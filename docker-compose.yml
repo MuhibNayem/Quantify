@@ -1,0 +1,212 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d inventory_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - my_network
+
+  # Redis Cluster 
+  redis1:
+    image: redis:7.0
+    container_name: redis1
+    hostname: redis1
+    environment:
+      REDISCLI_AUTH: redispass
+    ports:
+      - "6379:6379"
+      - "16379:16379"
+    command: [
+      "redis-server",
+      "--cluster-enabled", "yes",
+      "--cluster-config-file", "nodes.conf",
+      "--cluster-node-timeout", "5000",
+      "--requirepass", "redispass",
+      "--masterauth", "redispass",
+      "--protected-mode", "no",
+      "--cluster-announce-ip", "redis1",
+      "--cluster-announce-port", "6379",
+      "--cluster-announce-bus-port", "16379"
+    ]
+
+    volumes:
+      - redis1_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - my_network
+
+  redis2:
+    image: redis:7.0
+    container_name: redis2
+    hostname: redis2
+    depends_on:
+      - redis1
+    environment:
+      REDISCLI_AUTH: redispass
+    ports:
+      - "6380:6379"
+      - "16380:16379"
+    command: [
+      "redis-server",
+      "--cluster-enabled", "yes",
+      "--cluster-config-file", "nodes.conf",
+      "--cluster-node-timeout", "5000",
+      "--requirepass", "redispass",
+      "--masterauth", "redispass",
+      "--protected-mode", "no",
+      "--cluster-announce-ip", "redis2",
+      "--cluster-announce-port", "6379",
+      "--cluster-announce-bus-port", "16379"
+    ]
+
+    volumes:
+      - redis2_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - my_network
+
+  redis3:
+    image: redis:7.0
+    container_name: redis3
+    hostname: redis3
+    depends_on:
+      - redis2
+    environment:
+      REDISCLI_AUTH: redispass
+    ports:
+      - "6381:6379"
+      - "16381:16379"
+    command: [
+      "redis-server",
+      "--cluster-enabled", "yes",
+      "--cluster-config-file", "nodes.conf",
+      "--cluster-node-timeout", "5000",
+      "--requirepass", "redispass",
+      "--masterauth", "redispass",
+      "--protected-mode", "no",
+      "--cluster-announce-ip", "redis3",
+      "--cluster-announce-port", "6379",
+      "--cluster-announce-bus-port", "16379"
+    ]
+    volumes:
+      - redis3_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    networks:
+      - my_network
+
+  redis-init:
+    image: redis:7.0
+    container_name: redis-init
+    depends_on:
+      redis1:
+        condition: service_healthy
+      redis2:
+        condition: service_healthy
+      redis3: 
+        condition: service_healthy
+    entrypoint: ["bash", "-c", "
+      echo 'Waiting for Redis cluster nodes to be ready...';
+      sleep 5;
+      echo 'Creating Redis cluster...';
+      yes yes | redis-cli --cluster create \
+        redis1:6379 redis2:6379 redis3:6379 \
+        --cluster-replicas 0 \
+        -a redispass;
+      echo 'Redis cluster initialized.'
+      "]
+    networks:
+      - my_network
+    restart: "no"
+
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    networks:
+      - my_network
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis-init:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_started
+    env_file:
+      - ./.env
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    networks:
+      - my_network
+
+  prometheus:
+    image: prom/prometheus:v2.37.0
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - my_network
+
+  grafana:
+    image: grafana/grafana:9.1.0
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: password
+    networks:
+      - my_network
+
+volumes:
+  postgres_data:
+  grafana_data:
+  redis3_data:
+  redis2_data:
+  redis1_data:
+
+networks:
+  my_network:
+    driver: bridge

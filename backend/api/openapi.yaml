@@ -1,0 +1,3165 @@
+openapi: 3.1.0
+
+info:
+  title: Inventory Management API
+  version: 1.0.0
+  description: API for managing inventory, products, users, and other related entities.
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
+paths:
+  /health:
+    get:
+      summary: Show the status of the server
+      description: Get the status of the server
+      tags:
+        - Health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: UP
+  /users/register:
+    post:
+      summary: Register a new user
+      description: Create a new user account
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/login:
+    post:
+      summary: Log in a user
+      description: Authenticate user and return a JWT token
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          description: Login successful, returns JWT token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  refreshToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/refresh-token:
+    post:
+      summary: Refresh access token
+      description: Get a new access token using a refresh token
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: New access token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  refreshToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/logout:
+    post:
+      summary: Log out a user
+      description: Invalidate both the access and refresh tokens
+      tags:
+        - Users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Logout successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: User ID
+    get:
+      summary: Get user details by ID
+      description: Get details of a specific user by ID
+      tags:
+        - Users
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update user details
+      description: Update details of a specific user by ID
+      tags:
+        - Users
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a user
+      description: Delete a specific user by ID
+      tags:
+        - Users
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products:
+    post:
+      summary: Create a new product
+      description: Create a new product in the inventory
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: List all products
+      description: Retrieve a list of all products in the inventory
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: A list of products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Product ID
+    get:
+      summary: Get product details by ID
+      description: Retrieve details of a specific product by ID
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update product details
+      description: Update details of a specific product by ID
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a product
+      description: Delete a specific product by ID
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{id}/stock:
+    get:
+      summary: Get product stock by ID
+      description: Retrieve the current stock level for a specific product by ID
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Product ID
+      responses:
+        '200':
+          description: Current stock level
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stock:
+                    type: integer
+                    example: 100
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{id}/history:
+    get:
+      summary: List stock history for a product
+      description: Retrieve the stock adjustment history for a specific product by ID
+      tags:
+        - Products
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Product ID
+      responses:
+        '200':
+          description: A list of stock adjustments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockAdjustment'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /categories:
+    post:
+      summary: Create a new category
+      description: Create a new product category
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreateRequest'
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Category with this name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Get a list of categories
+      description: Get a list of all product categories
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: A list of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /categories/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Category ID
+    get:
+      summary: Get a category by ID
+      description: Get a single category by its ID
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update an existing category
+      description: Update an existing product category
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryUpdateRequest'
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a category
+      description: Delete a product category by its ID. Cannot delete if products or subcategories are associated.
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Cannot delete category: products are associated"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /categories/{categoryId}/subcategories:
+    parameters:
+      - in: path
+        name: categoryId
+        schema:
+          type: integer
+        required: true
+        description: Category ID
+    post:
+      summary: Create a new sub-category
+      description: Create a new sub-category for a specific category
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubCategoryCreateRequest'
+      responses:
+        '201':
+          description: Sub-category created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Get sub-categories for a category
+      description: Get a list of sub-categories for a specific category
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: A list of sub-categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubCategory'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /subcategories/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Sub-Category ID
+    get:
+      summary: Get a sub-category by ID
+      description: Get a single sub-category by its ID
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Sub-category details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubCategory'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update an existing sub-category
+      description: Update an existing sub-category
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubCategoryUpdateRequest'
+      responses:
+        '200':
+          description: Sub-category updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a sub-category
+      description: Delete a sub-category by its ID. Cannot delete if products are associated.
+      tags:
+        - Categories
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Cannot delete sub-category: products are associated'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /suppliers:
+    post:
+      summary: Create a new supplier
+      description: Create a new product supplier
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCreateRequest'
+      responses:
+        '201':
+          description: Supplier created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Supplier with this name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Get a list of suppliers
+      description: Get a list of all product suppliers
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: A list of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Supplier'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /suppliers/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Supplier ID
+    get:
+      summary: Get a supplier by ID
+      description: Get a single supplier by its ID
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Supplier details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update an existing supplier
+      description: Update an existing product supplier
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierUpdateRequest'
+      responses:
+        '200':
+          description: Supplier updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a supplier
+      description: Delete a product supplier by its ID. Cannot delete if products are associated.
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Cannot delete supplier: products are associated'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /suppliers/{id}/performance:
+    get:
+      summary: Get supplier performance report
+      description: Generates a mock report on supplier performance (e.g., on-time delivery, quality).
+      tags:
+        - Suppliers
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Supplier ID
+      responses:
+        '200':
+          description: Supplier performance data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  supplierId:
+                    type: integer
+                    example: 1
+                  supplierName:
+                    type: string
+                    example: Supplier A
+                  averageLeadTimeDays:
+                    type: number
+                    format: float
+                    example: 5.5
+                  onTimeDeliveryRate:
+                    type: number
+                    format: float
+                    example: 0.95
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /locations:
+    post:
+      summary: Create a new location
+      description: Create a new inventory location
+      tags:
+        - Locations
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationCreateRequest'
+      responses:
+        '201':
+          description: Location created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Location with this name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    get:
+      summary: Get a list of locations
+      description: Get a list of all inventory locations
+      tags:
+        - Locations
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: A list of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /locations/{id}:
+    parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+        description: Location ID
+    get:
+      summary: Get a location by ID
+      description: Get a single location by its ID
+      tags:
+        - Locations
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update an existing location
+      description: Update an existing inventory location
+      tags:
+        - Locations
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdateRequest'
+      responses:
+        '200':
+          description: Location updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Location with this name already exists
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a location
+      description: Delete an inventory location by its ID. Cannot delete if products, batches, or stock adjustments are associated.
+      tags:
+        - Locations
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Cannot delete location: products are associated'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /barcodes/generate:
+    get:
+      summary: Generate a barcode image for a product
+      description: Generates a barcode image (PNG) for a given product SKU or ID
+      tags:
+        - Barcodes
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: sku
+          schema:
+            type: string
+          description: Product SKU
+        - in: query
+          name: productId
+          schema:
+            type: integer
+          description: Product ID
+      responses:
+        '200':
+          description: Barcode image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/lookup:
+    get:
+      summary: Lookup a product by barcode/UPC
+      description: Retrieves product details by scanning its barcode or UPC
+      tags:
+        - Barcodes
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: barcode
+          schema:
+            type: string
+          required: true
+          description: Barcode or UPC value
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{productId}/stock/batches:
+    post:
+      summary: Add new stock with batch information
+      description: Adds a new batch of stock for a specific product
+      tags:
+        - Stock
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: productId
+          schema:
+            type: integer
+          required: true
+          description: Product ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockInBatchRequest'
+      responses:
+        '201':
+          description: Batch created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Batch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{productId}/stock:
+    get:
+      summary: Get current stock levels for a product
+      description: Retrieves current stock levels and batch breakdown for a specific product
+      tags:
+        - Stock
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: productId
+          schema:
+            type: integer
+          required: true
+          description: Product ID
+        - in: query
+          name: locationId
+          schema:
+            type: integer
+          required: false
+          description: Optional. Filter by Location ID
+      responses:
+        '200':
+          description: Product stock details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productId:
+                    type: integer
+                    example: 1
+                  currentQuantity:
+                    type: integer
+                    example: 150
+                  batches:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Batch'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{productId}/stock/adjustments:
+    post:
+      summary: Perform a manual stock adjustment
+      description: Performs a manual stock adjustment (stock-in or stock-out) for a product
+      tags:
+        - Stock
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: productId
+          schema:
+            type: integer
+          required: true
+          description: Product ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+      responses:
+        '201':
+          description: Stock adjustment successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stock adjustment successful
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/forecast/generate:
+    post:
+      summary: Trigger demand forecast generation
+      description: Triggers a demand forecasting process for a product or all products
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForecastGenerationRequest'
+      responses:
+        '200':
+          description: Forecast generation status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Demand forecast completed.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/forecast/{forecastId}:
+    parameters:
+      - in: path
+        name: forecastId
+        schema:
+          type: integer
+        required: true
+        description: Forecast ID
+    get:
+      summary: Get a specific demand forecast
+      description: Retrieves details of a specific demand forecast by its ID
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Demand forecast details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DemandForecast'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/suggestions:
+    get:
+      summary: Get a list of reorder suggestions
+      description: Retrieves a list of suggested reorders based on forecast and stock levels
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, APPROVED, REJECTED, PO_CREATED]
+          required: false
+          description: Filter by suggestion status
+        - in: query
+          name: supplierId
+          schema:
+            type: integer
+          required: false
+          description: Filter by Supplier ID
+      responses:
+        '200':
+          description: A list of reorder suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReorderSuggestion'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/suggestions/{suggestionId}/create-po:
+    post:
+      summary: Create a draft Purchase Order from a reorder suggestion
+      description: Creates a draft Purchase Order based on a selected reorder suggestion
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: suggestionId
+          schema:
+            type: integer
+          required: true
+          description: Reorder Suggestion ID
+      responses:
+        '201':
+          description: Purchase Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/purchase-orders/{poId}/approve:
+    post:
+      summary: Approve a draft Purchase Order
+      description: Approves a draft Purchase Order, changing its status to APPROVED
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: poId
+          schema:
+            type: integer
+          required: true
+          description: Purchase Order ID
+      responses:
+        '200':
+          description: Purchase Order approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/purchase-orders/{poId}/send:
+    post:
+      summary: Send a Purchase Order to the supplier
+      description: Marks an approved Purchase Order as SENT
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: poId
+          schema:
+            type: integer
+          required: true
+          description: Purchase Order ID
+      responses:
+        '200':
+          description: Purchase Order sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/purchase-orders/{poId}:
+    parameters:
+      - in: path
+        name: poId
+        schema:
+          type: integer
+        required: true
+        description: Purchase Order ID
+    get:
+      summary: Get a Purchase Order by ID
+      description: Retrieves details of a specific Purchase Order by its ID
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Purchase Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a Purchase Order
+      description: Updates details of a specific Purchase Order
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePORequest'
+      responses:
+        '200':
+          description: Purchase Order updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/purchase-orders/{poId}/receive:
+    post:
+      summary: Record received goods for a Purchase Order
+      description: Records received quantities for items in a Purchase Order and updates stock levels
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: poId
+          schema:
+            type: integer
+          required: true
+          description: Purchase Order ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivePORequest'
+      responses:
+        '200':
+          description: Goods received and stock updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cannot receive goods for Purchase Order in DRAFT status
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /replenishment/purchase-orders/{poId}/cancel:
+    post:
+      summary: Cancel a Purchase Order
+      description: Cancels a Purchase Order if it's in DRAFT or APPROVED status
+      tags:
+        - Replenishment
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: poId
+          schema:
+            type: integer
+          required: true
+          description: Purchase Order ID
+      responses:
+        '200':
+          description: Purchase Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: Cannot cancel Purchase Order in SENT status
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /reports/sales-trends:
+    post:
+      summary: Get sales trends report
+      description: Generates a report on sales trends over a specified period, with optional filters.
+      tags:
+        - Reports
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SalesTrendsReportRequest'
+      responses:
+        '200':
+          description: Sales trends data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                    example: "2023-01-01 to 2023-01-31"
+                  totalSales:
+                    type: number
+                    format: float
+                    example: 15000.75
+                  averageDailySales:
+                    type: number
+                    format: float
+                    example: 500.025
+                  salesTrends:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SalesTrend'
+                  topSellingProducts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopSellingProduct'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /reports/inventory-turnover:
+    post:
+      summary: Get inventory turnover report
+      description: Generates a report on inventory turnover rate over a specified period.
+      tags:
+        - Reports
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryTurnoverReportRequest'
+      responses:
+        '200':
+          description: Inventory turnover data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                    example: "2023-01-01 to 2023-01-31"
+                  totalCostOfGoodsSold:
+                    type: number
+                    format: float
+                    example: 10000.00
+                  averageInventoryValue:
+                    type: number
+                    format: float
+                    example: 20000.00
+                  inventoryTurnoverRate:
+                    type: number
+                    format: float
+                    example: 0.5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /reports/profit-margin:
+    post:
+      summary: Get profit margin report
+      description: Generates a report on profit margins for products or categories over a specified period.
+      tags:
+        - Reports
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfitMarginReportRequest'
+      responses:
+        '200':
+          description: Profit margin data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period:
+                    type: string
+                    example: "2023-01-01 to 2023-01-31"
+                  totalRevenue:
+                    type: number
+                    format: float
+                    example: 20000.00
+                  totalCost:
+                    type: number
+                    format: float
+                    example: 10000.00
+                  grossProfit:
+                    type: number
+                    format: float
+                    example: 10000.00
+                  grossProfitMargin:
+                    type: number
+                    format: float
+                    example: 0.5
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /products/{productId}/alert-settings:
+    parameters:
+      - in: path
+        name: productId
+        schema:
+          type: integer
+        required: true
+        description: Product ID
+    put:
+      summary: Configure alert thresholds for a product
+      description: Configures low-stock, overstock, and expiry alert thresholds for a specific product
+      tags:
+        - Alerts
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductAlertSettingsRequest'
+      responses:
+        '200':
+          description: Product alert settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAlertSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /alerts:
+    get:
+      summary: Get a list of all active alerts
+      description: Retrieves a list of all active stock-related alerts
+      tags:
+        - Alerts
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [LOW_STOCK, OUT_OF_STOCK, OVERSTOCK, EXPIRY_ALERT]
+          required: false
+          description: Filter by alert type
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ACTIVE, RESOLVED]
+          required: false
+          description: Filter by alert status
+        - in: query
+          name: productId
+          schema:
+            type: integer
+          required: false
+          description: Filter by Product ID
+      responses:
+        '200':
+          description: A list of alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /alerts/{alertId}:
+    parameters:
+      - in: path
+        name: alertId
+        schema:
+          type: integer
+        required: true
+        description: Alert ID
+    get:
+      summary: Get an alert by ID
+      description: Retrieves details of a specific alert by its ID
+      tags:
+        - Alerts
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Alert details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /alerts/{alertId}/resolve:
+    patch:
+      summary: Resolve an alert
+      description: Marks a specific alert as resolved
+      tags:
+        - Alerts
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: alertId
+          schema:
+            type: integer
+          required: true
+          description: Alert ID
+      responses:
+        '200':
+          description: Alert resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Alert'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /users/{userId}/notification-settings:
+    parameters:
+      - in: path
+        name: userId
+        schema:
+          type: integer
+        required: true
+        description: User ID
+    put:
+      summary: Configure user notification preferences
+      description: Configures email and SMS notification preferences for a user
+      tags:
+        - Users
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserNotificationSettingsRequest'
+      responses:
+        '200':
+          description: User notification settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserNotificationSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /bulk/products/template:
+    get:
+      summary: Download product import template
+      description: Downloads a CSV/Excel template file with required headers for product creation
+      tags:
+        - Bulk Operations
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: CSV template file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /bulk/products/import:
+    post:
+      summary: Upload a file for bulk product import
+      description: Uploads a CSV/Excel file for bulk product creation/update. Returns a job ID for status tracking.
+      tags:
+        - Bulk Operations
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Bulk import job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportJobStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /bulk/products/import/{jobId}/status:
+    get:
+      summary: Get bulk import job status
+      description: Retrieves the status and validation results of a bulk import job
+      tags:
+        - Bulk Operations
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Bulk Import Job ID
+      responses:
+        '200':
+          description: Bulk import job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkImportJobStatus'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /bulk/products/import/{jobId}/confirm:
+    post:
+      summary: Confirm and execute bulk import
+      description: Confirms and executes the bulk import after preview
+      tags:
+        - Bulk Operations
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: path
+          name: jobId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: Bulk Import Job ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkImportConfirmRequest'
+      responses:
+        '200':
+          description: Bulk import confirmation status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                    format: uuid
+                    example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+                  status:
+                    type: string
+                    example: PROCESSING
+                  message:
+                    type: string
+                    example: Bulk import initiated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /bulk/products/export:
+    get:
+      summary: Export product catalog
+      description: Exports the entire product catalog or a filtered list of products to a CSV/Excel file
+      tags:
+        - Bulk Operations
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - in: query
+          name: format
+          schema:
+            type: string
+            enum: [csv, excel]
+            default: csv
+          description: Export format
+        - in: query
+          name: category
+          schema:
+            type: integer
+          description: Filter by Category ID
+        - in: query
+          name: supplier
+          schema:
+            type: integer
+          description: Filter by Supplier ID
+      responses:
+        '200':
+          description: Exported product data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkExportJobStatus'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /inventory/transfers:
+    post:
+      summary: Create a stock transfer
+      description: Create a new stock transfer between two locations
+      tags:
+        - Inventory
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockTransferRequest'
+      responses:
+        '201':
+          description: Stock transfer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    UserRegisterRequest:
+      type: object
+      required:
+        - username
+        - password
+        - role
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: john.doe
+        password:
+          type: string
+          minLength: 6
+          example: password123
+        role:
+          type: string
+          enum: [Admin, Manager, Staff]
+          example: Staff
+    UserLoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: john.doe
+        password:
+          type: string
+          example: password123
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    UserUpdateRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: jane.doe
+        password:
+          type: string
+          minLength: 6
+          example: newpassword123
+        role:
+          type: string
+          enum: [Admin, Manager, Staff]
+          example: Manager
+    User:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        TenantID:
+          type: integer
+          format: int64
+          example: 1
+        Username:
+          type: string
+          example: john.doe
+        Role:
+          type: string
+          enum: [Admin, Manager, Staff]
+          example: Staff
+    ProductCreateRequest:
+      type: object
+      required:
+        - sku
+        - name
+        - categoryId
+        - supplierId
+        - sellingPrice
+        - locationId
+      properties:
+        sku:
+          type: string
+          example: SKU001
+        name:
+          type: string
+          example: Laptop Pro
+        description:
+          type: string
+          example: High performance laptop
+        categoryId:
+          type: integer
+          format: uint
+          example: 1
+        subCategoryId:
+          type: integer
+          format: uint
+          example: 1
+        supplierId:
+          type: integer
+          format: uint
+          example: 1
+        brand:
+          type: string
+          example: TechBrand
+        purchasePrice:
+          type: number
+          format: float
+          example: 1000.00
+        sellingPrice:
+          type: number
+          format: float
+          example: 1200.00
+        barcodeUpc:
+          type: string
+          example: 123456789012
+        imageUrls:
+          type: string
+          example: http://example.com/img1.jpg,http://example.com/img2.jpg
+        status:
+          type: string
+          example: Active
+        locationId:
+          type: integer
+          format: uint
+          example: 1
+    ProductUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Laptop Pro Max
+        description:
+          type: string
+          example: Ultra high performance laptop
+        categoryId:
+          type: integer
+          format: uint
+          example: 1
+        subCategoryId:
+          type: integer
+          format: uint
+          example: 1
+        supplierId:
+          type: integer
+          format: uint
+          example: 1
+        brand:
+          type: string
+          example: TechBrand
+        purchasePrice:
+          type: number
+          format: float
+          example: 1050.00
+        sellingPrice:
+          type: number
+          format: float
+          example: 1250.00
+        barcodeUpc:
+          type: string
+          example: 123456789013
+        imageUrls:
+          type: string
+          example: http://example.com/img3.jpg
+        status:
+          type: string
+          example: Archived
+        locationId:
+          type: integer
+          format: uint
+          example: 1
+    Product:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        SKU:
+          type: string
+          example: SKU001
+        Name:
+          type: string
+          example: Laptop Pro
+        Description:
+          type: string
+          example: High performance laptop
+        CategoryID:
+          type: integer
+          format: uint
+          example: 1
+        SubCategoryID:
+          type: integer
+          format: uint
+          example: 1
+        SupplierID:
+          type: integer
+          format: uint
+          example: 1
+        Brand:
+          type: string
+          example: TechBrand
+        PurchasePrice:
+          type: number
+          format: float
+          example: 1000.00
+        SellingPrice:
+          type: number
+          format: float
+          example: 1200.00
+        BarcodeUPC:
+          type: string
+          example: 123456789012
+        ImageURLs:
+          type: string
+          example: http://example.com/img1.jpg,http://example.com/img2.jpg
+        Status:
+          type: string
+          example: Active
+        LocationID:
+          type: integer
+          format: uint
+          example: 1
+    StockAdjustment:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        LocationID:
+          type: integer
+          format: uint
+          example: 1
+        Type:
+          type: string
+          example: STOCK_IN
+        Quantity:
+          type: integer
+          example: 10
+        ReasonCode:
+          type: string
+          example: DAMAGED_GOODS
+        Notes:
+          type: string
+          example: Item received damaged
+        AdjustedBy:
+          type: integer
+          format: uint
+          example: 1
+        AdjustedAt:
+          type: string
+          format: date-time
+        PreviousQuantity:
+          type: integer
+          example: 50
+        NewQuantity:
+          type: integer
+          example: 60
+    CategoryCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Electronics
+    CategoryUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Home Appliances
+    Category:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        Name:
+          type: string
+          example: Electronics
+        SubCategories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubCategory'
+    SubCategoryCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Laptops
+    SubCategoryUpdateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Desktops
+        CategoryID:
+          type: integer
+          format: uint
+          example: 1
+    SupplierCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Global Supplies Inc.
+        contactPerson:
+          type: string
+          example: Jane Doe
+        email:
+          type: string
+          format: email
+          example: jane.doe@globalsupplies.com
+        phone:
+          type: string
+          example: "+1-555-123-4567"
+        address:
+          type: string
+          example: 123 Main St, Anytown, USA
+    SupplierUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Global Supplies LLC
+        contactPerson:
+          type: string
+          example: John Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@globalsupplies.com
+        phone:
+          type: string
+          example: "+1-555-987-6543"
+        address:
+          type: string
+          example: 456 Oak Ave, Anytown, USA
+    Supplier:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        Name:
+          type: string
+          example: Global Supplies Inc.
+        ContactPerson:
+          type: string
+          example: Jane Doe
+        Email:
+          type: string
+          format: email
+          example: jane.doe@globalsupplies.com
+        Phone:
+          type: string
+          example: "+1-555-123-4567"
+        Address:
+          type: string
+          example: 123 Main St, Anytown, USA
+    LocationCreateRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          example: Warehouse A
+        address:
+          type: string
+          example: 100 Industrial Rd, City, State
+    LocationUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Warehouse B
+        address:
+          type: string
+          example: 200 Business Ave, City, State
+    Location:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        Name:
+          type: string
+          example: Warehouse A
+        Address:
+          type: string
+          example: 100 Industrial Rd, City, State
+    ForecastGenerationRequest:
+      type: object
+      required:
+        - periodInDays
+      properties:
+        periodInDays:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 30
+        productId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+    DemandForecast:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        ForecastPeriod:
+          type: string
+          example: 30_DAYS
+        PredictedDemand:
+          type: integer
+          example: 150
+        GeneratedAt:
+          type: string
+          format: date-time
+    ReorderSuggestion:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        SupplierID:
+          type: integer
+          format: uint
+          example: 1
+        CurrentStock:
+          type: integer
+          example: 50
+        PredictedDemand:
+          type: integer
+          example: 120
+        SuggestedOrderQuantity:
+          type: integer
+          example: 70
+        LeadTimeDays:
+          type: integer
+          example: 7
+        Status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, PO_CREATED]
+          example: PENDING
+        SuggestedAt:
+          type: string
+          format: date-time
+    PurchaseOrder:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        SupplierID:
+          type: integer
+          format: uint
+          example: 1
+        Status:
+          type: string
+          enum: [DRAFT, APPROVED, SENT, PARTIALLY_RECEIVED, RECEIVED, CANCELLED]
+          example: DRAFT
+        OrderDate:
+          type: string
+          format: date-time
+        ExpectedDeliveryDate:
+          type: string
+          format: date-time
+          nullable: true
+        ActualDeliveryDate:
+          type: string
+          format: date-time
+          nullable: true
+        CreatedBy:
+          type: integer
+          format: uint
+          example: 1
+        ApprovedBy:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        ApprovedAt:
+          type: string
+          format: date-time
+          nullable: true
+        PurchaseOrderItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/PurchaseOrderItem'
+    PurchaseOrderItem:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        PurchaseOrderID:
+          type: integer
+          format: uint
+          example: 1
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        OrderedQuantity:
+          type: integer
+          example: 100
+        ReceivedQuantity:
+          type: integer
+          example: 50
+        UnitPrice:
+          type: number
+          format: float
+          example: 10.50
+    UpdatePORequest:
+      type: object
+      properties:
+        supplierId:
+          type: integer
+          format: uint
+          example: 2
+        status:
+          type: string
+          enum: [DRAFT, APPROVED, SENT, RECEIVED, CANCELLED]
+          example: APPROVED
+        orderDate:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        expectedDeliveryDate:
+          type: string
+          format: date-time
+          example: "2023-11-15T10:00:00Z"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/POItemRequest'
+    POItemRequest:
+      type: object
+      required:
+        - productId
+        - orderedQuantity
+        - unitPrice
+      properties:
+        productId:
+          type: integer
+          format: uint
+          example: 1
+        orderedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 50
+        unitPrice:
+          type: number
+          format: float
+          minimum: 0
+          example: 12.00
+    ReceivePORequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivePOItemRequest'
+    ReceivePOItemRequest:
+      type: object
+      required:
+        - purchaseOrderItemId
+        - receivedQuantity
+        - batchNumber
+      properties:
+        purchaseOrderItemId:
+          type: integer
+          format: uint
+          example: 1
+        receivedQuantity:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 25
+        batchNumber:
+          type: string
+          example: BATCH-REC-001
+        expiryDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+    StockInBatchRequest:
+      type: object
+      required:
+        - quantity
+        - batchNumber
+      properties:
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 100
+        batchNumber:
+          type: string
+          example: BATCH-XYZ-2023
+        expiryDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2024-12-31T23:59:59Z"
+    ProductAlertSettingsRequest:
+      type: object
+      properties:
+        lowStockLevel:
+          type: integer
+          example: 10
+        overStockLevel:
+          type: integer
+          example: 100
+        expiryAlertDays:
+          type: integer
+          example: 30
+    ProductAlertSettings:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        LowStockLevel:
+          type: integer
+          example: 10
+        OverStockLevel:
+          type: integer
+          example: 100
+        ExpiryAlertDays:
+          type: integer
+          example: 30
+    Alert:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        Type:
+          type: string
+          enum: [LOW_STOCK, OUT_OF_STOCK, OVERSTOCK, EXPIRY_ALERT]
+          example: LOW_STOCK
+        Message:
+          type: string
+          example: 'Product Laptop Pro is running low. Current quantity: 5'
+        TriggeredAt:
+          type: string
+          format: date-time
+        Status:
+          type: string
+          enum: [ACTIVE, RESOLVED]
+          example: ACTIVE
+        BatchID:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+    UserNotificationSettingsRequest:
+      type: object
+      properties:
+        emailNotificationsEnabled:
+          type: boolean
+          example: true
+        smsNotificationsEnabled:
+          type: boolean
+          example: false
+        emailAddress:
+          type: string
+          format: email
+          example: user@example.com
+        phoneNumber:
+          type: string
+          example: "+1234567890"
+    UserNotificationSettings:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        UserID:
+          type: integer
+          format: uint
+          example: 1
+        EmailNotificationsEnabled:
+          type: boolean
+          example: true
+        SMSNotificationsEnabled:
+          type: boolean
+          example: false
+        EmailAddress:
+          type: string
+          format: email
+          example: user@example.com
+        PhoneNumber:
+          type: string
+          example: "+1234567890"
+    StockTransferRequest:
+      type: object
+      required:
+        - productId
+        - sourceLocationId
+        - destLocationId
+        - quantity
+      properties:
+        productId:
+          type: integer
+          format: uint
+          example: 1
+        sourceLocationId:
+          type: integer
+          format: uint
+          example: 1
+        destLocationId:
+          type: integer
+          format: uint
+          example: 2
+        quantity:
+          type: integer
+          example: 10
+    StockTransfer:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        SourceLocationID:
+          type: integer
+          format: uint
+          example: 1
+        DestLocationID:
+          type: integer
+          format: uint
+          example: 2
+        Quantity:
+          type: integer
+          example: 10
+        Status:
+          type: string
+          enum: [PENDING, COMPLETED, CANCELLED]
+          example: PENDING
+        TransferredBy:
+          type: integer
+          format: uint
+          example: 1
+        TransferredAt:
+          type: string
+          format: date-time
+    BulkImportConfirmRequest:
+      type: object
+      required:
+        - jobId
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+    BulkImportJobStatus:
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        status:
+          type: string
+          enum: [QUEUED, PROCESSING, PENDING_CONFIRMATION, COMPLETED, FAILED]
+          example: QUEUED
+        message:
+          type: string
+          example: Bulk import job queued for processing.
+        filePath:
+          type: string
+          example: ./uploads/products.csv
+        totalRecords:
+          type: integer
+          example: 100
+        validRecords:
+          type: integer
+          example: 95
+        invalidRecords:
+          type: integer
+          example: 5
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+                example: 2
+              message:
+                type: string
+                example: Invalid SKU format
+        preview:
+          type: array
+          items:
+            type: object # Example of a product data row
+            properties:
+              SKU:
+                type: string
+                example: PROD001
+              Name:
+                type: string
+                example: Example Product
+    BulkExportJobStatus:
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        status:
+          type: string
+          enum: [QUEUED, PROCESSING, COMPLETED, FAILED]
+          example: QUEUED
+        message:
+          type: string
+          example: Bulk export job queued for processing.
+        downloadUrl:
+          type: string
+          format: url
+          example: http://localhost:8080/downloads/export_a1b2c3d4.csv
+    StockAdjustmentRequest:
+      type: object
+      required:
+        - type
+        - quantity
+        - reasonCode
+      properties:
+        type:
+          type: string
+          enum: [STOCK_IN, STOCK_OUT]
+          example: STOCK_IN
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          example: 50
+        reasonCode:
+          type: string
+          example: DAMAGED_GOODS
+        notes:
+          type: string
+          example: Items damaged during transit
+    Batch:
+      type: object
+      properties:
+        ID:
+          type: integer
+          format: int64
+          readOnly: true
+          example: 1
+        CreatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        UpdatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        DeletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          readOnly: true
+        ProductID:
+          type: integer
+          format: uint
+          example: 1
+        LocationID:
+          type: integer
+          format: uint
+          example: 1
+        BatchNumber:
+          type: string
+          example: BATCH-XYZ-2023
+        Quantity:
+          type: integer
+          example: 100
+        ExpiryDate:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-12-31T23:59:59Z"
+    SalesTrendsReportRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          format: date
+          example: "2023-01-01"
+        endDate:
+          type: string
+          format: date
+          example: "2023-01-31"
+        categoryId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        locationId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+    InventoryTurnoverReportRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          format: date
+          example: "2023-01-01"
+        endDate:
+          type: string
+          format: date
+          example: "2023-01-31"
+        categoryId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        locationId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+    ProfitMarginReportRequest:
+      type: object
+      required:
+        - startDate
+        - endDate
+      properties:
+        startDate:
+          type: string
+          format: date
+          example: "2023-01-01"
+        endDate:
+          type: string
+          format: date
+          example: "2023-01-31"
+        categoryId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+        locationId:
+          type: integer
+          format: uint
+          nullable: true
+          example: 1
+    SalesTrend:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2023-01-01"
+        totalSales:
+          type: number
+          format: float
+          example: 1500.75
+    TopSellingProduct:
+      type: object
+      properties:
+        productId:
+          type: integer
+          format: uint
+          example: 1
+        name:
+          type: string
+          example: Laptop Pro
+        totalSold:
+          type: number
+          format: float
+          example: 120
