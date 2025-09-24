@@ -74,13 +74,13 @@ This feature set handles user registration, login, session management (via JWT a
 
 ```mermaid
 graph TD
-    A[User provides Username, Password, Role] --> B{Check if any user exists?};
-    B -- No --> C{Set Role to 'Admin', IsActive to true};
-    B -- Yes --> D{Set IsActive to false};
-    C --> E[Hash Password];
+    A["User provides Username, Password, Role"] --> B{"Check if any user exists?"};
+    B -- "No" --> C{"Set Role to 'Admin', IsActive to true"};
+    B -- "Yes" --> D{"Set IsActive to false"};
+    C --> E["Hash Password"];
     D --> E;
-    E --> F[Store User in Database];
-    F --> G{Return New User (without password)};
+    E --> F["Store User in Database"];
+    F --> G{"Return New User (without password)"};
 ```
 
 ### Scenario: User Login
@@ -99,15 +99,15 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Username, Password] --> B{Retrieve User by Username};
-    B -- User Not Found --> C[Authentication Failed: Invalid Credentials];
-    B -- User Found --> D{Is User Active?};
-    D -- No --> C;
-    D -- Yes --> E{Compare Provided Password with Hashed Password};
-    E -- Mismatch --> C;
-    E -- Match --> F[Generate Access Token & Refresh Token];
-    F --> G[Store Tokens in Redis];
-    G --> H[Return Access Token & Refresh Token];
+    A["User provides Username, Password"] --> B{"Retrieve User by Username"};
+    B -- "User Not Found" --> C["Authentication Failed: Invalid Credentials"];
+    B -- "User Found" --> D{"Is User Active?"};
+    D -- "No" --> C;
+    D -- "Yes" --> E{"Compare Provided Password with Hashed Password"};
+    E -- "Mismatch" --> C;
+    E -- "Match" --> F["Generate Access Token & Refresh Token"];
+    F --> G["Store Tokens in Redis"];
+    G --> H["Return Access Token & Refresh Token"];
 ```
 
 ### Scenario: Refreshing Access Token
@@ -125,13 +125,13 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Refresh Token] --> B{Check Refresh Token in Redis};
-    B -- Invalid/Expired --> C[Refresh Failed: Invalid Token];
-    B -- Valid --> D[Invalidate Old Refresh Token];
-    D --> E[Retrieve User Details];
-    E --> F[Generate New Access Token & New Refresh Token];
-    F --> G[Store New Tokens in Redis];
-    G --> H[Return New Access Token & New Refresh Token];
+    A["User provides Refresh Token"] --> B{"Check Refresh Token in Redis"};
+    B -- "Invalid/Expired" --> C["Refresh Failed: Invalid Token"];
+    B -- "Valid" --> D["Invalidate Old Refresh Token"];
+    D --> E["Retrieve User Details"];
+    E --> F["Generate New Access Token & New Refresh Token"];
+    F --> G["Store New Tokens in Redis"];
+    G --> H["Return New Access Token & New Refresh Token"];
 ```
 
 ### Scenario: User Logout
@@ -146,9 +146,9 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Refresh Token] --> B[Invalidate Refresh Token in Redis];
-    B --> C[Invalidate Access Token (if present)];
-    C --> D[Return Logout Success];
+    A["User provides Refresh Token"] --> B["Invalidate Refresh Token in Redis"];
+    B --> C["Invalidate Access Token (if present)"];
+    C --> D["Return Logout Success"];
 ```
 
 ### Scenario: Approving a New User
@@ -164,11 +164,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A[Admin requests to Approve User by ID] --> B{Retrieve User by ID};
-    B -- User Not Found --> C[Approval Failed: User Not Found];
-    B -- User Found --> D[Set User.IsActive to true];
-    D --> E[Save User Details];
-    E --> F[Return Approved User];
+    A["Admin requests to Approve User by ID"] --> B{"Retrieve User by ID"};
+    B -- "User Not Found" --> C["Approval Failed: User Not Found"];
+    B -- "User Found" --> D["Set User.IsActive to true"];
+    D --> E["Save User Details"];
+    E --> F["Return Approved User"];
 ```
 
 ---
@@ -191,12 +191,12 @@ This feature set allows for the creation, viewing, updating, and deletion of pro
 
 ```mermaid
 graph TD
-    A[User provides Product Details] --> B{Validate Input & Check Uniqueness (SKU, BarcodeUPC)};
-    B -- Invalid/Duplicate --> C[Product Creation Failed: Bad Request/Conflict];
-    B -- Valid & Unique --> D[Create Product in Database];
-    D --> E[Invalidate Caches];
-    E --> F[Publish 'product.created' Event];
-    F --> G[Return New Product];
+    A["User provides Product Details"] --> B{"Validate Input & Check Uniqueness (SKU, BarcodeUPC)"};
+    B -- "Invalid/Duplicate" --> C["Product Creation Failed: Bad Request/Conflict"];
+    B -- "Valid & Unique" --> D["Create Product in Database"];
+    D --> E["Invalidate Caches"];
+    E --> F["Publish 'product.created' Event"];
+    F --> G["Return New Product"];
 ```
 
 ### Scenario: Updating an Existing Product
@@ -214,14 +214,14 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID & Updated Details] --> B{Retrieve Product by ID};
-    B -- Product Not Found --> C[Product Update Failed: Not Found];
-    B -- Product Found --> D{Validate Updated Input};
-    D -- Invalid --> C;
-    D -- Valid --> E[Update Product in Database];
-    E --> F[Invalidate Caches];
-    F --> G[Publish 'product.updated' Event];
-    G --> H[Return Updated Product];
+    A["User provides Product ID & Updated Details"] --> B{"Retrieve Product by ID"};
+    B -- "Product Not Found" --> C["Product Update Failed: Not Found"];
+    B -- "Product Found" --> D{"Validate Updated Input"};
+    D -- "Invalid" --> C;
+    D -- "Valid" --> E["Update Product in Database"];
+    E --> F["Invalidate Caches"];
+    F --> G["Publish 'product.updated' Event"];
+    G --> H["Return Updated Product"];
 ```
 
 ### Scenario: Deleting a Product
@@ -240,14 +240,14 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID] --> B{Retrieve Product by ID};
-    B -- Product Not Found --> C[Product Deletion Failed: Not Found];
-    B -- Product Found --> D{Check for Associated Batches/Stock Adjustments};
-    D -- Associated Data Exists --> E[Product Deletion Failed: Conflict];
-    D -- No Associated Data --> F[Delete Product from Database];
-    F --> G[Invalidate Caches];
-    G --> H[Publish 'product.deleted' Event];
-    H --> I[Return Success (No Content)];
+    A["User provides Product ID"] --> B{"Retrieve Product by ID"};
+    B -- "Product Not Found" --> C["Product Deletion Failed: Not Found"];
+    B -- "Product Found" --> D{"Check for Associated Batches/Stock Adjustments"};
+    D -- "Associated Data Exists" --> E["Product Deletion Failed: Conflict"];
+    D -- "No Associated Data" --> F["Delete Product from Database"];
+    F --> G["Invalidate Caches"];
+    G --> H["Publish 'product.deleted' Event"];
+    H --> I["Return Success (No Content)"];
 ```
 
 ### Scenario: Archiving a Product
@@ -263,11 +263,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID & 'Archived' Status] --> B{Retrieve Product by ID};
-    B -- Product Not Found --> C[Product Archiving Failed: Not Found];
-    B -- Product Found --> D[Update Product Status to 'Archived'];
-    D --> E[Invalidate Caches];
-    E --> F[Return Archived Product];
+    A["User provides Product ID & 'Archived' Status"] --> B{"Retrieve Product by ID"};
+    B -- "Product Not Found" --> C["Product Archiving Failed: Not Found"];
+    B -- "Product Found" --> D["Update Product Status to 'Archived'"];
+    D --> E["Invalidate Caches"];
+    E --> F["Return Archived Product"];
 ```
 
 ---
@@ -288,10 +288,10 @@ This feature set allows for the organization of products into categories and sub
 
 ```mermaid
 graph TD
-    A[User provides Category Name] --> B{Validate Input & Check Uniqueness};
-    B -- Invalid/Duplicate --> C[Category Creation Failed: Bad Request/Conflict];
-    B -- Valid & Unique --> D[Create Category in Database];
-    D --> E[Return New Category];
+    A["User provides Category Name"] --> B{"Validate Input & Check Uniqueness"};
+    B -- "Invalid/Duplicate" --> C["Category Creation Failed: Bad Request/Conflict"];
+    B -- "Valid & Unique" --> D["Create Category in Database"];
+    D --> E["Return New Category"];
 ```
 
 ### Scenario: Creating a New Sub-Category
@@ -306,10 +306,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Parent Category ID & Sub-Category Name] --> B{Validate Input & Retrieve Parent Category};
-    B -- Invalid/Category Not Found --> C[Sub-Category Creation Failed: Bad Request/Not Found];
-    B -- Valid & Category Found --> D[Create Sub-Category in Database (linked to Parent)];
-    D --> E[Return New Sub-Category];
+    A["User provides Parent Category ID & Sub-Category Name"] --> B{"Validate Input & Retrieve Parent Category"};
+    B -- "Invalid/Category Not Found" --> C["Sub-Category Creation Failed: Bad Request/Not Found"];
+    B -- "Valid & Category Found" --> D["Create Sub-Category in Database (linked to Parent)"];
+    D --> E["Return New Sub-Category"];
 ```
 
 ### Scenario: Deleting a Category with No Associations
@@ -326,14 +326,14 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Category ID] --> B{Retrieve Category by ID};
-    B -- Category Not Found --> C[Category Deletion Failed: Not Found];
-    B -- Category Found --> D{Check for Associated Products?};
-    D -- Yes --> E[Deletion Failed: Products Associated];
-    D -- No --> F{Check for Associated Subcategories?};
-    F -- Yes --> G[Deletion Failed: Subcategories Associated];
-    F -- No --> H[Delete Category from Database];
-    H --> I[Return Success (No Content)];
+    A["User provides Category ID"] --> B{"Retrieve Category by ID"};
+    B -- "Category Not Found" --> C["Category Deletion Failed: Not Found"];
+    B -- "Category Found" --> D{"Check for Associated Products?"};
+    D -- "Yes" --> E["Deletion Failed: Products Associated"];
+    D -- "No" --> F{"Check for Associated Subcategories?"};
+    F -- "Yes" --> G["Deletion Failed: Subcategories Associated"];
+    F -- "No" --> H["Delete Category from Database"];
+    H --> I["Return Success (No Content)"];
 ```
 
 ### Scenario: Deleting a Category with Associated Products/Subcategories
@@ -350,14 +350,14 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Category ID] --> B{Retrieve Category by ID};
-    B -- Category Not Found --> C[Category Deletion Failed: Not Found];
-    B -- Category Found --> D{Check for Associated Products?};
-    D -- Yes --> E[Deletion Failed: Conflict (Products Associated)];
-    D -- No --> F{Check for Associated Subcategories?};
-    F -- Yes --> G[Deletion Failed: Conflict (Subcategories Associated)];
-    F -- No --> H[Delete Category from Database];
-    H --> I[Return Success (No Content)];
+    A["User provides Category ID"] --> B{"Retrieve Category by ID"};
+    B -- "Category Not Found" --> C["Category Deletion Failed: Not Found"];
+    B -- "Category Found" --> D{"Check for Associated Products?"};
+    D -- "Yes" --> E["Deletion Failed: Conflict (Products Associated)"];
+    D -- "No" --> F{"Check for Associated Subcategories?"};
+    F -- "Yes" --> G["Deletion Failed: Conflict (Subcategories Associated)"];
+    F -- "No" --> H["Delete Category from Database"];
+    H --> I["Return Success (No Content)"];
 ```
 
 ---
@@ -378,10 +378,10 @@ This feature set handles the creation, viewing, updating, and deletion of produc
 
 ```mermaid
 graph TD
-    A[User provides Supplier Details] --> B{Validate Input & Check Uniqueness (Name)};
-    B -- Invalid/Duplicate --> C[Supplier Creation Failed: Bad Request/Conflict];
-    B -- Valid & Unique --> D[Create Supplier in Database];
-    D --> E[Return New Supplier];
+    A["User provides Supplier Details"] --> B{"Validate Input & Check Uniqueness (Name)"};
+    B -- "Invalid/Duplicate" --> C["Supplier Creation Failed: Bad Request/Conflict"];
+    B -- "Valid & Unique" --> D["Create Supplier in Database"];
+    D --> E["Return New Supplier"];
 ```
 
 ### Scenario: Deleting a Supplier with Associated Products
@@ -398,12 +398,12 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Supplier ID] --> B{Retrieve Supplier by ID};
-    B -- Supplier Not Found --> C[Supplier Deletion Failed: Not Found];
-    B -- Supplier Found --> D{Check for Associated Products?};
-    D -- Yes --> E[Deletion Failed: Conflict (Products Associated)];
-    D -- No --> F[Delete Supplier from Database];
-    F --> G[Return Success (No Content)];
+    A["User provides Supplier ID"] --> B{"Retrieve Supplier by ID"};
+    B -- "Supplier Not Found" --> C["Supplier Deletion Failed: Not Found"];
+    B -- "Supplier Found" --> D{"Check for Associated Products?"};
+    D -- "Yes" --> E["Deletion Failed: Conflict (Products Associated)"];
+    D -- "No" --> F["Delete Supplier from Database"];
+    F --> G["Return Success (No Content)"];
 ```
 
 ---
@@ -424,10 +424,10 @@ This feature set manages physical inventory locations like warehouses or stores.
 
 ```mermaid
 graph TD
-    A[User provides Location Details] --> B{Validate Input & Check Uniqueness (Name)};
-    B -- Invalid/Duplicate --> C[Location Creation Failed: Bad Request/Conflict];
-    B -- Valid & Unique --> D[Create Location in Database];
-    D --> E[Return New Location];
+    A["User provides Location Details"] --> B{"Validate Input & Check Uniqueness (Name)"};
+    B -- "Invalid/Duplicate" --> C["Location Creation Failed: Bad Request/Conflict"];
+    B -- "Valid & Unique" --> D["Create Location in Database"];
+    D --> E["Return New Location"];
 ```
 
 ### Scenario: Deleting a Location with Associated Data
@@ -445,16 +445,16 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Location ID] --> B{Retrieve Location by ID};
-    B -- Location Not Found --> C[Location Deletion Failed: Not Found];
-    B -- Location Found --> D{Check for Associated Products?};
-    D -- Yes --> E[Deletion Failed: Conflict (Products Associated)];
-    D -- No --> F{Check for Associated Batches?};
-    F -- Yes --> G[Deletion Failed: Conflict (Batches Associated)];
-    F -- No --> H{Check for Associated Stock Adjustments?};
-    H -- Yes --> I[Deletion Failed: Conflict (Adjustments Associated)];
-    H -- No --> J[Delete Location from Database];
-    J --> K[Return Success (No Content)];
+    A["User provides Location ID"] --> B{"Retrieve Location by ID"};
+    B -- "Location Not Found" --> C["Location Deletion Failed: Not Found"];
+    B -- "Location Found" --> D{"Check for Associated Products?"};
+    D -- "Yes" --> E["Deletion Failed: Conflict (Products Associated)"];
+    D -- "No" --> F{"Check for Associated Batches?"};
+    F -- "Yes" --> G["Deletion Failed: Conflict (Batches Associated)"];
+    F -- "No" --> H{"Check for Associated Stock Adjustments?"};
+    H -- "Yes" --> I["Deletion Failed: Conflict (Adjustments Associated)"];
+    H -- "No" --> J["Delete Location from Database"];
+    J --> K["Return Success (No Content)"];
 ```
 
 ---
@@ -474,10 +474,10 @@ This feature set covers managing product stock levels, including adding new batc
 
 ```mermaid
 graph TD
-    A[User provides Product ID, Quantity, Batch Number, Expiry Date] --> B{Validate Input & Retrieve Product};
-    B -- Invalid/Product Not Found --> C[Batch Creation Failed: Bad Request/Not Found];
-    B -- Valid & Product Found --> D[Create New Batch Record in Database];
-    D --> E[Return New Batch];
+    A["User provides Product ID, Quantity, Batch Number, Expiry Date"] --> B{"Validate Input & Retrieve Product"};
+    B -- "Invalid/Product Not Found" --> C["Batch Creation Failed: Bad Request/Not Found"];
+    B -- "Valid & Product Found" --> D["Create New Batch Record in Database"];
+    D --> E["Return New Batch"];
 ```
 
 ### Scenario: Performing a Manual Stock Adjustment (Stock-In)
@@ -496,15 +496,15 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID, Quantity, Reason, Notes (STOCK_IN)] --> B{Validate Input & Retrieve Product};
-    B -- Invalid/Product Not Found --> C[Adjustment Failed: Bad Request/Not Found];
-    B -- Valid & Product Found --> D[Start DB Transaction];
-    D --> E[Record Current Stock Quantity];
-    E --> F[Create New Batch for Stock-In];
-    F --> G[Create StockAdjustment Record (STOCK_IN)];
-    G --> H[Commit DB Transaction];
-    H --> I[Publish 'stock.adjusted' Event];
-    I --> J[Return Success];
+    A["User provides Product ID, Quantity, Reason, Notes (STOCK_IN)"] --> B{"Validate Input & Retrieve Product"};
+    B -- "Invalid/Product Not Found" --> C["Adjustment Failed: Bad Request/Not Found"];
+    B -- "Valid & Product Found" --> D["Start DB Transaction"];
+    D --> E["Record Current Stock Quantity"];
+    E --> F["Create New Batch for Stock-In"];
+    F --> G["Create StockAdjustment Record (STOCK_IN)"];
+    G --> H["Commit DB Transaction"];
+    H --> I["Publish 'stock.adjusted' Event"];
+    I --> J["Return Success"];
 ```
 
 ### Scenario: Performing a Manual Stock Adjustment (Stock-Out)
@@ -524,17 +524,17 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID, Quantity, Reason, Notes (STOCK_OUT)] --> B{Validate Input & Retrieve Product};
-    B -- Invalid/Product Not Found --> C[Adjustment Failed: Bad Request/Not Found];
-    B -- Valid & Product Found --> D[Start DB Transaction];
-    D --> E[Record Current Stock Quantity];
-    E --> F{Is Sufficient Stock Available?};
-    F -- No --> G[Adjustment Failed: Insufficient Stock (Rollback)];
-    F -- Yes --> H[Reduce Stock from Existing Batches];
-    H --> I[Create StockAdjustment Record (STOCK_OUT)];
-    I --> J[Commit DB Transaction];
-    J --> K[Publish 'stock.adjusted' Event];
-    K --> L[Return Success];
+    A["User provides Product ID, Quantity, Reason, Notes (STOCK_OUT)"] --> B{"Validate Input & Retrieve Product"};
+    B -- "Invalid/Product Not Found" --> C["Adjustment Failed: Bad Request/Not Found"];
+    B -- "Valid & Product Found" --> D["Start DB Transaction"];
+    D --> E["Record Current Stock Quantity"];
+    E --> F{"Is Sufficient Stock Available?"};
+    F -- "No" --> G["Adjustment Failed: Insufficient Stock (Rollback)"];
+    F -- "Yes" --> H["Reduce Stock from Existing Batches"];
+    H --> I["Create StockAdjustment Record (STOCK_OUT)"];
+    I --> J["Commit DB Transaction"];
+    J --> K["Publish 'stock.adjusted' Event"];
+    K --> L["Return Success"];
 ```
 
 ### Scenario: Creating a Stock Transfer
@@ -552,14 +552,14 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Product ID, Source Location, Dest Location, Quantity] --> B{Validate Input};
-    B -- Invalid --> C[Transfer Failed: Bad Request];
-    B -- Valid --> D[Start DB Transaction];
-    D --> E[Create StockTransfer Record];
-    E --> F[Create STOCK_OUT Adjustment for Source Location];
-    F --> G[Create STOCK_IN Adjustment for Destination Location];
-    G --> H[Commit DB Transaction];
-    H --> I[Return New Stock Transfer];
+    A["User provides Product ID, Source Location, Dest Location, Quantity"] --> B{"Validate Input"};
+    B -- "Invalid" --> C["Transfer Failed: Bad Request"];
+    B -- "Valid" --> D["Start DB Transaction"];
+    D --> E["Create StockTransfer Record"];
+    E --> F["Create STOCK_OUT Adjustment for Source Location"];
+    F --> G["Create STOCK_IN Adjustment for Destination Location"];
+    G --> H["Commit DB Transaction"];
+    H --> I["Return New Stock Transfer"];
 ```
 
 ---
@@ -579,10 +579,10 @@ This feature set allows users to configure alerts for stock levels and receive n
 
 ```mermaid
 graph TD
-    A[User provides Product ID & Alert Thresholds] --> B{Validate Input & Retrieve Product};
-    B -- Invalid/Product Not Found --> C[Configuration Failed: Bad Request/Not Found];
-    B -- Valid & Product Found --> D[Upsert ProductAlertSettings in Database];
-    D --> E[Return Updated Settings];
+    A["User provides Product ID & Alert Thresholds"] --> B{"Validate Input & Retrieve Product"};
+    B -- "Invalid/Product Not Found" --> C["Configuration Failed: Bad Request/Not Found"];
+    B -- "Valid & Product Found" --> D["Upsert ProductAlertSettings in Database"];
+    D --> E["Return Updated Settings"];
 ```
 
 ### Scenario: Automatic Low Stock Alert Triggering
@@ -599,17 +599,17 @@ graph TD
 
 ```mermaid
 graph TD
-    A[Background Process: CheckAndTriggerAlerts] --> B{Fetch All ProductAlertSettings};
-    B --> C{For Each Setting:};
-    C --> D[Get Current Product Quantity];
-    D --> E{Is Current Quantity <= LowStockLevel?};
-    E -- Yes --> F{Is Active LOW_STOCK Alert for Product?};
-    F -- No --> G[Create New LOW_STOCK Alert Record];
-    G --> H[Publish 'alert.triggered' Event];
-    H --> I[Continue to next product/alert type];
-    F -- Yes --> I;
-    E -- No --> I;
-    C --> J[End Process];
+    A["Background Process: CheckAndTriggerAlerts"] --> B{"Fetch All ProductAlertSettings"};
+    B --> C{"For Each Setting:"};
+    C --> D["Get Current Product Quantity"];
+    D --> E{"Is Current Quantity <= LowStockLevel?"};
+    E -- "Yes" --> F{"Is Active LOW_STOCK Alert for Product?"};
+    F -- "No" --> G["Create New LOW_STOCK Alert Record"];
+    G --> H["Publish 'alert.triggered' Event"];
+    H --> I["Continue to next product/alert type"];
+    F -- "Yes" --> I;
+    E -- "No" --> I;
+    C --> J["End Process"];
 ```
 
 ### Scenario: Resolving an Alert
@@ -625,12 +625,12 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Alert ID] --> B{Retrieve Alert by ID};
-    B -- Alert Not Found --> C[Resolution Failed: Not Found];
-    B -- Alert Found --> D{Is Alert Already RESOLVED?};
-    D -- Yes --> E[Return Alert (Already Resolved)];
-    D -- No --> F[Update Alert Status to 'RESOLVED'];
-    F --> G[Return Resolved Alert];
+    A["User provides Alert ID"] --> B{"Retrieve Alert by ID"};
+    B -- "Alert Not Found" --> C["Resolution Failed: Not Found"];
+    B -- "Alert Found" --> D{"Is Alert Already RESOLVED?"};
+    D -- "Yes" --> E["Return Alert (Already Resolved)"];
+    D -- "No" --> F["Update Alert Status to 'RESOLVED'"];
+    F --> G["Return Resolved Alert"];
 ```
 
 ### Scenario: Configuring User Notification Preferences
@@ -644,10 +644,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides User ID & Notification Preferences] --> B{Validate Input & Ensure User Exists};
-    B -- Invalid/User Not Found --> C[Configuration Failed: Bad Request/Not Found];
-    B -- Valid & User Found --> D[Upsert UserNotificationSettings in Database];
-    D --> E[Return Updated Settings];
+    A["User provides User ID & Notification Preferences"] --> B{"Validate Input & Ensure User Exists"};
+    B -- "Invalid/User Not Found" --> C["Configuration Failed: Bad Request/Not Found"];
+    B -- "Valid & User Found" --> D["Upsert UserNotificationSettings in Database"];
+    D --> E["Return Updated Settings"];
 ```
 
 ---
@@ -670,13 +670,13 @@ This feature set provides functionality for generating and using barcodes for pr
 
 ```mermaid
 graph TD
-    A[User provides Product SKU or Product ID] --> B{Retrieve Product by SKU/ID};
-    B -- Product Not Found --> C[Barcode Generation Failed: Not Found];
-    B -- Product Found --> D[Determine Barcode Content (BarcodeUPC or SKU)];
-    D --> E[Generate Code128 Barcode];
-    E --> F[Scale Barcode];
-    F --> G[Encode Barcode to PNG];
-    G --> H[Return Barcode Image (PNG)];
+    A["User provides Product SKU or Product ID"] --> B{"Retrieve Product by SKU/ID"};
+    B -- "Product Not Found" --> C["Barcode Generation Failed: Not Found"];
+    B -- "Product Found" --> D["Determine Barcode Content (BarcodeUPC or SKU)"];
+    D --> E["Generate Code128 Barcode"];
+    E --> F["Scale Barcode"];
+    F --> G["Encode Barcode to PNG"];
+    G --> H["Return Barcode Image (PNG)"];
 ```
 
 ### Scenario: Looking Up a Product by Barcode
@@ -692,11 +692,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Barcode Value] --> B{Validate Barcode Value};
-    B -- Invalid --> C[Product Lookup Failed: Bad Request];
-    B -- Valid --> D{Search Product by BarcodeValue (SKU or BarcodeUPC)};
-    D -- Product Not Found --> E[Product Lookup Failed: Not Found];
-    D -- Product Found --> F[Return Product Details];
+    A["User provides Barcode Value"] --> B{"Validate Barcode Value"};
+    B -- "Invalid" --> C["Product Lookup Failed: Bad Request"];
+    B -- "Valid" --> D{"Search Product by BarcodeValue (SKU or BarcodeUPC)"};
+    D -- "Product Not Found" --> E["Product Lookup Failed: Not Found"];
+    D -- "Product Found" --> F["Return Product Details"];
 ```
 
 ---
@@ -719,11 +719,11 @@ This feature set enables bulk import and export of product data.
 
 ```mermaid
 graph TD
-    A[User uploads CSV/Excel File] --> B[Save File Temporarily];
-    B --> C[Generate Job ID];
-    C --> D[Retrieve User ID from Context];
-    D --> E[Publish 'bulk.import' Event to Message Broker];
-    E --> F[Return Job Status (QUEUED)];
+    A["User uploads CSV/Excel File"] --> B["Save File Temporarily"];
+    B --> C["Generate Job ID"];
+    C --> D["Retrieve User ID from Context"];
+    D --> E["Publish 'bulk.import' Event to Message Broker"];
+    E --> F["Return Job Status (QUEUED)"];
 ```
 
 ### Scenario: Confirming a Bulk Product Import
@@ -740,12 +740,12 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Job ID for Confirmation] --> B{Retrieve Job Status};
-    B -- Job Not Found/Not PENDING_CONFIRMATION --> C[Confirmation Failed: Bad Request/Not Found];
-    B -- Job Found & PENDING_CONFIRMATION --> D[Retrieve User ID from Context];
-    D --> E[Publish 'bulk.import' Event (Confirmation)];
-    E --> F[Update Job Status to 'PROCESSING'];
-    F --> G[Return Confirmation Status];
+    A["User provides Job ID for Confirmation"] --> B{"Retrieve Job Status"};
+    B -- "Job Not Found/Not PENDING_CONFIRMATION" --> C["Confirmation Failed: Bad Request/Not Found"];
+    B -- "Job Found & PENDING_CONFIRMATION" --> D["Retrieve User ID from Context"];
+    D --> E["Publish 'bulk.import' Event (Confirmation)"];
+    E --> F["Update Job Status to 'PROCESSING'"];
+    F --> G["Return Confirmation Status"];
 ```
 
 ### Scenario: Exporting Product Data
@@ -761,10 +761,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User specifies Export Format & Filters] --> B[Retrieve User ID from Context];
-    B --> C[Generate Job ID];
-    C --> D[Publish 'bulk.export' Event to Message Broker];
-    D --> E[Return Job Status (QUEUED)];
+    A["User specifies Export Format & Filters"] --> B["Retrieve User ID from Context"];
+    B --> C["Generate Job ID"];
+    C --> D["Publish 'bulk.export' Event to Message Broker"];
+    D --> E["Return Job Status (QUEUED)"];
 ```
 
 ---
@@ -785,11 +785,11 @@ This feature set manages demand forecasting, reorder suggestions, and the lifecy
 
 ```mermaid
 graph TD
-    A[User provides Period & Optional Product ID] --> B{Retrieve Sales Data for Product(s)};
-    B -- Failed to get Sales Data --> C[Forecast Generation Failed: Internal Error];
-    B -- Sales Data Retrieved --> D{Calculate Predicted Demand (Weighted Average)};
-    D --> E[Create DemandForecast Record in Database];
-    E --> F[Return Forecast Generation Status];
+    A["User provides Period & Optional Product ID"] --> B{"Retrieve Sales Data for Product(s)"};
+    B -- "Failed to get Sales Data" --> C["Forecast Generation Failed: Internal Error"];
+    B -- "Sales Data Retrieved" --> D{"Calculate Predicted Demand (Weighted Average)"};
+    D --> E["Create DemandForecast Record in Database"];
+    E --> F["Return Forecast Generation Status"];
 ```
 
 ### Scenario: Creating a Purchase Order from a Reorder Suggestion
@@ -806,12 +806,12 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Suggestion ID] --> B{Retrieve ReorderSuggestion by ID};
-    B -- Suggestion Not Found/Not PENDING --> C[PO Creation Failed: Not Found/Bad Request];
-    B -- Suggestion Found & PENDING --> D[Create New PurchaseOrder (DRAFT)];
-    D --> E[Add PurchaseOrderItem from Suggestion];
-    E --> F[Update ReorderSuggestion Status to 'PO_CREATED'];
-    F --> G[Return New Purchase Order];
+    A["User provides Suggestion ID"] --> B{"Retrieve ReorderSuggestion by ID"};
+    B -- "Suggestion Not Found/Not PENDING" --> C["PO Creation Failed: Not Found/Bad Request"];
+    B -- "Suggestion Found & PENDING" --> D["Create New PurchaseOrder (DRAFT)"];
+    D --> E["Add PurchaseOrderItem from Suggestion"];
+    E --> F["Update ReorderSuggestion Status to 'PO_CREATED'"];
+    F --> G["Return New Purchase Order"];
 ```
 
 ### Scenario: Approving a Purchase Order
@@ -826,11 +826,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides PO ID] --> B{Retrieve PurchaseOrder by ID};
-    B -- PO Not Found/Not DRAFT --> C[PO Approval Failed: Not Found/Bad Request];
-    B -- PO Found & DRAFT --> D[Update PO Status to 'APPROVED'];
-    D --> E[Set ApprovedBy & ApprovedAt];
-    E --> F[Return Approved Purchase Order];
+    A["User provides PO ID"] --> B{"Retrieve PurchaseOrder by ID"};
+    B -- "PO Not Found/Not DRAFT" --> C["PO Approval Failed: Not Found/Bad Request"];
+    B -- "PO Found & DRAFT" --> D["Update PO Status to 'APPROVED'"];
+    D --> E["Set ApprovedBy & ApprovedAt"];
+    E --> F["Return Approved Purchase Order"];
 ```
 
 ### Scenario: Sending a Purchase Order
@@ -845,10 +845,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides PO ID] --> B{Retrieve PurchaseOrder by ID};
-    B -- PO Not Found/Not APPROVED --> C[PO Send Failed: Not Found/Bad Request];
-    B -- PO Found & APPROVED --> D[Update PO Status to 'SENT'];
-    D --> E[Return Sent Purchase Order];
+    A["User provides PO ID"] --> B{"Retrieve PurchaseOrder by ID"};
+    B -- "PO Not Found/Not APPROVED" --> C["PO Send Failed: Not Found/Bad Request"];
+    B -- "PO Found & APPROVED" --> D["Update PO Status to 'SENT'"];
+    D --> E["Return Sent Purchase Order"];
 ```
 
 ### Scenario: Receiving Goods for a Purchase Order
@@ -868,19 +868,19 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides PO ID & Received Items Details] --> B{Validate Input & Retrieve PO/Items};
-    B -- Invalid/PO Not Found/Not APPROVED/SENT --> C[Receiving Failed: Bad Request/Not Found/Conflict];
-    B -- Valid & PO Ready --> D[Start DB Transaction];
-    D --> E{For Each Received Item:};
-    E --> F[Update PurchaseOrderItem.ReceivedQuantity];
-    F --> G[Create New Batch Record];
-    E --> H[Next Item];
-    H --> I{Are All Items Fully Received?};
-    I -- Yes --> J[Update PO Status to 'RECEIVED'];
-    I -- No --> K[Update PO Status to 'PARTIALLY_RECEIVED'];
-    J --> L[Commit DB Transaction];
+    A["User provides PO ID & Received Items Details"] --> B{"Validate Input & Retrieve PO/Items"};
+    B -- "Invalid/PO Not Found/Not APPROVED/SENT" --> C["Receiving Failed: Bad Request/Not Found/Conflict"];
+    B -- "Valid & PO Ready" --> D["Start DB Transaction"];
+    D --> E{"For Each Received Item:"};
+    E --> F["Update PurchaseOrderItem.ReceivedQuantity"];
+    F --> G["Create New Batch Record"];
+    E --> H["Next Item"];
+    H --> I{"Are All Items Fully Received?"};
+    I -- "Yes" --> J["Update PO Status to 'RECEIVED'"];
+    I -- "No" --> K["Update PO Status to 'PARTIALLY_RECEIVED'"];
+    J --> L["Commit DB Transaction"];
     K --> L;
-    L --> M[Return Updated Purchase Order];
+    L --> M["Return Updated Purchase Order"];
 ```
 
 ### Scenario: Cancelling a Purchase Order
@@ -895,10 +895,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides PO ID] --> B{Retrieve PurchaseOrder by ID};
-    B -- PO Not Found/Not DRAFT/APPROVED --> C[PO Cancellation Failed: Not Found/Bad Request];
-    B -- PO Found & DRAFT/APPROVED --> D[Update PO Status to 'CANCELLED'];
-    D --> E[Return Cancelled Purchase Order];
+    A["User provides PO ID"] --> B{"Retrieve PurchaseOrder by ID"};
+    B -- "PO Not Found/Not DRAFT/APPROVED" --> C["PO Cancellation Failed: Not Found/Bad Request"];
+    B -- "PO Found & DRAFT/APPROVED" --> D["Update PO Status to 'CANCELLED'"];
+    D --> E["Return Cancelled Purchase Order"];
 ```
 
 ---
@@ -920,11 +920,11 @@ This feature set provides various reports for analyzing inventory and sales data
 
 ```mermaid
 graph TD
-    A[User provides Date Range & Filters] --> B{Query Sales Data (STOCK_OUT, SALE)};
-    B --> C[Calculate Daily Total Sales];
-    C --> D[Identify Top-Selling Products];
-    D --> E[Calculate Total Sales & Average Daily Sales for Period];
-    E --> F[Return Sales Trends Report Data];
+    A["User provides Date Range & Filters"] --> B{"Query Sales Data (STOCK_OUT, SALE)"};
+    B --> C["Calculate Daily Total Sales"];
+    C --> D["Identify Top-Selling Products"];
+    D --> E["Calculate Total Sales & Average Daily Sales for Period"];
+    E --> F["Return Sales Trends Report Data"];
 ```
 
 ### Scenario: Generating Inventory Turnover Report
@@ -940,10 +940,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Date Range & Filters] --> B{Calculate Cost of Goods Sold (COGS)};
-    B --> C{Estimate Average Inventory Value};
-    C --> D[Calculate Inventory Turnover Rate (COGS / Avg Inventory Value)];
-    D --> E[Return Inventory Turnover Report Data];
+    A["User provides Date Range & Filters"] --> B{"Calculate Cost of Goods Sold (COGS)"};
+    B --> C{"Estimate Average Inventory Value"};
+    C --> D["Calculate Inventory Turnover Rate (COGS / Avg Inventory Value)"];
+    D --> E["Return Inventory Turnover Report Data"];
 ```
 
 ### Scenario: Generating Profit Margin Report
@@ -960,11 +960,11 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Date Range & Filters] --> B{Calculate Total Revenue};
-    B --> C{Calculate Total Cost (COGS)};
-    C --> D[Calculate Gross Profit (Revenue - Cost)];
-    D --> E[Calculate Gross Profit Margin (Gross Profit / Revenue)];
-    E --> F[Return Profit Margin Report Data];
+    A["User provides Date Range & Filters"] --> B{"Calculate Total Revenue"};
+    B --> C{"Calculate Total Cost (COGS)"};
+    C --> D["Calculate Gross Profit (Revenue - Cost)"];
+    D --> E["Calculate Gross Profit Margin (Gross Profit / Revenue)"];
+    E --> F["Return Profit Margin Report Data"];
 ```
 
 ### Scenario: Generating Supplier Performance Report
@@ -981,10 +981,10 @@ graph TD
 
 ```mermaid
 graph TD
-    A[User provides Supplier ID] --> B{Retrieve RECEIVED Purchase Orders for Supplier};
-    B -- No POs Found --> C[Report Failed: No Data];
-    B -- POs Found --> D{For Each PO: Calculate Lead Time & Check On-Time Delivery};
-    D --> E[Calculate Average Lead Time];
-    E --> F[Calculate On-Time Delivery Rate];
-    F --> G[Return Supplier Performance Report Data];
+    A["User provides Supplier ID"] --> B{"Retrieve RECEIVED Purchase Orders for Supplier"};
+    B -- "No POs Found" --> C["Report Failed: No Data"];
+    B -- "POs Found" --> D{"For Each PO: Calculate Lead Time & Check On-Time Delivery"};
+    D --> E["Calculate Average Lead Time"];
+    E --> F["Calculate On-Time Delivery Rate"];
+    F --> G["Return Supplier Performance Report Data"];
 ```
