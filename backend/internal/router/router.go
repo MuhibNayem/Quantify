@@ -36,11 +36,7 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	// Routes requiring tenant middleware
-	tenantRoutes := r.Group("/")
-	tenantRoutes.Use(middleware.TenantMiddleware())
-
-	api := tenantRoutes.Group("/api/v1")
+	api := r.Group("/api/v1")
 	{
 		// Auth middleware will be applied to all routes in this group
 		api.Use(middleware.AuthMiddleware())
@@ -157,8 +153,9 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 			users.POST("/refresh-token", handlers.RefreshToken)
 			users.POST("/logout", handlers.LogoutUser)
 			users.GET("/:id", handlers.GetUser)
-			users.PUT("/:id", handlers.UpdateUser)
-			users.DELETE("/:id", handlers.DeleteUser)
+			users.PUT("/:id", middleware.AdminOnly(), handlers.UpdateUser)
+			users.DELETE("/:id", middleware.AdminOnly(), handlers.DeleteUser)
+			users.PUT("/:id/approve", middleware.AdminOnly(), handlers.ApproveUser)
 		}
 	}
 

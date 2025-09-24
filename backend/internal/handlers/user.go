@@ -35,24 +35,40 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
+	// Check if any user already exists
+	var userCount int64
+	if err := repository.DB.Model(&domain.User{}).Count(&userCount).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to check for existing users", http.StatusInternalServerError, err))
+		return
+	}
+
+	var user domain.User
+	if userCount == 0 {
+		// This is the first user, they must be an Admin and will be active
+		if req.Role != "Admin" {
+			c.Error(appErrors.NewAppError("The first user must be an Admin", http.StatusBadRequest, nil))
+			return
+		}
+		user = domain.User{
+			Username: req.Username,
+			Role:     req.Role,
+			IsActive: true, // First user is active by default
+		}
+	} else {
+		// Subsequent users are not active by default
+		user = domain.User{
+			Username: req.Username,
+			Role:     req.Role,
+			IsActive: false, // Subsequent users are inactive by default
+		}
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to hash password", http.StatusInternalServerError, err))
 		return
 	}
-
-	tenantID, err := middleware.GetTenantIDFromContext(c)
-	if err != nil {
-		c.Error(err.(*appErrors.AppError))
-		return
-	}
-
-	user := domain.User{
-		TenantID: tenantID,
-		Username: req.Username,
-		Password: string(hashedPassword),
-		Role:     req.Role,
-	}
+	user.Password = string(hashedPassword)
 
 	if err := repository.DB.Create(&user).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to create user", http.StatusInternalServerError, err))
@@ -82,14 +98,8 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	tenantID, err := middleware.GetTenantIDFromContext(c)
-	if err != nil {
-		c.Error(err.(*appErrors.AppError))
-		return
-	}
-
 	var user domain.User
-	if err := repository.DB.Where("tenant_id = ? AND username = ?", tenantID, req.Username).First(&user).Error; err != nil {
+	if err := repository.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 			return
@@ -98,11 +108,16 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
+	// Check if user is active
+	if !user.IsActive {
+		c.Error(appErrors.NewAppError("Account not active. Please contact an administrator.", http.StatusUnauthorized, nil))
+		return
+	}
+
 	// Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	}
+		return	}
 
 	// Generate tokens
 	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
@@ -248,13 +263,8 @@ func LogoutUser(c *gin.Context) {
 func GetUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
-	tenantID, err := middleware.GetTenantIDFromContext(c)
-	if err != nil {
-		c.Error(err.(*appErrors.AppError))
-		return
-	}
 
-	if err := repository.DB.Where("tenant_id = ?", tenantID).First(&user, id).Error; err != nil {
+	if err := repository.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -291,18 +301,24 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	tenantID, err := middleware.GetTenantIDFromContext(c)
-	if err != nil {
-		c.Error(err.(*appErrors.AppError))
-		return
-	}
-
-	if err := repository.DB.Where("tenant_id = ?", tenantID).First(&user, id).Error; err != nil {
+	if err := repository.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
 		}
 		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+		return	}
+
+	// Get the role of the authenticated user from the context
+	authUserRole, exists := c.Get("role")
+	if !exists {
+		c.Error(appErrors.NewAppError("User role not found in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	// If the request includes a role change, ensure the authenticated user is an Admin
+	if req.Role != "" && authUserRole != "Admin" {
+		c.Error(appErrors.NewAppError("Only Admins can change user roles", http.StatusForbidden, nil))
 		return
 	}
 
@@ -346,13 +362,8 @@ func UpdateUser(c *gin.Context) {
 func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
-	tenantID, err := middleware.GetTenantIDFromContext(c)
-	if err != nil {
-		c.Error(err.(*appErrors.AppError))
-		return
-	}
 
-	if err := repository.DB.Where("tenant_id = ?", tenantID).First(&user, id).Error; err != nil {
+	if err := repository.DB.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -367,4 +378,40 @@ func DeleteUser(c *gin.Context) {
 	}
 
 	c.Status(http.StatusNoContent)
+}
+
+// ApproveUser godoc
+// @Summary Approve a user
+// @Description Activate a user's account by setting IsActive to true
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Security ApiKeyAuth
+// @Success 200 {object} domain.User
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 404 {object} map[string]interface{} "User not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /users/{id}/approve [put]
+func ApproveUser(c *gin.Context) {
+	id := c.Param("id")
+	var user domain.User
+
+	if err := repository.DB.First(&user, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
+			return
+		}
+		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+		return
+	}
+
+	user.IsActive = true
+	if err := repository.DB.Save(&user).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to approve user", http.StatusInternalServerError, err))
+		return
+	}
+
+	user.Password = ""
+	c.JSON(http.StatusOK, user)
 }

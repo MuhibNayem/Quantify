@@ -105,18 +105,12 @@ type Alert struct {
 // User represents a system user (for AdjustedBy in StockAdjustment, etc.)
 type User struct {
 	gorm.Model
-	TenantID uint
-	Tenant   Tenant
 	Username string `gorm:"uniqueIndex;not null"`
 	Password string `gorm:"not null"`
 	Role     string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff"
+	IsActive bool   `gorm:"default:false"`
 }
 
-// Tenant represents a multi-tenant entity.
-type Tenant struct {
-	gorm.Model
-	Name string `gorm:"uniqueIndex;not null"`
-}
 
 // ProductAlertSettings stores alert thresholds per product.
 type ProductAlertSettings struct {

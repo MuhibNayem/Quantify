@@ -81,3 +81,8 @@ func AuthorizeMiddleware(requiredRoles ...string) gin.HandlerFunc {
 		c.Abort()
 	}
 }
+
+// AdminOnly checks if the user has the "Admin" role.
+func AdminOnly() gin.HandlerFunc {
+	return AuthorizeMiddleware("Admin")
+}

@@ -47,7 +47,6 @@ func InitDB(cfg *config.Config) {
 		&domain.PurchaseOrder{},
 		&domain.PurchaseOrderItem{},
 		&domain.Location{},
-		&domain.Tenant{},
 	)
 	if err != nil {
 		logrus.Fatalf("Failed to auto-migrate database schema: %v", err)
