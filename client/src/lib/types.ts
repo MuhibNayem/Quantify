@@ -1,0 +1,133 @@
+export interface BaseEntity {
+	ID: number;
+	CreatedAt?: string;
+	UpdatedAt?: string;
+}
+
+export interface Category extends BaseEntity {
+	Name: string;
+	SubCategories?: SubCategory[];
+}
+
+export interface SubCategory extends BaseEntity {
+	Name: string;
+	CategoryID: number;
+	Category: Category;
+}
+
+export interface Supplier extends BaseEntity {
+	Name: string;
+	ContactPerson?: string;
+	Email?: string;
+	Phone?: string;
+	Address?: string;
+}
+
+export interface Location extends BaseEntity {
+	Name: string;
+	Address?: string;
+}
+
+export interface Product extends BaseEntity {
+	SKU: string;
+	Name: string;
+	Description?: string;
+	CategoryID?: number;
+	SubCategoryID?: number;
+	SupplierID?: number;
+	Brand?: string;
+	PurchasePrice?: number;
+	SellingPrice?: number;
+	BarcodeUPC?: string;
+	ImageURLs?: string;
+	Status?: string;
+	LocationID?: number;
+	Category?: Category;
+	SubCategory?: SubCategory;
+	Supplier?: Supplier;
+	Location?: Location;
+}
+
+export interface Batch extends BaseEntity {
+	ProductID: number;
+	BatchNumber: string;
+	Quantity: number;
+	ExpiryDate?: string | null;
+}
+
+export interface Alert extends BaseEntity {
+	ProductID: number;
+	Type: string;
+	Message: string;
+	TriggeredAt: string;
+	Status: string;
+	BatchID?: number;
+	Product?: Product;
+}
+
+export interface ReorderSuggestion extends BaseEntity {
+	ProductID: number;
+	SupplierID: number;
+	CurrentStock: number;
+	PredictedDemand: number;
+	SuggestedOrderQuantity: number;
+	LeadTimeDays: number;
+	Status: string;
+	SuggestedAt: string;
+	Product?: Product;
+	Supplier?: Supplier;
+}
+
+export interface PurchaseOrder extends BaseEntity {
+	SupplierID: number;
+	Status: string;
+	OrderDate: string;
+	ExpectedDeliveryDate?: string | null;
+	ActualDeliveryDate?: string | null;
+	CreatedBy?: number;
+	ApprovedBy?: number | null;
+	PurchaseOrderItems?: PurchaseOrderItem[];
+}
+
+export interface PurchaseOrderItem extends BaseEntity {
+	PurchaseOrderID: number;
+	ProductID: number;
+	OrderedQuantity: number;
+	ReceivedQuantity: number;
+	UnitPrice: number;
+	Product?: Product;
+}
+
+export interface StockTransfer extends BaseEntity {
+	ProductID: number;
+	SourceLocationID: number;
+	DestLocationID: number;
+	Quantity: number;
+	Status?: string;
+}
+
+export interface DemandForecast extends BaseEntity {
+	ProductID: number;
+	ForecastPeriod: string;
+	PredictedDemand: number;
+	GeneratedAt: string;
+	Product?: Product;
+}
+
+export interface BulkImportJob {
+	jobId: string;
+	status: string;
+	message?: string;
+	totalRecords?: number;
+	validRecords?: number;
+	invalidRecords?: number;
+	errors?: Array<Record<string, unknown>>;
+	preview?: Array<Record<string, unknown>>;
+	filePath?: string;
+}
+
+export interface UserSummary extends BaseEntity {
+	Username: string;
+	Role: string;
+	IsActive: boolean;
+}

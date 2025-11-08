@@ -152,6 +152,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - my_network
 
@@ -165,10 +168,8 @@ services:
         condition: service_healthy
       redis-init:
         condition: service_completed_successfully
-      rabbitmq:
-        condition: service_started
     env_file:
-      - ./.env
+      - ./backend/.env
     deploy:
       resources:
         limits:

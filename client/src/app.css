@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* white */
+    --foreground: 222.2 84% 4.9%; /* slate-950 */
+
+    --card: 0 0% 100%; /* white */
+    --card-foreground: 222.2 84% 4.9%; /* slate-950 */
+
+    --popover: 0 0% 100%; /* white */
+    --popover-foreground: 222.2 84% 4.9%; /* slate-950 */
+
+    --primary: 142.1 76.2% 36.3%; /* emerald-600 */
+    --primary-foreground: 210 40% 98%; /* slate-50 */
+
+    --secondary: 210 40% 96.1%; /* slate-100 */
+    --secondary-foreground: 222.2 47.4% 11.2%; /* slate-900 */
+
+    --destructive: 0 84.2% 60.2%; /* red-600 */
+    --destructive-foreground: 210 40% 98%; /* slate-50 */
+
+    --muted: 210 40% 96.1%; /* slate-100 */
+    --muted-foreground: 215.4 16.3% 46.9%; /* slate-400 */
+
+    --accent: 210 40% 96.1%; /* slate-100 */
+    --accent-foreground: 222.2 47.4% 11.2%; /* slate-900 */
+
+    --border: 214.3 31.8% 91.4%; /* slate-200 */
+    --input: 214.3 31.8% 91.4%; /* slate-200 */
+    --ring: 142.1 76.2% 36.3%; /* emerald-600 */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 47.4% 11.2%; /* slate-950 */
+    --foreground: 210 40% 98%; /* slate-50 */
+
+    --card: 222.2 47.4% 11.2%; /* slate-950 */
+    --card-foreground: 210 40% 98%; /* slate-50 */
+
+    --popover: 222.2 47.4% 11.2%; /* slate-950 */
+    --popover-foreground: 210 40% 98%; /* slate-50 */
+
+    --primary: 142.1 76.2% 36.3%; /* emerald-500 */
+    --primary-foreground: 222.2 47.4% 11.2%; /* slate-950 */
+
+    --secondary: 217.2 32.4% 17.5%; /* slate-800 */
+    --secondary-foreground: 210 40% 98%; /* slate-50 */
+
+    --muted: 217.2 32.4% 17.5%; /* slate-800 */
+    --muted-foreground: 215 20.2% 65.1%; /* slate-400 */
+
+    --accent: 217.2 32.4% 17.5%; /* slate-800 */
+    --accent-foreground: 210 40% 98%; /* slate-50 */
+
+    --destructive: 0 62.8% 30.6%; /* red-900 */
+    --destructive-foreground: 210 40% 98%; /* slate-50 */
+
+    --border: 217.2 32.4% 17.5%; /* slate-800 */
+    --input: 217.2 32.4% 17.5%; /* slate-800 */
+    --ring: 142.1 76.2% 36.3%; /* emerald-500 */
+  }
+}
