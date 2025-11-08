@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+
+	ws "inventory/backend/internal/websocket"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	ws "inventory/backend/internal/websocket"
 )
 
 var upgrader = websocket.Upgrader{
@@ -20,6 +22,8 @@ var upgrader = websocket.Upgrader{
 func ServeWs(hub *ws.Hub, c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		// Log the error if the WebSocket upgrade fails
+		fmt.Printf("Failed to upgrade to websocket: %v\n", err)
 		return
 	}
 	client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan []byte, 256)}

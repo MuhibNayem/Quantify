@@ -96,28 +96,61 @@ func main() {
 				return
 			}
 
+			// Store valid products in Redis with a TTL of 1 hour
+			validProductsJSON, err := json.Marshal(result.ValidProducts)
+			if err != nil {
+				job["status"] = "FAILED"
+				job["message"] = "Failed to serialize valid products"
+				handlers.SetBulkImportJob(payload.JobID, job)
+				logrus.Errorf("Failed to serialize valid products: %v", err)
+				return
+			}
+			err = repository.SetCache("bulk_import:"+payload.JobID, string(validProductsJSON), 3600)
+			if err != nil {
+				job["status"] = "FAILED"
+				job["message"] = "Failed to store valid products in cache"
+				handlers.SetBulkImportJob(payload.JobID, job)
+				logrus.Errorf("Failed to store valid products in cache: %v", err)
+				return
+			}
+
 			job["status"] = "PENDING_CONFIRMATION"
 			job["totalRecords"] = result.TotalRecords
 			job["validRecords"] = result.ValidRecords
 			job["invalidRecords"] = result.InvalidRecords
 			job["errors"] = result.Errors
-			// In a real app, you might store the valid products in a temporary location (e.g., Redis) until confirmation.
-			// For simplicity, we'll re-process the file on confirmation.
 			handlers.SetBulkImportJob(payload.JobID, job)
 			logrus.Infof("BulkImportJob %s validation complete. Status: %s", payload.JobID, job["status"])
 		} else if job["status"] == "PROCESSING" {
 			logrus.Infof("Confirming BulkImportJob: %s for file %s by user %d", payload.JobID, payload.FilePath, payload.UserID)
 
-			result, err := services.ProcessBulkImport(payload.FilePath)
+			// Retrieve valid products from Redis
+			validProductsJSON, err := repository.GetCache("bulk_import:" + payload.JobID)
 			if err != nil {
 				job["status"] = "FAILED"
-				job["message"] = err.Error()
+				job["message"] = "Failed to retrieve valid products from cache"
 				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to process bulk import on confirmation: %v", err)
+				logrus.Errorf("Failed to retrieve valid products from cache: %v", err)
+				return
+			}
+			if validProductsJSON == "" {
+				job["status"] = "FAILED"
+				job["message"] = "No valid products found in cache"
+				handlers.SetBulkImportJob(payload.JobID, job)
+				logrus.Errorf("No valid products found in cache for job %s", payload.JobID)
 				return
 			}
 
-			if err := repository.DB.CreateInBatches(result.ValidProducts, 100).Error; err != nil {
+			var validProducts []domain.Product
+			if err := json.Unmarshal([]byte(validProductsJSON), &validProducts); err != nil {
+				job["status"] = "FAILED"
+				job["message"] = "Failed to deserialize valid products"
+				handlers.SetBulkImportJob(payload.JobID, job)
+				logrus.Errorf("Failed to deserialize valid products: %v", err)
+				return
+			}
+
+			if err := repository.DB.CreateInBatches(validProducts, 100).Error; err != nil {
 				job["status"] = "FAILED"
 				job["message"] = err.Error()
 				handlers.SetBulkImportJob(payload.JobID, job)
@@ -129,6 +162,12 @@ func main() {
 			job["message"] = "Bulk import completed successfully."
 			handlers.SetBulkImportJob(payload.JobID, job)
 			logrus.Infof("BulkImportJob %s completed.", payload.JobID)
+
+			// Delete the cached data
+			err = repository.DeleteCache("bulk_import:" + payload.JobID)
+			if err != nil {
+				logrus.Errorf("Failed to delete cached bulk import data for job %s: %v", payload.JobID, err)
+			}
 		}
 	})
 
@@ -178,19 +217,26 @@ func main() {
 		}
 		logrus.Infof("Processing AlertTriggeredEvent: %s for product %v. Message: %s", payload.Type, payload.ProductID, payload.Message)
 
-		// In a real scenario, you would have a way to determine which users to notify.
-		// For now, we'll assume we notify user with ID 1.
-		var userNotificationSettings domain.UserNotificationSettings
-		if err := repository.DB.Where("user_id = ?", 1).First(&userNotificationSettings).Error; err != nil {
-			logrus.Errorf("Failed to fetch notification settings for user 1: %v", err)
+		// Notify all admin users
+		var adminUsers []domain.User
+		if err := repository.DB.Where("role = ?", "Admin").Find(&adminUsers).Error; err != nil {
+			logrus.Errorf("Failed to fetch admin users: %v", err)
 			return
 		}
 
-		if userNotificationSettings.EmailNotificationsEnabled {
-			subject := fmt.Sprintf("Inventory Alert: %s", payload.Type)
-			body := fmt.Sprintf("An alert has been triggered for product ID %d: %s", payload.ProductID, payload.Message)
-			if err := notifications.SendEmail(cfg, userNotificationSettings.EmailAddress, subject, body); err != nil {
-				logrus.Errorf("Failed to send email notification: %v", err)
+		for _, user := range adminUsers {
+			var userNotificationSettings domain.UserNotificationSettings
+			if err := repository.DB.Where("user_id = ?", user.ID).First(&userNotificationSettings).Error; err != nil {
+				logrus.Errorf("Failed to fetch notification settings for user %d: %v", user.ID, err)
+				continue
+			}
+
+			if userNotificationSettings.EmailNotificationsEnabled {
+				subject := fmt.Sprintf("Inventory Alert: %s", payload.Type)
+				body := fmt.Sprintf("An alert has been triggered for product ID %d: %s", payload.ProductID, payload.Message)
+				if err := notifications.SendEmail(cfg, userNotificationSettings.EmailAddress, subject, body); err != nil {
+					logrus.Errorf("Failed to send email notification to user %d: %v", user.ID, err)
+				}
 			}
 		}
 	})

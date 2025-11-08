@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -12,10 +13,49 @@ import (
 	"inventory/backend/internal/auth"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
-	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 )
+
+// ListUsers godoc
+// @Summary List users with optional status and search filters
+// @Description Retrieves all users, optionally filtered by status (approved/pending) and search query (username or ID)
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param status query string false "Filter by user status (approved, pending)"
+// @Param q query string false "Search by username or ID"
+// @Security ApiKeyAuth
+// @Success 200 {array} domain.User
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /users [get]
+func ListUsers(c *gin.Context) {
+	var users []domain.User
+	db := repository.DB
+
+	switch strings.ToLower(c.Query("status")) {
+	case "approved":
+		db = db.Where("is_active = ?", true)
+	case "pending":
+		db = db.Where("is_active = ?", false)
+	}
+
+	if q := c.Query("q"); q != "" {
+		pattern := fmt.Sprintf("%%%s%%", q)
+		db = db.Where("username ILIKE ? OR CAST(id AS TEXT) ILIKE ?", pattern, pattern)
+	}
+
+	if err := db.Order("id ASC").Find(&users).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to list users", http.StatusInternalServerError, err))
+		return
+	}
+
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	c.JSON(http.StatusOK, users)
+}
 
 // RegisterUser godoc
 // @Summary Register a new user
@@ -117,7 +157,8 @@ func LoginUser(c *gin.Context) {
 	// Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return	}
+		return
+	}
 
 	// Generate tokens
 	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
@@ -139,9 +180,11 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
+	user.Password = "" // Clear password before sending
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
+		"user":         user, // Include user object
 	})
 }
 
@@ -307,7 +350,8 @@ func UpdateUser(c *gin.Context) {
 			return
 		}
 		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
-		return	}
+		return
+	}
 
 	// Get the role of the authenticated user from the context
 	authUserRole, exists := c.Get("role")

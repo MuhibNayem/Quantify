@@ -7,7 +7,7 @@ import (
 	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/websocket"
 
-	"github.com/gin-contrib/pprof"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
@@ -19,8 +19,15 @@ import (
 func SetupRouter(hub *websocket.Hub) *gin.Engine {
 	r := gin.Default()
 
-	// pprof
-	pprof.Register(r)
+	// CORS Middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-Requested-With", "Access-Control-Allow-Origin"},
+		ExposeHeaders:    []string{"Content-Length", "Access-Control-Allow-Origin"},
+		MaxAge:           12 * 3600,
+		AllowCredentials: true,
+	}))
 
 	r.Use(middleware.ErrorHandler())
 
@@ -36,6 +43,16 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
+	// Public API routes (no auth middleware)
+	publicAPI := r.Group("/api/v1")
+	{
+		userRoutes := publicAPI.Group("/users")
+		{
+			userRoutes.POST("/register", handlers.RegisterUser)
+			userRoutes.POST("/login", handlers.LoginUser)
+		}
+	}
+
 	api := r.Group("/api/v1")
 	{
 		// Auth middleware will be applied to all routes in this group
@@ -44,30 +61,41 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Products
 		products := api.Group("/products")
 		{
-			products.POST("/", handlers.CreateProduct)
-			products.GET("/", handlers.ListProducts)
+			products.POST("", handlers.CreateProduct)
+			products.GET("", handlers.ListProducts)
 			products.GET("/:id", handlers.GetProduct)
 			products.PUT("/:id", handlers.UpdateProduct)
 			products.DELETE("/:id", handlers.DeleteProduct)
 			products.GET("/:id/stock", handlers.GetProductStock)
+			products.POST("/:productId/stock/batches", handlers.CreateBatch)
+			products.POST("/:productId/stock/adjustments", handlers.CreateStockAdjustment)
 			products.GET("/:id/history", handlers.ListStockHistory)
 		}
 
 		// Categories
 		categories := api.Group("/categories")
 		{
-			categories.POST("/", handlers.CreateCategory)
-			categories.GET("/", handlers.ListCategories)
+			categories.POST("", handlers.CreateCategory)
+			categories.GET("", handlers.ListCategories)
 			categories.GET("/:id", handlers.GetCategory)
 			categories.PUT("/:id", handlers.UpdateCategory)
 			categories.DELETE("/:id", handlers.DeleteCategory)
 		}
 
+		// Sub-categories
+		subCategories := api.Group("/sub-categories")
+		{
+			subCategories.POST("", handlers.CreateSubCategory)
+			subCategories.GET("", handlers.ListSubCategories)
+			subCategories.PUT("/:id", handlers.UpdateSubCategory)
+			subCategories.DELETE("/:id", handlers.DeleteSubCategory)
+		}
+
 		// Suppliers
 		suppliers := api.Group("/suppliers")
 		{
-			suppliers.POST("/", handlers.CreateSupplier)
-			suppliers.GET("/", handlers.ListSuppliers)
+			suppliers.POST("", handlers.CreateSupplier)
+			suppliers.GET("", handlers.ListSuppliers)
 			suppliers.GET("/:id", handlers.GetSupplier)
 			suppliers.PUT("/:id", handlers.UpdateSupplier)
 			suppliers.DELETE("/:id", handlers.DeleteSupplier)
@@ -77,24 +105,18 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Locations
 		locations := api.Group("/locations")
 		{
-			locations.POST("/", handlers.CreateLocation)
-			locations.GET("/", handlers.ListLocations)
+			locations.POST("", handlers.CreateLocation)
+			locations.GET("", handlers.ListLocations)
 			locations.GET("/:id", handlers.GetLocation)
 			locations.PUT("/:id", handlers.UpdateLocation)
 			locations.DELETE("/:id", handlers.DeleteLocation)
-		}
-
-		// Stock
-		stock := api.Group("/stock")
-		{
-			stock.POST("/adjustments", handlers.CreateStockAdjustment)
 		}
 
 		// Barcode
 		barcode := api.Group("/barcode")
 		{
 			barcode.GET("/lookup", handlers.LookupProductByBarcode)
-			barcode.POST("/generate", handlers.GenerateBarcode)
+			barcode.GET("/generate", handlers.GenerateBarcode)
 		}
 
 		// Replenishment
@@ -123,6 +145,11 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Alerts
 		alerts := api.Group("/alerts")
 		{
+			alerts.GET("", handlers.ListAlerts)
+			alerts.GET("/:alertId", handlers.GetAlert)
+			alerts.PATCH("/:alertId/resolve", handlers.ResolveAlert)
+			alerts.PUT("/products/:productId/settings", handlers.PutProductAlertSettings)
+			alerts.PUT("/users/:userId/notification-settings", handlers.PutUserNotificationSettings)
 			alerts.POST("/check", func(c *gin.Context) {
 				handlers.CheckAndTriggerAlerts()
 				c.JSON(http.StatusOK, gin.H{"message": "Alert check triggered"})
@@ -148,8 +175,7 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Users
 		users := api.Group("/users")
 		{
-			users.POST("/register", handlers.RegisterUser)
-			users.POST("/login", handlers.LoginUser)
+			users.GET("", handlers.ListUsers)
 			users.POST("/refresh-token", handlers.RefreshToken)
 			users.POST("/logout", handlers.LogoutUser)
 			users.GET("/:id", handlers.GetUser)

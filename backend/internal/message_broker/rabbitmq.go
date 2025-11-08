@@ -50,6 +50,18 @@ func Publish(exchange, routingKey string, body interface{}) error {
 }
 
 func Subscribe(exchange, queueName, routingKey string, hub *websocket.Hub, handler func(d amqp091.Delivery)) error {
+	if err := RabbitMQChannel.ExchangeDeclare(
+		exchange,
+		"topic", // allows dot-delimited routing keys like bulk.import
+		true,    // durable
+		false,   // auto-deleted
+		false,   // internal
+		false,   // no-wait
+		nil,     // arguments
+	); err != nil {
+		return fmt.Errorf("failed to declare exchange %s: %w", exchange, err)
+	}
+
 	q, err := RabbitMQChannel.QueueDeclare(
 		queueName,
 		true,  // durable
