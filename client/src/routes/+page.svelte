@@ -182,7 +182,143 @@
 			</Card>
 		</div>
 
-		
+		<!-- Fresh Inventory + Priority Alerts -->
+<div class="grid gap-6 lg:grid-cols-2">
+  <!-- Fresh Inventory -->
+  <Card class="rounded-xl bg-white dark:bg-slate-800 shadow-md hover:shadow-xl transition-all duration-200">
+    <CardHeader>
+      <CardTitle class="text-slate-800 dark:text-slate-100">Fresh inventory</CardTitle>
+      <CardDescription class="text-slate-600 dark:text-slate-400">Latest SKUs created or touched</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <Table>
+        <TableHeader>
+          <TableRow class="text-slate-700 dark:text-slate-200">
+            <TableHead>SKU</TableHead>
+            <TableHead>Title</TableHead>
+            <TableHead>Status</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {#if loading}
+            {#each Array(3) as _, i}
+              <TableRow>
+                <TableCell colspan="3"><Skeleton class="h-6 w-full" /></TableCell>
+              </TableRow>
+            {/each}
+          {:else if recentProducts.length === 0}
+            <TableRow>
+              <TableCell colspan="3" class="text-center text-sm text-slate-500 dark:text-slate-400">No recent changes</TableCell>
+            </TableRow>
+          {:else}
+            {#each recentProducts as product}
+              <TableRow class="text-slate-800 dark:text-slate-100">
+                <TableCell class="font-mono text-xs">{product.SKU}</TableCell>
+                <TableCell>{product.Name}</TableCell>
+                <TableCell>
+                  <span class="rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 text-xs capitalize">
+                    {product.Status ?? 'active'}
+                  </span>
+                </TableCell>
+              </TableRow>
+            {/each}
+          {/if}
+        </TableBody>
+      </Table>
+    </CardContent>
+  </Card>
+
+  <!-- Priority Alerts -->
+  <Card class="rounded-xl bg-white dark:bg-slate-800 shadow-md hover:shadow-xl transition-all duration-200">
+    <CardHeader>
+      <CardTitle class="text-slate-800 dark:text-slate-100">Priority alerts</CardTitle>
+      <CardDescription class="text-slate-600 dark:text-slate-400">Signals requiring intervention</CardDescription>
+    </CardHeader>
+    <CardContent>
+      <Table>
+        <TableHeader>
+          <TableRow class="text-slate-700 dark:text-slate-200">
+            <TableHead>Type</TableHead>
+            <TableHead>SKU</TableHead>
+            <TableHead>State</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {#if loading}
+            {#each Array(3) as _, i}
+              <TableRow>
+                <TableCell colspan="3"><Skeleton class="h-6 w-full" /></TableCell>
+              </TableRow>
+            {/each}
+          {:else if recentAlerts.length === 0}
+            <TableRow>
+              <TableCell colspan="3" class="text-center text-sm text-slate-500 dark:text-slate-400">All clear</TableCell>
+            </TableRow>
+          {:else}
+            {#each recentAlerts as item}
+              <TableRow class="text-slate-800 dark:text-slate-100">
+                <TableCell class="text-xs font-semibold">{item.Type}</TableCell>
+                <TableCell>{item.Product?.SKU ?? item.ProductID}</TableCell>
+                <TableCell>
+                  <span class="rounded-full bg-rose-50 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300 px-2 py-0.5 text-xs">
+                    {item.Status}
+                  </span>
+                </TableCell>
+              </TableRow>
+            {/each}
+          {/if}
+        </TableBody>
+      </Table>
+    </CardContent>
+  </Card>
+</div>
+
+<!-- Procurement Intelligence -->
+<Card class="rounded-xl bg-white dark:bg-slate-800 shadow-md hover:shadow-xl transition-all duration-200">
+  <CardHeader>
+    <CardTitle class="text-slate-800 dark:text-slate-100">Procurement intelligence</CardTitle>
+    <CardDescription class="text-slate-600 dark:text-slate-400">Top reorder suggestions waiting for conversion</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <Table>
+      <TableHeader>
+        <TableRow class="text-slate-700 dark:text-slate-200">
+          <TableHead>Product</TableHead>
+          <TableHead>Suggested Qty</TableHead>
+          <TableHead>Supplier</TableHead>
+          <TableHead>Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {#if loading}
+          {#each Array(4) as _, i}
+            <TableRow>
+              <TableCell colspan="4"><Skeleton class="h-6 w-full" /></TableCell>
+            </TableRow>
+          {/each}
+        {:else if suggestions.length === 0}
+          <TableRow>
+            <TableCell colspan="4" class="text-center text-sm text-slate-500 dark:text-slate-400">No pending suggestions</TableCell>
+          </TableRow>
+        {:else}
+          {#each suggestions as suggestion}
+            <TableRow class="text-slate-800 dark:text-slate-100">
+              <TableCell>{suggestion?.Product?.Name ?? `Product ${suggestion?.ProductID ?? 'N/A'}`}</TableCell>
+              <TableCell>{suggestion?.SuggestedOrderQuantity ?? 'N/A'}</TableCell>
+              <TableCell>{suggestion?.Supplier?.Name ?? suggestion?.SupplierID ?? 'N/A'}</TableCell>
+              <TableCell>
+                <span class="rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-0.5 text-xs capitalize">
+                  {suggestion.Status}
+                </span>
+              </TableCell>
+            </TableRow>
+          {/each}
+        {/if}
+      </TableBody>
+    </Table>
+  </CardContent>
+</Card>
+
 	</section>
 </div>
 
