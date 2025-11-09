@@ -1,14 +1,15 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Root, Content, Item, PrevButton, NextButton, Ellipsis, Link } from '$lib/components/ui/pagination';
 	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { productsApi, categoriesApi, subCategoriesApi, suppliersApi, locationsApi } from '$lib/api/resources';
 	import type { Category, Location, Product, SubCategory, Supplier } from '$lib/types';
-	import { PlusCircle, RefreshCcw } from 'lucide-svelte';
+	import { PlusCircle, RefreshCcw, Zap } from 'lucide-svelte';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
@@ -32,13 +33,23 @@
 		purchasePrice: '',
 		sellingPrice: '',
 		status: 'Active',
+		barCodeUPC: '',
 	});
+
+	const pagination = $state({
+		currentPage: 1,
+		totalPages: 1,
+		totalItems: 0,
+		itemsPerPage: 10,
+	});
+
 	let editingProduct: Product | null = null;
 
 	const categoryForm = $state({ name: '' });
 	let editingCategory: Category | null = null;
 
-	const subCategoryForm = $state({ name: '', categoryId: '' });	let editingSubCategory: SubCategory | null = null;
+	const subCategoryForm = $state({ name: '', categoryId: '' });
+	let editingSubCategory: SubCategory | null = null;
 
 	const supplierForm = $state({ name: '', contactPerson: '', email: '', phone: '', address: '' });
 	let editingSupplier: Supplier | null = null;
@@ -46,15 +57,11 @@
 	const locationForm = $state({ name: '', address: '' });
 	let editingLocation: Location | null = null;
 
-	const loadAll = async () => {
-		console.log('loadAll called');
+	const loadAll = async (page = 1) => {
 		loading = true;
 		try {
 			const categoryList = await categoriesApi.list();
 			categories = Array.isArray(categoryList) ? categoryList : [categoryList];
-
-			const subCategoryList = await subCategoriesApi.list();
-			subCategories = Array.isArray(subCategoryList) ? subCategoryList : [subCategoryList];
 
 			const supplierList = await suppliersApi.list();
 			suppliers = Array.isArray(supplierList) ? supplierList : [supplierList];
@@ -62,19 +69,106 @@
 			const locationList = await locationsApi.list();
 			locations = Array.isArray(locationList) ? locationList : [locationList];
 
-			const productList = await productsApi.list();
-			products = productList;
-		} catch (error) {
+			const productResponse = await productsApi.list(page, 100);
+			products = productResponse.products || [];
+
+			pagination.currentPage = productResponse.currentPage;
+			pagination.totalPages = productResponse.totalPages;
+			pagination.totalItems = productResponse.totalItems;
+			pagination.itemsPerPage = productResponse.itemsPerPage;
+		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to load catalog';
-			toast.error('Failed to Load Catalog', {
-				description: errorMessage,
-			});
+			toast.error('Failed to Load Catalog', { description: errorMessage });
 		} finally {
 			loading = false;
 		}
 	};
 
-	onMount(loadAll);
+	const loadProductPerPage = async (page = 1) => {
+		try {
+			const productResponse = await productsApi.list(page, 1);
+			products = productResponse.products || [];
+
+			pagination.currentPage = productResponse.currentPage;
+			pagination.totalPages = productResponse.totalPages;
+			pagination.totalItems = productResponse.totalItems;
+			pagination.itemsPerPage = productResponse.itemsPerPage;
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.error || 'Unable to load catalog';
+			toast.error('Failed to Load Catalog', { description: errorMessage });
+		} finally {
+			loading = false;
+		}
+	};
+
+	const handlePageChange = (page: number) => {
+		if (page !== pagination.currentPage) {
+			pagination.currentPage = page;
+			loadProductPerPage(page);
+		}
+	};
+
+	onMount(() => {
+		loadAll();
+
+		// Parallax + gradient motion on hero
+		let raf = 0;
+		const onScroll = () => {
+			if (raf) return;
+			raf = requestAnimationFrame(() => {
+				raf = 0;
+				const y = window.scrollY || 0;
+				const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
+				if (hero) {
+					hero.style.setProperty('--hero-translate', Math.min(y * 0.15, 60) + 'px');
+					hero.style.setProperty('--hero-blur', Math.min(2 + y * 0.01, 6) + 'px');
+				}
+			});
+		};
+		window.addEventListener('scroll', onScroll, { passive: true });
+
+		// Staggered fade-up on first paint
+		const observers: IntersectionObserver[] = [];
+		document.querySelectorAll<HTMLElement>('[data-animate="fade-up"]').forEach((el, idx) => {
+			el.style.animationDelay = `${100 + idx * 60}ms`;
+			const io = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((e) => {
+						if (e.isIntersecting) {
+							el.classList.add('animate-fadeUp');
+							io.unobserve(el);
+						}
+					});
+				},
+				{ threshold: 0.12 }
+			);
+			io.observe(el);
+			observers.push(io);
+		});
+
+		return () => {
+			window.removeEventListener('scroll', onScroll);
+			observers.forEach((o) => o.disconnect());
+			if (raf) cancelAnimationFrame(raf);
+		};
+	});
+
+	const loadSubCategories = async (categoryId: number) => {
+		if (!categoryId) {
+			subCategories = [];
+			return;
+		}
+		loading = true;
+		try {
+			const subCategoryList = await subCategoriesApi.list(categoryId);
+			subCategories = Array.isArray(subCategoryList) ? subCategoryList : [subCategoryList];
+		} catch (error) {
+			const errorMessage = (error as any)?.response?.data?.error || 'Unable to load sub-categories';
+			toast.error('Failed to Load Sub-Categories', { description: errorMessage });
+		} finally {
+			loading = false;
+		}
+	};
 
 	const resetProductForm = () => {
 		editingProduct = null;
@@ -88,6 +182,7 @@
 		productForm.purchasePrice = '';
 		productForm.sellingPrice = '';
 		productForm.status = 'Active';
+		productForm.barCodeUPC = '';
 	};
 
 	const editProduct = (product: Product) => {
@@ -105,6 +200,25 @@
 	};
 
 	const saveProduct = async () => {
+		if (!productForm.barCodeUPC.trim()) {
+			toast.error('Missing Barcode/UPC', {
+				description: 'Each product must have a unique BarcodeUPC value.',
+			});
+			return;
+		}
+
+		const duplicate = products.find(
+			(p) =>
+				p.BarcodeUPC?.toLowerCase() === productForm.barCodeUPC.trim().toLowerCase() &&
+				p.ID !== editingProduct?.ID
+		);
+		if (duplicate) {
+			toast.error('Duplicate Barcode/UPC Detected', {
+				description: `The BarcodeUPC "${productForm.barCodeUPC}" is already used by product "${duplicate.Name}".`,
+			});
+			return;
+		}
+
 		const payload = {
 			sku: productForm.sku,
 			name: productForm.name,
@@ -116,22 +230,23 @@
 			purchasePrice: productForm.purchasePrice ? Number(productForm.purchasePrice) : undefined,
 			sellingPrice: productForm.sellingPrice ? Number(productForm.sellingPrice) : undefined,
 			status: productForm.status,
+			BarcodeUPC: productForm.barCodeUPC.trim(),
 		};
+
 		try {
 			if (editingProduct) {
 				await productsApi.update(editingProduct.ID, payload);
-				toast.success('Product updated');
+				toast.success('Product updated successfully');
 			} else {
 				await productsApi.create(payload);
-				toast.success('Product created');
+				toast.success('Product created successfully');
 			}
 			await loadAll();
 			resetProductForm();
-		} catch (error) {
-			const errorMessage = error?.response?.data?.error || 'Unable to save product';
-			toast.error('Failed to Save Product', {
-				description: errorMessage,
-			});
+		} catch (error: any) {
+			const backendMessage =
+				error?.response?.data?.error || error?.response?.data?.message || 'Unable to save product';
+			toast.error('Failed to Save Product', { description: backendMessage });
 		}
 	};
 
@@ -144,9 +259,7 @@
 					await loadAll();
 				} catch (error: any) {
 					const errorMessage = error.response?.data?.error || 'Unable to delete product';
-					toast.error('Failed to Delete Product', {
-						description: errorMessage,
-					});
+					toast.error('Failed to Delete Product', { description: errorMessage });
 				}
 			},
 		});
@@ -168,10 +281,8 @@
 			await loadAll();
 			resetCategoryForm();
 		} catch (error) {
-			const errorMessage = error?.response?.data?.error || 'Unable to save category';
-			toast.error('Failed to Save Category', {
-				description: errorMessage,
-			});
+			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save category';
+			toast.error('Failed to Save Category', { description: errorMessage });
 		}
 	};
 
@@ -184,9 +295,7 @@
 					await loadAll();
 				} catch (error: any) {
 					const errorMessage = error.response?.data?.error || 'Unable to delete category';
-					toast.error('Failed to Delete Category', {
-						description: errorMessage,
-					});
+					toast.error('Failed to Delete Category', { description: errorMessage });
 				}
 			},
 		});
@@ -200,23 +309,18 @@
 
 	const saveSubCategory = async () => {
 		try {
-			const payload = {
-				name: subCategoryForm.name,
-				categoryId: Number(subCategoryForm.categoryId),
-			};
+			const payload = { name: subCategoryForm.name };
 			if (editingSubCategory) {
 				await subCategoriesApi.update(editingSubCategory.ID, payload);
 			} else {
-				await subCategoriesApi.create(payload);
+				await subCategoriesApi.create(payload, Number(subCategoryForm.categoryId));
 			}
 			toast.success('Sub-category saved');
 			await loadAll();
 			resetSubCategoryForm();
 		} catch (error) {
-			const errorMessage = error?.response?.data?.error || 'Unable to save sub-category';
-			toast.error('Failed to Save Sub-Category', {
-				description: errorMessage,
-			});
+			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save sub-category';
+			toast.error('Failed to Save Sub-Category', { description: errorMessage });
 		}
 	};
 
@@ -229,9 +333,7 @@
 					await loadAll();
 				} catch (error: any) {
 					const errorMessage = error.response?.data?.error || 'Unable to delete sub-category';
-					toast.error('Failed to Delete Sub-Category', {
-						description: errorMessage,
-					});
+					toast.error('Failed to Delete Sub-Category', { description: errorMessage });
 				}
 			},
 		});
@@ -257,10 +359,8 @@
 			await loadAll();
 			resetSupplierForm();
 		} catch (error) {
-			const errorMessage = error.response?.data?.error || 'Unable to save supplier';
-			toast.error('Failed to Save Supplier', {
-				description: errorMessage,
-			});
+			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save supplier';
+			toast.error('Failed to Save Supplier', { description: errorMessage });
 		}
 	};
 
@@ -273,9 +373,7 @@
 					await loadAll();
 				} catch (error: any) {
 					const errorMessage = error.response?.data?.error || 'Unable to delete supplier';
-					toast.error('Failed to Delete Supplier', {
-						description: errorMessage,
-					});
+					toast.error('Failed to Delete Supplier', { description: errorMessage });
 				}
 			},
 		});
@@ -298,10 +396,8 @@
 			await loadAll();
 			resetLocationForm();
 		} catch (error) {
-			const errorMessage = error.response?.data?.error || 'Unable to save location';
-			toast.error('Failed to Save Location', {
-				description: errorMessage,
-			});
+			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save location';
+			toast.error('Failed to Save Location', { description: errorMessage });
 		}
 	};
 
@@ -314,412 +410,647 @@
 					await loadAll();
 				} catch (error: any) {
 					const errorMessage = error.response?.data?.error || 'Unable to delete location';
-					toast.error('Failed to Delete Location', {
-						description: errorMessage,
-					});
+					toast.error('Failed to Delete Location', { description: errorMessage });
 				}
 			},
 		});
 	};
-	
 </script>
 
-<div class="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 shadow-xl rounded-2xl">
-  <section class="space-y-8">
-    <header class="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p class="text-sm uppercase tracking-wide text-muted-foreground">Catalog cockpit</p>
-        <h1 class="text-3xl font-semibold">Products, categories & partners</h1>
-      </div>
-      <div class="flex gap-2">
-        <Button variant="secondary" onclick={loadAll}>
-          <RefreshCcw class="mr-2 h-4 w-4" /> Sync data
-        </Button>
-        <Button variant="outline" href="/bulk" class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200">
-          <PlusCircle class="mr-2 h-4 w-4" /> Bulk import
-        </Button>
-      </div>
-    </header>
+<!-- ===== FIXED HERO (responsive, clean parallax, correct layering) ===== -->
+<section class="relative rounded w-full isolate overflow-hidden">
+	<!-- Gradient background with motion -->
+	<div class="absolute inset-0 -z-10 animate-gradientShift bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-100 bg-[length:200%_200%]"></div>
 
-    <div class="grid gap-4 md:grid-cols-5">
-      <Button variant={activeTab === 'products' ? 'default' : 'secondary'} onclick={() => (activeTab = 'products')} class={activeTab === 'products' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200' : ''}>
-        Products
-      </Button>
-      <Button variant={activeTab === 'categories' ? 'default' : 'secondary'} onclick={() => (activeTab = 'categories')} class={activeTab === 'categories' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200' : ''}>
-        Categories
-      </Button>
-      <Button variant={activeTab === 'sub-categories' ? 'default' : 'secondary'} onclick={() => (activeTab = 'sub-categories')} class={activeTab === 'sub-categories' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200' : ''}>
-        Sub Categories
-      </Button>
-      <Button variant={activeTab === 'suppliers' ? 'default' : 'secondary'} onclick={() => (activeTab = 'suppliers')} class={activeTab === 'suppliers' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200' : ''}>
-        Suppliers
-      </Button>
-      <Button variant={activeTab === 'locations' ? 'default' : 'secondary'} onclick={() => (activeTab = 'locations')} class={activeTab === 'locations' ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200' : ''}>
-        Locations
-      </Button>
-    </div>
+	<!-- Floating glow blobs -->
+	<div class="absolute -top-32 -left-24 w-96 h-96 rounded-full bg-sky-200/40 blur-3xl animate-pulseGlow"></div>
+	<div class="absolute -bottom-28 -right-24 w-80 h-80 rounded-full bg-cyan-200/30 blur-3xl animate-pulseGlow delay-700"></div>
 
-    {#key activeTab}
-    {#if activeTab === 'products'}
-      <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>SKU registry</CardTitle>
-            <CardDescription>Manage items synced with the warehouse</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {#if loading}
-                  {#each Array(4) as _, i}
-                    <TableRow>
-                      <TableCell colspan="4"><Skeleton class="h-6 w-full" /></TableCell>
-                    </TableRow>
-                  {/each}
-                {:else}
-                  {#each products as product}
-                    <TableRow>
-                      <TableCell class="font-mono text-xs">{product.SKU}</TableCell>
-                      <TableCell>{product.Name}</TableCell>
-                      <TableCell>
-                        <span class="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">{product.Status ?? 'active'}</span>
-                      </TableCell>
-                      <TableCell class="text-right space-x-1">
-                        <Button size="sm" variant="ghost" onclick={() => editProduct(product)}>Edit</Button>
-                        <Button size="sm" variant="ghost" class="text-destructive" onclick={() => deleteProduct(product)}>
-                          Delete
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                {/if}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>{editingProduct ? 'Update product' : 'Create product'}</CardTitle>
-            <CardDescription>SKU-level metadata</CardDescription>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Input placeholder="SKU" bind:value={productForm.sku} />
-            <Input placeholder="Name" bind:value={productForm.name} />
-            <Input placeholder="Description" bind:value={productForm.description} />
-            <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={productForm.categoryId}>
-              <option value="">Select category</option>
-              {#each categories as category}
-                <option value={category.ID}>{category.Name}</option>
-              {/each}
-            </select>
-            <div class="flex items-center gap-2">
-              <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={productForm.subCategoryId}>
-                <option value="">Select sub-category</option>
-                {#each subCategories.filter(sc => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
-                  <option value={subCategory.ID}>{subCategory.Name}</option>
-                {/each}
-              </select>
-              <Button size="sm" variant="outline" onclick={() => activeTab = 'sub-categories'}>New</Button>
-            </div>
-            <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={productForm.supplierId}>
-              <option value="">Select supplier</option>
-              {#each suppliers as supplier}
-                <option value={supplier.ID}>{supplier.Name}</option>
-              {/each}
-            </select>
-            <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={productForm.locationId}>
-              <option value="">Default location</option>
-              {#each locations as location}
-                <option value={location.ID}>{location.Name}</option>
-              {/each}
-            </select>
-            <div class="grid grid-cols-2 gap-2">
-              <Input type="number" min="0" step="0.01" placeholder="Purchase price" bind:value={productForm.purchasePrice} />
-              <Input type="number" min="0" step="0.01" placeholder="Selling price" bind:value={productForm.sellingPrice} />
-            </div>
-            <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={productForm.status}>
-              <option value="Active">Active</option>
-              <option value="Archived">Archived</option>
-              <option value="Discontinued">Disoption>
-            </select>
-            <div class="flex gap-2">
-              <Button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200" onclick={saveProduct}>{editingProduct ? 'Update' : 'Create'}</Button>
-              <Button class="w-full" variant="outline" onclick={resetProductForm}>Reset</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    {:else if activeTab === 'categories'}
-      <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>Categories</CardTitle>
-            <CardDescription>Structure your catalog foundation</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {#if loading}
-                  {#each Array(3) as _, i}
-                    <TableRow>
-                      <TableCell colspan="2"><Skeleton class="h-6 w-full" /></TableCell>
-                    </TableRow>
-                  {/each}
-                {:else if categories.length === 0}
-                  <TableRow>
-                    <TableCell colspan='2' class="text-center text-sm text-muted-foreground">No categories found</TableCell>
-                  </TableRow>
-                {:else}
-                  {#each categories as category}
-                    <TableRow>
-                      <TableCell>{category.Name}</TableCell>
-                      <TableCell class="text-right space-x-1">
-                        <Button size="sm" variant="ghost" onclick={() => { editingCategory = category; categoryForm.name = category.Name; }}>Edit</Button>
-                        <Button size="sm" variant="ghost" class="text-destructive" onclick={() => deleteCategory(category)}>Delete</Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                {/if}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>{editingCategory ? 'Update category' : 'Create category'}</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Input placeholder="Name" bind:value={categoryForm.name} />
-            <div class="flex gap-2">
-              <Button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200" onclick={saveCategory}>{editingCategory ? 'Update' : 'Create'}</Button>
-              <Button class="w-full" variant="outline" onclick={resetCategoryForm}>Reset</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    {:else if activeTab === 'sub-categories'}
-      <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>Sub Categories</CardTitle>
-            <CardDescription>Refine your catalog structure</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {#if loading}
-                  {#each Array(3) as _, i}
-                    <TableRow>
-                      <TableCell colspan="3"><Skeleton class="h-6 w-full" /></TableCell>
-                    </TableRow>
-                  {/each}
-                {:else if subCategories.length === 0}
-                  <TableRow>
-                    <TableCell colspan="3" class="text-center text-sm text-muted-foreground">No sub-categories found</TableCell>
-                  </TableRow>
-                {:else}
-                  {#each subCategories as subCategory}
-                    <TableRow>
-                      <TableCell>{subCategory.Name}</TableCell>
-                      <TableCell>{subCategory.Category.Name}</TableCell>
-                      <TableCell class="text-right space-x-1">
-                        <Button size="sm" variant="ghost" onclick={() => { editingSubCategory = subCategory; subCategoryForm.name = subCategory.Name; subCategoryForm.categoryId = String(subCategory.CategoryID); }}>Edit</Button>
-                        <Button size="sm" variant="ghost" class="text-destructive" onclick={() => deleteSubCategory(subCategory)}>Delete</Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                {/if}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>{editingSubCategory ? 'Update sub-category' : 'Create sub-category'}</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Input placeholder="Name" bind:value={subCategoryForm.name} />
-            <select class="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" bind:value={subCategoryForm.categoryId}>
-              <option value="">Select category</option>
-              {#each categories as category}
-                <option value={category.ID}>{category.Name}</option>
-              {/each}
-            </select>
-            <div class="flex gap-2">
-              <Button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200" onclick={saveSubCategory}>{editingSubCategory ? 'Update' : 'Create'}</Button>
-              <Button class="w-full" variant="outline" onclick={resetSubCategoryForm}>Reset</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    {:else if activeTab === 'suppliers'}
-      <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>Suppliers</CardTitle>
-            <CardDescription>Strategic partners powering replenishment</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {#if loading}
-                  {#each Array(3) as _, i}
-                    <TableRow>
-                      <TableCell colspan="3"><Skeleton class="h-6 w-full" /></TableCell>
-                    </TableRow>
-                  {/each}
-                {:else if suppliers.length === 0}
-                  <TableRow>
-                    <TableCell colspan="3" class="text-center text-sm text-muted-foreground">No suppliers found</TableCell>
-                  </TableRow>
-                {:else}
-                  {#each suppliers as supplier}
-                    <TableRow>
-                      <TableCell>{supplier.Name}</TableCell>
-                      <TableCell>
-                        <p class="text-sm">{supplier.ContactPerson ?? '—'}</p>
-                        <p class="text-xs text-muted-foreground">{supplier.Email ?? supplier.Phone ?? ''}</p>
-                      </TableCell>
-                      <TableCell class="text-right space-x-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onclick={() => {
-                            editingSupplier = supplier;
-                            Object.assign(supplierForm, {
-                              name: supplier.Name,
-                              contactPerson: supplier.ContactPerson ?? '',
-                              email: supplier.Email ?? '',
-                              phone: supplier.Phone ?? '',
-                              address: supplier.Address ?? '',
-                            });
-                          }}
-                        >
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="ghost" class="text-destructive" onclick={() => deleteSupplier(supplier)}>Delete</Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                {/if}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>{editingSupplier ? 'Update supplier' : 'Create supplier'}</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Input placeholder="Name" bind:value={supplierForm.name} />
-            <Input placeholder="Contact person" bind:value={supplierForm.contactPerson} />
-            <Input placeholder="Email" bind:value={supplierForm.email} />
-            <Input placeholder="Phone" bind:value={supplierForm.phone} />
-            <Input placeholder="Address" bind:value={supplierForm.address} />
-            <div class="flex gap-2">
-              <Button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200" onclick={saveSupplier}>{editingSupplier ? 'Update' : 'Create'}</Button>
-              <Button class="w-full" variant="outline" onclick={resetSupplierForm}>Reset</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    {:else}
-      <div class="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>Locations</CardTitle>
-            <CardDescription>Fulfilment nodes and stores</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead class="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {#if loading}
-                  {#each Array(3) as _, i}
-                    <TableRow>
-                      <TableCell colspan="3"><Skeleton class="h-6 w-full" /></TableCell>
-                    </TableRow>
-                  {/each}
-                {:else if locations.length === 0}
-                  <TableRow>
-                    <TableCell colspan="3" class="text-center text-sm text-muted-foreground">No locations found</TableCell>
-                  </TableRow>
-                {:else}
-                  {#each locations as location}
-                    <TableRow>
-                      <TableCell>{location.Name}</TableCell>
-                      <TableCell class="text-sm text-muted-foreground">{location.Address ?? '—'}</TableCell>
-                      <TableCell class="text-right space-x-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onclick={() => {
-                            editingLocation = location;
-                            locationForm.name = location.Name;
-                            locationForm.address = location.Address ?? '';
-                          }}
-                        >
-                          Edit
-                        </Button>
-                        <Button size="sm" variant="ghost" class="text-destructive" onclick={() => deleteLocation(location)}>Delete</Button>
-                      </TableCell>
-                    </TableRow>
-                  {/each}
-                {/if}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card class="shadow-lg rounded-xl">
-          <CardHeader>
-            <CardTitle>{editingLocation ? 'Update location' : 'Create location'}</CardTitle>
-          </CardHeader>
-          <CardContent class="space-y-3">
-            <Input placeholder="Name" bind:value={locationForm.name} />
-            <Input placeholder="Address" bind:value={locationForm.address} />
-            <div class="flex gap-2">
-              <Button class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200" onclick={saveLocation}>{editingLocation ? 'Update' : 'Create'}</Button>
-              <Button class="w-full" variant="outline" onclick={resetLocationForm}>Reset</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    {/if}
-    {/key}
-  </section>
+	<!-- Hero container -->
+	<div
+		class="parallax-hero relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-10 sm:pb-16 text-center sm:text-left"
+		style="transform: translateY(var(--hero-translate, 0));"
+	>
+		<div class="inline-flex items-center gap-3 justify-center sm:justify-start mb-3">
+			<span class="inline-flex p-2 rounded-2xl shadow-md bg-gradient-to-br from-sky-500 to-blue-600 animate-cardFloat">
+				<Zap class="h-6 w-6 text-white" />
+			</span>
+			<p class="text-xs sm:text-sm uppercase tracking-[0.18em] text-sky-700 font-semibold">
+				Catalog Cockpit
+			</p>
+		</div>
+
+		<h1
+			class="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-transparent mb-3"
+		>
+			Products, Categories &amp; Partners
+		</h1>
+		<p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto sm:mx-0">
+			Unified control center for your catalog data
+		</p>
+
+		<!-- Action buttons -->
+		<div class="mt-6 flex flex-col sm:flex-row gap-3 justify-center sm:justify-start">
+			<Button
+				variant="secondary"
+				onclick={loadAll}
+				class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-xl px-5 py-2.5 font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 focus:ring-2 focus:ring-sky-300"
+			>
+				<RefreshCcw class="h-4 w-4 mr-2" /> Sync data
+			</Button>
+			<Button
+				href="/bulk"
+				variant="outline"
+				class="w-full sm:w-auto bg-white/80 border border-sky-200 text-sky-700 hover:bg-sky-50 rounded-xl px-5 py-2.5 font-medium shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 focus:ring-2 focus:ring-sky-200"
+			>
+				<PlusCircle class="h-4 w-4 mr-2" /> Bulk import
+			</Button>
+		</div>
+	</div>
+</section>
+
+
+<!-- ===== TABS ===== -->
+<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
+	<div class="flex border-b border-sky-200 mb-8 overflow-x-auto bg-white/60 backdrop-blur rounded-xl px-2 data-animate='fade-up'">
+		{#each ['products','categories','sub-categories','suppliers','locations'] as tab, i}
+			<button
+				class="px-5 py-2.5 text-sm font-medium transition-all duration-200 rounded-t-xl m-1
+		           {activeTab === tab
+		             ? 'text-sky-800 bg-gradient-to-b from-sky-100 to-blue-100 border-b-2 border-sky-500 shadow-sm'
+		             : 'text-slate-600 hover:text-sky-700 hover:bg-sky-50'}"
+				onclick={() => (activeTab = tab as TabKey)}
+				style={`animation-delay:${100 + i * 50}ms`}
+			>
+				{tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+			</button>
+		{/each}
+	</div>
+
+	<!-- ===== SECTIONS ===== -->
+	<section class="space-y-10">
+		{#key activeTab}
+			{#if activeTab === 'products'}
+				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+					<!-- Table -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-sky-50 to-blue-100" data-animate="fade-up" style="animation-delay:120ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">SKU Registry</CardTitle>
+							<CardDescription class="text-slate-600">Manage items synced with the warehouse</CardDescription>
+						</CardHeader>
+						<CardContent class="pt-0 p-0 overflow-x-auto">
+							<Table class="min-w-full">
+								<TableHeader class="sticky top-0 bg-gradient-to-r from-sky-100/80 to-blue-100/80 backdrop-blur z-10">
+									<TableRow class="border-y border-sky-200/70">
+										<TableHead class="px-4 py-3 text-slate-700">SKU</TableHead>
+										<TableHead class="px-4 py-3 text-slate-700">Name</TableHead>
+										<TableHead class="px-4 py-3 text-slate-700">Status</TableHead>
+										<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+									{#if loading}
+										{#each Array(4) as _, i}
+											<TableRow><TableCell colspan="4" class="px-4 py-3"><Skeleton class="h-7 w-full bg-white/60" /></TableCell></TableRow>
+										{/each}
+									{:else if products.length === 0}
+										<TableRow>
+											<TableCell colspan="4" class="text-center py-6 text-slate-600">No products found</TableCell>
+										</TableRow>
+									{:else}
+										{#each products as product}
+											<TableRow class="hover:bg-white/90 transition-colors">
+												<TableCell class="px-4 py-3 font-mono text-xs text-slate-800">{product.SKU}</TableCell>
+												<TableCell class="px-4 py-3 text-slate-900">{product.Name}</TableCell>
+												<TableCell class="px-4 py-3">
+													<span class="rounded-full bg-sky-100 text-sky-700 px-2.5 py-0.5 text-xs capitalize border border-sky-200 shadow-sm">
+														{product.Status ?? 'active'}
+													</span>
+												</TableCell>
+												<TableCell class="px-4 py-3 text-right space-x-2">
+													<Button size="sm" variant="ghost" class="text-sky-700 hover:bg-sky-100 rounded-lg px-3 py-1.5" onclick={() => editProduct(product)}>Edit</Button>
+													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteProduct(product)}>Delete</Button>
+												</TableCell>
+											</TableRow>
+										{/each}
+									{/if}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+
+					{#if pagination.totalPages > 1}
+						<div class="flex flex-col items-center justify-center py-6 space-y-2 bg-white/70 backdrop-blur rounded-2xl shadow-md border border-white/60" data-animate="fade-up" style="animation-delay:180ms">
+							<Root
+								count={pagination.totalItems}
+								perPage={pagination.itemsPerPage}
+								page={pagination.currentPage}
+								onPageChange={(e) => handlePageChange(e.detail)}
+							>
+								{#snippet children({ pages, currentPage })}
+									<Content class="flex items-center gap-1">
+										<Item>
+											<PrevButton
+												disabled={pagination.currentPage === 1}
+												class="rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200"
+												onclick={() => handlePageChange(pagination.currentPage - 1)}
+											/>
+										</Item>
+
+										{#each pages as page (page.key)}
+											{#if page.type === 'ellipsis'}
+												<Item><Ellipsis /></Item>
+											{:else}
+												<Item>
+													<Link
+														{page}
+														isActive={currentPage === page.value}
+														class="rounded-lg data-[active=true]:bg-sky-600 data-[active=true]:text-white data-[active=false]:bg-white/80 data-[active=false]:text-slate-700 hover:scale-105 border border-sky-200 px-3 py-1.5"
+														onclick={() => handlePageChange(page.value)}
+													>
+														{page.value}
+													</Link>
+												</Item>
+											{/if}
+										{/each}
+										<Item>
+											<NextButton
+												disabled={false}
+												class="rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200"
+												onclick={() => handlePageChange(pagination.currentPage + 1)}
+											/>
+										</Item>
+									</Content>
+								{/snippet}
+							</Root>
+
+							<p class="text-sm text-slate-600">
+								Showing
+								{(pagination.currentPage - 1) * pagination.itemsPerPage + 1}
+								–
+								{Math.min(pagination.currentPage * pagination.itemsPerPage, pagination.totalItems)}
+								of {pagination.totalItems} products
+							</p>
+						</div>
+					{/if}
+
+					<!-- Form -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-sky-50 to-blue-100" data-animate="fade-up" style="animation-delay:240ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">{editingProduct ? 'Update product' : 'Create product'}</CardTitle>
+							<CardDescription class="text-slate-600">SKU-level metadata</CardDescription>
+						</CardHeader>
+						<CardContent class="space-y-4 p-6">
+							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="SKU" bind:value={productForm.sku} />
+							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Name" bind:value={productForm.name} />
+							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Description" bind:value={productForm.description} />
+							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Barcode / UPC (must be unique)" bind:value={productForm.barCodeUPC} />
+
+							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.categoryId} onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}>
+								<option value="">Select category</option>
+								{#each categories as category}
+									<option value={category.ID}>{category.Name}</option>
+								{/each}
+							</select>
+
+							<div class="flex items-center gap-3">
+								<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.subCategoryId}>
+									<option value="">Select sub-category</option>
+									{#each subCategories.filter((sc) => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
+										<option value={subCategory.ID}>{subCategory.Name}</option>
+									{/each}
+								</select>
+								<Button size="sm" variant="outline" class="border border-sky-200 text-sky-700 hover:bg-sky-50 rounded-xl px-3 py-2" onclick={() => (activeTab = 'sub-categories')}>New</Button>
+							</div>
+
+							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.supplierId}>
+								<option value="">Select supplier</option>
+								{#each suppliers as supplier}
+									<option value={supplier.ID}>{supplier.Name}</option>
+								{/each}
+							</select>
+
+							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.locationId}>
+								<option value="">Default location</option>
+								{#each locations as location}
+									<option value={location.ID}>{location.Name}</option>
+								{/each}
+							</select>
+
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+								<Input type="number" min="0" step="0.01" class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Purchase price" bind:value={productForm.purchasePrice} />
+								<Input type="number" min="0" step="0.01" class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Selling price" bind:value={productForm.sellingPrice} />
+							</div>
+
+							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.status}>
+								<option value="Active">Active</option>
+								<option value="Archived">Archived</option>
+								<option value="Discontinued">Discontinued</option>
+							</select>
+
+							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
+								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveProduct}>
+									{editingProduct ? 'Update' : 'Create'}
+								</Button>
+								<Button class="w-full sm:w-1/2 border border-sky-200 text-sky-700 hover:bg-sky-50 rounded-xl py-2.5 transition" onclick={resetProductForm}>
+									Reset
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			{:else if activeTab === 'categories'}
+				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+					<!-- Table -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-green-50 to-emerald-100" data-animate="fade-up" style="animation-delay:120ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">Categories</CardTitle>
+							<CardDescription class="text-slate-600">Structure your catalog foundation</CardDescription>
+						</CardHeader>
+						<CardContent class="pt-0 p-0 overflow-x-auto">
+							<Table class="min-w-full">
+								<TableHeader class="sticky top-0 bg-gradient-to-r from-green-100/80 to-emerald-100/80 backdrop-blur z-10">
+									<TableRow class="border-y border-emerald-200/70">
+										<TableHead class="px-4 py-3 text-slate-700">Name</TableHead>
+										<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+									{#if loading}
+										{#each Array(3) as _, i}
+											<TableRow><TableCell colspan="2" class="px-4 py-3"><Skeleton class="h-7 w-full bg-white/60" /></TableCell></TableRow>
+										{/each}
+									{:else if categories.length === 0}
+										<TableRow>
+											<TableCell colspan="2" class="text-center py-6 text-slate-600">No categories found</TableCell>
+										</TableRow>
+									{:else}
+										{#each categories as category}
+											<TableRow class="hover:bg-white/90 transition-colors">
+												<TableCell class="px-4 py-3">{category.Name}</TableCell>
+												<TableCell class="px-4 py-3 text-right space-x-2">
+													<Button size="sm" variant="ghost" class="text-emerald-700 hover:bg-emerald-100 rounded-lg px-3 py-1.5" onclick={() => { editingCategory = category; categoryForm.name = category.Name; }}>Edit</Button>
+													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteCategory(category)}>Delete</Button>
+												</TableCell>
+											</TableRow>
+										{/each}
+									{/if}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+
+					<!-- Form -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-green-50 to-emerald-100" data-animate="fade-up" style="animation-delay:180ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">{editingCategory ? 'Update category' : 'Create category'}</CardTitle>
+						</CardHeader>
+						<CardContent class="space-y-4 p-6">
+							<Input class="w-full border border-emerald-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 bg-white/90" placeholder="Name" bind:value={categoryForm.name} />
+							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
+								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveCategory}>{editingCategory ? 'Update' : 'Create'}</Button>
+								<Button class="w-full sm:w-1/2 border border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-xl py-2.5 transition" onclick={resetCategoryForm}>Reset</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			{:else if activeTab === 'sub-categories'}
+				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+					<!-- TABLE SECTION -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-amber-50 to-orange-100" data-animate="fade-up" style="animation-delay:120ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">Sub Categories</CardTitle>
+							<CardDescription class="text-slate-600">Filter by parent category</CardDescription>
+						</CardHeader>
+
+						<CardContent class="space-y-4 p-6 overflow-x-auto">
+							<select
+								class="w-full sm:w-1/2 border border-amber-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 bg-white/90"
+								bind:value={subCategoryForm.categoryId}
+								onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}
+							>
+								<option value="">Select category to view sub-categories</option>
+								{#if categories.length > 0}
+									{#each categories as category}
+										<option value={category.ID}>{category.Name}</option>
+									{/each}
+								{:else}
+									<option disabled>Loading categories...</option>
+								{/if}
+							</select>
+
+							{#if !subCategoryForm.categoryId}
+								<div class="py-10 text-center text-slate-600 border border-dashed border-amber-200 rounded-xl bg-white/60">
+									<p class="text-sm">Select a category to view sub-categories</p>
+								</div>
+							{:else}
+								<Table class="min-w-full border border-amber-200 rounded-xl overflow-hidden">
+									<TableHeader class="bg-gradient-to-r from-amber-100/80 to-orange-100/80 backdrop-blur">
+										<TableRow class="border-y border-amber-200/70">
+											<TableHead class="px-4 py-3 text-slate-700">Name</TableHead>
+											<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+										{#if loading}
+											{#each Array(3) as _, i}
+												<TableRow><TableCell colspan="2" class="px-4 py-3"><Skeleton class="h-7 w-full bg-white/60" /></TableCell></TableRow>
+											{/each}
+										{:else}
+											{#each subCategories.filter((sc) => sc.CategoryID === Number(subCategoryForm.categoryId)) as subCategory (subCategory.ID)}
+												<TableRow class="hover:bg-white/90 transition-colors">
+													<TableCell class="px-4 py-3">{subCategory.Name}</TableCell>
+													<TableCell class="px-4 py-3 text-right space-x-2">
+														<Button
+															size="sm"
+															variant="ghost"
+															class="text-amber-700 hover:bg-amber-100 rounded-lg px-3 py-1.5"
+															onclick={() => {
+																editingSubCategory = subCategory;
+																subCategoryForm.name = subCategory.Name;
+																subCategoryForm.categoryId = String(subCategory.CategoryID);
+															}}
+														>Edit</Button>
+														<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteSubCategory(subCategory)}>Delete</Button>
+													</TableCell>
+												</TableRow>
+											{:else}
+												<TableRow>
+													<TableCell colspan="2" class="text-center py-6 text-slate-600">
+														No sub-categories found for this category
+													</TableCell>
+												</TableRow>
+											{/each}
+										{/if}
+									</TableBody>
+								</Table>
+							{/if}
+						</CardContent>
+					</Card>
+
+					<!-- FORM SECTION -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-amber-50 to-orange-100" data-animate="fade-up" style="animation-delay:180ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">{editingSubCategory ? 'Update sub-category' : 'Create sub-category'}</CardTitle>
+						</CardHeader>
+						<CardContent class="space-y-4 p-6">
+							<Input class="w-full border border-amber-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 bg-white/90" placeholder="Name" bind:value={subCategoryForm.name} />
+							<select class="w-full border border-amber-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400 bg-white/90" bind:value={subCategoryForm.categoryId}>
+								<option value="">Select category</option>
+								{#each categories as category}
+									<option value={category.ID}>{category.Name}</option>
+								{/each}
+							</select>
+							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
+								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveSubCategory}>
+									{editingSubCategory ? 'Update' : 'Create'}
+								</Button>
+								<Button class="w-full sm:w-1/2 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-xl py-2.5 transition" onclick={resetSubCategoryForm}>
+									Reset
+								</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			{:else if activeTab === 'suppliers'}
+				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+					<!-- Table -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-violet-50 to-purple-100" data-animate="fade-up" style="animation-delay:120ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">Suppliers</CardTitle>
+							<CardDescription class="text-slate-600">Strategic partners powering replenishment</CardDescription>
+						</CardHeader>
+						<CardContent class="pt-0 p-0 overflow-x-auto">
+							<Table class="min-w-full">
+								<TableHeader class="sticky top-0 bg-gradient-to-r from-violet-100/80 to-purple-100/80 backdrop-blur z-10">
+									<TableRow class="border-y border-violet-200/70">
+										<TableHead class="px-4 py-3 text-slate-700">Name</TableHead>
+										<TableHead class="px-4 py-3 text-slate-700">Contact</TableHead>
+										<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+									{#if loading}
+										{#each Array(3) as _, i}
+											<TableRow><TableCell colspan="3" class="px-4 py-3"><Skeleton class="h-7 w-full bg-white/60" /></TableCell></TableRow>
+										{/each}
+									{:else if suppliers.length === 0}
+										<TableRow>
+											<TableCell colspan="3" class="text-center py-6 text-slate-600">No suppliers found</TableCell>
+										</TableRow>
+									{:else}
+										{#each suppliers as supplier}
+											<TableRow class="hover:bg-white/90 transition-colors">
+												<TableCell class="px-4 py-3">{supplier.Name}</TableCell>
+												<TableCell class="px-4 py-3">
+													<p class="text-sm text-slate-800">{supplier.ContactPerson ?? '—'}</p>
+													<p class="text-xs text-slate-600">{supplier.Email ?? supplier.Phone ?? ''}</p>
+												</TableCell>
+												<TableCell class="px-4 py-3 text-right space-x-2">
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-violet-700 hover:bg-violet-100 rounded-lg px-3 py-1.5"
+														onclick={() => {
+															editingSupplier = supplier;
+															Object.assign(supplierForm, {
+																name: supplier.Name,
+																contactPerson: supplier.ContactPerson ?? '',
+																email: supplier.Email ?? '',
+																phone: supplier.Phone ?? '',
+																address: supplier.Address ?? '',
+															});
+														}}
+													>Edit</Button>
+													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteSupplier(supplier)}>Delete</Button>
+												</TableCell>
+											</TableRow>
+										{/each}
+									{/if}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+
+					<!-- Form -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-violet-50 to-purple-100" data-animate="fade-up" style="animation-delay:180ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">{editingSupplier ? 'Update supplier' : 'Create supplier'}</CardTitle>
+						</CardHeader>
+						<CardContent class="space-y-4 p-6">
+							<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Name" bind:value={supplierForm.name} />
+							<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Contact person" bind:value={supplierForm.contactPerson} />
+							<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Email" bind:value={supplierForm.email} />
+							<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Phone" bind:value={supplierForm.phone} />
+							<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Address" bind:value={supplierForm.address} />
+							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
+								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveSupplier}>{editingSupplier ? 'Update' : 'Create'}</Button>
+								<Button class="w-full sm:w-1/2 border border-violet-200 text-violet-700 hover:bg-violet-50 rounded-xl py-2.5 transition" onclick={resetSupplierForm}>Reset</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			{:else}
+				<!-- LOCATIONS -->
+				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+					<!-- Table -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-cyan-50 to-teal-100" data-animate="fade-up" style="animation-delay:120ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">Locations</CardTitle>
+							<CardDescription class="text-slate-600">Fulfilment nodes and stores</CardDescription>
+						</CardHeader>
+						<CardContent class="pt-0 p-0 overflow-x-auto">
+							<Table class="min-w-full">
+								<TableHeader class="sticky top-0 bg-gradient-to-r from-cyan-100/80 to-teal-100/80 backdrop-blur z-10">
+									<TableRow class="border-y border-teal-200/70">
+										<TableHead class="px-4 py-3 text-slate-700">Name</TableHead>
+										<TableHead class="px-4 py-3 text-slate-700">Address</TableHead>
+										<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+									{#if loading}
+										{#each Array(3) as _, i}
+											<TableRow><TableCell colspan="3" class="px-4 py-3"><Skeleton class="h-7 w-full bg-white/60" /></TableCell></TableRow>
+										{/each}
+									{:else if locations.length === 0}
+										<TableRow>
+											<TableCell colspan="3" class="text-center py-6 text-slate-600">No locations found</TableCell>
+										</TableRow>
+									{:else}
+										{#each locations as location}
+											<TableRow class="hover:bg-white/90 transition-colors">
+												<TableCell class="px-4 py-3">{location.Name}</TableCell>
+												<TableCell class="px-4 py-3 text-slate-700">{location.Address ?? '—'}</TableCell>
+												<TableCell class="px-4 py-3 text-right space-x-2">
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-cyan-700 hover:bg-cyan-100 rounded-lg px-3 py-1.5"
+														onclick={() => {
+															editingLocation = location;
+															locationForm.name = location.Name;
+															locationForm.address = location.Address ?? '';
+														}}
+													>Edit</Button>
+													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteLocation(location)}>Delete</Button>
+												</TableCell>
+											</TableRow>
+										{/each}
+									{/if}
+								</TableBody>
+							</Table>
+						</CardContent>
+					</Card>
+
+					<!-- Form -->
+					<Card class="rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] overflow-hidden border-0 bg-gradient-to-br from-cyan-50 to-teal-100" data-animate="fade-up" style="animation-delay:180ms">
+						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
+							<CardTitle class="text-slate-800">{editingLocation ? 'Update location' : 'Create location'}</CardTitle>
+						</CardHeader>
+						<CardContent class="space-y-4 p-6">
+							<Input class="w-full border border-teal-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400 bg-white/90" placeholder="Name" bind:value={locationForm.name} />
+							<Input class="w-full border border-teal-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400 bg-white/90" placeholder="Address" bind:value={locationForm.address} />
+							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
+								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveLocation}>{editingLocation ? 'Update' : 'Create'}</Button>
+								<Button class="w-full sm:w-1/2 border border-teal-200 text-teal-700 hover:bg-teal-50 rounded-xl py-2.5 transition" onclick={resetLocationForm}>Reset</Button>
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			{/if}
+		{/key}
+	</section>
 </div>
-</div>
+
+<style lang="postcss">
+	/* Smooth transitions globally */
+	* {
+		transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+		transition-duration: 300ms;
+	}
+
+	/* Hero gradient animation */
+	@keyframes gradientShift {
+		0% { background-position: 0% 50%; }
+		50% { background-position: 100% 50%; }
+		100% { background-position: 0% 50%; }
+	}
+	.animate-gradientShift {
+		background-size: 200% 200%;
+		animation: gradientShift 16s ease-in-out infinite;
+	}
+
+	/* Soft glowing blobs */
+	@keyframes pulseGlow {
+		0%, 100% { transform: scale(1); opacity: 0.45; filter: blur(80px); }
+		50% { transform: scale(1.08); opacity: 0.6; filter: blur(90px); }
+	}
+	.animate-pulseGlow { animation: pulseGlow 10s ease-in-out infinite; }
+
+	/* Card float micro-motion */
+	@keyframes cardFloat {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-4px); }
+	}
+	.animate-cardFloat { animation: cardFloat 4s ease-in-out infinite; }
+
+	/* Fade-up reveal */
+	@keyframes fadeUp {
+		from { opacity: 0; transform: translateY(12px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
+	.animate-fadeUp {
+		animation: fadeUp 500ms var(--ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
+	}
+
+	/* Pastel scrollbar */
+	::-webkit-scrollbar { width: 8px; height: 8px; }
+	::-webkit-scrollbar-track { background: transparent; }
+	::-webkit-scrollbar-thumb {
+		background: rgba(14, 165, 233, 0.25);
+		border-radius: 9999px;
+	}
+	::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.35); }
+
+	/* Responsive padding and stacking */
+	@media (max-width: 1024px) {
+		/* ensure container breathes on tablets */
+	}
+
+	@media (max-width: 768px) {
+		.parallax-hero { --hero-translate: 0px; --hero-blur: 0px; }
+	}
+
+	@media (max-width: 640px) {
+		/* full-width buttons in hero already handled with utility classes */
+	}
+
+  @keyframes gradientShift {
+	0% { background-position: 0% 50%; }
+	50% { background-position: 100% 50%; }
+	100% { background-position: 0% 50%; }
+}
+.animate-gradientShift {
+	background-size: 200% 200%;
+	animation: gradientShift 20s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+	0%, 100% { transform: scale(1); opacity: 0.5; }
+	50% { transform: scale(1.08); opacity: 0.7; }
+}
+.animate-pulseGlow {
+	animation: pulseGlow 12s ease-in-out infinite;
+}
+
+@keyframes cardFloat {
+	0%, 100% { transform: translateY(0); }
+	50% { transform: translateY(-4px); }
+}
+.animate-cardFloat {
+	animation: cardFloat 4s ease-in-out infinite;
+}
+
+</style>

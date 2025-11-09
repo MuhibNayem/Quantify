@@ -12,10 +12,11 @@ import type {
 	ReorderSuggestion,
 	Supplier,
 	UserSummary,
+	PaginatedProducts,
 } from '$lib/types';
 
 export const productsApi = {
-	list: async (params?: Record<string, unknown>) => (await api.get<Product[]>('/products', { params })).data,
+	list: async (page: number = 1, limit: number = 100) => (await api.get<PaginatedProducts>(`/products?page=${page}&limit=${limit}`)).data,
 	get: async (id: number) => (await api.get<Product>(`/products/${id}`)).data,
 	create: async (payload: Record<string, unknown>) => (await api.post<Product>('/products', payload)).data,
 	update: async (id: number, payload: Record<string, unknown>) => (await api.put<Product>(`/products/${id}`, payload)).data,

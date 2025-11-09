@@ -28,6 +28,7 @@ export interface Location extends BaseEntity {
 	Address?: string;
 }
 
+// Your existing Product type
 export interface Product extends BaseEntity {
 	SKU: string;
 	Name: string;
@@ -47,6 +48,16 @@ export interface Product extends BaseEntity {
 	Supplier?: Supplier;
 	Location?: Location;
 }
+
+// The paginated response type
+export interface PaginatedProducts {
+	currentPage: number;
+	itemsPerPage: number;
+	totalItems: number;
+	totalPages: number;
+	products: Product[];
+}
+
 
 export interface Batch extends BaseEntity {
 	ProductID: number;
