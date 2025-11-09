@@ -79,7 +79,7 @@ func ListCategories(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [get]
 func GetCategory(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("categoryId")
 	var category domain.Category
 	if err := repository.DB.Preload("SubCategories").First(&category, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -106,7 +106,7 @@ func GetCategory(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [put]
 func UpdateCategory(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("categoryId")
 	var req requests.CategoryUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -148,7 +148,7 @@ func UpdateCategory(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [delete]
 func DeleteCategory(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("categoryId")
 	var category domain.Category
 	if err := repository.DB.First(&category, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -226,7 +226,8 @@ func CreateSubCategory(c *gin.Context) {
 
 	if err := repository.DB.Create(&subCategory).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to create sub-category", http.StatusInternalServerError, err))
-		return	}
+		return
+	}
 
 	c.JSON(http.StatusCreated, subCategory)
 }

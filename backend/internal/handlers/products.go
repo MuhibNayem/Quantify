@@ -181,7 +181,7 @@ func ListProducts(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /products/{id} [get]
 func GetProduct(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("productId")
 	var product domain.Product
 	cacheKey := fmt.Sprintf("product:%s", id)
 
@@ -227,7 +227,7 @@ func GetProduct(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /products/{id} [put]
 func UpdateProduct(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("productId")
 	var req requests.ProductUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -293,7 +293,7 @@ func UpdateProduct(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /products/{id} [delete]
 func DeleteProduct(c *gin.Context) {
-	id := c.Param("id")
+	id := c.Param("productId")
 	var product domain.Product
 	if err := repository.DB.First(&product, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {

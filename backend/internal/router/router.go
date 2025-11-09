@@ -63,13 +63,13 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		{
 			products.POST("", handlers.CreateProduct)
 			products.GET("", handlers.ListProducts)
-			products.GET("/:id", handlers.GetProduct)
-			products.PUT("/:id", handlers.UpdateProduct)
-			products.DELETE("/:id", handlers.DeleteProduct)
-			products.GET("/:id/stock", handlers.GetProductStock)
+			products.GET("/:productId", handlers.GetProduct)
+			products.PUT("/:productId", handlers.UpdateProduct)
+			products.DELETE("/:productId", handlers.DeleteProduct)
+			products.GET("/:productId/stock", handlers.GetProductStock)
 			products.POST("/:productId/stock/batches", handlers.CreateBatch)
 			products.POST("/:productId/stock/adjustments", handlers.CreateStockAdjustment)
-			products.GET("/:id/history", handlers.ListStockHistory)
+			products.GET("/:productId/history", handlers.ListStockHistory)
 		}
 
 		// Categories
@@ -77,16 +77,17 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		{
 			categories.POST("", handlers.CreateCategory)
 			categories.GET("", handlers.ListCategories)
-			categories.GET("/:id", handlers.GetCategory)
-			categories.PUT("/:id", handlers.UpdateCategory)
-			categories.DELETE("/:id", handlers.DeleteCategory)
+			categories.GET("/:categoryId", handlers.GetCategory)
+			categories.PUT("/:categoryId", handlers.UpdateCategory)
+			categories.DELETE("/:categoryId", handlers.DeleteCategory)
+
+			categories.POST("/:categoryId/sub-categories", handlers.CreateSubCategory)
+			categories.GET("/:categoryId/sub-categories", handlers.ListSubCategories)
 		}
 
 		// Sub-categories
 		subCategories := api.Group("/sub-categories")
 		{
-			subCategories.POST("", handlers.CreateSubCategory)
-			subCategories.GET("", handlers.ListSubCategories)
 			subCategories.PUT("/:id", handlers.UpdateSubCategory)
 			subCategories.DELETE("/:id", handlers.DeleteSubCategory)
 		}
