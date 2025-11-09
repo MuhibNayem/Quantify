@@ -98,7 +98,7 @@ func ListAlerts(c *gin.Context) {
 	if status := c.Query("status"); status != "" {
 		db = db.Where("status = ?", status)
 	} else {
-		db = db.Where("status = ?", "ACTIVE") // Default to active alerts
+		db = db.Where("status = ?", "ACTIVE")
 	}
 	if productID := c.Query("productId"); productID != "" {
 		db = db.Where("product_id = ?", productID)
