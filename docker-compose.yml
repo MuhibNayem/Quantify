@@ -152,9 +152,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
-    depends_on:
-      backend:
-        condition: service_started
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - my_network
 
@@ -168,6 +170,8 @@ services:
         condition: service_healthy
       redis-init:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     env_file:
       - ./backend/.env
     deploy:

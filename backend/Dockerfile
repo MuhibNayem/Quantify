@@ -1,7 +1,8 @@
 # Stage 1: Build the Go application
 FROM golang:1.24-alpine AS builder
 
-WORKDIR /app
+# Create the directory structure matching the module path
+WORKDIR /app/inventory/backend
 
 # Copy go.mod and go.sum
 COPY go.* ./
@@ -12,9 +13,8 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
-
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o /inventory-backend cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /inventory-backend ./cmd/server/main.go
 
 # Stage 2: Create the production image
 FROM alpine:latest

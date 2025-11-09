@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Root, Content, Item, PrevButton, NextButton, Ellipsis, Link } from '$lib/components/ui/pagination';
@@ -109,49 +109,33 @@
 	};
 
 	onMount(() => {
-		loadAll();
+	loadAll();
 
-		// Parallax + gradient motion on hero
-		let raf = 0;
-		const onScroll = () => {
-			if (raf) return;
-			raf = requestAnimationFrame(() => {
-				raf = 0;
-				const y = window.scrollY || 0;
-				const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
-				if (hero) {
-					hero.style.setProperty('--hero-translate', Math.min(y * 0.15, 60) + 'px');
-					hero.style.setProperty('--hero-blur', Math.min(2 + y * 0.01, 6) + 'px');
-				}
+	let ticking = false;
+	const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
+
+	const handleScroll = () => {
+		if (!hero) return;
+		if (!ticking) {
+			window.requestAnimationFrame(() => {
+				const scrollY = window.scrollY || 0;
+				const translate = Math.min(scrollY * 0.25, 60); 
+				const blur = Math.min(scrollY * 0.02, 6); 
+				hero.style.transform = `translateY(${translate}px)`;
+				hero.style.filter = `blur(${blur}px)`;
+				ticking = false;
 			});
-		};
-		window.addEventListener('scroll', onScroll, { passive: true });
+			ticking = true;
+		}
+	};
 
-		// Staggered fade-up on first paint
-		const observers: IntersectionObserver[] = [];
-		document.querySelectorAll<HTMLElement>('[data-animate="fade-up"]').forEach((el, idx) => {
-			el.style.animationDelay = `${100 + idx * 60}ms`;
-			const io = new IntersectionObserver(
-				(entries) => {
-					entries.forEach((e) => {
-						if (e.isIntersecting) {
-							el.classList.add('animate-fadeUp');
-							io.unobserve(el);
-						}
-					});
-				},
-				{ threshold: 0.12 }
-			);
-			io.observe(el);
-			observers.push(io);
-		});
+	window.addEventListener('scroll', handleScroll, { passive: true });
 
-		return () => {
-			window.removeEventListener('scroll', onScroll);
-			observers.forEach((o) => o.disconnect());
-			if (raf) cancelAnimationFrame(raf);
-		};
-	});
+	return () => {
+		window.removeEventListener('scroll', handleScroll);
+	};
+});
+
 
 	const loadSubCategories = async (categoryId: number) => {
 		if (!categoryId) {
@@ -418,7 +402,7 @@
 </script>
 
 <!-- ===== FIXED HERO (responsive, clean parallax, correct layering) ===== -->
-<section class="relative rounded w-full isolate overflow-hidden">
+<section class="relative w-full isolate overflow-hidden">
 	<!-- Gradient background with motion -->
 	<div class="absolute inset-0 -z-10 animate-gradientShift bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-100 bg-[length:200%_200%]"></div>
 
@@ -1014,31 +998,25 @@
 	}
 	::-webkit-scrollbar-thumb:hover { background: rgba(14, 165, 233, 0.35); }
 
-	/* Responsive padding and stacking */
-	@media (max-width: 1024px) {
-		/* ensure container breathes on tablets */
-	}
 
-	@media (max-width: 768px) {
-		.parallax-hero { --hero-translate: 0px; --hero-blur: 0px; }
-	}
+  .parallax-hero {
+    transform: translateY(0);
+    will-change: transform, filter;
+    transition: transform 0.1s ease-out, filter 0.2s ease-out;
+  }
 
-	@media (max-width: 640px) {
-		/* full-width buttons in hero already handled with utility classes */
-	}
 
-  @keyframes gradientShift {
+@keyframes gradientShift {
 	0% { background-position: 0% 50%; }
 	50% { background-position: 100% 50%; }
 	100% { background-position: 0% 50%; }
 }
 .animate-gradientShift {
-	background-size: 200% 200%;
-	animation: gradientShift 20s ease-in-out infinite;
+	animation: gradientShift 18s ease-in-out infinite;
 }
 
 @keyframes pulseGlow {
-	0%, 100% { transform: scale(1); opacity: 0.5; }
+	0%, 100% { transform: scale(1); opacity: 0.45; }
 	50% { transform: scale(1.08); opacity: 0.7; }
 }
 .animate-pulseGlow {
@@ -1051,6 +1029,22 @@
 }
 .animate-cardFloat {
 	animation: cardFloat 4s ease-in-out infinite;
+}
+
+@keyframes fadeUp {
+	from { opacity: 0; transform: translateY(12px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeUp {
+	animation: fadeUp 0.6s ease-out forwards;
+}
+
+/* Responsive tweaks */
+@media (max-width: 640px) {
+	.parallax-hero {
+		padding-top: 5rem;
+		padding-bottom: 3rem;
+	}
 }
 
 </style>

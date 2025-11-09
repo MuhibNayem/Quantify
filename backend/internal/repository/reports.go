@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"inventory/backend/internal/domain"
 	"time"
 )
@@ -64,7 +65,7 @@ func GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint) 
 }
 
 func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
-	var costOfGoodsSold float64
+	var costOfGoodsSold sql.NullFloat64
 
 	// Calculate Cost of Goods Sold (COGS)
 	query := DB.Model(&domain.StockAdjustment{}).
@@ -86,9 +87,13 @@ func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *
 		return 0, 0, err
 	}
 
+	cogsValue := 0.0
+	if costOfGoodsSold.Valid {
+		cogsValue = costOfGoodsSold.Float64
+	}
+
 	// Calculate Average Inventory Value
-	var startInventoryValue float64
-	var endInventoryValue float64
+	var endInventoryValue sql.NullFloat64
 
 	// This is a simplified calculation. A real implementation would need to reconstruct the inventory at a specific point in time.
 	// For simplicity, we'll use the current inventory as a proxy for the end inventory and calculate the start inventory based on adjustments.
@@ -108,8 +113,13 @@ func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *
 		return 0, 0, err
 	}
 
+	endInvValue := 0.0
+	if endInventoryValue.Valid {
+		endInvValue = endInventoryValue.Float64
+	}
+
 	// Start Inventory Value (End Inventory Value - changes during the period)
-	var netChangeInValue float64
+	var netChangeInValue sql.NullFloat64
 	query = DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(CASE WHEN stock_adjustments.type = 'STOCK_IN' THEN stock_adjustments.quantity * products.purchase_price ELSE -stock_adjustments.quantity * products.purchase_price END)").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
@@ -125,16 +135,21 @@ func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *
 		return 0, 0, err
 	}
 
-	startInventoryValue = endInventoryValue - netChangeInValue
+	netChangeValue := 0.0
+	if netChangeInValue.Valid {
+		netChangeValue = netChangeInValue.Float64
+	}
 
-	averageInventoryValue := (startInventoryValue + endInventoryValue) / 2
+	startInvValue := endInvValue - netChangeValue
 
-	return costOfGoodsSold, averageInventoryValue, nil
+	averageInventoryValue := (startInvValue + endInvValue) / 2
+
+	return cogsValue, averageInventoryValue, nil
 }
 
 func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
-	var totalRevenue float64
-	var totalCost float64
+	var totalRevenue sql.NullFloat64
+	var totalCost sql.NullFloat64
 
 	// Calculate Total Revenue
 	query := DB.Model(&domain.StockAdjustment{}).
@@ -154,6 +169,11 @@ func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint)
 	err := query.Scan(&totalRevenue).Error
 	if err != nil {
 		return 0, 0, err
+	}
+
+	revenueValue := 0.0
+	if totalRevenue.Valid {
+		revenueValue = totalRevenue.Float64
 	}
 
 	// Calculate Total Cost (COGS)
@@ -176,11 +196,16 @@ func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint)
 		return 0, 0, err
 	}
 
-	return totalRevenue, totalCost, nil
+	costValue := 0.0
+	if totalCost.Valid {
+		costValue = totalCost.Float64
+	}
+
+	return revenueValue, costValue, nil
 }
 
 func GetDailySalesSummary(date time.Time) (float64, error) {
-	var totalSales float64
+	var totalSales sql.NullFloat64
 
 	query := DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(stock_adjustments.quantity * products.selling_price)").
@@ -194,5 +219,10 @@ func GetDailySalesSummary(date time.Time) (float64, error) {
 		return 0, err
 	}
 
-	return totalSales, nil
+	salesValue := 0.0
+	if totalSales.Valid {
+		salesValue = totalSales.Float64
+	}
+
+	return salesValue, nil
 }

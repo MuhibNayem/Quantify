@@ -9,6 +9,7 @@
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
+	import { Download, TrendingUp, RotateCcw, Percent } from 'lucide-svelte';
 
 	const forecastForm = $state({ periodInDays: '30', productId: '', result: '' });
 	let suggestions = $state<ReorderSuggestion[]>([]);
@@ -22,6 +23,19 @@
 	type ReportKey = (typeof reportKeys)[number];
 	const reportResults = $state<Record<ReportKey, unknown>>({ sales: null, turnover: null, margin: null });
 	let reportsLoading = $state(false);
+
+	const exportJSON = (data: unknown, filename: string) => {
+		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = `${filename}.json`;
+		a.click();
+		URL.revokeObjectURL(url);
+	};
+
+	// Helper for safe number formatting
+	const fmt = (v: number | undefined) => (v ?? 0).toLocaleString();
 
 	const loadSuggestions = async () => {
 		suggestionsLoading = true;
@@ -227,25 +241,140 @@
 	</Card>
 
 	<!-- Reports payloads -->
-	<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-		{#each reportKeys as key}
-			<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-slate-50 to-slate-100">
-				<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-					<CardTitle class="capitalize text-slate-800">{key} report</CardTitle>
-					<CardDescription class="text-slate-600">Raw payload for BI handoff</CardDescription>
-				</CardHeader>
-				<CardContent class="p-6">
-					{#if reportsLoading && !reportResults[key]}
-						<Skeleton class="h-36 w-full bg-white/70" />
-					{:else if reportResults[key]}
-						<pre class="max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white/70 backdrop-blur p-3 text-xs text-slate-800">{JSON.stringify(reportResults[key], null, 2)}</pre>
-					{:else}
-						<p class="text-sm text-slate-600">Run the {key} report to populate this block.</p>
-					{/if}
-				</CardContent>
-			</Card>
-		{/each}
-	</div>
+
+		
+		<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
+	<!-- SALES REPORT -->
+	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-sky-50 to-blue-100">
+		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
+			<div>
+				<CardTitle class="flex items-center gap-2 text-slate-800">
+					<TrendingUp class="h-5 w-5 text-sky-600" />
+					Sales Report
+				</CardTitle>
+				<CardDescription class="text-slate-600">Trend of total vs average sales</CardDescription>
+			</div>
+			<button class="rounded-full hover:bg-sky-100 p-2" onclick={() => exportJSON(reportResults.sales, 'sales-report')}>
+				<Download class="h-4 w-4 text-sky-700" />
+			</button>
+		</CardHeader>
+		<CardContent class="p-6 space-y-4">
+			<!-- Simple Line Chart (SVG sparkline) -->
+			<div class="h-24 w-full relative">
+				<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0">
+					<polyline
+						points="0,35 10,28 20,25 30,18 40,20 50,14 60,12 70,18 80,22 90,15 100,10"
+						fill="none"
+						stroke="url(#salesGrad)"
+						stroke-width="2.5"
+						stroke-linecap="round"
+					/>
+					<defs>
+						<linearGradient id="salesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+							<stop offset="0%" stop-color="#38bdf8" />
+							<stop offset="100%" stop-color="#2563eb" />
+						</linearGradient>
+					</defs>
+				</svg>
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Total Sales</p>
+				<p class="font-semibold text-sky-700">{fmt(reportResults.sales?.totalSales)}</p>
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Avg Daily Sales</p>
+				<p class="font-semibold text-blue-700">{fmt(reportResults.sales?.averageDailySales)}</p>
+			</div>
+			<p class="text-xs text-slate-500">Period: {reportResults.sales?.period ?? '—'}</p>
+		</CardContent>
+	</Card>
+
+	<!-- TURNOVER REPORT -->
+	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-cyan-50 to-teal-100">
+		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
+			<div>
+				<CardTitle class="flex items-center gap-2 text-slate-800">
+					<RotateCcw class="h-5 w-5 text-teal-600" />
+					Turnover Report
+				</CardTitle>
+				<CardDescription class="text-slate-600">Inventory efficiency over time</CardDescription>
+			</div>
+			<button class="rounded-full hover:bg-teal-100 p-2" onclick={() => exportJSON(reportResults.turnover, 'turnover-report')}>
+				<Download class="h-4 w-4 text-teal-700" />
+			</button>
+		</CardHeader>
+		<CardContent class="p-6 space-y-4">
+			<!-- Bar Chart -->
+			<div class="h-24 w-full flex items-end gap-1">
+				{#each [40, 25, 30, 15, 35, 22, 28] as height}
+					<div
+						class="flex-1 bg-gradient-to-t from-teal-400 to-cyan-400 rounded-t-md transition-all duration-500 ease-in-out hover:scale-105"
+						style={`height: ${height}%;`}
+					></div>
+				{/each}
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Avg Inventory Value</p>
+				<p class="font-semibold text-teal-700">${fmt(reportResults.turnover?.averageInventoryValue)}</p>
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Turnover Rate</p>
+				<p class="font-semibold text-teal-700">{fmt(reportResults.turnover?.inventoryTurnoverRate)}</p>
+			</div>
+			<p class="text-xs text-slate-500">Period: {reportResults.turnover?.period ?? '—'}</p>
+		</CardContent>
+	</Card>
+
+	<!-- MARGIN REPORT -->
+	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-pink-50 to-rose-100">
+		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
+			<div>
+				<CardTitle class="flex items-center gap-2 text-slate-800">
+					<Percent class="h-5 w-5 text-rose-600" />
+					Margin Report
+				</CardTitle>
+				<CardDescription class="text-slate-600">Profitability visualization</CardDescription>
+			</div>
+			<button class="rounded-full hover:bg-pink-100 p-2" onclick={() => exportJSON(reportResults.margin, 'margin-report')}>
+				<Download class="h-4 w-4 text-rose-700" />
+			</button>
+		</CardHeader>
+		<CardContent class="p-6 space-y-4">
+			<!-- Semi-donut Chart -->
+			<div class="relative flex items-center justify-center h-24">
+				<svg viewBox="0 0 36 18" class="w-24 h-12 rotate-180">
+					<path
+						d="M2 18 A16 16 0 0 1 34 18"
+						fill="none"
+						stroke="url(#marginGrad)"
+						stroke-width="4"
+						stroke-linecap="round"
+						stroke-dasharray="{(reportResults.margin?.grossProfitMargin ?? 0) * 0.5},100"
+					/>
+					<defs>
+						<linearGradient id="marginGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+							<stop offset="0%" stop-color="#fb7185" />
+							<stop offset="100%" stop-color="#e11d48" />
+						</linearGradient>
+					</defs>
+				</svg>
+				<span class="absolute text-lg font-semibold text-rose-700">
+					{fmt(reportResults.margin?.grossProfitMargin)}%
+				</span>
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Gross Profit</p>
+				<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.grossProfit)}</p>
+			</div>
+			<div class="flex justify-between text-sm text-slate-600">
+				<p>Total Revenue</p>
+				<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.totalRevenue)}</p>
+			</div>
+			<p class="text-xs text-slate-500">Period: {reportResults.margin?.period ?? '—'}</p>
+		</CardContent>
+	</Card>
+</div>
+
 </section>
 
 <style lang="postcss">
