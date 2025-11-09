@@ -65,4 +65,41 @@
     --input: 217.2 32.4% 17.5%; /* slate-800 */
     --ring: 142.1 76.2% 36.3%; /* emerald-500 */
   }
+
+    /* Safari-friendly select reset and modern styling */
+    select {
+      @apply appearance-none w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm bg-white/90 focus:ring-2 focus:ring-sky-400 text-slate-800 transition duration-200 outline-none;
+      background-image: none;
+      /* Removes macOS glossy gradient */
+    }
+  
+    /* Ensure consistent rendering */
+    select::-ms-expand {
+      display: none;
+    }
+  
+    .select-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+  
+    .select-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 1rem;
+      width: 0.6rem;
+      height: 0.6rem;
+      pointer-events: none;
+      border-left: 2px solid #0ea5e9;
+      /* sky-500 */
+      border-bottom: 2px solid #0ea5e9;
+      transform: rotate(-45deg) translateY(-50%);
+      transition: transform 0.2s ease;
+    }
+  
+    .select-wrapper:focus-within::after {
+      transform: rotate(-225deg) translateY(-50%);
+    }
 }

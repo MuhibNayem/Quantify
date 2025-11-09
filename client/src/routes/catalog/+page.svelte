@@ -590,48 +590,61 @@
 							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Description" bind:value={productForm.description} />
 							<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Barcode / UPC (must be unique)" bind:value={productForm.barCodeUPC} />
 
-							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.categoryId} onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}>
+              <div class="select-wrapper">
+<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.categoryId} onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}>
 								<option value="">Select category</option>
 								{#each categories as category}
 									<option value={category.ID}>{category.Name}</option>
 								{/each}
 							</select>
+              </div>
+							
 
 							<div class="flex items-center gap-3">
-								<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.subCategoryId}>
+                <div class="select-wrapper">
+                  <select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.subCategoryId}>
 									<option value="">Select sub-category</option>
 									{#each subCategories.filter((sc) => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
 										<option value={subCategory.ID}>{subCategory.Name}</option>
 									{/each}
 								</select>
+                </div>
+								
 								<Button size="sm" variant="outline" class="border border-sky-200 text-sky-700 hover:bg-sky-50 rounded-xl px-3 py-2" onclick={() => (activeTab = 'sub-categories')}>New</Button>
 							</div>
 
-							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.supplierId}>
+              <div class="select-wrapper">
+                <select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.supplierId}>
 								<option value="">Select supplier</option>
 								{#each suppliers as supplier}
 									<option value={supplier.ID}>{supplier.Name}</option>
 								{/each}
 							</select>
+              </div>
+							
 
-							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.locationId}>
+              <div class="select-wrapper">
+                  <select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.locationId}>
 								<option value="">Default location</option>
 								{#each locations as location}
 									<option value={location.ID}>{location.Name}</option>
 								{/each}
 							</select>
+              </div>
 
 							<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
 								<Input type="number" min="0" step="0.01" class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Purchase price" bind:value={productForm.purchasePrice} />
 								<Input type="number" min="0" step="0.01" class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Selling price" bind:value={productForm.sellingPrice} />
 							</div>
 
-							<select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.status}>
+              <div class="select-wrapper">
+
+                <select class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={productForm.status}>
 								<option value="Active">Active</option>
 								<option value="Archived">Archived</option>
 								<option value="Discontinued">Discontinued</option>
 							</select>
-
+              </div>
 							<div class="flex flex-col sm:flex-row gap-3 pt-1 pr-2">
 								<Button class="w-full sm:w-1/2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-xl py-2.5 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" onclick={saveProduct}>
 									{editingProduct ? 'Update' : 'Create'}

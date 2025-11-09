@@ -85,6 +85,11 @@
             "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
             "transition-all duration-200 ease-in-out",
             "shadow-sm", // Material UI-like shadow
+            "appearance-none", // Reset default button styles for cross-browser consistency
+            "-webkit-appearance: none;", // For Safari
+            "background-color: transparent;", // Ensure background is controlled by Tailwind
+            "border: none;", // Ensure border is controlled by Tailwind
+            "cursor: pointer;", // Explicitly set cursor
             disabled && "opacity-50 cursor-not-allowed bg-gray-100",
             value && "pt-4" // Adjust padding when value is selected and label floats
         )}

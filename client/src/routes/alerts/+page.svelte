@@ -164,19 +164,25 @@
 				<CardTitle class="text-slate-800">Live Alerts</CardTitle>
 				<CardDescription class="text-slate-600">Filter by type or lifecycle state</CardDescription>
 			</div>
-			<div class="flex flex-wrap gap-2">
-				<select class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" bind:value={filters.type}>
+			<div class="flex gap-2">
+				<div class="select-wrapper w-[200px]">
+<select class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" bind:value={filters.type}>
 					<option value="">All types</option>
 					<option value="LOW_STOCK">Low stock</option>
 					<option value="OVERSTOCK">Overstock</option>
 					<option value="OUT_OF_STOCK">Out of stock</option>
 					<option value="EXPIRY_ALERT">Expiry</option>
 				</select>
-				<select class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" bind:value={filters.status}>
+				</div>
+				
+				<div class="select-wrapper w-[150px]">
+<select class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400" bind:value={filters.status}>
 					<option value="">Any status</option>
 					<option value="ACTIVE">Active</option>
 					<option value="RESOLVED">Resolved</option>
 				</select>
+				</div>
+				
 				<Button
 					variant="secondary"
 					class="bg-white/90 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-xl"
