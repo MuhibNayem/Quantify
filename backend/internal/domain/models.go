@@ -205,3 +205,14 @@ type PurchaseOrderItem struct {
 	ReceivedQuantity int     `gorm:"default:0"` // Quantity actually received
 	UnitPrice        float64 `gorm:"not null"`
 }
+
+// Transaction represents a payment transaction.
+type Transaction struct {
+	gorm.Model
+	OrderID              string `gorm:"not null"`
+	Amount               int64  `gorm:"not null"` // Amount in smallest currency unit (e.g., cents)
+	Currency             string `gorm:"not null"`
+	PaymentMethod        string `gorm:"not null"` // e.g., "card", "bkash"
+	Status               string `gorm:"not null"` // e.g., "pending", "succeeded", "failed"
+	GatewayTransactionID string `gorm:"uniqueIndex;not null"`
+}

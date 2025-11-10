@@ -255,7 +255,7 @@ func main() {
 	defer c.Stop()
 
 	// Setup router
-	r := router.SetupRouter(hub)
+	r := router.SetupRouter(cfg, hub)
 	// Start HTTP server
 	logrus.Infof("Server starting on port %s", cfg.ServerPort)
 	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {

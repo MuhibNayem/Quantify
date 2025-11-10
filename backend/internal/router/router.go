@@ -1,9 +1,11 @@
 package router
 
 import (
+	"inventory/backend/internal/config"
 	"inventory/backend/internal/handlers"
 	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/repository"
+	"inventory/backend/internal/services"
 	"inventory/backend/internal/websocket"
 	"net/http"
 
@@ -16,7 +18,7 @@ import (
 	_ "inventory/backend/api"
 )
 
-func SetupRouter(hub *websocket.Hub) *gin.Engine {
+func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 	r := gin.Default()
 
 	// CORS Middleware
@@ -36,11 +38,16 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 	productRepo := repository.NewProductRepository(db)
 	categoryRepo := repository.NewCategoryRepository(db)
 	supplierRepo := repository.NewSupplierRepository(db)
+	paymentRepo := repository.NewPaymentRepository(db)
+
+	// Initialize services
+	paymentService := services.NewPaymentService(cfg, paymentRepo)
 
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler(productRepo, db)
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
+	paymentHandler := handlers.NewPaymentHandler(paymentService)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -52,6 +59,16 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
 		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
+	// Payment routes
+	paymentRoutes := r.Group("/payment")
+	{
+		paymentRoutes.POST("/create", paymentHandler.CreatePayment)
+		paymentRoutes.POST("/success", paymentHandler.PaymentSuccess)
+		paymentRoutes.POST("/fail", paymentHandler.PaymentFail)
+		paymentRoutes.POST("/cancel", paymentHandler.PaymentCancel)
+		paymentRoutes.POST("/ipn", paymentHandler.HandleSSLCommerzIPN) // Updated IPN handler
 	}
 
 	// Public API routes (no auth middleware)

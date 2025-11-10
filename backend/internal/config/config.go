@@ -25,6 +25,18 @@ type Config struct {
 	RabbitMQURL        string
 	JWTSecret          string
 	RefreshTokenSecret string
+	SSLCommerzStoreID       string
+	SSLCommerzStorePassword string
+	SSLCommerzAPIHost       string
+	SSLCommerzSuccessURL    string
+	SSLCommerzFailURL       string
+	SSLCommerzCancelURL     string
+	SSLCommerzIPNURL        string
+	BkashAPIKey             string
+	BkashAPISecret          string
+	BkashUsername           string
+	BkashPassword           string
+	BkashBaseURL            string
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -41,22 +53,34 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		DBHost:             getEnv("DB_HOST", "localhost"),
-		DBUser:             getEnv("DB_USER", "user"),
-		DBPassword:         getEnv("DB_PASSWORD", "password"),
-		DBName:             getEnv("DB_NAME", "inventory_db"),
-		DBPort:             strconv.Itoa(dbPort),
-		ServerPort:         getEnv("SERVER_PORT", "8080"),
-		SMTPHost:           getEnv("SMTP_HOST", ""),
-		SMTPPort:           smtpPort,
-		SMTPUser:           getEnv("SMTP_USER", ""),
-		SMTPPass:           getEnv("SMTP_PASS", ""),
-		SMTPSender:         getEnv("SMTPSENDER", ""),
-		RedisClusterAddrs:  strings.Split(getEnv("REDIS_CLUSTER_ADDRS", "redis1:6379,redis2:6379,redis3:6379"), ","),
-		RedisPassword:      getEnv("REDIS_PASSWORD", "redispass"),
-		RabbitMQURL:        getEnv("RABBITMQ_URL", ""),
-		JWTSecret:          getEnv("JWT_SECRET", "my_secret_key"),
-		RefreshTokenSecret: getEnv("REFRESH_TOKEN_SECRET", "my_refresh_secret_key"),
+		DBHost:                  getEnv("DB_HOST", "localhost"),
+		DBUser:                  getEnv("DB_USER", "user"),
+		DBPassword:              getEnv("DB_PASSWORD", "password"),
+		DBName:                  getEnv("DB_NAME", "inventory_db"),
+		DBPort:                  strconv.Itoa(dbPort),
+		ServerPort:              getEnv("SERVER_PORT", "8080"),
+		SMTPHost:                getEnv("SMTP_HOST", ""),
+		SMTPPort:                smtpPort,
+		SMTPUser:                getEnv("SMTP_USER", ""),
+		SMTPPass:                getEnv("SMTP_PASS", ""),
+		SMTPSender:              getEnv("SMTPSENDER", ""),
+		RedisClusterAddrs:       strings.Split(getEnv("REDIS_CLUSTER_ADDRS", "redis1:6379,redis2:6379,redis3:6379"), ","),
+		RedisPassword:           getEnv("REDIS_PASSWORD", "redispass"),
+		RabbitMQURL:             getEnv("RABBITMQ_URL", ""),
+		JWTSecret:               getEnv("JWT_SECRET", "my_secret_key"),
+		RefreshTokenSecret:      getEnv("REFRESH_TOKEN_SECRET", "my_refresh_secret_key"),
+		SSLCommerzStoreID:       getEnv("SSLCOMMERZ_STORE_ID", ""),
+		SSLCommerzStorePassword: getEnv("SSLCOMMERZ_STORE_PASSWORD", ""),
+		SSLCommerzAPIHost:       getEnv("SSLCOMMERZ_API_HOST", "https://sandbox.sslcommerz.com"),
+		SSLCommerzSuccessURL:    getEnv("SSLCOMMERZ_SUCCESS_URL", "http://localhost:8080/payment/success"),
+		SSLCommerzFailURL:       getEnv("SSLCOMMERZ_FAIL_URL", "http://localhost:8080/payment/fail"),
+		SSLCommerzCancelURL:     getEnv("SSLCOMMERZ_CANCEL_URL", "http://localhost:8080/payment/cancel"),
+		SSLCommerzIPNURL:        getEnv("SSLCOMMERZ_IPN_URL", "http://localhost:8080/payment/ipn"),
+		BkashAPIKey:             getEnv("BKASH_API_KEY", ""),
+		BkashAPISecret:          getEnv("BKASH_API_SECRET", ""),
+		BkashUsername:           getEnv("BKASH_USERNAME", ""),
+		BkashPassword:           getEnv("BKASH_PASSWORD", ""),
+		BkashBaseURL:            getEnv("BKASH_BASE_URL", "https://sandbox.bkash.com/v1.2.0-beta"),
 	}
 }
 

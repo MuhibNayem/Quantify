@@ -22,6 +22,10 @@ require (
 	gorm.io/gorm v1.31.0
 )
 
+require github.com/sh0umik/bd-payment-gateway v0.4.0
+
+require github.com/dreygur/bkashgo v1.2.0 // indirect
+
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
