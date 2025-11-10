@@ -1,11 +1,11 @@
 package router
 
 import (
-	"net/http"
-
 	"inventory/backend/internal/handlers"
 	"inventory/backend/internal/middleware"
+	"inventory/backend/internal/repository"
 	"inventory/backend/internal/websocket"
+	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -30,6 +30,17 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 	}))
 
 	r.Use(middleware.ErrorHandler())
+
+	// Initialize repositories
+	db := repository.DB
+	productRepo := repository.NewProductRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	supplierRepo := repository.NewSupplierRepository(db)
+
+	// Initialize handlers
+	productHandler := handlers.NewProductHandler(productRepo, db)
+	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
+	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -61,11 +72,13 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Products
 		products := api.Group("/products")
 		{
-			products.POST("", handlers.CreateProduct)
-			products.GET("", handlers.ListProducts)
-			products.GET("/:productId", handlers.GetProduct)
-			products.PUT("/:productId", handlers.UpdateProduct)
-			products.DELETE("/:productId", handlers.DeleteProduct)
+			products.POST("", productHandler.CreateProduct)
+			products.GET("", productHandler.ListProducts)
+			products.GET("/:productId", productHandler.GetProduct)
+			products.GET("/sku/:sku", productHandler.GetProductBySKU)
+			products.GET("/barcode/:barcode", productHandler.GetProductByBarcode)
+			products.PUT("/:productId", productHandler.UpdateProduct)
+			products.DELETE("/:productId", productHandler.DeleteProduct)
 			products.GET("/:productId/stock", handlers.GetProductStock)
 			products.POST("/:productId/stock/batches", handlers.CreateBatch)
 			products.POST("/:productId/stock/adjustments", handlers.CreateStockAdjustment)
@@ -75,32 +88,34 @@ func SetupRouter(hub *websocket.Hub) *gin.Engine {
 		// Categories
 		categories := api.Group("/categories")
 		{
-			categories.POST("", handlers.CreateCategory)
-			categories.GET("", handlers.ListCategories)
-			categories.GET("/:categoryId", handlers.GetCategory)
-			categories.PUT("/:categoryId", handlers.UpdateCategory)
-			categories.DELETE("/:categoryId", handlers.DeleteCategory)
+			categories.POST("", categoryHandler.CreateCategory)
+			categories.GET("", categoryHandler.ListCategories)
+			categories.GET("/:categoryId", categoryHandler.GetCategory)
+			categories.GET("/name/:name", categoryHandler.GetCategoryByName)
+			categories.PUT("/:categoryId", categoryHandler.UpdateCategory)
+			categories.DELETE("/:categoryId", categoryHandler.DeleteCategory)
 
-			categories.POST("/:categoryId/sub-categories", handlers.CreateSubCategory)
-			categories.GET("/:categoryId/sub-categories", handlers.ListSubCategories)
+			categories.POST("/:categoryId/sub-categories", categoryHandler.CreateSubCategory)
+			categories.GET("/:categoryId/sub-categories", categoryHandler.ListSubCategories)
 		}
 
 		// Sub-categories
 		subCategories := api.Group("/sub-categories")
 		{
-			subCategories.PUT("/:id", handlers.UpdateSubCategory)
-			subCategories.DELETE("/:id", handlers.DeleteSubCategory)
+			subCategories.PUT("/:id", categoryHandler.UpdateSubCategory)
+			subCategories.DELETE("/:id", categoryHandler.DeleteSubCategory)
 		}
 
 		// Suppliers
 		suppliers := api.Group("/suppliers")
 		{
-			suppliers.POST("", handlers.CreateSupplier)
-			suppliers.GET("", handlers.ListSuppliers)
-			suppliers.GET("/:id", handlers.GetSupplier)
-			suppliers.PUT("/:id", handlers.UpdateSupplier)
-			suppliers.DELETE("/:id", handlers.DeleteSupplier)
-			suppliers.GET("/:id/performance", handlers.GetSupplierPerformanceReport)
+			suppliers.POST("", supplierHandler.CreateSupplier)
+			suppliers.GET("", supplierHandler.ListSuppliers)
+			suppliers.GET("/:id", supplierHandler.GetSupplier)
+			suppliers.GET("/name/:name", supplierHandler.GetSupplierByName)
+			suppliers.PUT("/:id", supplierHandler.UpdateSupplier)
+			suppliers.DELETE("/:id", supplierHandler.DeleteSupplier)
+			suppliers.GET("/:id/performance", supplierHandler.GetSupplierPerformanceReport)
 		}
 
 		// Locations

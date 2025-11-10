@@ -3,12 +3,30 @@ package repository
 import (
 	"inventory/backend/internal/domain"
 	"time"
+
+	"gorm.io/gorm"
 )
 
-func GetSupplierPerformance(supplierID uint) (float64, float64, error) {
+type SupplierRepository struct {
+	db *gorm.DB
+}
+
+func NewSupplierRepository(db *gorm.DB) *SupplierRepository {
+	return &SupplierRepository{db: db}
+}
+
+func (r *SupplierRepository) GetSupplierByName(name string) (*domain.Supplier, error) {
+	var supplier domain.Supplier
+	if err := r.db.Where("name = ?", name).First(&supplier).Error; err != nil {
+		return nil, err
+	}
+	return &supplier, nil
+}
+
+func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, float64, error) {
 	var purchaseOrders []domain.PurchaseOrder
 
-	err := DB.Where("supplier_id = ? AND status = ?", supplierID, "RECEIVED").Find(&purchaseOrders).Error
+	err := r.db.Where("supplier_id = ? AND status = ?", supplierID, "RECEIVED").Find(&purchaseOrders).Error
 	if err != nil {
 		return 0, 0, err
 	}

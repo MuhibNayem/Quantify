@@ -1,18 +1,29 @@
 package handlers
 
 import (
+	"inventory/backend/internal/domain"
+	appErrors "inventory/backend/internal/errors"
+	"inventory/backend/internal/repository"
+	"inventory/backend/internal/requests"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-
-	"inventory/backend/internal/domain"
-	appErrors "inventory/backend/internal/errors"
-	"inventory/backend/internal/repository"
-	"inventory/backend/internal/requests"
 )
+
+type CategoryHandler struct {
+	categoryRepo *repository.CategoryRepository
+	db           *gorm.DB // Keep db for now for existing functions
+}
+
+func NewCategoryHandler(categoryRepo *repository.CategoryRepository, db *gorm.DB) *CategoryHandler {
+	return &CategoryHandler{
+		categoryRepo: categoryRepo,
+		db:           db,
+	}
+}
 
 // CreateCategory godoc
 // @Summary Create a new category
@@ -26,7 +37,7 @@ import (
 // @Failure 409 {object} map[string]interface{} "Conflict: Category with this name already exists"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories [post]
-func CreateCategory(c *gin.Context) {
+func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 	var req requests.CategoryCreateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -37,7 +48,7 @@ func CreateCategory(c *gin.Context) {
 		Name: req.Name,
 	}
 
-	if err := repository.DB.Create(&category).Error; err != nil {
+	if err := h.db.Create(&category).Error; err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Category with this name already exists", http.StatusConflict, err))
 			return
@@ -58,9 +69,9 @@ func CreateCategory(c *gin.Context) {
 // @Success 200 {array} domain.Category
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories [get]
-func ListCategories(c *gin.Context) {
+func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	var categories []domain.Category
-	if err := repository.DB.Preload("SubCategories").Find(&categories).Error; err != nil {
+	if err := h.db.Preload("SubCategories").Find(&categories).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch categories", http.StatusInternalServerError, err))
 		return
 	}
@@ -78,10 +89,35 @@ func ListCategories(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [get]
-func GetCategory(c *gin.Context) {
+func (h *CategoryHandler) GetCategory(c *gin.Context) {
 	id := c.Param("categoryId")
 	var category domain.Category
-	if err := repository.DB.Preload("SubCategories").First(&category, id).Error; err != nil {
+	if err := h.db.Preload("SubCategories").First(&category, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
+			return
+		}
+		c.Error(appErrors.NewAppError("Failed to fetch category", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, category)
+}
+
+// GetCategoryByName godoc
+// @Summary Get a category by Name
+// @Description Get a single category by its Name
+// @Tags categories
+// @Accept json
+// @Produce json
+// @Param name path string true "Category Name"
+// @Success 200 {object} domain.Category
+// @Failure 404 {object} map[string]interface{} "Category not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /categories/name/{name} [get]
+func (h *CategoryHandler) GetCategoryByName(c *gin.Context) {
+	name := c.Param("name")
+	category, err := h.categoryRepo.GetCategoryByName(name)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
 			return
@@ -105,7 +141,7 @@ func GetCategory(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [put]
-func UpdateCategory(c *gin.Context) {
+func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	id := c.Param("categoryId")
 	var req requests.CategoryUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -114,7 +150,7 @@ func UpdateCategory(c *gin.Context) {
 	}
 
 	var category domain.Category
-	if err := repository.DB.First(&category, id).Error; err != nil {
+	if err := h.db.First(&category, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
 			return
@@ -123,7 +159,7 @@ func UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Model(&category).Update("Name", req.Name).Error; err != nil {
+	if err := h.db.Model(&category).Update("Name", req.Name).Error; err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Category with this name already exists", http.StatusConflict, err))
 			return
@@ -147,10 +183,10 @@ func UpdateCategory(c *gin.Context) {
 // @Failure 409 {object} map[string]interface{} "Conflict: Category has associated data"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{id} [delete]
-func DeleteCategory(c *gin.Context) {
+func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	id := c.Param("categoryId")
 	var category domain.Category
-	if err := repository.DB.First(&category, id).Error; err != nil {
+	if err := h.db.First(&category, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
 			return
@@ -161,7 +197,7 @@ func DeleteCategory(c *gin.Context) {
 
 	// Check for associated products
 	var productCount int64
-	repository.DB.Model(&domain.Product{}).Where("category_id = ?", id).Count(&productCount)
+	h.db.Model(&domain.Product{}).Where("category_id = ?", id).Count(&productCount)
 	if productCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete category: products are associated", http.StatusConflict, nil))
 		return
@@ -169,13 +205,13 @@ func DeleteCategory(c *gin.Context) {
 
 	// Check for associated subcategories
 	var subCategoryCount int64
-	repository.DB.Model(&domain.SubCategory{}).Where("category_id = ?", id).Count(&subCategoryCount)
+	h.db.Model(&domain.SubCategory{}).Where("category_id = ?", id).Count(&subCategoryCount)
 	if subCategoryCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete category: subcategories are associated", http.StatusConflict, nil))
 		return
 	}
 
-	if err := repository.DB.Delete(&category).Error; err != nil {
+	if err := h.db.Delete(&category).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete category", http.StatusInternalServerError, err))
 		return
 	}
@@ -196,7 +232,7 @@ func DeleteCategory(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{categoryId}/subcategories [post]
-func CreateSubCategory(c *gin.Context) {
+func (h *CategoryHandler) CreateSubCategory(c *gin.Context) {
 	categoryID, err := strconv.ParseUint(c.Param("categoryId"), 10, 64)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid category ID", http.StatusBadRequest, err))
@@ -210,7 +246,7 @@ func CreateSubCategory(c *gin.Context) {
 	}
 
 	var category domain.Category
-	if err := repository.DB.First(&category, categoryID).Error; err != nil {
+	if err := h.db.First(&category, categoryID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
 			return
@@ -224,7 +260,7 @@ func CreateSubCategory(c *gin.Context) {
 		CategoryID: uint(categoryID),
 	}
 
-	if err := repository.DB.Create(&subCategory).Error; err != nil {
+	if err := h.db.Create(&subCategory).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to create sub-category", http.StatusInternalServerError, err))
 		return
 	}
@@ -243,10 +279,10 @@ func CreateSubCategory(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories/{categoryId}/subcategories [get]
-func ListSubCategories(c *gin.Context) {
+func (h *CategoryHandler) ListSubCategories(c *gin.Context) {
 	categoryID := c.Param("categoryId")
 	var subCategories []domain.SubCategory
-	if err := repository.DB.Where("category_id = ?", categoryID).Find(&subCategories).Error; err != nil {
+	if err := h.db.Where("category_id = ?", categoryID).Find(&subCategories).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch sub-categories", http.StatusInternalServerError, err))
 		return
 	}
@@ -264,10 +300,10 @@ func ListSubCategories(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Sub-Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /subcategories/{id} [get]
-func GetSubCategory(c *gin.Context) {
+func (h *CategoryHandler) GetSubCategory(c *gin.Context) {
 	id := c.Param("id")
 	var subCategory domain.SubCategory
-	if err := repository.DB.First(&subCategory, id).Error; err != nil {
+	if err := h.db.First(&subCategory, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Sub-Category not found", http.StatusNotFound, err))
 			return
@@ -291,7 +327,7 @@ func GetSubCategory(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Sub-Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /subcategories/{id} [put]
-func UpdateSubCategory(c *gin.Context) {
+func (h *CategoryHandler) UpdateSubCategory(c *gin.Context) {
 	id := c.Param("id")
 	var req requests.SubCategoryUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -300,7 +336,7 @@ func UpdateSubCategory(c *gin.Context) {
 	}
 
 	var subCategory domain.SubCategory
-	if err := repository.DB.First(&subCategory, id).Error; err != nil {
+	if err := h.db.First(&subCategory, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Sub-Category not found", http.StatusNotFound, err))
 			return
@@ -309,7 +345,7 @@ func UpdateSubCategory(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Model(&subCategory).Update("Name", req.Name).Error; err != nil {
+	if err := h.db.Model(&subCategory).Update("Name", req.Name).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to update sub-category", http.StatusInternalServerError, err))
 		return
 	}
@@ -329,10 +365,10 @@ func UpdateSubCategory(c *gin.Context) {
 // @Failure 409 {object} map[string]interface{} "Conflict: Sub-Category has associated products"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /subcategories/{id} [delete]
-func DeleteSubCategory(c *gin.Context) {
+func (h *CategoryHandler) DeleteSubCategory(c *gin.Context) {
 	id := c.Param("id")
 	var subCategory domain.SubCategory
-	if err := repository.DB.First(&subCategory, id).Error; err != nil {
+	if err := h.db.First(&subCategory, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Sub-Category not found", http.StatusNotFound, err))
 			return
@@ -343,13 +379,13 @@ func DeleteSubCategory(c *gin.Context) {
 
 	// Check for associated products
 	var productCount int64
-	repository.DB.Model(&domain.Product{}).Where("sub_category_id = ?", id).Count(&productCount)
+	h.db.Model(&domain.Product{}).Where("sub_category_id = ?", id).Count(&productCount)
 	if productCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete sub-category: products are associated", http.StatusConflict, nil))
 		return
 	}
 
-	if err := repository.DB.Delete(&subCategory).Error; err != nil {
+	if err := h.db.Delete(&subCategory).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete sub-category", http.StatusInternalServerError, err))
 		return
 	}

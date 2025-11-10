@@ -374,6 +374,27 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the category is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+### GET /categories/name/{name}
+
+-   **Summary:** Get a category by Name
+-   **Description:** Get a single category by its Name.
+-   **Request:**
+    -   **URL Params:**
+        -   `name` (string, required): The Name of the category.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "Name": "Electronics",
+            "SubCategories": [ ... ],
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
+        }
+        ```
+    -   **404 Not Found:** If the category is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ### PUT /categories/{id}
 
 -   **Summary:** Update an existing category
@@ -769,6 +790,46 @@ This document provides a detailed description of the API endpoints, including th
 -   **Request:**
     -   **URL Params:**
         -   `id` (integer, required): The ID of the product.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "SKU": "SKU123",
+            "Name": "Sample Product",
+            ...
+        }
+        ```
+    -   **404 Not Found:** If the product is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /products/sku/{sku}
+
+-   **Summary:** Get a product by SKU
+-   **Description:** Get a single product by its SKU.
+-   **Request:**
+    -   **URL Params:**
+        -   `sku` (string, required): The SKU of the product.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "SKU": "SKU123",
+            "Name": "Sample Product",
+            ...
+        }
+        ```
+    -   **404 Not Found:** If the product is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /products/barcode/{barcode}
+
+-   **Summary:** Get a product by Barcode
+-   **Description:** Get a single product by its Barcode.
+-   **Request:**
+    -   **URL Params:**
+        -   `barcode` (string, required): The Barcode of the product.
 -   **Response:**
     -   **200 OK:**
         ```json
@@ -1338,6 +1399,25 @@ This document provides a detailed description of the API endpoints, including th
 -   **Request:**
     -   **URL Params:**
         -   `id` (integer, required): The ID of the supplier.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "Name": "Supplier A",
+            ...
+        }
+        ```
+    -   **404 Not Found:** If the supplier is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /suppliers/name/{name}
+
+-   **Summary:** Get a supplier by Name
+-   **Description:** Get a single supplier by its Name.
+-   **Request:**
+    -   **URL Params:**
+        -   `name` (string, required): The Name of the supplier.
 -   **Response:**
     -   **200 OK:**
         ```json
