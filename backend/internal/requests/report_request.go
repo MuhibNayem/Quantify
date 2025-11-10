@@ -8,6 +8,7 @@ type SalesTrendsReportRequest struct {
 	EndDate    time.Time `json:"endDate"`
 	CategoryID *uint     `json:"categoryId"`
 	LocationID *uint     `json:"locationId"`
+	GroupBy    string    `json:"groupBy"`
 }
 
 // InventoryTurnoverReportRequest represents parameters for inventory turnover report.

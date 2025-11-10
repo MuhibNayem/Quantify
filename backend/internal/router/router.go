@@ -6,12 +6,14 @@ import (
 	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/storage"
 	"inventory/backend/internal/websocket"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -39,15 +41,36 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 	categoryRepo := repository.NewCategoryRepository(db)
 	supplierRepo := repository.NewSupplierRepository(db)
 	paymentRepo := repository.NewPaymentRepository(db)
+	forecastingRepo := repository.NewForecastingRepository(db)
+	barcodeRepo := repository.NewBarcodeRepository(db)
+	crmRepo := repository.NewCRMRepository(db)
+	timeTrackingRepo := repository.NewTimeTrackingRepository(db)
+	reportsRepo := repository.NewReportsRepository(db)
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
+	forecastingService := services.NewForecastingService(forecastingRepo)
+	barcodeService := services.NewBarcodeService(barcodeRepo)
+	crmService := services.NewCRMService(crmRepo)
+	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo)
+	integrationService := services.NewIntegrationService()
+	minioUploader, err := storage.NewMinIOUploader(cfg)
+	if err != nil {
+		logrus.Fatalf("Failed to initialize MinIO uploader: %v", err)
+	}
+	reportingService := services.NewReportingService(reportsRepo, minioUploader)
 
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler(productRepo, db)
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
+	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService)
+	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
+	crmHandler := handlers.NewCRMHandler(crmService)
+	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
+	webhookHandler := handlers.NewWebhookHandler(integrationService)
+	reportHandler := handlers.NewReportHandler(reportingService)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -59,6 +82,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
 		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
+	// Webhook routes
+	webhookRoutes := r.Group("/webhooks")
+	{
+		webhookRoutes.POST("", webhookHandler.HandleWebhook)
 	}
 
 	// Payment routes
@@ -148,14 +177,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 		// Barcode
 		barcode := api.Group("/barcode")
 		{
-			barcode.GET("/lookup", handlers.LookupProductByBarcode)
-			barcode.GET("/generate", handlers.GenerateBarcode)
+			barcode.GET("/lookup", barcodeHandler.LookupProductByBarcode)
+			barcode.GET("/generate", barcodeHandler.GenerateBarcode)
 		}
 
 		// Replenishment
 		replenishment := api.Group("/replenishment")
 		{
-			replenishment.POST("/forecast/generate", handlers.GenerateDemandForecast)
+			replenishment.POST("/forecast/generate", replenishmentHandler.GenerateDemandForecast)
 			replenishment.GET("/forecast/:forecastId", handlers.GetDemandForecast)
 			replenishment.GET("/suggestions", handlers.ListReorderSuggestions)
 			replenishment.POST("/suggestions/:suggestionId/create-po", handlers.CreatePOFromSuggestion)
@@ -170,9 +199,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 		// Reports
 		reports := api.Group("/reports")
 		{
-			reports.POST("/sales-trends", handlers.GetSalesTrendsReport)
-			reports.POST("/inventory-turnover", handlers.GetInventoryTurnoverReport)
-			reports.POST("/profit-margin", handlers.GetProfitMarginReport)
+			reports.POST("/sales-trends", reportHandler.GetSalesTrendsReport)
+			reports.POST("/sales-trends/export", reportHandler.ExportSalesTrendsReport)
+			reports.GET("/jobs/:jobId", reportHandler.GetReportJobStatus)
+			reports.GET("/download/:jobId", reportHandler.DownloadReportFile)
+			reports.POST("/inventory-turnover", reportHandler.GetInventoryTurnoverReport)
+			reports.POST("/profit-margin", reportHandler.GetProfitMarginReport)
 		}
 
 		// Alerts
@@ -215,6 +247,30 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			users.PUT("/:id", middleware.AdminOnly(), handlers.UpdateUser)
 			users.DELETE("/:id", middleware.AdminOnly(), handlers.DeleteUser)
 			users.PUT("/:id/approve", middleware.AdminOnly(), handlers.ApproveUser)
+		}
+
+		// CRM
+		crm := api.Group("/crm")
+		{
+			crm.POST("/customers", crmHandler.CreateCustomer)
+			crm.GET("/customers/:identifier", crmHandler.GetCustomer)
+			crm.GET("/customers/username/:username", crmHandler.GetCustomerByUsername)
+			crm.GET("/customers/email/:email", crmHandler.GetCustomerByEmail)
+			crm.GET("/customers/phone/:phone", crmHandler.GetCustomerByPhone)
+			crm.PUT("/customers/:userId", crmHandler.UpdateCustomer)
+			crm.DELETE("/customers/:userId", crmHandler.DeleteCustomer)
+			crm.GET("/loyalty/:userId", crmHandler.GetLoyaltyAccount)
+			crm.POST("/loyalty/:userId/points", crmHandler.AddLoyaltyPoints)
+			crm.POST("/loyalty/:userId/redeem", crmHandler.RedeemLoyaltyPoints)
+		}
+
+		// Time Tracking
+		timeTracking := api.Group("/time-tracking")
+		{
+			timeTracking.POST("/clock-in/:userId", timeTrackingHandler.ClockIn)
+			timeTracking.POST("/clock-out/:userId", timeTrackingHandler.ClockOut)
+			timeTracking.GET("/last-entry/:userId", timeTrackingHandler.GetLastTimeClock)
+			timeTracking.GET("/last-entry/username/:username", timeTrackingHandler.GetLastTimeClockByUsername)
 		}
 	}
 

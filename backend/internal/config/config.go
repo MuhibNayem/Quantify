@@ -9,22 +9,22 @@ import (
 
 // Config holds all application-wide configurations.
 type Config struct {
-	DBHost             string
-	DBUser             string
-	DBPassword         string
-	DBName             string
-	DBPort             string
-	ServerPort         string
-	SMTPHost           string
-	SMTPPort           int
-	SMTPUser           string
-	SMTPPass           string
-	SMTPSender         string
-	RedisClusterAddrs  []string
-	RedisPassword      string
-	RabbitMQURL        string
-	JWTSecret          string
-	RefreshTokenSecret string
+	DBHost                  string
+	DBUser                  string
+	DBPassword              string
+	DBName                  string
+	DBPort                  string
+	ServerPort              string
+	SMTPHost                string
+	SMTPPort                int
+	SMTPUser                string
+	SMTPPass                string
+	SMTPSender              string
+	RedisClusterAddrs       []string
+	RedisPassword           string
+	RabbitMQURL             string
+	JWTSecret               string
+	RefreshTokenSecret      string
 	SSLCommerzStoreID       string
 	SSLCommerzStorePassword string
 	SSLCommerzAPIHost       string
@@ -37,6 +37,10 @@ type Config struct {
 	BkashUsername           string
 	BkashPassword           string
 	BkashBaseURL            string
+	MinioEndpoint           string `env:"MINIO_ENDPOINT,required"`
+	MinioAccessKeyID        string `env:"MINIO_ACCESS_KEY_ID,required"`
+	MinioSecretAccessKey    string `env:"MINIO_SECRET_ACCESS_KEY,required"`
+	MinioBucketName         string `env:"MINIO_BUCKET_NAME,required"`
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -81,6 +85,10 @@ func LoadConfig() *Config {
 		BkashUsername:           getEnv("BKASH_USERNAME", ""),
 		BkashPassword:           getEnv("BKASH_PASSWORD", ""),
 		BkashBaseURL:            getEnv("BKASH_BASE_URL", "https://sandbox.bkash.com/v1.2.0-beta"),
+		MinioEndpoint:           getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinioAccessKeyID:        getEnv("MINIO_ACCESS_KEY_ID", "minioadmin"),
+		MinioSecretAccessKey:    getEnv("MINIO_SECRET_ACCESS_KEY", "minioadmin"),
+		MinioBucketName:         getEnv("MINIO_BUCKET_NAME", "reports"),
 	}
 }
 

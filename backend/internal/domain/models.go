@@ -105,10 +105,15 @@ type Alert struct {
 // User represents a system user (for AdjustedBy in StockAdjustment, etc.)
 type User struct {
 	gorm.Model
-	Username string `gorm:"uniqueIndex;not null"`
-	Password string `gorm:"not null"`
-	Role     string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff"
-	IsActive bool   `gorm:"default:false"`
+	Username    string `gorm:"uniqueIndex;not null"`
+	Password    string `gorm:"not null"`
+	Role        string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff", "Customer"
+	IsActive    bool   `gorm:"default:false"`
+	FirstName   string
+	LastName    string
+	Email       string `gorm:"uniqueIndex"`
+	PhoneNumber string `gorm:"uniqueIndex"`
+	Address     string
 }
 
 // ProductAlertSettings stores alert thresholds per product.
@@ -215,4 +220,23 @@ type Transaction struct {
 	PaymentMethod        string `gorm:"not null"` // e.g., "card", "bkash"
 	Status               string `gorm:"not null"` // e.g., "pending", "succeeded", "failed"
 	GatewayTransactionID string `gorm:"uniqueIndex;not null"`
+}
+
+// LoyaltyAccount represents a customer's loyalty account.
+type LoyaltyAccount struct {
+	gorm.Model
+	UserID uint `gorm:"uniqueIndex;not null"`
+	User   User
+	Points int    `gorm:"default:0"`
+	Tier   string `gorm:"default:'Bronze'"` // e.g., Bronze, Silver, Gold
+}
+
+// TimeClock represents an employee's time clock entry.
+type TimeClock struct {
+	gorm.Model
+	UserID   uint `gorm:"not null"`
+	User     User
+	ClockIn  time.Time
+	ClockOut *time.Time
+	Notes    string
 }

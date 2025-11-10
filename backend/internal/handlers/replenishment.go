@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
@@ -14,7 +12,16 @@ import (
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+	"inventory/backend/internal/services"
 )
+
+type ReplenishmentHandler struct {
+	forecastingService services.ForecastingService
+}
+
+func NewReplenishmentHandler(forecastingService services.ForecastingService) *ReplenishmentHandler {
+	return &ReplenishmentHandler{forecastingService: forecastingService}
+}
 
 // Mock storage for forecast jobs and POs
 var forecastJobs = make(map[string]gin.H)
@@ -31,63 +38,19 @@ var purchaseOrders = make(map[uint]domain.PurchaseOrder) // Using PO ID as key
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/forecast/generate [post]
-func GenerateDemandForecast(c *gin.Context) {
+func (h *ReplenishmentHandler) GenerateDemandForecast(c *gin.Context) {
 	var req requests.ForecastGenerationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
 		return
 	}
 
-	var products []domain.Product
-	if req.ProductID != nil {
-		if err := repository.DB.First(&products, *req.ProductID).Error; err != nil {
-			c.Error(appErrors.NewAppError("Failed to fetch product", http.StatusNotFound, err))
-			return
-		}
-	} else {
-		if err := repository.DB.Find(&products).Error; err != nil {
-			c.Error(appErrors.NewAppError("Failed to fetch products", http.StatusInternalServerError, err))
-			return
-		}
+	if err := h.forecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays); err != nil {
+		c.Error(appErrors.NewAppError("Failed to generate demand forecast", http.StatusInternalServerError, err))
+		return
 	}
 
-	for _, product := range products {
-		salesData, err := repository.GetSalesDataForForecast(product.ID, req.PeriodInDays)
-		if err != nil {
-			logrus.Errorf("Failed to get sales data for product %d: %v", product.ID, err)
-			continue
-		}
-
-		var weightedSum float64
-		var weightSum float64
-		for i, sale := range salesData {
-			weight := float64(i + 1)
-			weightedSum += float64(sale.Quantity) * weight
-			weightSum += weight
-		}
-
-		var predictedDemand int
-		if weightSum > 0 {
-			dailyDemand := weightedSum / weightSum
-			predictedDemand = int(dailyDemand * float64(req.PeriodInDays))
-		} else {
-			predictedDemand = 0
-		}
-
-		forecast := domain.DemandForecast{
-			ProductID:       product.ID,
-			ForecastPeriod:  fmt.Sprintf("%d_DAYS", req.PeriodInDays),
-			PredictedDemand: predictedDemand,
-			GeneratedAt:     time.Now(),
-		}
-		if err := repository.DB.Create(&forecast).Error; err != nil {
-			logrus.Errorf("Failed to save demand forecast for product %d: %v", product.ID, err)
-			continue
-		}
-		logrus.Infof("Generated forecast for product %d: PredictedDemand=%d", product.ID, predictedDemand)
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Demand forecast completed."})
+	c.JSON(http.StatusOK, gin.H{"message": "Demand forecast generation initiated."})
 }
 
 // GetDemandForecast godoc

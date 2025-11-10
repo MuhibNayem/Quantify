@@ -19,6 +19,7 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/router"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/storage"
 	"inventory/backend/internal/websocket"
 )
 
@@ -241,15 +242,50 @@ func main() {
 		}
 	})
 
+	message_broker.Subscribe("inventory", "reporting", "report.generate", hub, func(d amqp091.Delivery) {
+		var job services.ReportJob
+		if err := json.Unmarshal(d.Body, &job); err != nil {
+			logrus.Errorf("Failed to unmarshal ReportJob: %v", err)
+			return
+		}
+		logrus.Infof("Processing ReportJob: %s", job.JobID)
+
+		// Initialize ReportsRepository and ReportingService within the consumer
+		reportsRepo := repository.NewReportsRepository(repository.DB)
+		minioUploader, err := storage.NewMinIOUploader(cfg)
+		if err != nil {
+			logrus.Errorf("Failed to initialize MinIO uploader in consumer: %v", err)
+			return
+		}
+		reportingService := services.NewReportingService(reportsRepo, minioUploader)
+
+		if err := reportingService.GenerateReport(&job); err != nil {
+			job.Status = "FAILED"
+			jobJSON, _ := json.Marshal(job)
+			repository.SetCache("report_job:"+job.JobID, string(jobJSON), 3600)
+			logrus.Errorf("Failed to generate report: %v", err)
+			return
+		}
+	})
+
 	// Initialize Cron Scheduler
 	c := cron.New()
 	c.AddFunc("@every 5m", func() {
 		logrus.Info("Running alert check...")
 		handlers.CheckAndTriggerAlerts()
 	})
+
+	// Initialize ReportsRepository and ReportingService
+	reportsRepo := repository.NewReportsRepository(repository.DB)
+	minioUploader, err := storage.NewMinIOUploader(cfg)
+	if err != nil {
+		logrus.Fatalf("Failed to initialize MinIO uploader: %v", err)
+	}
+	reportingService := services.NewReportingService(reportsRepo, minioUploader)
+
 	c.AddFunc("@daily", func() {
 		logrus.Info("Running daily sales summary generation...")
-		handlers.GenerateDailySalesSummary()
+		reportingService.GenerateDailySalesSummary()
 	})
 	go c.Start()
 	defer c.Stop()

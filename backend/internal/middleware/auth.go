@@ -86,3 +86,13 @@ func AuthorizeMiddleware(requiredRoles ...string) gin.HandlerFunc {
 func AdminOnly() gin.HandlerFunc {
 	return AuthorizeMiddleware("Admin")
 }
+
+// ManagerOnly checks if the user has the "Manager" role.
+func ManagerOnly() gin.HandlerFunc {
+	return AuthorizeMiddleware("Manager")
+}
+
+// StaffOnly checks if the user has the "Staff" role.
+func StaffOnly() gin.HandlerFunc {
+	return AuthorizeMiddleware("Staff")
+}
