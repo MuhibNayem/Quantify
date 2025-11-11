@@ -3,8 +3,8 @@ import axios from 'axios';
 import { get } from 'svelte/store';
 import { auth } from './stores/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
-const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8080/api/v1/users';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080/api/v1';
+const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://http://127.0.0.1:8080/api/v1/users';
 
 const api = axios.create({
 	baseURL: API_BASE_URL,

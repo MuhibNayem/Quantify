@@ -9,6 +9,7 @@ import (
 	"inventory/backend/internal/storage"
 	"inventory/backend/internal/websocket"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -22,15 +23,17 @@ import (
 func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.JobRepository, minioUploader storage.Uploader) *gin.Engine {
 	r := gin.Default()
 
-	// CORS Middleware
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "X-Requested-With", "Access-Control-Allow-Origin"},
-		ExposeHeaders:    []string{"Content-Length", "Access-Control-Allow-Origin"},
-		MaxAge:           12 * 3600,
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Authorization", "X-Requested-With", "X-CSRF-Token"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
-	}))
+		MaxAge:           12 * time.Hour,
+		AllowWebSockets:  true,
+	}
+
+	r.Use(cors.New(corsConfig))
 
 	r.Use(middleware.ErrorHandler())
 

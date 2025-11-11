@@ -185,12 +185,12 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	user.Password = "" // Clear password before sending
+	user.Password = ""
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
 		"csrfToken":    csrfToken,
-		"user":         user, // Include user object
+		"user":         user,
 	})
 }
 
