@@ -15,6 +15,7 @@ import type {
 	SupplierPerformance,
 	UserSummary,
 	PaginatedProducts,
+	Notification,
 } from '$lib/types';
 
 export const productsApi = {
@@ -118,6 +119,17 @@ export const alertsApi = {
 	updateUserNotifications: async (userId: number, payload: Record<string, unknown>) =>
 		(await api.put(`/alerts/users/${userId}/notification-settings`, payload)).data,
 	triggerCheck: async () => (await api.post('/alerts/check')).data,
+};
+
+export const notificationsApi = {
+	list: async (userId: number, params?: Record<string, unknown>) =>
+		(await api.get<Notification[]>(`/users/${userId}/notifications`, { params })).data,
+	unreadCount: async (userId: number) =>
+		(await api.get<{ count: number }>(`/users/${userId}/notifications/unread/count`)).data.count,
+	markRead: async (userId: number, notificationId: number) =>
+		(await api.patch(`/users/${userId}/notifications/${notificationId}/read`)).data,
+	markAllRead: async (userId: number) =>
+		(await api.patch(`/users/${userId}/notifications/read-all`)).data,
 };
 
 export const bulkApi = {

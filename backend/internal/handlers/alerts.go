@@ -257,43 +257,60 @@ func CheckAndTriggerAlerts() {
 	}
 
 	for _, s := range settings {
-		var product domain.Product
-		if err := repository.DB.First(&product, s.ProductID).Error; err != nil {
-			logrus.Errorf("Failed to fetch product %d for alert check: %v", s.ProductID, err)
-			continue
+		checkAndTriggerAlertsForSettings(&s)
+	}
+}
+
+// CheckAndTriggerAlertsForProduct evaluates alert thresholds for a single product.
+func CheckAndTriggerAlertsForProduct(productID uint) {
+	var settings domain.ProductAlertSettings
+	if err := repository.DB.Where("product_id = ?", productID).First(&settings).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logrus.Errorf("Failed to fetch alert settings for product %d: %v", productID, err)
+		}
+		return
+	}
+
+	checkAndTriggerAlertsForSettings(&settings)
+}
+
+func checkAndTriggerAlertsForSettings(s *domain.ProductAlertSettings) {
+	var product domain.Product
+	if err := repository.DB.First(&product, s.ProductID).Error; err != nil {
+		logrus.Errorf("Failed to fetch product %d for alert check: %v", s.ProductID, err)
+		return
+	}
+
+	// Get current quantity
+	var currentQuantity int
+	repository.DB.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
+
+	// Low Stock Alert
+	if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
+		triggerAlert(s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
+	}
+
+	// Out of Stock Alert
+	if currentQuantity == 0 {
+		triggerAlert(s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
+	}
+
+	// Overstock Alert
+	if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
+		triggerAlert(s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
+	}
+
+	// Expiry Alert
+	if s.ExpiryAlertDays > 0 {
+		var expiringBatches []domain.Batch
+		expiryThreshold := time.Now().AddDate(0, 0, s.ExpiryAlertDays)
+		if err := repository.DB.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
+			logrus.Errorf("Failed to fetch expiring batches for product %d: %v", s.ProductID, err)
+			return
 		}
 
-		// Get current quantity
-		var currentQuantity int
-		repository.DB.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
-
-		// Low Stock Alert
-		if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
-			triggerAlert(s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
-		}
-
-		// Out of Stock Alert
-		if currentQuantity == 0 {
-			triggerAlert(s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
-		}
-
-		// Overstock Alert
-		if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
-			triggerAlert(s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
-		}
-
-		// Expiry Alert
-		if s.ExpiryAlertDays > 0 {
-			var expiringBatches []domain.Batch
-			expiryThreshold := time.Now().AddDate(0, 0, s.ExpiryAlertDays)
-			if err := repository.DB.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
-				logrus.Errorf("Failed to fetch expiring batches for product %d: %v", s.ProductID, err)
-				continue
-			}
-
-			for _, batch := range expiringBatches {
-				triggerAlert(s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
-			}
+		for _, batch := range expiringBatches {
+			triggerAlert(s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
 		}
 	}
 }

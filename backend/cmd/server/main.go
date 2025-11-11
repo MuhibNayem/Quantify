@@ -108,6 +108,10 @@ func main() {
 	stopConsumers := bulkConsumer.Start(ctx, workerCount)
 	defer stopConsumers()
 
+	alertConsumer := consumers.NewAlertConsumer()
+	stopAlertConsumer := alertConsumer.Start(ctx)
+	defer stopAlertConsumer()
+
 	message_broker.Subscribe(ctx, "inventory", "alerts", "alert.triggered", func(ctx context.Context, deliveries <-chan amqp091.Delivery) {
 		for {
 			select {

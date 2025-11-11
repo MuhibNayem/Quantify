@@ -62,8 +62,34 @@ func AutoMigrate() {
 		logrus.Fatalf("Database schema auto-migration failed: %v", err)
 	}
 	logrus.Info("Database schema auto-migrated")
+
+	ensureDefaultAlertSubscriptions()
 }
 
+func ensureDefaultAlertSubscriptions() {
+	defaultTypes := []string{"LOW_STOCK", "OUT_OF_STOCK", "OVERSTOCK", "EXPIRY_ALERT"}
+	for _, alertType := range defaultTypes {
+		var count int64
+		if err := DB.Model(&domain.AlertRoleSubscription{}).
+			Where("alert_type = ? AND role = ?", alertType, "Admin").
+			Count(&count).Error; err != nil {
+			logrus.Errorf("Failed to check default alert subscription for %s: %v", alertType, err)
+			continue
+		}
+
+		if count == 0 {
+			subscription := domain.AlertRoleSubscription{
+				AlertType: alertType,
+				Role:      "Admin",
+			}
+			if err := DB.Create(&subscription).Error; err != nil {
+				logrus.Errorf("Failed to seed default alert subscription for %s: %v", alertType, err)
+			} else {
+				logrus.Infof("Seeded default alert subscription %s -> Admin", alertType)
+			}
+		}
+	}
+}
 
 // CloseDB closes the database connection.
 func CloseDB() {

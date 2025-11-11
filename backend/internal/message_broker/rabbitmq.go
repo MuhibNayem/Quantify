@@ -221,7 +221,7 @@ func Subscribe(ctx context.Context, exchange, queueName, routingKey string, hand
 			msgs, err := rabbitMQManager.channel.Consume(
 				q.Name,
 				"",
-				true,
+				false,
 				false,
 				false,
 				false,

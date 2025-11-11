@@ -2,8 +2,9 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Bell, Menu, RefreshCcw, Search, Sun, Moon } from 'lucide-svelte';
+	import { Menu, RefreshCcw, Search, Sun, Moon } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 
 	const { user = null } = $props<{ user?: { Username?: string } | null }>();
 	const dispatch = createEventDispatcher<{ toggleSidebar: void }>();
@@ -85,17 +86,7 @@
 			<RefreshCcw class="h-4 w-4 text-sky-700 dark:text-sky-300" />
 		</Button>
 
-		<Button
-			variant="ghost"
-			size="icon"
-			class="relative hover:bg-sky-200/40 dark:hover:bg-slate-700/40 transition-colors"
-		>
-			<Bell class="h-4 w-4 text-sky-700 dark:text-sky-300" />
-			<div
-				class="absolute -top-1 -right-1 h-2 w-2
-				bg-gradient-to-r from-pink-500 to-rose-500 rounded-full animate-pulse"
-			></div>
-		</Button>
+		<NotificationBell />
 
 		<Button
 			variant="ghost"

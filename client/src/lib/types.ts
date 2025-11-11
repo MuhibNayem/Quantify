@@ -162,3 +162,14 @@ export interface SupplierPerformance {
 	averageLeadTimeDays: number;
 	onTimeDeliveryRate: number;
 }
+
+export interface Notification extends BaseEntity {
+	UserID: number;
+	Type: string;
+	Title: string;
+	Message: string;
+	Payload?: string | null;
+	IsRead: boolean;
+	ReadAt?: string | null;
+	TriggeredAt: string;
+}
