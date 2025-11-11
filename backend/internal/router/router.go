@@ -226,6 +226,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 				handlers.CheckAndTriggerAlerts()
 				c.JSON(http.StatusOK, gin.H{"message": "Alert check triggered"})
 			})
+			// Alert Role Subscriptions (Admin Only)
+			subscriptions := alerts.Group("/subscriptions")
+			subscriptions.Use(middleware.AdminOnly())
+			{
+				subscriptions.POST("", handlers.CreateAlertRoleSubscription)
+				subscriptions.GET("", handlers.ListAlertRoleSubscriptions)
+				subscriptions.DELETE("/:id", handlers.DeleteAlertRoleSubscription)
+			}
 		}
 
 		// Bulk Operations (Manager/Admin)

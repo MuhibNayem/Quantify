@@ -243,6 +243,27 @@ type Job struct {
 	LastAttemptAt *time.Time `json:"lastAttemptAt"`
 }
 
+// Notification represents an in-app notification for a user.
+type Notification struct {
+	gorm.Model
+	UserID      uint   `gorm:"not null"`
+	User        User
+	Type        string `gorm:"not null"` // e.g., "ALERT", "SYSTEM", "PROMOTIONAL"
+	Title       string `gorm:"not null"`
+	Message     string `gorm:"not null"`
+	Payload     string // JSON string for additional data (e.g., productID, orderID)
+	IsRead      bool   `gorm:"default:false"`
+	ReadAt      *time.Time
+	TriggeredAt time.Time
+}
+
+// AlertRoleSubscription links an alert type to a user role.
+type AlertRoleSubscription struct {
+	gorm.Model
+	AlertType string `gorm:"not null;uniqueIndex:idx_alert_role"`
+	Role      string `gorm:"not null;uniqueIndex:idx_alert_role"`
+}
+
 // TimeClock represents an employee's time clock entry.
 type TimeClock struct {
 	gorm.Model

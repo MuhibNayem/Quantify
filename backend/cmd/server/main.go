@@ -33,6 +33,7 @@ type App struct {
 	reportingService *services.ReportingService
 	hub              *websocket.Hub
 	jobRepo          *repository.JobRepository
+	notificationRepo repository.NotificationRepository
 }
 
 // Payloads for events
@@ -83,6 +84,7 @@ func main() {
 	jobRepo := repository.NewJobRepository(repository.DB)
 	productRepo := repository.NewProductRepository(repository.DB)
 	reportsRepo := repository.NewReportsRepository(repository.DB)
+	notificationRepo := repository.NewNotificationRepository(repository.DB)
 
 	// Initialize Services
 	bulkImportSvc := services.NewBulkImportService()
@@ -94,6 +96,7 @@ func main() {
 		reportingService: reportingService,
 		hub:              hub,
 		jobRepo:          jobRepo,
+		notificationRepo: notificationRepo,
 	}
 
 	// Initialize and start the BulkConsumer
@@ -179,37 +182,75 @@ func (app *App) handleAlertDelivery(d amqp091.Delivery) {
 	var payload AlertTriggeredPayload
 	if err := json.Unmarshal(d.Body, &payload); err != nil {
 		logrus.Errorf("Failed to unmarshal alert payload: %v", err)
-		d.Nack(false, false) // Negative acknowledgement, don't requeue
+		d.Nack(false, false)
 		return
 	}
 
-	logrus.Infof("Handling alert delivery for product %d: %s", payload.ProductID, payload.Message)
+	logrus.Infof("Handling alert delivery for alert type %s", payload.Type)
 
-	// Find users with notifications enabled
+	// 1. Find roles subscribed to this alert type
+	var subscriptions []domain.AlertRoleSubscription
+	if err := repository.DB.Where("alert_type = ?", payload.Type).Find(&subscriptions).Error; err != nil {
+		logrus.Errorf("Failed to fetch alert subscriptions: %v", err)
+		d.Nack(true, true) // Nack and requeue
+		return
+	}
+
+	if len(subscriptions) == 0 {
+		logrus.Infof("No subscriptions found for alert type %s", payload.Type)
+		d.Ack(false) // No one is subscribed, so we're done.
+		return
+	}
+
+	var roles []string
+	for _, sub := range subscriptions {
+		roles = append(roles, sub.Role)
+	}
+
+	// 2. Find users with those roles
 	var users []domain.User
-	if err := repository.DB.Find(&users).Error; err != nil {
-		logrus.Errorf("Failed to fetch users: %v", err)
-		d.Nack(false, true) // Nack and requeue
+	if err := repository.DB.Where("role IN (?)", roles).Find(&users).Error; err != nil {
+		logrus.Errorf("Failed to fetch users for roles %v: %v", roles, err)
+		d.Nack(true, true)
 		return
 	}
 
+	// 3. Send notifications to the targeted users
 	for _, user := range users {
 		var settings domain.UserNotificationSettings
-		if err := repository.DB.Where("user_id = ?", user.ID).First(&settings).Error; err == nil {
-			if settings.EmailNotificationsEnabled && settings.EmailAddress != "" {
-				subject := "Inventory Alert: " + payload.Type
-				body := payload.Message
-				if err := notifications.SendEmail(app.cfg, settings.EmailAddress, subject, body); err != nil {
-					logrus.Errorf("Failed to send email to %s: %v", settings.EmailAddress, err)
-				}
+		if err := repository.DB.Where("user_id = ?", user.ID).First(&settings).Error; err != nil {
+			// If settings don't exist, we can't send notifications, so we skip.
+			continue
+		}
+
+		// Send email if enabled
+		if settings.EmailNotificationsEnabled && settings.EmailAddress != "" {
+			subject := "Inventory Alert: " + payload.Type
+			body := payload.Message
+			if err := notifications.SendEmail(app.cfg, settings.EmailAddress, subject, body); err != nil {
+				logrus.Errorf("Failed to send email to %s: %v", settings.EmailAddress, err)
 			}
+		}
+
+		// Create and persist in-app notification
+		notificationPayload, _ := json.Marshal(payload)
+		notification := domain.Notification{
+			UserID:      user.ID,
+			Type:        "ALERT",
+			Title:       "New Alert: " + payload.Type,
+			Message:     payload.Message,
+			Payload:     string(notificationPayload),
+			TriggeredAt: time.Now(),
+		}
+		if err := app.notificationRepo.CreateNotification(&notification); err != nil {
+			logrus.Errorf("Failed to create in-app notification for user %d: %v", user.ID, err)
+		} else {
+			// Send user-specific WebSocket message
+			app.hub.SendToUser(user.ID, notification)
 		}
 	}
 
-	// Broadcast to all websocket clients
-	app.hub.Broadcast(payload)
-
-	d.Ack(false) // Acknowledge the message
+	d.Ack(false)
 }
 
 func (app *App) handleReportingDelivery(d amqp091.Delivery) {
