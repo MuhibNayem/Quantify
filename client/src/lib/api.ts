@@ -4,18 +4,21 @@ import { get } from 'svelte/store';
 import { auth } from './stores/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080/api/v1';
-const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://http://127.0.0.1:8080/api/v1/users';
+const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://127.0.0.1:8080/api/v1/users';
 
 const api = axios.create({
 	baseURL: API_BASE_URL,
 });
 
-// Request interceptor for attaching access token
+// Request interceptor for attaching access token and CSRF token
 api.interceptors.request.use(
   async (config) => {
-    const { accessToken } = get(auth);
+    const { accessToken, csrfToken } = get(auth);
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() ?? '')) {
+      config.headers['X-CSRF-Token'] = csrfToken;
     }
     return config;
   },
@@ -39,10 +42,10 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           const refreshResponse = await axios.post(`${AUTH_SERVICE_URL}/refresh-token`, { refreshToken });
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken } = refreshResponse.data;
+          const { accessToken: newAccessToken, refreshToken: newRefreshToken, csrfToken: newCsrfToken } = refreshResponse.data;
 
           // Update auth store with new tokens
-          auth.login(newAccessToken, newRefreshToken, get(auth).user); // Assuming user data doesn't change on refresh
+          auth.login(newAccessToken, newRefreshToken, newCsrfToken, get(auth).user); // Assuming user data doesn't change on refresh
 
           // Retry the original request with the new access token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

@@ -117,6 +117,19 @@ export interface StockTransfer extends BaseEntity {
 	Status?: string;
 }
 
+export interface StockAdjustment extends BaseEntity {
+	ProductID: number;
+	LocationID: number;
+	Type: string;
+	Quantity: number;
+	ReasonCode: string;
+	Notes: string;
+	AdjustedBy: number;
+	AdjustedAt: string;
+	PreviousQuantity: number;
+	NewQuantity: number;
+}
+
 export interface DemandForecast extends BaseEntity {
 	ProductID: number;
 	ForecastPeriod: string;
@@ -141,4 +154,11 @@ export interface UserSummary extends BaseEntity {
 	Username: string;
 	Role: string;
 	IsActive: boolean;
+}
+
+export interface SupplierPerformance {
+	supplierId: number;
+	supplierName: string;
+	averageLeadTimeDays: number;
+	onTimeDeliveryRate: number;
 }

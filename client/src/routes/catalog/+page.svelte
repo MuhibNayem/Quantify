@@ -15,6 +15,7 @@
 
 	let activeTab = $state<TabKey>('products');
 	let loading = $state(false);
+	let search = $state({ term: '', key: 'name' });
 
 	let products = $state<Product[]>([]);
 	let categories = $state<Category[]>([]);
@@ -47,12 +48,14 @@
 
 	const categoryForm = $state({ name: '' });
 	let editingCategory: Category | null = null;
+	let categorySearchTerm = $state('');
 
 	const subCategoryForm = $state({ name: '', categoryId: '' });
 	let editingSubCategory: SubCategory | null = null;
 
 	const supplierForm = $state({ name: '', contactPerson: '', email: '', phone: '', address: '' });
 	let editingSupplier: Supplier | null = null;
+	let supplierSearchTerm = $state('');
 
 	const locationForm = $state({ name: '', address: '' });
 	let editingLocation: Location | null = null;
@@ -106,6 +109,84 @@
 			pagination.currentPage = page;
 			loadProductPerPage(page);
 		}
+	};
+
+	const handleSearch = async () => {
+		if (!search.term.trim()) return;
+		loading = true;
+		try {
+			if (search.key === 'name') {
+				const productResponse = await productsApi.list(1, 100, search.term.trim());
+				products = productResponse.products || [];
+				pagination.currentPage = productResponse.currentPage;
+				pagination.totalPages = productResponse.totalPages;
+				pagination.totalItems = productResponse.totalItems;
+				pagination.itemsPerPage = productResponse.itemsPerPage;
+			} else if (search.key === 'sku') {
+				const product = await productsApi.getBySku(search.term.trim());
+				if (product) {
+					window.location.href = `/products/${product.ID}`;
+				} else {
+					toast.error('Product not found');
+				}
+			}
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.error || 'Search failed';
+			toast.error('Search Failed', { description: errorMessage });
+		} finally {
+			loading = false;
+		}
+	};
+
+	const clearSearch = () => {
+		search.term = '';
+		loadAll();
+	};
+
+	const handleCategorySearch = async () => {
+		if (!categorySearchTerm.trim()) return;
+		loading = true;
+		try {
+			const category = await categoriesApi.getByName(categorySearchTerm.trim());
+			if (category) {
+				window.location.href = `/categories/${category.ID}`;
+			} else {
+				toast.error('Category not found');
+			}
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.error || 'Search failed';
+			toast.error('Search Failed', { description: errorMessage });
+		} finally {
+			loading = false;
+		}
+	};
+
+	const clearCategorySearch = () => {
+		categorySearchTerm = '';
+		loadAll();
+	};
+
+	const handleSupplierSearch = async () => {
+		if (!supplierSearchTerm.trim()) return;
+		loading = true;
+		try {
+			const supplier = await suppliersApi.getByName(supplierSearchTerm.trim());
+			if (supplier) {
+				window.location.href = `/suppliers/${supplier.ID}`;
+			} else {
+				toast.error('Supplier not found');
+			}
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.error || 'Search failed';
+			toast.error('Search Failed', { description: errorMessage });
+		} finally {
+			loading = false;
+		}
+	};
+
+	const clearSupplierSearch = () => {
+		supplierSearchTerm = '';
+		loadAll();
 	};
 
 	onMount(() => {
@@ -481,6 +562,15 @@
 						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
 							<CardTitle class="text-slate-800">SKU Registry</CardTitle>
 							<CardDescription class="text-slate-600">Manage items synced with the warehouse</CardDescription>
+							<div class="flex items-center gap-2 pt-2">
+								<Input class="w-full border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" placeholder="Search..." bind:value={search.term} />
+								<select class="border border-sky-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400 bg-white/90" bind:value={search.key}>
+									<option value="name">Name</option>
+									<option value="sku">SKU</option>
+								</select>
+								<Button class="bg-sky-500 text-white rounded-xl px-4 py-2.5" onclick={handleSearch}>Search</Button>
+								<Button variant="ghost" class="text-sky-600 rounded-xl px-4 py-2.5" onclick={clearSearch}>Clear</Button>
+							</div>
 						</CardHeader>
 						<CardContent class="pt-0 p-0 overflow-x-auto">
 							<Table class="min-w-full">
@@ -663,6 +753,11 @@
 						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
 							<CardTitle class="text-slate-800">Categories</CardTitle>
 							<CardDescription class="text-slate-600">Structure your catalog foundation</CardDescription>
+							<div class="flex items-center gap-2 pt-2">
+								<Input class="w-full border border-emerald-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 bg-white/90" placeholder="Search by name..." bind:value={categorySearchTerm} />
+								<Button class="bg-emerald-500 text-white rounded-xl px-4 py-2.5" onclick={handleCategorySearch}>Search</Button>
+								<Button variant="ghost" class="text-emerald-600 rounded-xl px-4 py-2.5" onclick={clearCategorySearch}>Clear</Button>
+							</div>
 						</CardHeader>
 						<CardContent class="pt-0 p-0 overflow-x-auto">
 							<Table class="min-w-full">
@@ -816,6 +911,11 @@
 						<CardHeader class="space-y-1 bg-white/70 backdrop-blur px-6 py-5 border-b border-white/60">
 							<CardTitle class="text-slate-800">Suppliers</CardTitle>
 							<CardDescription class="text-slate-600">Strategic partners powering replenishment</CardDescription>
+							<div class="flex items-center gap-2 pt-2">
+								<Input class="w-full border border-violet-200 rounded-xl px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400 bg-white/90" placeholder="Search by name..." bind:value={supplierSearchTerm} />
+								<Button class="bg-violet-500 text-white rounded-xl px-4 py-2.5" onclick={handleSupplierSearch}>Search</Button>
+								<Button variant="ghost" class="text-violet-600 rounded-xl px-4 py-2.5" onclick={clearSupplierSearch}>Clear</Button>
+							</div>
 						</CardHeader>
 						<CardContent class="pt-0 p-0 overflow-x-auto">
 							<Table class="min-w-full">

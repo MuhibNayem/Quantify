@@ -26,8 +26,8 @@
     loading = true;
     try {
       const response = await api.post('/users/login', { username, password });
-      const { accessToken, refreshToken, user } = response.data;
-      auth.login(accessToken, refreshToken, user);
+      const { accessToken, refreshToken, csrfToken, user } = response.data;
+      auth.login(accessToken, refreshToken, csrfToken, user);
       toast.success('Login successful!');
       goto('/');
     } catch (error: any) {
