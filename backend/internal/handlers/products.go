@@ -93,7 +93,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		SKU:       product.SKU,
 		Name:      product.Name,
 	}
-	if err := message_broker.Publish("inventory", "product.created", payload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), "inventory", "product.created", payload); err != nil {
 		logrus.Errorf("Failed to publish product created event: %v", err)
 	}
 
@@ -336,7 +336,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		SKU:       product.SKU,
 		Name:      product.Name,
 	}
-	if err := message_broker.Publish("inventory", "product.updated", payload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), "inventory", "product.updated", payload); err != nil {
 		logrus.Errorf("Failed to publish product updated event: %v", err)
 	}
 
@@ -399,7 +399,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		SKU:       product.SKU,
 		Name:      product.Name,
 	}
-	if err := message_broker.Publish("inventory", "product.deleted", payload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), "inventory", "product.deleted", payload); err != nil {
 		logrus.Errorf("Failed to publish product deleted event: %v", err)
 	}
 

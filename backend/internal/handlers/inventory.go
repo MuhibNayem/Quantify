@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -60,7 +61,7 @@ func CreateStockTransfer(c *gin.Context) {
 			Type:           "STOCK_OUT",
 			Quantity:       req.Quantity,
 			ReasonCode:     "TRANSFER_OUT",
-			Notes:          "Stock transfer to location " + string(req.DestLocationID),
+			Notes:          "Stock transfer to location " + strconv.FormatUint(uint64(req.DestLocationID), 10),
 			AdjustedBy:     userID.(uint),
 			AdjustedAt:     time.Now(),
 		}
@@ -75,7 +76,7 @@ func CreateStockTransfer(c *gin.Context) {
 			Type:           "STOCK_IN",
 			Quantity:       req.Quantity,
 			ReasonCode:     "TRANSFER_IN",
-			Notes:          "Stock transfer from location " + string(req.SourceLocationID),
+			Notes:          "Stock transfer from location " + strconv.FormatUint(uint64(req.SourceLocationID), 10),
 			AdjustedBy:     userID.(uint),
 			AdjustedAt:     time.Now(),
 		}

@@ -2,10 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
+	"inventory/backend/internal/domain"
+	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -15,10 +19,11 @@ import (
 
 type ReportHandler struct {
 	reportingService *services.ReportingService
+	jobRepo          *repository.JobRepository
 }
 
-func NewReportHandler(reportingService *services.ReportingService) *ReportHandler {
-	return &ReportHandler{reportingService: reportingService}
+func NewReportHandler(reportingService *services.ReportingService, jobRepo *repository.JobRepository) *ReportHandler {
+	return &ReportHandler{reportingService: reportingService, jobRepo: jobRepo}
 }
 
 // GetSalesTrendsReport godoc
@@ -36,6 +41,11 @@ func (h *ReportHandler) GetSalesTrendsReport(c *gin.Context) {
 	var req requests.SalesTrendsReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	if err := validateDateRange(req.StartDate, req.EndDate); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -68,18 +78,41 @@ func (h *ReportHandler) ExportSalesTrendsReport(c *gin.Context) {
 		return
 	}
 
+	if err := validateDateRange(req.StartDate, req.EndDate); err != nil {
+		c.Error(err)
+		return
+	}
+
 	reportType := "sales_trends_" + c.Query("format")
 	if reportType == "sales_trends_" {
 		reportType = "sales_trends_csv"
 	}
 
-	jobID, err := h.reportingService.RequestReport(reportType, req)
+	payload, err := json.Marshal(req)
 	if err != nil {
-		c.Error(appErrors.NewAppError("Failed to request report", http.StatusInternalServerError, err))
+		c.Error(appErrors.NewAppError("Failed to marshal request", http.StatusInternalServerError, err))
 		return
 	}
 
-	c.JSON(http.StatusAccepted, gin.H{"jobId": jobID})
+	job := &domain.Job{
+		Type:       reportType,
+		Status:     "QUEUED",
+		Payload:    string(payload),
+		MaxRetries: 3,
+	}
+
+	if err := h.jobRepo.CreateJob(job); err != nil {
+		c.Error(appErrors.NewAppError("Failed to create job", http.StatusInternalServerError, err))
+		return
+	}
+
+	err = message_broker.Publish(c.Request.Context(), "inventory", "reporting", job)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to publish job", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusAccepted, gin.H{"jobId": job.ID})
 }
 
 // GetReportJobStatus godoc
@@ -87,27 +120,21 @@ func (h *ReportHandler) ExportSalesTrendsReport(c *gin.Context) {
 // @Description Get the status of a report generation job.
 // @Tags reports
 // @Produce json
-// @Param jobId path string true "Job ID"
-// @Success 200 {object} services.ReportJob "Job status"
+// @Param jobId path int true "Job ID"
+// @Success 200 {object} domain.Job "Job status"
 // @Failure 404 {object} map[string]interface{} "Not Found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /reports/jobs/{jobId} [get]
 func (h *ReportHandler) GetReportJobStatus(c *gin.Context) {
-	jobID := c.Param("jobId")
-	jobStatus, err := repository.GetCache("report_job:" + jobID)
+	jobID, err := strconv.Atoi(c.Param("jobId"))
 	if err != nil {
-		c.Error(appErrors.NewAppError("Failed to get job status", http.StatusInternalServerError, err))
-		return
-	}
-	if jobStatus == "" {
-		c.Error(appErrors.NewAppError("Job not found", http.StatusNotFound, nil))
+		c.Error(appErrors.NewAppError("Invalid job ID", http.StatusBadRequest, err))
 		return
 	}
 
-	var job services.ReportJob
-	err = json.Unmarshal([]byte(jobStatus), &job)
+	job, err := h.jobRepo.GetJob(uint(jobID))
 	if err != nil {
-		c.Error(appErrors.NewAppError("Failed to parse job status", http.StatusInternalServerError, err))
+		c.Error(appErrors.NewAppError("Job not found", http.StatusNotFound, err))
 		return
 	}
 
@@ -125,26 +152,58 @@ func (h *ReportHandler) GetReportJobStatus(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /reports/download/{jobId} [get]
 func (h *ReportHandler) DownloadReportFile(c *gin.Context) {
-	jobID := c.Param("jobId")
-	jobStatus, err := repository.GetCache("report_job:" + jobID)
+	jobID, err := strconv.Atoi(c.Param("jobId"))
 	if err != nil {
-		c.Error(appErrors.NewAppError("Failed to get job status", http.StatusInternalServerError, err))
-		return
-	}
-	if jobStatus == "" {
-		c.Error(appErrors.NewAppError("Job not found", http.StatusNotFound, nil))
+		c.Error(appErrors.NewAppError("Invalid job ID", http.StatusBadRequest, err))
 		return
 	}
 
-	var job services.ReportJob
-	json.Unmarshal([]byte(jobStatus), &job)
+	job, err := h.jobRepo.GetJob(uint(jobID))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Job not found", http.StatusNotFound, err))
+		return
+	}
 
 	if job.Status != "COMPLETED" {
 		c.Error(appErrors.NewAppError("Report not ready", http.StatusNotFound, nil))
 		return
 	}
 
-	c.Redirect(http.StatusFound, job.FileURL)
+	c.Redirect(http.StatusFound, job.Result)
+}
+
+func (h *ReportHandler) CancelJob(c *gin.Context) {
+	jobID, err := strconv.Atoi(c.Param("jobId"))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Invalid job ID", http.StatusBadRequest, err))
+		return
+	}
+
+	job, err := h.jobRepo.GetJob(uint(jobID))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Job not found", http.StatusNotFound, err))
+		return
+	}
+
+	if job.Status == "COMPLETED" || job.Status == "FAILED" {
+		c.Error(appErrors.NewAppError("Job already completed or failed", http.StatusBadRequest, nil))
+		return
+	}
+
+	job.Status = "CANCELLED"
+	if err := h.jobRepo.UpdateJob(job); err != nil {
+		c.Error(appErrors.NewAppError("Failed to cancel job", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Job cancelled successfully"})
+}
+
+func validateDateRange(start, end time.Time) *appErrors.AppError {
+	if end.Before(start) {
+		return appErrors.NewAppError("End date must be after start date", http.StatusBadRequest, nil)
+	}
+	return nil
 }
 
 // GetInventoryTurnoverReport godoc
@@ -162,6 +221,11 @@ func (h *ReportHandler) GetInventoryTurnoverReport(c *gin.Context) {
 	var req requests.InventoryTurnoverReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	if err := validateDateRange(req.StartDate, req.EndDate); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -191,6 +255,11 @@ func (h *ReportHandler) GetProfitMarginReport(c *gin.Context) {
 	var req requests.ProfitMarginReportRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	if err := validateDateRange(req.StartDate, req.EndDate); err != nil {
+		c.Error(err)
 		return
 	}
 

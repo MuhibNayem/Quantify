@@ -2,6 +2,12 @@
 
 This document provides a detailed description of the API endpoints, including their requests and responses.
 
+## Authorization & CSRF Overview
+
+Most `/api/v1` routes require authentication and specific roles (Admin, Manager, Staff). Refer to `docs/api_authorization_matrix.md` for the full mapping of endpoints to required roles. Public endpoints (health, metrics, WebSocket, payment callbacks, registration/login, and webhooks) remain unauthenticated by design.
+
+For all authenticated requests that mutate state (POST/PUT/PATCH/DELETE), clients must include the `X-CSRF-Token` header. The token is issued in both the login and refresh-token responses (`csrfToken` field) and is tied to the authenticated user. Tokens expire automatically and are invalidated on logout; obtain a new token by calling the refresh endpoint.
+
 ## Alerts
 
 ### PUT /products/{productId}/alert-settings
@@ -209,6 +215,8 @@ This document provides a detailed description of the API endpoints, including th
 
 ## Bulk Operations
 
+Bulk operations are now processed asynchronously. When you initiate a bulk import or export, a job is created and its status can be tracked using the job ID.
+
 ### GET /bulk/products/template
 
 -   **Summary:** Download product import template
@@ -220,23 +228,25 @@ This document provides a detailed description of the API endpoints, including th
 ### POST /bulk/products/import
 
 -   **Summary:** Upload a file for bulk product import
--   **Description:** Uploads a CSV/Excel file for bulk product creation/update. Returns a job ID for status tracking.
+-   **Description:** Uploads a CSV/Excel file for bulk product creation/update. Returns a job ID for status tracking. The file is uploaded to MinIO, and a message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **Form Data:**
         -   `file` (file, required): The CSV/Excel file to upload.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "QUEUED",
-            "message": "Bulk import job queued for processing.",
-            "filePath": "...",
-            "totalRecords": 0,
-            "validRecords": 0,
-            "invalidRecords": 0,
-            "errors": [],
-            "preview": []
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "QUEUED",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": null,
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
         }
         ```
     -   **400 Bad Request:** If the file is not provided.
@@ -248,20 +258,22 @@ This document provides a detailed description of the API endpoints, including th
 -   **Description:** Retrieves the status and validation results of a bulk import job.
 -   **Request:**
     -   **URL Params:**
-        -   `jobId` (string, required): The ID of the bulk import job.
+        -   `jobId` (integer, required): The ID of the bulk import job.
 -   **Response:**
     -   **200 OK:**
         ```json
         {
-            "jobId": "...",
-            "status": "PENDING_CONFIRMATION",
-            "message": "Bulk import job validation complete.",
-            "filePath": "...",
-            "totalRecords": 100,
-            "validRecords": 98,
-            "invalidRecords": 2,
-            "errors": [ ... ],
-            "preview": [ ... ]
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "PENDING_CONFIRMATION",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "{ \"totalRecords\": 100, \"validRecords\": 98, \"invalidRecords\": 2, \"errors\": [\"error1\", \"error2\"], \"validProducts\": [...] }",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": "2025-11-08T21:00:00Z",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:05:00Z"
         }
         ```
     -   **404 Not Found:** If the job is not found.
@@ -269,17 +281,25 @@ This document provides a detailed description of the API endpoints, including th
 ### POST /bulk/products/import/{jobId}/confirm
 
 -   **Summary:** Confirm and execute bulk import
--   **Description:** Confirms and executes the bulk import after preview.
+-   **Description:** Confirms and executes the bulk import after preview. A message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **URL Params:**
-        -   `jobId` (string, required): The ID of the bulk import job.
+        -   `jobId` (integer, required): The ID of the bulk import job.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "PROCESSING",
-            "message": "Bulk import initiated"
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "PROCESSING",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "{ \"totalRecords\": 100, \"validRecords\": 98, \"invalidRecords\": 2, \"errors\": [\"error1\", \"error2\"], \"validProducts\": [...] }",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": "2025-11-08T21:00:00Z",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:05:00Z"
         }
         ```
     -   **400 Bad Request:** If the job is not in the `PENDING_CONFIRMATION` state.
@@ -289,19 +309,27 @@ This document provides a detailed description of the API endpoints, including th
 ### GET /bulk/products/export
 
 -   **Summary:** Export product catalog
--   **Description:** Exports the entire product catalog or a filtered list of products to a CSV/Excel file.
+-   **Description:** Exports the entire product catalog or a filtered list of products to a CSV/Excel file. A job is created and a message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **Query Params:**
         -   `format` (string, optional): Export format (csv, excel). Defaults to `csv`.
         -   `category` (integer, optional): Filter by Category ID.
         -   `supplier` (integer, optional): Filter by Supplier ID.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "QUEUED",
-            "message": "Bulk export job queued for processing."
+            "ID": 1,
+            "Type": "BULK_EXPORT",
+            "Status": "QUEUED",
+            "Payload": "{ \"format\": \"csv\", \"category\": \"\", \"supplier\": \"\", \"userId\": 1 }",
+            "Result": "",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": null,
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
         }
         ```
     -   **500 Internal Server Error:** If there is a server-side error.

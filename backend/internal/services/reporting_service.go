@@ -5,71 +5,52 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"inventory/backend/internal/message_broker"
-	"inventory/backend/internal/repository"
-	"inventory/backend/internal/storage"
 	"io"
 	"strconv"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jung-kurt/gofpdf"
 	"github.com/sirupsen/logrus"
 	"github.com/xuri/excelize/v2"
+
+	"inventory/backend/internal/config"
+	"inventory/backend/internal/domain"
+	"inventory/backend/internal/repository"
+	"inventory/backend/internal/storage"
 )
 
 type ReportingService struct {
-	repo     *repository.ReportsRepository
-	uploader storage.Uploader
+	repo                 *repository.ReportsRepository
+	uploader             storage.Uploader
+	jobRepo              *repository.JobRepository
+	salesTrendsTTL       time.Duration
+	inventoryTurnoverTTL time.Duration
+	profitMarginTTL      time.Duration
 }
 
-func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader) *ReportingService {
-	return &ReportingService{repo: repo, uploader: uploader}
+func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, cfg *config.Config) *ReportingService {
+	return &ReportingService{
+		repo:                 repo,
+		uploader:             uploader,
+		jobRepo:              jobRepo,
+		salesTrendsTTL:       cfg.SalesTrendsCacheTTL,
+		inventoryTurnoverTTL: cfg.InventoryTurnoverCacheTTL,
+		profitMarginTTL:      cfg.ProfitMarginCacheTTL,
+	}
 }
 
-type ReportJob struct {
-	JobID      string      `json:"jobId"`
-	ReportType string      `json:"reportType"`
-	Params     interface{} `json:"params"`
-	Status     string      `json:"status"`
-	FileURL    string      `json:"fileUrl"`
-}
-
-func (s *ReportingService) RequestReport(reportType string, params interface{}) (string, error) {
-	jobID := uuid.New().String()
-	job := ReportJob{
-		JobID:      jobID,
-		ReportType: reportType,
-		Params:     params,
-		Status:     "QUEUED",
-	}
-
-	err := message_broker.Publish("inventory", "reporting", job)
-	if err != nil {
-		return "", err
-	}
-
-	// Store job status in Redis
-	payload, err := json.Marshal(job)
-	if err != nil {
-		return "", err
-	}
-	err = repository.SetCache("report_job:"+jobID, string(payload), 3600)
-	if err != nil {
-		return "", err
-	}
-
-	return jobID, nil
-}
-
-func (s *ReportingService) GenerateReport(job *ReportJob) error {
+func (s *ReportingService) GenerateReport(job *domain.Job) error {
 	var buffer bytes.Buffer
 	var fileType string
 
-	switch job.ReportType {
+	var params map[string]interface{}
+	if err := json.Unmarshal([]byte(job.Payload), &params); err != nil {
+		return err
+	}
+
+	switch job.Type {
 	case "sales_trends_csv":
 		fileType = "csv"
-		params := job.Params.(map[string]interface{})
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
 		var categoryID, locationID *uint
@@ -88,7 +69,6 @@ func (s *ReportingService) GenerateReport(job *ReportJob) error {
 		}
 	case "sales_trends_pdf":
 		fileType = "pdf"
-		params := job.Params.(map[string]interface{})
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
 		var categoryID, locationID *uint
@@ -107,7 +87,6 @@ func (s *ReportingService) GenerateReport(job *ReportJob) error {
 		}
 	case "sales_trends_excel":
 		fileType = "xlsx"
-		params := job.Params.(map[string]interface{})
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
 		var categoryID, locationID *uint
@@ -125,19 +104,20 @@ func (s *ReportingService) GenerateReport(job *ReportJob) error {
 			return err
 		}
 	default:
-		return fmt.Errorf("unknown report type: %s", job.ReportType)
+		return fmt.Errorf("unknown report type: %s", job.Type)
 	}
 
-	fileName := fmt.Sprintf("report-%s.%s", job.JobID, fileType)
+	fileName := fmt.Sprintf("report-%d.%s", job.ID, fileType)
 	uploadInfo, err := s.uploader.UploadFile("reports", fileName, &buffer, int64(buffer.Len()))
 	if err != nil {
 		return err
 	}
 
 	job.Status = "COMPLETED"
-	job.FileURL = uploadInfo.Location
-	payload, _ := json.Marshal(job)
-	return repository.SetCache("report_job:"+job.JobID, string(payload), 3600)
+	job.Result = uploadInfo.Location
+	now := time.Now()
+	job.LastAttemptAt = &now
+	return s.jobRepo.UpdateJob(job)
 }
 
 func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) (map[string]interface{}, error) {
@@ -175,8 +155,16 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 		"topSellingProducts": topSellingProducts,
 	}
 
-	reportJSON, _ := json.Marshal(reportData)
-	repository.SetCache(cacheKey, string(reportJSON), 3600)
+	if s.salesTrendsTTL > 0 {
+		reportJSON, err := json.Marshal(reportData)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to marshal sales trends report for caching")
+		} else if err := repository.SetCache(cacheKey, string(reportJSON), s.salesTrendsTTL); err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to cache sales trends report")
+		}
+	}
 
 	return reportData, nil
 }
@@ -261,6 +249,14 @@ func (s *ReportingService) ExportSalesTrendsReportExcel(writer io.Writer, startD
 }
 
 func (s *ReportingService) GetInventoryTurnoverReport(startDate, endDate time.Time, categoryID, locationID *uint) (map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("inventory_turnover:%s:%s:%v:%v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID)
+	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+		var reportData map[string]interface{}
+		if err := json.Unmarshal([]byte(cached), &reportData); err == nil {
+			return reportData, nil
+		}
+	}
+
 	costOfGoodsSold, averageInventoryValue, err := s.repo.GetInventoryTurnover(startDate, endDate, categoryID, locationID)
 	if err != nil {
 		return nil, err
@@ -272,16 +268,35 @@ func (s *ReportingService) GetInventoryTurnoverReport(startDate, endDate time.Ti
 	}
 
 	reportData := map[string]interface{}{
-		"period":                  fmt.Sprintf("%s to %s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02")),
-		"totalCostOfGoodsSold":    costOfGoodsSold,
-		"averageInventoryValue":   averageInventoryValue,
-		"inventoryTurnoverRate":   inventoryTurnoverRate,
+		"period":                fmt.Sprintf("%s to %s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02")),
+		"totalCostOfGoodsSold":  costOfGoodsSold,
+		"averageInventoryValue": averageInventoryValue,
+		"inventoryTurnoverRate": inventoryTurnoverRate,
+	}
+
+	if s.inventoryTurnoverTTL > 0 {
+		reportJSON, err := json.Marshal(reportData)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to marshal inventory turnover report for caching")
+		} else if err := repository.SetCache(cacheKey, string(reportJSON), s.inventoryTurnoverTTL); err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to cache inventory turnover report")
+		}
 	}
 
 	return reportData, nil
 }
 
 func (s *ReportingService) GetProfitMarginReport(startDate, endDate time.Time, categoryID, locationID *uint) (map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("profit_margin:%s:%s:%v:%v", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID)
+	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+		var reportData map[string]interface{}
+		if err := json.Unmarshal([]byte(cached), &reportData); err == nil {
+			return reportData, nil
+		}
+	}
+
 	totalRevenue, totalCost, err := s.repo.GetProfitMargin(startDate, endDate, categoryID, locationID)
 	if err != nil {
 		return nil, err
@@ -299,6 +314,17 @@ func (s *ReportingService) GetProfitMarginReport(startDate, endDate time.Time, c
 		"totalCost":         totalCost,
 		"grossProfit":       grossProfit,
 		"grossProfitMargin": grossProfitMargin,
+	}
+
+	if s.profitMarginTTL > 0 {
+		reportJSON, err := json.Marshal(reportData)
+		if err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to marshal profit margin report for caching")
+		} else if err := repository.SetCache(cacheKey, string(reportJSON), s.profitMarginTTL); err != nil {
+			logrus.WithFields(logrus.Fields{"cacheKey": cacheKey}).WithError(err).
+				Error("Failed to cache profit margin report")
+		}
 	}
 
 	return reportData, nil

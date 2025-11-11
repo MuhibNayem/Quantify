@@ -3,8 +3,10 @@ package handlers
 import (
 	"net/http"
 
+	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +21,7 @@ func NewPaymentHandler(paymentService services.PaymentService) *PaymentHandler {
 func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 	var req requests.PaymentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(appErrors.NewAppError("Invalid payment request payload", http.StatusBadRequest, err))
 		return
 	}
 
@@ -31,7 +33,7 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 
 	redirectURL, err := h.paymentService.CreatePayment(req.PaymentMethod, req.Amount, req.OrderID, "BDT", cusName, cusEmail, cusPhone)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create payment session: " + err.Error()})
+		c.Error(appErrors.NewAppError("Failed to create payment session", http.StatusInternalServerError, err))
 		return
 	}
 
@@ -40,13 +42,13 @@ func (h *PaymentHandler) CreatePayment(c *gin.Context) {
 
 func (h *PaymentHandler) HandleSSLCommerzIPN(c *gin.Context) {
 	if err := c.Request.ParseForm(); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Could not parse form"})
+		c.Error(appErrors.NewAppError("Invalid SSLCommerz IPN payload", http.StatusBadRequest, err))
 		return
 	}
 
 	valid, err := h.paymentService.ValidateSSLCommerzIPN(c.Request.Form)
 	if err != nil || !valid {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "SSLCommerz IPN validation failed"})
+		c.Error(appErrors.NewAppError("SSLCommerz IPN validation failed", http.StatusBadRequest, err))
 		return
 	}
 
@@ -65,13 +67,13 @@ func (h *PaymentHandler) HandleBkashCallback(c *gin.Context) {
 	status := c.Query("status")
 
 	if paymentID == "" || status == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing paymentID or status in bKash callback"})
+		c.Error(appErrors.NewAppError("Missing paymentID or status in bKash callback", http.StatusBadRequest, nil))
 		return
 	}
 
 	redirectURL, err := h.paymentService.HandleBkashCallback(paymentID, status)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle bKash callback: " + err.Error()})
+		c.Error(appErrors.NewAppError("Failed to handle bKash callback", http.StatusInternalServerError, err))
 		return
 	}
 

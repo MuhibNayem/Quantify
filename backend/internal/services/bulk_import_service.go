@@ -5,28 +5,27 @@ import (
 	"fmt"
 	"inventory/backend/internal/domain"
 	"io"
-	"os"
 	"strconv"
 )
 
-type BulkImportResult struct {
-	TotalRecords   int
-	ValidRecords   int
-	InvalidRecords int
-	Errors         []error
-	ValidProducts  []domain.Product
+type BulkImportService struct{}
+
+func NewBulkImportService() *BulkImportService {
+	return &BulkImportService{}
 }
 
-func ProcessBulkImport(filePath string) (*BulkImportResult, error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
-	}
-	defer file.Close()
+type BulkImportResult struct {
+	TotalRecords   int              `json:"totalRecords"`
+	ValidRecords   int              `json:"validRecords"`
+	InvalidRecords int              `json:"invalidRecords"`
+	Errors         []string         `json:"errors"`
+	ValidProducts  []domain.Product `json:"validProducts"`
+}
 
+func (s *BulkImportService) ProcessBulkImport(file io.Reader) (*BulkImportResult, error) {
 	reader := csv.NewReader(file)
 	// Read header row
-	_, err = reader.Read()
+	_, err := reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read header row: %w", err)
 	}
@@ -40,13 +39,13 @@ func ProcessBulkImport(filePath string) (*BulkImportResult, error) {
 		}
 		if err != nil {
 			result.InvalidRecords++
-			result.Errors = append(result.Errors, fmt.Errorf("failed to read row: %w", err))
+			result.Errors = append(result.Errors, fmt.Sprintf("failed to read row: %v", err))
 			continue
 		}
 
 		result.TotalRecords++
 
-		product, validationErrors := validateAndParseProduct(row)
+		product, validationErrors := s.validateAndParseProduct(row)
 		if len(validationErrors) > 0 {
 			result.InvalidRecords++
 			result.Errors = append(result.Errors, validationErrors...)
@@ -59,11 +58,11 @@ func ProcessBulkImport(filePath string) (*BulkImportResult, error) {
 	return result, nil
 }
 
-func validateAndParseProduct(row []string) (*domain.Product, []error) {
-	var errors []error
+func (s *BulkImportService) validateAndParseProduct(row []string) (*domain.Product, []string) {
+	var errors []string
 
 	if len(row) != 12 {
-		errors = append(errors, fmt.Errorf("invalid number of columns"))
+		errors = append(errors, "invalid number of columns")
 		return nil, errors
 	}
 
@@ -81,35 +80,35 @@ func validateAndParseProduct(row []string) (*domain.Product, []error) {
 	status := row[11]
 
 	if sku == "" {
-		errors = append(errors, fmt.Errorf("SKU is required"))
+		errors = append(errors, "SKU is required")
 	}
 	if name == "" {
-		errors = append(errors, fmt.Errorf("name is required"))
+		errors = append(errors, "name is required")
 	}
 
 	categoryID, err := strconv.ParseUint(categoryIDStr, 10, 32)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("invalid category ID: %w", err))
+		errors = append(errors, fmt.Sprintf("invalid category ID: %v", err))
 	}
 
 	subCategoryID, err := strconv.ParseUint(subCategoryIDStr, 10, 32)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("invalid sub-category ID: %w", err))
+		errors = append(errors, fmt.Sprintf("invalid sub-category ID: %v", err))
 	}
 
 	supplierID, err := strconv.ParseUint(supplierIDStr, 10, 32)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("invalid supplier ID: %w", err))
+		errors = append(errors, fmt.Sprintf("invalid supplier ID: %v", err))
 	}
 
 	purchasePrice, err := strconv.ParseFloat(purchasePriceStr, 64)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("invalid purchase price: %w", err))
+		errors = append(errors, fmt.Sprintf("invalid purchase price: %v", err))
 	}
 
 	sellingPrice, err := strconv.ParseFloat(sellingPriceStr, 64)
 	if err != nil {
-		errors = append(errors, fmt.Errorf("invalid selling price: %w", err))
+		errors = append(errors, fmt.Sprintf("invalid selling price: %v", err))
 	}
 
 	if len(errors) > 0 {

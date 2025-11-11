@@ -31,28 +31,37 @@ func InitDB(cfg *config.Config) {
 	logrus.Info("Database connection established")
 
 	// Auto-migrate the schema
-	err = DB.AutoMigrate(
+	AutoMigrate()
+}
+
+func AutoMigrate() {
+	err := DB.AutoMigrate(
+		&domain.User{},
 		&domain.Product{},
 		&domain.Category{},
 		&domain.SubCategory{},
 		&domain.Supplier{},
-		&domain.Batch{},
+		&domain.Location{},
 		&domain.StockAdjustment{},
-		&domain.Alert{},
-		&domain.User{},
-		&domain.ProductAlertSettings{},
-		&domain.UserNotificationSettings{},
-		&domain.DemandForecast{},
-		&domain.ReorderSuggestion{},
+		&domain.Batch{},
 		&domain.PurchaseOrder{},
 		&domain.PurchaseOrderItem{},
-		&domain.Location{},
+		&domain.ReorderSuggestion{},
+		&domain.DemandForecast{},
+		&domain.Alert{},
+		&domain.UserNotificationSettings{},
+		&domain.StockTransfer{},
+		&domain.Transaction{},
+		&domain.LoyaltyAccount{},
+		&domain.TimeClock{},
+		&domain.Job{},
 	)
 	if err != nil {
-		logrus.Fatalf("Failed to auto-migrate database schema: %v", err)
+		logrus.Fatalf("Database schema auto-migration failed: %v", err)
 	}
 	logrus.Info("Database schema auto-migrated")
 }
+
 
 // CloseDB closes the database connection.
 func CloseDB() {

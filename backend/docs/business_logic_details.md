@@ -703,27 +703,35 @@ graph TD
 
 ## 9. Bulk Operations
 
-This feature set enables bulk import and export of product data.
+This feature set enables bulk import and export of product data, now handled asynchronously via a message broker and persistent job tracking.
 
 ### Scenario: Uploading a File for Bulk Product Import
 
 **User Story:** As an inventory manager, I want to upload a CSV/Excel file containing product data for bulk creation or update.
 
 **Business Logic:**
-*   A user uploads a CSV/Excel file.
-*   The system saves the uploaded file temporarily.
-*   A unique `jobID` is generated.
-*   The `userID` of the uploader is retrieved from the context.
-*   A `bulk.import` event is published to the message broker, containing the `jobID`, file path, and `userID`.
-*   A mock job status is created and returned, indicating the job is 'QUEUED'.
+*   A user uploads a CSV/Excel file via the API.
+*   The API handler uploads the file to MinIO storage, generating a unique object name.
+*   A new `Job` record is created in the database with status `QUEUED`, storing the MinIO bucket and object name, and the `userID`.
+*   A `bulk.import` event is published to the message broker, containing the `jobID`.
+*   The API returns the created `Job` object with status `QUEUED`.
+*   A background consumer listens for `bulk.import` events.
+*   Upon receiving the event, the consumer updates the job status to `PROCESSING`.
+*   The consumer downloads the file from MinIO.
+*   The `BulkImportService` processes the file, validates product data, and returns a `BulkImportResult` (valid products, errors).
+*   The consumer updates the `Job` record with the `BulkImportResult` and sets the status to `PENDING_CONFIRMATION`.
 
 ```mermaid
 graph TD
-    A["User uploads CSV/Excel File"] --> B["Save File Temporarily"];
-    B --> C["Generate Job ID"];
-    C --> D["Retrieve User ID from Context"];
-    D --> E["Publish 'bulk.import' Event to Message Broker"];
-    E --> F["Return Job Status (QUEUED)"];
+    A["User uploads CSV/Excel File (API)"] --> B["Upload File to MinIO"];
+    B --> C["Create Job Record (DB) - Status: QUEUED"];
+    C --> D["Publish 'bulk.import' Event (Message Broker)"];
+    D --> E["API Returns Job (QUEUED)"];
+    E --> F["Background Consumer listens for 'bulk.import'"];
+    F --> G["Consumer: Update Job Status to PROCESSING"];
+    G --> H["Consumer: Download File from MinIO"];
+    H --> I["Consumer: Process File (BulkImportService)"];
+    I --> J["Consumer: Update Job Record with Result & Status: PENDING_CONFIRMATION"];
 ```
 
 ### Scenario: Confirming a Bulk Product Import
@@ -731,21 +739,28 @@ graph TD
 **User Story:** As an inventory manager, after reviewing a preview of a bulk import, I want to confirm and execute the import.
 
 **Business Logic:**
-*   A user provides the `jobID` for a bulk import.
-*   The system retrieves the job status from mock storage.
-*   If the job is not found or not in 'PENDING_CONFIRMATION' status, the request fails.
-*   The `userID` of the confirmer is retrieved from the context.
-*   A `bulk.import` event is published to the message broker (re-publishing with confirmation intent).
-*   The job status is updated to 'PROCESSING' and returned.
+*   A user provides the `jobID` to the API for confirmation.
+*   The API handler retrieves the `Job` record from the database.
+*   If the job is not found or not in `PENDING_CONFIRMATION` status, the request fails.
+*   A `bulk.import.confirm` event is published to the message broker, containing the `jobID`.
+*   The API updates the `Job` status to `PROCESSING` and returns the updated `Job` object.
+*   The background consumer listens for `bulk.import.confirm` events.
+*   Upon receiving the event, the consumer retrieves the `Job` record.
+*   The consumer extracts the validated product data from the job's `Result` field.
+*   The `ProductRepository` is used to bulk insert the valid products into the database.
+*   The consumer updates the `Job` record with status `COMPLETED`.
 
 ```mermaid
 graph TD
-    A["User provides Job ID for Confirmation"] --> B{"Retrieve Job Status"};
-    B -- "Job Not Found/Not PENDING_CONFIRMATION" --> C["Confirmation Failed: Bad Request/Not Found"];
-    B -- "Job Found & PENDING_CONFIRMATION" --> D["Retrieve User ID from Context"];
-    D --> E["Publish 'bulk.import' Event (Confirmation)"];
-    E --> F["Update Job Status to 'PROCESSING'"];
-    F --> G["Return Confirmation Status"];
+    A["User confirms Job (API)"] --> B["Retrieve Job Record (DB)"];
+    B -- "Job Not Found/Not PENDING_CONFIRMATION" --> C["Confirmation Failed"];
+    B -- "Job Found & PENDING_CONFIRMATION" --> D["Publish 'bulk.import.confirm' Event (Message Broker)"];
+    D --> E["API: Update Job Status to PROCESSING & Return Job"];
+    E --> F["Background Consumer listens for 'bulk.import.confirm'"];
+    F --> G["Consumer: Retrieve Job Record"];
+    G --> H["Consumer: Extract Validated Products from Job Result"];
+    H --> I["Consumer: Bulk Insert Products (ProductRepository)"];
+    I --> J["Consumer: Update Job Status to COMPLETED"];
 ```
 
 ### Scenario: Exporting Product Data
@@ -753,18 +768,28 @@ graph TD
 **User Story:** As an inventory manager, I want to export product data (all or filtered) to a CSV or Excel file.
 
 **Business Logic:**
-*   A user specifies the export format (CSV/Excel) and optional filters (category, supplier).
-*   The `userID` of the exporter is retrieved from the context.
-*   A unique `jobID` is generated.
-*   A `bulk.export` event is published to the message broker, containing the `jobID`, format, filters, and `userID`.
-*   A job status is returned, indicating the export is 'QUEUED'. (The actual export file generation and delivery would be handled by a background worker consuming this event).
+*   A user specifies the export format (CSV/Excel) and optional filters (category, supplier) via the API.
+*   A new `Job` record is created in the database with status `QUEUED`, storing the format, filters, and `userID`.
+*   A `bulk.export` event is published to the message broker, containing the `jobID`.
+*   The API returns the created `Job` object with status `QUEUED`.
+*   A background consumer listens for `bulk.export` events.
+*   Upon receiving the event, the consumer updates the job status to `PROCESSING`.
+*   The consumer fetches the relevant product data from the database (applying filters).
+*   The `BulkExportService` generates the export file in memory.
+*   The consumer uploads the generated file to MinIO storage.
+*   The consumer updates the `Job` record with status `COMPLETED` and includes a download URL in the `Result` field.
 
 ```mermaid
 graph TD
-    A["User specifies Export Format & Filters"] --> B["Retrieve User ID from Context"];
-    B --> C["Generate Job ID"];
-    C --> D["Publish 'bulk.export' Event to Message Broker"];
-    D --> E["Return Job Status (QUEUED)"];
+    A["User requests Export (API)"] --> B["Create Job Record (DB) - Status: QUEUED"];
+    B --> C["Publish 'bulk.export' Event (Message Broker)"];
+    C --> D["API Returns Job (QUEUED)"];
+    D --> E["Background Consumer listens for 'bulk.export'"];
+    E --> F["Consumer: Update Job Status to PROCESSING"];
+    F --> G["Consumer: Fetch Product Data (ProductRepository)"];
+    G --> H["Consumer: Generate Export File (BulkExportService)"];
+    H --> I["Consumer: Upload File to MinIO"];
+    I --> J["Consumer: Update Job Status to COMPLETED with Download URL"];
 ```
 
 ---

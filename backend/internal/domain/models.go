@@ -231,6 +231,18 @@ type LoyaltyAccount struct {
 	Tier   string `gorm:"default:'Bronze'"` // e.g., Bronze, Silver, Gold
 }
 
+type Job struct {
+	gorm.Model
+	Type         string    `json:"type"`
+	Status       string    `json:"status"`
+	Payload      string    `json:"payload"`
+	Result       string    `json:"result"`
+	LastError    string    `json:"lastError"`
+	RetryCount   int       `json:"retryCount"`
+	MaxRetries   int       `json:"maxRetries"`
+	LastAttemptAt *time.Time `json:"lastAttemptAt"`
+}
+
 // TimeClock represents an employee's time clock entry.
 type TimeClock struct {
 	gorm.Model

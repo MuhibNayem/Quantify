@@ -7,8 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"inventory/backend/internal/websocket"
-
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 )
@@ -28,6 +26,7 @@ type RabbitMQManager struct {
 	isClosed   bool
 	notifyConn chan *amqp091.Error
 	notifyChan chan *amqp091.Error
+	cancelFunc context.CancelFunc
 }
 
 // NewRabbitMQManager creates a new RabbitMQManager.
@@ -107,6 +106,9 @@ func (m *RabbitMQManager) Close() {
 	if m.conn != nil {
 		m.conn.Close()
 	}
+	if m.cancelFunc != nil {
+		m.cancelFunc()
+	}
 }
 
 // InitRabbitMQ initializes the RabbitMQ manager.
@@ -116,8 +118,15 @@ func InitRabbitMQ(url string) {
 	})
 }
 
+// Close shuts down the RabbitMQ manager if initialized.
+func Close() {
+	if rabbitMQManager != nil {
+		rabbitMQManager.Close()
+	}
+}
+
 // Publish publishes a message to RabbitMQ.
-func Publish(exchange, routingKey string, body interface{}) error {
+func Publish(ctx context.Context, exchange, routingKey string, body interface{}) error {
 	<-rabbitMQManager.isReady // Wait for the connection to be ready
 
 	rabbitMQManager.mu.Lock()
@@ -127,7 +136,7 @@ func Publish(exchange, routingKey string, body interface{}) error {
 		return fmt.Errorf("RabbitMQ channel is not available")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	jsonBody, err := json.Marshal(body)
@@ -149,9 +158,16 @@ func Publish(exchange, routingKey string, body interface{}) error {
 
 // Subscribe subscribes to a RabbitMQ queue.
 // Subscribe subscribes to a RabbitMQ queue and handles reconnections.
-func Subscribe(exchange, queueName, routingKey string, hub *websocket.Hub, handler func(d amqp091.Delivery)) {
+func Subscribe(ctx context.Context, exchange, queueName, routingKey string, handler func(context.Context, <-chan amqp091.Delivery)) context.CancelFunc {
+	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
 			<-rabbitMQManager.isReady // Wait for the connection to be ready
 
 			rabbitMQManager.mu.Lock()
@@ -220,26 +236,16 @@ func Subscribe(exchange, queueName, routingKey string, hub *websocket.Hub, handl
 
 			logrus.Infof("Subscribed to queue '%s'", queueName)
 
-			// Consumer loop
-			for {
-				select {
-				case d, ok := <-msgs:
-					if !ok {
-						logrus.Warn("RabbitMQ consumer channel closed. Re-subscribing...")
-						goto end_consumer_loop
-					}
-					handler(d)
-					hub.Broadcast(d.Body)
-				case <-rabbitMQManager.notifyChan:
-					logrus.Warn("RabbitMQ channel closed. Re-subscribing...")
-					goto end_consumer_loop
-				case <-rabbitMQManager.notifyConn:
-					logrus.Warn("RabbitMQ connection lost. Re-subscribing...")
-					goto end_consumer_loop
-				}
+			handler(ctx, msgs)
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
 			}
-		end_consumer_loop:
+
 			time.Sleep(5 * time.Second) // Wait before attempting to re-subscribe
 		}
 	}()
+	return cancel
 }

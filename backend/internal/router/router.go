@@ -13,14 +13,13 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
 	_ "inventory/backend/api"
 )
 
-func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
+func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.JobRepository, minioUploader storage.Uploader) *gin.Engine {
 	r := gin.Default()
 
 	// CORS Middleware
@@ -54,11 +53,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 	crmService := services.NewCRMService(crmRepo)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo)
 	integrationService := services.NewIntegrationService()
-	minioUploader, err := storage.NewMinIOUploader(cfg)
-	if err != nil {
-		logrus.Fatalf("Failed to initialize MinIO uploader: %v", err)
-	}
-	reportingService := services.NewReportingService(reportsRepo, minioUploader)
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler(productRepo, db)
@@ -70,7 +65,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 	crmHandler := handlers.NewCRMHandler(crmService)
 	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
 	webhookHandler := handlers.NewWebhookHandler(integrationService)
-	reportHandler := handlers.NewReportHandler(reportingService)
+	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
+	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -114,64 +110,72 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 	{
 		// Auth middleware will be applied to all routes in this group
 		api.Use(middleware.AuthMiddleware())
+		api.Use(middleware.CSRFMiddleware())
+
+		// Jobs (Manager/Admin)
+		jobs := api.Group("/jobs")
+		jobs.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
+		{
+			jobs.POST("/:jobId/cancel", reportHandler.CancelJob)
+		}
 
 		// Products
 		products := api.Group("/products")
 		{
-			products.POST("", productHandler.CreateProduct)
+			products.POST("", middleware.AuthorizeMiddleware("Admin", "Manager"), productHandler.CreateProduct)
 			products.GET("", productHandler.ListProducts)
 			products.GET("/:productId", productHandler.GetProduct)
 			products.GET("/sku/:sku", productHandler.GetProductBySKU)
 			products.GET("/barcode/:barcode", productHandler.GetProductByBarcode)
-			products.PUT("/:productId", productHandler.UpdateProduct)
-			products.DELETE("/:productId", productHandler.DeleteProduct)
+			products.PUT("/:productId", middleware.AuthorizeMiddleware("Admin", "Manager"), productHandler.UpdateProduct)
+			products.DELETE("/:productId", middleware.AuthorizeMiddleware("Admin", "Manager"), productHandler.DeleteProduct)
 			products.GET("/:productId/stock", handlers.GetProductStock)
-			products.POST("/:productId/stock/batches", handlers.CreateBatch)
-			products.POST("/:productId/stock/adjustments", handlers.CreateStockAdjustment)
+			products.POST("/:productId/stock/batches", middleware.AuthorizeMiddleware("Admin", "Manager"), handlers.CreateBatch)
+			products.POST("/:productId/stock/adjustments", middleware.AuthorizeMiddleware("Admin", "Manager", "Staff"), handlers.CreateStockAdjustment)
 			products.GET("/:productId/history", handlers.ListStockHistory)
 		}
 
 		// Categories
 		categories := api.Group("/categories")
 		{
-			categories.POST("", categoryHandler.CreateCategory)
+			categories.POST("", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.CreateCategory)
 			categories.GET("", categoryHandler.ListCategories)
 			categories.GET("/:categoryId", categoryHandler.GetCategory)
 			categories.GET("/name/:name", categoryHandler.GetCategoryByName)
-			categories.PUT("/:categoryId", categoryHandler.UpdateCategory)
-			categories.DELETE("/:categoryId", categoryHandler.DeleteCategory)
+			categories.PUT("/:categoryId", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.UpdateCategory)
+			categories.DELETE("/:categoryId", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.DeleteCategory)
 
-			categories.POST("/:categoryId/sub-categories", categoryHandler.CreateSubCategory)
+			categories.POST("/:categoryId/sub-categories", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.CreateSubCategory)
 			categories.GET("/:categoryId/sub-categories", categoryHandler.ListSubCategories)
 		}
 
 		// Sub-categories
 		subCategories := api.Group("/sub-categories")
 		{
-			subCategories.PUT("/:id", categoryHandler.UpdateSubCategory)
-			subCategories.DELETE("/:id", categoryHandler.DeleteSubCategory)
+			subCategories.PUT("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.UpdateSubCategory)
+			subCategories.DELETE("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), categoryHandler.DeleteSubCategory)
 		}
 
 		// Suppliers
 		suppliers := api.Group("/suppliers")
 		{
-			suppliers.POST("", supplierHandler.CreateSupplier)
+			suppliers.POST("", middleware.AuthorizeMiddleware("Admin", "Manager"), supplierHandler.CreateSupplier)
 			suppliers.GET("", supplierHandler.ListSuppliers)
 			suppliers.GET("/:id", supplierHandler.GetSupplier)
 			suppliers.GET("/name/:name", supplierHandler.GetSupplierByName)
-			suppliers.PUT("/:id", supplierHandler.UpdateSupplier)
-			suppliers.DELETE("/:id", supplierHandler.DeleteSupplier)
+			suppliers.PUT("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), supplierHandler.UpdateSupplier)
+			suppliers.DELETE("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), supplierHandler.DeleteSupplier)
 			suppliers.GET("/:id/performance", supplierHandler.GetSupplierPerformanceReport)
 		}
 
 		// Locations
 		locations := api.Group("/locations")
 		{
-			locations.POST("", handlers.CreateLocation)
+			locations.POST("", middleware.AuthorizeMiddleware("Admin", "Manager"), handlers.CreateLocation)
 			locations.GET("", handlers.ListLocations)
 			locations.GET("/:id", handlers.GetLocation)
-			locations.PUT("/:id", handlers.UpdateLocation)
-			locations.DELETE("/:id", handlers.DeleteLocation)
+			locations.PUT("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), handlers.UpdateLocation)
+			locations.DELETE("/:id", middleware.AuthorizeMiddleware("Admin", "Manager"), handlers.DeleteLocation)
 		}
 
 		// Barcode
@@ -181,8 +185,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			barcode.GET("/generate", barcodeHandler.GenerateBarcode)
 		}
 
-		// Replenishment
+		// Replenishment (Manager/Admin)
 		replenishment := api.Group("/replenishment")
+		replenishment.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
 			replenishment.POST("/forecast/generate", replenishmentHandler.GenerateDemandForecast)
 			replenishment.GET("/forecast/:forecastId", handlers.GetDemandForecast)
@@ -196,8 +201,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			replenishment.POST("/purchase-orders/:poId/cancel", handlers.CancelPurchaseOrder)
 		}
 
-		// Reports
+		// Reports (Manager/Admin)
 		reports := api.Group("/reports")
+		reports.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
 			reports.POST("/sales-trends", reportHandler.GetSalesTrendsReport)
 			reports.POST("/sales-trends/export", reportHandler.ExportSalesTrendsReport)
@@ -207,8 +213,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			reports.POST("/profit-margin", reportHandler.GetProfitMarginReport)
 		}
 
-		// Alerts
+		// Alerts (Manager/Admin)
 		alerts := api.Group("/alerts")
+		alerts.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
 			alerts.GET("", handlers.ListAlerts)
 			alerts.GET("/:alertId", handlers.GetAlert)
@@ -221,18 +228,20 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			})
 		}
 
-		// Bulk Operations
+		// Bulk Operations (Manager/Admin)
 		bulk := api.Group("/bulk")
+		bulk.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
-			bulk.GET("/products/template", handlers.GetProductImportTemplate)
-			bulk.POST("/products/import", handlers.UploadProductImport)
-			bulk.GET("/products/import/:jobId/status", handlers.GetBulkImportStatus)
-			bulk.POST("/products/import/:jobId/confirm", handlers.ConfirmBulkImport)
-			bulk.GET("/products/export", handlers.ExportProducts)
+			bulk.GET("/products/template", bulkHandler.GetProductImportTemplate)
+			bulk.POST("/products/import", bulkHandler.UploadProductImport)
+			bulk.GET("/products/import/:jobId/status", bulkHandler.GetBulkImportStatus)
+			bulk.POST("/products/import/:jobId/confirm", bulkHandler.ConfirmBulkImport)
+			bulk.GET("/products/export", bulkHandler.ExportProducts)
 		}
 
-		// Inventory
+		// Inventory (Staff and above)
 		inventory := api.Group("/inventory")
+		inventory.Use(middleware.AuthorizeMiddleware("Admin", "Manager", "Staff"))
 		{
 			inventory.POST("/transfers", handlers.CreateStockTransfer)
 		}
@@ -240,7 +249,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 		// Users
 		users := api.Group("/users")
 		{
-			users.GET("", handlers.ListUsers)
+			users.GET("", middleware.AdminOnly(), handlers.ListUsers)
 			users.POST("/refresh-token", handlers.RefreshToken)
 			users.POST("/logout", handlers.LogoutUser)
 			users.GET("/:id", handlers.GetUser)
@@ -249,8 +258,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			users.PUT("/:id/approve", middleware.AdminOnly(), handlers.ApproveUser)
 		}
 
-		// CRM
+		// CRM (Manager/Admin)
 		crm := api.Group("/crm")
+		crm.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
 			crm.POST("/customers", crmHandler.CreateCustomer)
 			crm.GET("/customers/:identifier", crmHandler.GetCustomer)
@@ -264,8 +274,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub) *gin.Engine {
 			crm.POST("/loyalty/:userId/redeem", crmHandler.RedeemLoyaltyPoints)
 		}
 
-		// Time Tracking
+		// Time Tracking (Staff and above)
 		timeTracking := api.Group("/time-tracking")
+		timeTracking.Use(middleware.AuthorizeMiddleware("Admin", "Manager", "Staff"))
 		{
 			timeTracking.POST("/clock-in/:userId", timeTrackingHandler.ClockIn)
 			timeTracking.POST("/clock-out/:userId", timeTrackingHandler.ClockOut)

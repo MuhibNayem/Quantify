@@ -156,27 +156,32 @@ func LoginUser(c *gin.Context) {
 
 	// Compare password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 		return
 	}
 
-	// Generate tokens
 	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
 	}
 
 	// Store tokens in Redis
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
 	if err := repository.SetCache("access_token:"+accessToken, user.ID, accessTokenExpiresAt.Sub(time.Now())); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store access token"})
+		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
 
 	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour) // 10 years
 	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, refreshTokenExpiresAt.Sub(time.Now())); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store refresh token"})
+		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
+		return
+	}
+
+	csrfToken, err := auth.GenerateCSRFToken(user.ID)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to generate CSRF token", http.StatusInternalServerError, err))
 		return
 	}
 
@@ -184,6 +189,7 @@ func LoginUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
+		"csrfToken":    csrfToken,
 		"user":         user, // Include user object
 	})
 }
@@ -230,29 +236,34 @@ func RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Generate new tokens
 	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate tokens"})
+		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
 	}
 
-	// Store new tokens in Redis
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
 	if err := repository.SetCache("access_token:"+accessToken, user.ID, accessTokenExpiresAt.Sub(time.Now())); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store access token"})
+		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
 
-	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour) // 10 years
+	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour)
 	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, refreshTokenExpiresAt.Sub(time.Now())); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store refresh token"})
+		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
+		return
+	}
+
+	csrfToken, err := auth.GenerateCSRFToken(user.ID)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to generate CSRF token", http.StatusInternalServerError, err))
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
+		"csrfToken":    csrfToken,
 	})
 }
 
@@ -287,6 +298,12 @@ func LogoutUser(c *gin.Context) {
 		// Even if the access token is already expired, we should proceed with logout
 	}
 
+	csrfToken := c.GetHeader("X-CSRF-Token")
+	if err := auth.InvalidateCSRFToken(csrfToken); err != nil {
+		c.Error(appErrors.NewAppError("Failed to invalidate CSRF token", http.StatusInternalServerError, err))
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }
 
@@ -315,6 +332,11 @@ func GetUser(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
 		return
 	}
+
+	if !canAccessUser(c, user.ID) {
+		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
+		return
+	}
 	// Do not return hashed password
 	user.Password = ""
 	c.JSON(http.StatusOK, user)
@@ -339,7 +361,7 @@ func UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 	var req requests.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
 		return
 	}
 
@@ -458,4 +480,21 @@ func ApproveUser(c *gin.Context) {
 
 	user.Password = ""
 	c.JSON(http.StatusOK, user)
+}
+
+func canAccessUser(c *gin.Context, targetUserID uint) bool {
+	roleVal, roleExists := c.Get("role")
+	requestorVal, userExists := c.Get("user_id")
+	if !roleExists || !userExists {
+		return false
+	}
+
+	role, _ := roleVal.(string)
+	requestorID, _ := requestorVal.(uint)
+
+	if role == "Admin" {
+		return true
+	}
+
+	return requestorID == targetUserID
 }

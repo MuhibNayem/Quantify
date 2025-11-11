@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -15,6 +16,19 @@ import (
 	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+)
+
+var (
+	allowedAlertTypes = map[string]struct{}{
+		"LOW_STOCK":    {},
+		"OUT_OF_STOCK": {},
+		"OVERSTOCK":    {},
+		"EXPIRY_ALERT": {},
+	}
+	allowedAlertStatuses = map[string]struct{}{
+		"ACTIVE":   {},
+		"RESOLVED": {},
+	}
 )
 
 // AlertTriggeredPayload defines the payload for alert triggered events.
@@ -93,9 +107,17 @@ func ListAlerts(c *gin.Context) {
 	db := repository.DB.Preload("Product").Preload("Batch")
 
 	if alertType := c.Query("type"); alertType != "" {
+		if _, ok := allowedAlertTypes[alertType]; !ok {
+			c.Error(appErrors.NewAppError("Invalid alert type", http.StatusBadRequest, nil))
+			return
+		}
 		db = db.Where("type = ?", alertType)
 	}
 	if status := c.Query("status"); status != "" {
+		if _, ok := allowedAlertStatuses[status]; !ok {
+			c.Error(appErrors.NewAppError("Invalid alert status", http.StatusBadRequest, nil))
+			return
+		}
 		db = db.Where("status = ?", status)
 	} else {
 		db = db.Where("status = ?", "ACTIVE")
@@ -199,25 +221,14 @@ func PutUserNotificationSettings(c *gin.Context) {
 		return
 	}
 
-	// In a real app, you'd verify the user exists
-	// For now, we assume the user exists or create a placeholder
 	var user domain.User
 	if err := repository.DB.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Create a dummy user if not found for demonstration
-			user = domain.User{
-				Username: fmt.Sprintf("user_%d", userID),
-				Password: "password", // Placeholder
-				Role:     "Staff",    // Placeholder
-			}
-			if err := repository.DB.Create(&user).Error; err != nil {
-				c.Error(appErrors.NewAppError("Failed to create dummy user", http.StatusInternalServerError, err))
-				return
-			}
-		} else {
-			c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
 		}
+		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+		return
 	}
 
 	settings := domain.UserNotificationSettings{
@@ -323,7 +334,7 @@ func triggerAlert(productID uint, alertType, message string, batchID *uint) {
 		Type:      alertType,
 		Message:   message,
 	}
-	if err := message_broker.Publish("inventory", "alert.triggered", payload); err != nil {
+	if err := message_broker.Publish(context.Background(), "inventory", "alert.triggered", payload); err != nil {
 		logrus.Errorf("Failed to publish alert triggered event: %v", err)
 	}
 	logrus.Infof("Alert triggered and published: %s for product %d", alertType, productID)

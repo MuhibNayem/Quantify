@@ -29,3 +29,15 @@ func (r *ProductRepository) GetProductByBarcode(barcode string) (*domain.Product
 	}
 	return &product, nil
 }
+
+func (r *ProductRepository) CreateBulk(products *[]domain.Product) error {
+	return r.db.CreateInBatches(products, 100).Error
+}
+
+func (r *ProductRepository) GetAll() ([]domain.Product, error) {
+	var products []domain.Product
+	if err := r.db.Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}

@@ -9,18 +9,24 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-func GenerateProductExport(products []domain.Product, format string) (*bytes.Buffer, error) {
+type BulkExportService struct{}
+
+func NewBulkExportService() *BulkExportService {
+	return &BulkExportService{}
+}
+
+func (s *BulkExportService) GenerateProductExport(products []domain.Product, format string) (*bytes.Buffer, error) {
 	switch format {
 	case "csv":
-		return generateProductCSV(products)
+		return s.generateProductCSV(products)
 	case "excel":
-		return generateProductExcel(products)
+		return s.generateProductExcel(products)
 	default:
 		return nil, fmt.Errorf("unsupported export format: %s", format)
 	}
 }
 
-func generateProductCSV(products []domain.Product) (*bytes.Buffer, error) {
+func (s *BulkExportService) generateProductCSV(products []domain.Product) (*bytes.Buffer, error) {
 	var b bytes.Buffer
 	writer := csv.NewWriter(&b)
 
@@ -53,7 +59,7 @@ func generateProductCSV(products []domain.Product) (*bytes.Buffer, error) {
 	return &b, nil
 }
 
-func generateProductExcel(products []domain.Product) (*bytes.Buffer, error) {
+func (s *BulkExportService) generateProductExcel(products []domain.Product) (*bytes.Buffer, error) {
 	f := excelize.NewFile()
 	sheetName := "Products"
 	index, _ := f.NewSheet(sheetName)

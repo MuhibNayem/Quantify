@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
@@ -40,7 +42,10 @@ func (s *paymentService) getBkashAccessToken() (string, error) {
 		"app_key":    s.cfg.BkashAPIKey,
 		"app_secret": s.cfg.BkashAPISecret,
 	}
-	jsonPayload, _ := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal bKash token payload: %w", err)
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -57,9 +62,14 @@ func (s *paymentService) getBkashAccessToken() (string, error) {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read bKash token response: %w", err)
+	}
 	var result map[string]interface{}
-	json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("failed to parse bKash token response: %w", err)
+	}
 
 	if accessToken, ok := result["id_token"].(string); ok {
 		return accessToken, nil
@@ -70,11 +80,12 @@ func (s *paymentService) getBkashAccessToken() (string, error) {
 func (s *paymentService) CreatePayment(paymentMethod string, total float64, tranID, currency, cusName, cusEmail, cusPhone string) (string, error) {
 	// Create a new transaction with a "pending" status
 	transaction := &domain.Transaction{
-		OrderID:       tranID,
-		Amount:        int64(total * 100), // Store amount in smallest currency unit
-		Currency:      currency,
-		PaymentMethod: paymentMethod,
-		Status:        "pending",
+		OrderID:              tranID,
+		Amount:               int64(total * 100), // Store amount in smallest currency unit
+		Currency:             currency,
+		PaymentMethod:        paymentMethod,
+		Status:               "pending",
+		GatewayTransactionID: uuid.NewString(),
 	}
 	if err := s.paymentRepo.CreateTransaction(transaction); err != nil {
 		return "", fmt.Errorf("failed to create transaction record: %w", err)
@@ -99,6 +110,7 @@ func (s *paymentService) createCashPayment(total float64, tranID, currency strin
 		return "", fmt.Errorf("failed to get transaction: %w", err)
 	}
 	transaction.Status = "completed"
+	transaction.GatewayTransactionID = fmt.Sprintf("cash-%s", tranID)
 	if err := s.paymentRepo.UpdateTransaction(transaction); err != nil {
 		return "", fmt.Errorf("failed to update transaction: %w", err)
 	}
@@ -121,7 +133,10 @@ func (s *paymentService) createBkashPayment(total float64, tranID, currency stri
 		"intent":          "sale",
 		"merchantInvoice": tranID,
 	}
-	jsonPayload, _ := json.Marshal(payload)
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal bKash payment payload: %w", err)
+	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -138,9 +153,14 @@ func (s *paymentService) createBkashPayment(total float64, tranID, currency stri
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read bKash payment response: %w", err)
+	}
 	var result map[string]interface{}
-	json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("failed to parse bKash payment response: %w", err)
+	}
 
 	if bkashURL, ok := result["bkashURL"].(string); ok {
 		return bkashURL, nil
@@ -216,7 +236,10 @@ func (s *paymentService) HandleBkashCallback(paymentID, status string) (string, 
 	// Execute bKash payment
 	executeURL := s.cfg.BkashBaseURL + "/execute"
 	executePayload := map[string]string{"paymentID": paymentID}
-	jsonExecutePayload, _ := json.Marshal(executePayload)
+	jsonExecutePayload, err := json.Marshal(executePayload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal bKash execute payload: %w", err)
+	}
 
 	executeReq, err := http.NewRequest("POST", executeURL, bytes.NewBuffer(jsonExecutePayload))
 	if err != nil {
@@ -233,9 +256,14 @@ func (s *paymentService) HandleBkashCallback(paymentID, status string) (string, 
 	}
 	defer executeResp.Body.Close()
 
-	executeBody, _ := ioutil.ReadAll(executeResp.Body)
+	executeBody, err := ioutil.ReadAll(executeResp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read bKash execute response: %w", err)
+	}
 	var executeResult map[string]interface{}
-	json.Unmarshal(executeBody, &executeResult)
+	if err := json.Unmarshal(executeBody, &executeResult); err != nil {
+		return "", fmt.Errorf("failed to parse bKash execute response: %w", err)
+	}
 
 	if transactionStatus, ok := executeResult["transactionStatus"].(string); ok && transactionStatus == "Completed" {
 		// Payment successful, update transaction in DB
