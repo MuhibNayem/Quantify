@@ -55,6 +55,8 @@ func AutoMigrate() {
 		&domain.LoyaltyAccount{},
 		&domain.TimeClock{},
 		&domain.Job{},
+		&domain.Notification{},
+		&domain.AlertRoleSubscription{},
 	)
 	if err != nil {
 		logrus.Fatalf("Database schema auto-migration failed: %v", err)
