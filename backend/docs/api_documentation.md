@@ -160,6 +160,65 @@ For all authenticated requests that mutate state (POST/PUT/PATCH/DELETE), client
     -   **404 Not Found:** If the user is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+### POST /alerts/subscriptions
+
+-   **Summary:** Create an alert role subscription
+-   **Description:** Creates a new subscription to link a role with an alert type. (Admin only)
+-   **Request:**
+    -   **Body:**
+        ```json
+        {
+            "alertType": "LOW_STOCK",
+            "role": "Manager"
+        }
+        ```
+-   **Response:**
+    -   **201 Created:**
+        ```json
+        {
+            "ID": 1,
+            "AlertType": "LOW_STOCK",
+            "Role": "Manager",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **409 Conflict:** If the subscription already exists.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /alerts/subscriptions
+
+-   **Summary:** List all alert role subscriptions
+-   **Description:** Retrieves a list of all current alert-role subscriptions. (Admin only)
+-   **Request:** None
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        [
+            {
+                "ID": 1,
+                "AlertType": "LOW_STOCK",
+                "Role": "Manager",
+                "CreatedAt": "2025-11-08T21:00:00Z",
+                "UpdatedAt": "2025-11-08T21:00:00Z"
+            }
+        ]
+        ```
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### DELETE /alerts/subscriptions/{id}
+
+-   **Summary:** Delete an alert role subscription
+-   **Description:** Deletes a subscription by its ID. (Admin only)
+-   **Request:**
+    -   **URL Params:**
+        -   `id` (integer, required): The ID of the subscription.
+-   **Response:**
+    -   **204 No Content:** If the subscription is deleted successfully.
+    -   **404 Not Found:** If the subscription is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## Barcode
 
 ### GET /barcode/generate
@@ -574,6 +633,96 @@ Bulk operations are now processed asynchronously. When you initiate a bulk impor
     -   **204 No Content:** If the sub-category is deleted successfully.
     -   **404 Not Found:** If the sub-category is not found.
     -   **409 Conflict:** If the sub-category has associated products.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+## Notifications
+
+### GET /users/{userId}/notifications
+
+-   **Summary:** Get a list of notifications for a user
+-   **Description:** Retrieves a list of notifications for a specific user, with optional filtering by read status.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Query Params:**
+        -   `isRead` (boolean, optional): Filter by read status (true/false).
+        -   `limit` (integer, optional): Limit number of notifications (default 20).
+        -   `offset` (integer, optional): Offset for pagination (default 0).
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        [
+            {
+                "ID": 1,
+                "UserID": 1,
+                "Type": "ALERT",
+                "Title": "New Alert: LOW_STOCK",
+                "Message": "Product 'Sample Product' is running low.",
+                "Payload": "{ \"productId\": 1, \"type\": \"LOW_STOCK\", \"message\": \"Product 'Sample Product' is running low.\" }",
+                "IsRead": false,
+                "ReadAt": null,
+                "TriggeredAt": "2025-11-08T21:00:00Z",
+                "CreatedAt": "2025-11-08T21:00:00Z",
+                "UpdatedAt": "2025-11-08T21:00:00Z"
+            }
+        ]
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user or an Admin.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /users/{userId}/notifications/unread/count
+
+-   **Summary:** Get the count of unread notifications for a user
+-   **Description:** Retrieves the count of unread notifications for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "count": 5
+        }
+        ```
+    -   **403 Forbidden:** If the authenticated user is not the target user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### PATCH /users/{userId}/notifications/{notificationId}/read
+
+-   **Summary:** Mark a notification as read
+-   **Description:** Marks a specific notification as read for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+        -   `notificationId` (integer, required): The ID of the notification.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "Notification marked as read"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### PATCH /users/{userId}/notifications/read-all
+
+-   **Summary:** Mark all notifications as read
+-   **Description:** Marks all unread notifications as read for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "All notifications marked as read"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user.
     -   **500 Internal Server Error:** If there is a server-side error.
 
 ## CRM

@@ -45,6 +45,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	crmRepo := repository.NewCRMRepository(db)
 	timeTrackingRepo := repository.NewTimeTrackingRepository(db)
 	reportsRepo := repository.NewReportsRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
@@ -67,13 +68,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	webhookHandler := handlers.NewWebhookHandler(integrationService)
 	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
 	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
+	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
 		publicRoutes.GET("/ws", func(c *gin.Context) {
-			handlers.ServeWs(hub, c)
+			handlers.ServeWs(hub, c, notificationRepo)
 		})
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
@@ -264,6 +266,15 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			users.PUT("/:id", middleware.AdminOnly(), handlers.UpdateUser)
 			users.DELETE("/:id", middleware.AdminOnly(), handlers.DeleteUser)
 			users.PUT("/:id/approve", middleware.AdminOnly(), handlers.ApproveUser)
+
+			// Notification routes
+			notifications := users.Group("/:id/notifications")
+			{
+				notifications.GET("", notificationHandler.ListNotifications)
+				notifications.GET("/unread/count", notificationHandler.GetUnreadNotificationCount)
+				notifications.PATCH("/:notificationId/read", notificationHandler.MarkNotificationAsRead)
+				notifications.PATCH("/read-all", notificationHandler.MarkAllNotificationsAsRead)
+			}
 		}
 
 		// CRM (Manager/Admin)
