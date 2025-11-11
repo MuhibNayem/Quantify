@@ -7,9 +7,25 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { productsApi, categoriesApi, subCategoriesApi, suppliersApi, locationsApi } from '$lib/api/resources';
-	import type { Category, Location, Product, SubCategory, Supplier } from '$lib/types';
-	import { PlusCircle, RefreshCcw, Zap } from 'lucide-svelte';
+import DetailsModal from '$lib/components/DetailsModal.svelte';
+import type { DetailBuilderContext, DetailExtraFetcher, DetailSection } from '$lib/components/DetailsModal.svelte';
+import { productsApi, categoriesApi, subCategoriesApi, suppliersApi, locationsApi } from '$lib/api/resources';
+import type { Category, Location, Product, StockAdjustment, SubCategory, Supplier, SupplierPerformance } from '$lib/types';
+import {
+	BadgeDollarSign,
+	CalendarClock,
+	ClipboardList,
+	Layers,
+	MapPin,
+	Mail,
+	Package,
+	Phone,
+	PlusCircle,
+	RefreshCcw,
+	Tag,
+	Users,
+	Zap,
+} from 'lucide-svelte';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
@@ -59,6 +75,388 @@
 
 	const locationForm = $state({ name: '', address: '' });
 	let editingLocation: Location | null = null;
+
+let selectedResourceId: number | null = $state(null);
+let isModalOpen = $state(false);
+let modalEndpoint = $state('');
+let modalTitle = $state('');
+let modalSubtitle: string | null = $state(null);
+let modalExtraFetchers = $state<DetailExtraFetcher[]>([]);
+const emptySectionBuilder: (ctx: DetailBuilderContext) => DetailSection[] = () => [];
+let modalSectionsBuilder = $state<(ctx: DetailBuilderContext) => DetailSection[]>(emptySectionBuilder);
+let useLegacyModalSlot = $state(true);
+
+type StockSnapshot = Awaited<ReturnType<typeof productsApi.stock>>;
+
+const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+const dateTimeFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+const percentFormatter = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 });
+
+const formatCurrency = (value?: number | null) => {
+	if (value === null || value === undefined || Number.isNaN(value)) return '—';
+	return currencyFormatter.format(value);
+};
+
+const formatDateTime = (value?: string | null) => {
+	if (!value) return '—';
+	const date = new Date(value);
+	return Number.isNaN(date.getTime()) ? '—' : dateTimeFormatter.format(date);
+};
+
+const formatPercent = (value?: number | null) => {
+	if (value === null || value === undefined || Number.isNaN(value)) return '—';
+	const normalized = value > 1 ? value / 100 : value;
+	return percentFormatter.format(normalized);
+};
+
+const statusBadge = (status?: string) => {
+	if (!status) return undefined;
+	const normalized = status.toLowerCase();
+	if (normalized === 'active') return { text: status, variant: 'success' as const };
+	if (normalized === 'inactive') return { text: status, variant: 'warning' as const };
+	if (normalized === 'archived') return { text: status, variant: 'danger' as const };
+	return { text: status, variant: 'info' as const };
+};
+
+const productDetailExtraFetchers: DetailExtraFetcher[] = [
+	{
+		key: 'stockSnapshot',
+		request: async (resourceId: string | number) => productsApi.stock(Number(resourceId)),
+	},
+	{
+		key: 'stockHistory',
+		request: async (resourceId: string | number) => productsApi.stockHistory(Number(resourceId)),
+	},
+];
+
+const categoryDetailExtraFetchers: DetailExtraFetcher[] = [
+	{
+		key: 'subCategories',
+		request: async (resourceId: string | number) => subCategoriesApi.list(Number(resourceId)),
+	},
+];
+
+const supplierDetailExtraFetchers: DetailExtraFetcher[] = [
+	{
+		key: 'performance',
+		request: async (resourceId: string | number) => suppliersApi.performance(Number(resourceId)),
+	},
+];
+
+const buildProductSections = ({ data, extras }: DetailBuilderContext): DetailSection[] => {
+	const product = data as Product;
+	const stockSnapshot = (extras.stockSnapshot as StockSnapshot | null) ?? null;
+	const stockHistory = (extras.stockHistory as StockAdjustment[] | null) ?? [];
+	const batches = stockSnapshot?.batches ?? [];
+	const recentHistory = stockHistory.slice(0, 10);
+	const lastAdjustment = recentHistory[0];
+
+	return [
+		{
+			type: 'summary',
+			cards: [
+				{
+					title: 'Current Stock',
+					value: stockSnapshot?.currentQuantity ?? '—',
+					hint: batches.length ? `${batches.length} active batch${batches.length === 1 ? '' : 'es'}` : 'No active batches',
+					icon: Package,
+					accent: 'sky',
+				},
+				{
+					title: 'Status',
+					value: product.Status ?? 'Unknown',
+					hint: lastAdjustment ? `Updated ${formatDateTime(lastAdjustment.AdjustedAt)}` : 'No adjustments yet',
+					icon: Tag,
+					accent: 'emerald',
+				},
+				{
+					title: 'Selling Price',
+					value: formatCurrency(product.SellingPrice),
+					hint: `Purchase ${formatCurrency(product.PurchasePrice)}`,
+					icon: BadgeDollarSign,
+					accent: 'amber',
+				},
+			],
+		},
+		{
+			type: 'description',
+			title: 'Catalog Profile',
+			description: 'Key identifiers & pricing context.',
+			items: [
+				{ label: 'SKU', value: product.SKU },
+				{ label: 'Name', value: product.Name },
+				{ label: 'Status', value: product.Status ?? 'Unknown', badge: statusBadge(product.Status) },
+				{ label: 'Purchase Price', value: formatCurrency(product.PurchasePrice) },
+				{ label: 'Selling Price', value: formatCurrency(product.SellingPrice) },
+				{ label: 'Barcode', value: product.BarcodeUPC ?? '—' },
+			],
+		},
+		{
+			type: 'description',
+			title: 'Associations',
+			description: 'Upstream supplier & placement details.',
+			items: [
+				{ label: 'Category', value: product.Category?.Name ?? (product.CategoryID ? `#${product.CategoryID}` : '—') },
+				{ label: 'Sub-Category', value: product.SubCategory?.Name ?? (product.SubCategoryID ? `#${product.SubCategoryID}` : '—') },
+				{ label: 'Supplier', value: product.Supplier?.Name ?? (product.SupplierID ? `#${product.SupplierID}` : '—') },
+				{ label: 'Location', value: product.Location?.Name ?? (product.LocationID ? `#${product.LocationID}` : '—') },
+				{ label: 'Brand', value: product.Brand ?? '—' },
+			],
+		},
+		{
+			type: 'table',
+			title: 'Recent Stock Adjustments',
+			description: 'Last 10 adjustments pulled from the audit log.',
+			columns: [
+				{ key: 'AdjustedAt', label: 'Date', formatter: (value) => formatDateTime(value as string) },
+				{ key: 'Type', label: 'Type' },
+				{ key: 'Quantity', label: 'Qty', align: 'right' },
+				{ key: 'ReasonCode', label: 'Reason' },
+				{ key: 'AdjustedBy', label: 'By', align: 'right' },
+			],
+			rows: recentHistory,
+			emptyText: 'No adjustments recorded for this product yet.',
+		},
+	];
+};
+
+const buildCategorySections = ({ data, extras }: DetailBuilderContext): DetailSection[] => {
+	const category = data as Category;
+	const children = (extras.subCategories as SubCategory[] | null) ?? [];
+
+	return [
+		{
+			type: 'summary',
+			cards: [
+				{
+					title: 'Sub-categories',
+					value: children.length,
+					hint: children.length ? 'Active descendants' : 'No children yet',
+					icon: Layers,
+					accent: 'violet',
+				},
+				{
+					title: 'Category ID',
+					value: category.ID,
+					hint: 'Primary identifier',
+					icon: ClipboardList,
+					accent: 'sky',
+				},
+				{
+					title: 'Created',
+					value: formatDateTime(category.CreatedAt),
+					hint: category.UpdatedAt ? `Updated ${formatDateTime(category.UpdatedAt)}` : 'No updates yet',
+					icon: CalendarClock,
+					accent: 'slate',
+				},
+			],
+		},
+		{
+			type: 'description',
+			title: 'Category Profile',
+			items: [
+				{ label: 'Name', value: category.Name },
+				{ label: 'ID', value: category.ID },
+				{ label: 'Created', value: formatDateTime(category.CreatedAt) },
+				{ label: 'Updated', value: formatDateTime(category.UpdatedAt) },
+				{ label: 'Sub-categories', value: children.length ? `${children.length} linked` : '—' },
+			],
+		},
+		{
+			type: 'table',
+			title: 'Sub-categories',
+			description: 'Direct children linked to this category.',
+			columns: [
+				{ key: 'Name', label: 'Name' },
+				{ key: 'ID', label: 'ID', align: 'right' },
+			],
+			rows: children,
+			emptyText: 'No sub-categories associated yet.',
+		},
+	];
+};
+
+const buildSubCategorySections = ({ data }: DetailBuilderContext): DetailSection[] => {
+	const subCategory = data as SubCategory;
+	const parent = subCategory.Category;
+
+	return [
+		{
+			type: 'summary',
+			cards: [
+				{
+					title: 'Parent Category',
+					value: parent?.Name ?? `#${subCategory.CategoryID}`,
+					hint: parent ? `ID ${parent.ID}` : 'Linked parent',
+					icon: ClipboardList,
+					accent: 'violet',
+				},
+				{
+					title: 'Sub-category ID',
+					value: subCategory.ID,
+					hint: 'Primary identifier',
+					icon: Tag,
+					accent: 'sky',
+				},
+				{
+					title: 'Created',
+					value: formatDateTime(subCategory.CreatedAt),
+					hint: subCategory.UpdatedAt ? `Updated ${formatDateTime(subCategory.UpdatedAt)}` : 'No updates yet',
+					icon: CalendarClock,
+					accent: 'slate',
+				},
+			],
+		},
+		{
+			type: 'description',
+			title: 'Sub-category Profile',
+			items: [
+				{ label: 'Name', value: subCategory.Name },
+				{ label: 'Parent', value: parent?.Name ?? `Category #${subCategory.CategoryID}` },
+				{ label: 'Created', value: formatDateTime(subCategory.CreatedAt) },
+				{ label: 'Updated', value: formatDateTime(subCategory.UpdatedAt) },
+			],
+		},
+	];
+};
+
+const buildSupplierSections = ({ data, extras }: DetailBuilderContext): DetailSection[] => {
+	const supplier = data as Supplier;
+	const performance = (extras.performance as SupplierPerformance | null) ?? null;
+
+	return [
+		{
+			type: 'summary',
+			cards: [
+				{
+					title: 'On-time rate',
+					value: formatPercent(performance?.onTimeDeliveryRate),
+					hint: 'Past reporting window',
+					icon: Users,
+					accent: 'emerald',
+				},
+				{
+					title: 'Avg. lead time',
+					value: performance?.averageLeadTimeDays ? `${performance.averageLeadTimeDays} days` : '—',
+					hint: 'Receipt to PO',
+					icon: CalendarClock,
+					accent: 'amber',
+				},
+				{
+					title: 'Supplier ID',
+					value: supplier.ID,
+					hint: 'Primary identifier',
+					icon: ClipboardList,
+					accent: 'slate',
+				},
+			],
+		},
+		{
+			type: 'description',
+			title: 'Contact Details',
+			items: [
+				{ label: 'Name', value: supplier.Name },
+				{ label: 'Contact Person', value: supplier.ContactPerson ?? '—' },
+				{ label: 'Email', value: supplier.Email ?? '—', icon: Mail },
+				{ label: 'Phone', value: supplier.Phone ?? '—', icon: Phone },
+				{ label: 'Address', value: supplier.Address ?? '—', icon: MapPin },
+			],
+		},
+		{
+			type: 'table',
+			title: 'Performance Snapshot',
+			columns: [
+				{ key: 'metric', label: 'Metric' },
+				{ key: 'value', label: 'Value' },
+			],
+			rows: [
+				{ metric: 'On-time delivery', value: formatPercent(performance?.onTimeDeliveryRate) },
+				{
+					metric: 'Average lead time',
+					value: performance?.averageLeadTimeDays ? `${performance.averageLeadTimeDays} days` : '—',
+				},
+			],
+			emptyText: 'Performance metrics unavailable.',
+		},
+	];
+};
+
+const buildLocationSections = ({ data }: DetailBuilderContext): DetailSection[] => {
+	const location = data as Location;
+
+	return [
+		{
+			type: 'summary',
+			cards: [
+				{
+					title: 'Location ID',
+					value: location.ID,
+					hint: 'Primary identifier',
+					icon: MapPin,
+					accent: 'sky',
+				},
+				{
+					title: 'Created',
+					value: formatDateTime(location.CreatedAt),
+					hint: location.UpdatedAt ? `Updated ${formatDateTime(location.UpdatedAt)}` : 'No updates yet',
+					icon: CalendarClock,
+					accent: 'slate',
+				},
+			],
+		},
+		{
+			type: 'description',
+			title: 'Location Profile',
+			items: [
+				{ label: 'Name', value: location.Name },
+				{ label: 'Address', value: location.Address ?? '—' },
+				{ label: 'Created', value: formatDateTime(location.CreatedAt) },
+				{ label: 'Updated', value: formatDateTime(location.UpdatedAt) },
+			],
+		},
+	];
+};
+
+const viewDetails = (resource: any, type: TabKey) => {
+	selectedResourceId = resource.ID;
+	modalEndpoint = `/${type}`;
+	modalTitle = `${type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ')} Details`;
+	modalSubtitle = resource?.Name ?? resource?.SKU ?? null;
+	modalExtraFetchers = [];
+	modalSectionsBuilder = emptySectionBuilder;
+	useLegacyModalSlot = true;
+
+	switch (type) {
+		case 'products':
+			modalSubtitle = resource.SKU ? `SKU ${resource.SKU}` : resource.Name ?? null;
+			modalExtraFetchers = productDetailExtraFetchers;
+			modalSectionsBuilder = buildProductSections;
+			useLegacyModalSlot = false;
+			break;
+		case 'categories':
+			modalExtraFetchers = categoryDetailExtraFetchers;
+			modalSectionsBuilder = buildCategorySections;
+			useLegacyModalSlot = false;
+			break;
+		case 'sub-categories':
+			modalSectionsBuilder = buildSubCategorySections;
+			useLegacyModalSlot = false;
+			break;
+		case 'suppliers':
+			modalExtraFetchers = supplierDetailExtraFetchers;
+			modalSectionsBuilder = buildSupplierSections;
+			useLegacyModalSlot = false;
+			break;
+		case 'locations':
+			modalSectionsBuilder = buildLocationSections;
+			useLegacyModalSlot = false;
+			break;
+		default:
+			useLegacyModalSlot = true;
+	}
+
+	isModalOpen = true;
+};
 
 	const loadAll = async (page = 1) => {
 		loading = true;
@@ -125,7 +523,7 @@
 			} else if (search.key === 'sku') {
 				const product = await productsApi.getBySku(search.term.trim());
 				if (product) {
-					window.location.href = `/products/${product.ID}`;
+					viewDetails(product, 'products');
 				} else {
 					toast.error('Product not found');
 				}
@@ -149,7 +547,7 @@
 		try {
 			const category = await categoriesApi.getByName(categorySearchTerm.trim());
 			if (category) {
-				window.location.href = `/categories/${category.ID}`;
+				viewDetails(category, 'categories');
 			} else {
 				toast.error('Category not found');
 			}
@@ -172,7 +570,7 @@
 		try {
 			const supplier = await suppliersApi.getByName(supplierSearchTerm.trim());
 			if (supplier) {
-				window.location.href = `/suppliers/${supplier.ID}`;
+				viewDetails(supplier, 'suppliers');
 			} else {
 				toast.error('Supplier not found');
 			}
@@ -482,6 +880,33 @@
 	};
 </script>
 
+<DetailsModal
+	bind:open={isModalOpen}
+	resourceId={selectedResourceId}
+	endpoint={modalEndpoint}
+	title={modalTitle}
+	subtitle={modalSubtitle}
+	extraFetchers={modalExtraFetchers}
+	buildSections={modalSectionsBuilder}
+	let:data={resource}
+>
+	{#if useLegacyModalSlot && resource}
+		<div class="grid gap-4">
+			<div class="grid grid-cols-2 gap-2">
+				<p><strong>ID:</strong> {resource.ID}</p>
+				<p><strong>SKU:</strong> {resource.SKU}</p>
+				<p><strong>Name:</strong> {resource.Name}</p>
+				<p><strong>Status:</strong> {resource.Status}</p>
+				<p><strong>Purchase Price:</strong> ${resource.PurchasePrice}</p>
+				<p><strong>Selling Price:</strong> ${resource.SellingPrice}</p>
+				<p><strong>Category ID:</strong> {resource.CategoryID}</p>
+				<p><strong>Supplier ID:</strong> {resource.SupplierID}</p>
+			</div>
+			<p><strong>Description:</strong> {resource.Description}</p>
+		</div>
+	{/if}
+</DetailsModal>
+
 <!-- ===== FIXED HERO (responsive, clean parallax, correct layering) ===== -->
 <section class="relative w-full isolate overflow-hidden">
 	<!-- Gradient background with motion -->
@@ -593,7 +1018,7 @@
 										</TableRow>
 									{:else}
 										{#each products as product}
-											<TableRow class="hover:bg-white/90 transition-colors">
+											<TableRow onclick={() => viewDetails(product, 'products')} class="cursor-pointer hover:bg-white/90 transition-colors">
 												<TableCell class="px-4 py-3 font-mono text-xs text-slate-800">{product.SKU}</TableCell>
 												<TableCell class="px-4 py-3 text-slate-900">{product.Name}</TableCell>
 												<TableCell class="px-4 py-3">
@@ -602,8 +1027,28 @@
 													</span>
 												</TableCell>
 												<TableCell class="px-4 py-3 text-right space-x-2">
-													<Button size="sm" variant="ghost" class="text-sky-700 hover:bg-sky-100 rounded-lg px-3 py-1.5" onclick={() => editProduct(product)}>Edit</Button>
-													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteProduct(product)}>Delete</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-sky-700 hover:bg-sky-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															editProduct(product);
+														}}
+													>
+														Edit
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															deleteProduct(product);
+														}}
+													>
+														Delete
+													</Button>
 												</TableCell>
 											</TableRow>
 										{/each}
@@ -778,11 +1223,32 @@
 										</TableRow>
 									{:else}
 										{#each categories as category}
-											<TableRow class="hover:bg-white/90 transition-colors">
+											<TableRow onclick={() => viewDetails(category, 'categories')} class="cursor-pointer hover:bg-white/90 transition-colors">
 												<TableCell class="px-4 py-3">{category.Name}</TableCell>
 												<TableCell class="px-4 py-3 text-right space-x-2">
-													<Button size="sm" variant="ghost" class="text-emerald-700 hover:bg-emerald-100 rounded-lg px-3 py-1.5" onclick={() => { editingCategory = category; categoryForm.name = category.Name; }}>Edit</Button>
-													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteCategory(category)}>Delete</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-emerald-700 hover:bg-emerald-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															editingCategory = category;
+															categoryForm.name = category.Name;
+														}}
+													>
+														Edit
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															deleteCategory(category);
+														}}
+													>
+														Delete
+													</Button>
 												</TableCell>
 											</TableRow>
 										{/each}
@@ -850,20 +1316,33 @@
 											{/each}
 										{:else}
 											{#each subCategories.filter((sc) => sc.CategoryID === Number(subCategoryForm.categoryId)) as subCategory (subCategory.ID)}
-												<TableRow class="hover:bg-white/90 transition-colors">
+												<TableRow onclick={() => viewDetails(subCategory, 'sub-categories')} class="cursor-pointer hover:bg-white/90 transition-colors">
 													<TableCell class="px-4 py-3">{subCategory.Name}</TableCell>
 													<TableCell class="px-4 py-3 text-right space-x-2">
 														<Button
 															size="sm"
 															variant="ghost"
 															class="text-amber-700 hover:bg-amber-100 rounded-lg px-3 py-1.5"
-															onclick={() => {
+															onclick={(event) => {
+																event.stopPropagation();
 																editingSubCategory = subCategory;
 																subCategoryForm.name = subCategory.Name;
 																subCategoryForm.categoryId = String(subCategory.CategoryID);
 															}}
-														>Edit</Button>
-														<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteSubCategory(subCategory)}>Delete</Button>
+														>
+															Edit
+														</Button>
+														<Button
+															size="sm"
+															variant="ghost"
+															class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+															onclick={(event) => {
+																event.stopPropagation();
+																deleteSubCategory(subCategory);
+															}}
+														>
+															Delete
+														</Button>
 													</TableCell>
 												</TableRow>
 											{:else}
@@ -937,7 +1416,7 @@
 										</TableRow>
 									{:else}
 										{#each suppliers as supplier}
-											<TableRow class="hover:bg-white/90 transition-colors">
+											<TableRow onclick={() => viewDetails(supplier, 'suppliers')} class="cursor-pointer hover:bg-white/90 transition-colors">
 												<TableCell class="px-4 py-3">{supplier.Name}</TableCell>
 												<TableCell class="px-4 py-3">
 													<p class="text-sm text-slate-800">{supplier.ContactPerson ?? '—'}</p>
@@ -948,7 +1427,8 @@
 														size="sm"
 														variant="ghost"
 														class="text-violet-700 hover:bg-violet-100 rounded-lg px-3 py-1.5"
-														onclick={() => {
+														onclick={(event) => {
+															event.stopPropagation();
 															editingSupplier = supplier;
 															Object.assign(supplierForm, {
 																name: supplier.Name,
@@ -958,8 +1438,20 @@
 																address: supplier.Address ?? '',
 															});
 														}}
-													>Edit</Button>
-													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteSupplier(supplier)}>Delete</Button>
+													>
+														Edit
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															deleteSupplier(supplier);
+														}}
+													>
+														Delete
+													</Button>
 												</TableCell>
 											</TableRow>
 										{/each}
@@ -1016,7 +1508,7 @@
 										</TableRow>
 									{:else}
 										{#each locations as location}
-											<TableRow class="hover:bg-white/90 transition-colors">
+											<TableRow onclick={() => viewDetails(location, 'locations')} class="cursor-pointer hover:bg-white/90 transition-colors">
 												<TableCell class="px-4 py-3">{location.Name}</TableCell>
 												<TableCell class="px-4 py-3 text-slate-700">{location.Address ?? '—'}</TableCell>
 												<TableCell class="px-4 py-3 text-right space-x-2">
@@ -1024,13 +1516,26 @@
 														size="sm"
 														variant="ghost"
 														class="text-cyan-700 hover:bg-cyan-100 rounded-lg px-3 py-1.5"
-														onclick={() => {
+														onclick={(event) => {
+															event.stopPropagation();
 															editingLocation = location;
 															locationForm.name = location.Name;
 															locationForm.address = location.Address ?? '';
 														}}
-													>Edit</Button>
-													<Button size="sm" variant="ghost" class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5" onclick={() => deleteLocation(location)}>Delete</Button>
+													>
+														Edit
+													</Button>
+													<Button
+														size="sm"
+														variant="ghost"
+														class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+														onclick={(event) => {
+															event.stopPropagation();
+															deleteLocation(location);
+														}}
+													>
+														Delete
+													</Button>
 												</TableCell>
 											</TableRow>
 										{/each}

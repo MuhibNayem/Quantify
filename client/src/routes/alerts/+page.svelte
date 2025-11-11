@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { alertsApi } from '$lib/api/resources';
-	import type { Alert } from '$lib/types';
+import { alertsApi } from '$lib/api/resources';
+import type { Alert } from '$lib/types';
+import DetailsModal from '$lib/components/DetailsModal.svelte';
+import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
 
-	// UI components
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { cn } from '$lib/utils';
+// UI components
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
+import { Input } from '$lib/components/ui/input';
+import { Button } from '$lib/components/ui/button';
+import { Skeleton } from '$lib/components/ui/skeleton';
+import { cn } from '$lib/utils';
 
-	// Icon
-	import { Bell } from 'lucide-svelte';
+// Icon
+import { Bell, Activity, CalendarClock, Package, AlertTriangle } from 'lucide-svelte';
 
 	// --- State ---
 	const filters = $state({ type: '', status: 'ACTIVE' });
@@ -34,6 +36,87 @@
 		emailAddress: '',
 		phoneNumber: ''
 	});
+
+	const dateTimeFormatter = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+
+	const formatDateTime = (value?: string | null) => {
+		if (!value) return '—';
+		const date = new Date(value);
+		return Number.isNaN(date.getTime()) ? '—' : dateTimeFormatter.format(date);
+	};
+
+	let detailModalOpen = $state(false);
+	let detailAlertId = $state<number | null>(null);
+	let detailModalSubtitle = $state<string | null>(null);
+
+	const buildAlertSections = ({ data }: DetailBuilderContext): DetailSection[] => {
+		const alert = data as Alert;
+		const productName = alert.Product?.Name ?? `Product #${alert.ProductID}`;
+		return [
+			{
+				type: 'summary',
+				cards: [
+					{
+						title: 'Alert Type',
+						value: alert.Type,
+						hint: `Alert #${alert.ID}`,
+						icon: AlertTriangle,
+						accent: 'amber',
+					},
+					{
+						title: 'Status',
+						value: alert.Status,
+						hint: alert.ResolvedAt ? `Resolved ${formatDateTime(alert.ResolvedAt)}` : 'Awaiting action',
+						icon: Activity,
+						accent: alert.Status === 'RESOLVED' ? 'emerald' : 'rose',
+					},
+					{
+						title: 'Triggered',
+						value: formatDateTime(alert.TriggeredAt),
+						hint: productName,
+						icon: CalendarClock,
+						accent: 'slate',
+					},
+				],
+			},
+			{
+				type: 'description',
+				title: 'Alert Context',
+				items: [
+					{ label: 'Product', value: productName, icon: Package },
+					{ label: 'Message', value: alert.Message },
+					{ label: 'Product ID', value: `#${alert.ProductID}` },
+					{ label: 'Triggered At', value: formatDateTime(alert.TriggeredAt) },
+					{ label: 'Resolved At', value: formatDateTime(alert.ResolvedAt) },
+				],
+			},
+			{
+				type: 'description',
+				title: 'Batch Details',
+				items: [
+					{ label: 'Batch ID', value: alert.BatchID ? `#${alert.BatchID}` : 'N/A' },
+					{
+						label: 'Batch Number',
+						value: alert.Batch?.BatchNumber ?? '—',
+					},
+					{
+						label: 'Quantity',
+						value: alert.Batch ? `${alert.Batch.Quantity}` : '—',
+					},
+					{
+						label: 'Expiry Date',
+						value: alert.Batch?.ExpiryDate ? formatDateTime(alert.Batch.ExpiryDate) : '—',
+					},
+				],
+			},
+		];
+	};
+
+	const openAlertDetails = (alert: Alert) => {
+		detailAlertId = alert.ID;
+		detailModalSubtitle = alert.Product?.Name ?? `Alert #${alert.ID}`;
+		detailModalOpen = true;
+	};
 
 	// --- Data ops ---
 	const loadAlerts = async () => {
@@ -155,6 +238,15 @@
 	</div>
 </section>
 
+<DetailsModal
+	bind:open={detailModalOpen}
+	resourceId={detailAlertId}
+	endpoint="/alerts"
+	title="Alert Details"
+	subtitle={detailModalSubtitle}
+	buildSections={buildAlertSections}
+/>
+
 <!-- MAIN -->
 <section class="max-w-7xl mx-auto py-12 px-4 sm:px-6 space-y-8">
 	<!-- Filters + Live Alerts -->
@@ -218,7 +310,7 @@
 						</TableRow>
 					{:else}
 						{#each alerts as alert}
-							<TableRow class="hover:bg-white/90 transition-colors">
+							<TableRow class="hover:bg-white/90 transition-colors cursor-pointer" onclick={() => openAlertDetails(alert)}>
 								<TableCell class="px-4 py-3 text-xs font-semibold text-slate-700">{alert.Type}</TableCell>
 								<TableCell class="px-4 py-3 text-slate-800">{alert.Product?.Name ?? `Product ${alert.ProductID}`}</TableCell>
 								<TableCell class="px-4 py-3 text-sm text-slate-600">{alert.Message}</TableCell>
@@ -240,7 +332,10 @@
 											size="sm"
 											variant="ghost"
 											class="text-amber-700 hover:bg-amber-100 rounded-lg px-3 py-1.5"
-											onclick={() => resolveAlert(alert.ID)}
+											onclick={(event) => {
+												event.stopPropagation();
+												resolveAlert(alert.ID);
+											}}
 										>
 											Resolve
 										</Button>

@@ -14,32 +14,32 @@ Create dedicated modals to display detailed information for individual resources
 *   **Color Palette:** Use the color palette of the parent section (e.g., `sky` and `blue` for products, `violet` and `purple` for suppliers).
 
 ### 1.3. Subtasks
-*   [ ] **Task 1: Create a Reusable Detail Modal Component:**
-    *   [ ] Develop a generic modal component that can be adapted for different resources.
-    *   [ ] This component will handle fetching data based on a provided resource ID and endpoint.
-*   [ ] **Task 2: Integrate Modal for Products:**
-    *   [ ] On the "Catalog" page, make the product table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch product details using `GET /products/{id}`.
-    *   [ ] The modal should include details like stock history (`GET /products/{productId}/stock/history`).
+*   [x] **Task 1: Create a Reusable Detail Modal Component:**
+    *   [x] Develop a generic modal component that can be adapted for different resources.
+    *   [x] This component will handle fetching data based on a provided resource ID and endpoint.
+*   [x] **Task 2: Integrate Modal for Products:**
+    *   [x] On the "Catalog" page, make the product table rows clickable.
+    *   [x] On row click, open the detail modal and fetch product details using `GET /products/{id}`.
+    *   [x] The modal should include details like stock history (`GET /products/{productId}/stock/history`).
 *   [ ] **Task 3: Integrate Modal for Categories & Sub-Categories:**
-    *   [ ] Make the category and sub-category table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /categories/{id}` and `GET /subcategories/{id}`.
-*   [ ] **Task 4: Integrate Modal for Suppliers:**
-    *   [ ] Make the supplier table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /suppliers/{id}`.
-    *   [ ] The modal should include the Supplier Performance Report.
-*   [ ] **Task 5: Integrate Modal for Locations:**
-    *   [ ] Make the location table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /locations/{id}`.
-*   [ ] **Task 6: Integrate Modal for Alerts:**
-    *   [ ] On the "Alerts" page, make the alert table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /alerts/{alertId}`.
-*   [ ] **Task 7: Integrate Modal for Forecasts:**
-    *   [ ] On the "Intelligence" page, make the forecast table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /replenishment/forecast/{forecastId}`.
-*   [ ] **Task 8: Integrate Modal for Purchase Orders:**
-    *   [ ] On the "Purchase Orders" page, make the PO table rows clickable.
-    *   [ ] On row click, open the detail modal and fetch details using `GET /purchase-orders/{poId}`.
+    *   [x] Make the category and sub-category table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /categories/{id}` and `GET /subcategories/{id}`.
+*   [x] **Task 4: Integrate Modal for Suppliers:**
+    *   [x] Make the supplier table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /suppliers/{id}`.
+    *   [x] The modal should include the Supplier Performance Report.
+*   [x] **Task 5: Integrate Modal for Locations:**
+    *   [x] Make the location table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /locations/{id}`.
+*   [x] **Task 6: Integrate Modal for Alerts:**
+    *   [x] On the "Alerts" page, make the alert table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /alerts/{alertId}`.
+*   [x] **Task 7: Integrate Modal for Forecasts:**
+    *   [x] On the "Intelligence" page, make the forecast table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /replenishment/forecast/{forecastId}`.
+*   [x] **Task 8: Integrate Modal for Purchase Orders:**
+    *   [x] On the "Purchase Orders" page, make the PO table rows clickable.
+    *   [x] On row click, open the detail modal and fetch details using `GET /purchase-orders/{poId}`.
 
 ## 2. Enhanced Search & Filtering
 

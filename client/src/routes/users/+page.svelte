@@ -7,7 +7,9 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { UserCheck } from 'lucide-svelte';
+	import DetailsModal from '$lib/components/DetailsModal.svelte';
+	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
+import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 
 	const tabFilters = [
 		{ value: 'all', label: 'All users' },
@@ -24,6 +26,54 @@
 
 	let selectedUser = $state<UserSummary | null>(null);
 	const form = $state({ username: '', password: '', role: '' });
+	let detailModalOpen = $state(false);
+	let detailResourceId = $state<number | null>(null);
+	let detailModalSubtitle = $state<string | null>(null);
+
+	const userStatusBadge = (isActive: boolean) =>
+		isActive ? { text: 'Approved', variant: 'success' as const } : { text: 'Pending', variant: 'warning' as const };
+
+	const buildUserSections = ({ data }: DetailBuilderContext): DetailSection[] => {
+		const user = data as UserSummary;
+		return [
+			{
+				type: 'summary',
+				cards: [
+					{
+						title: 'Status',
+						value: user.IsActive ? 'Approved' : 'Pending',
+						hint: user.IsActive ? 'Active access' : 'Awaiting approval',
+						icon: CheckCircle2,
+						accent: user.IsActive ? 'emerald' : 'amber',
+					},
+					{
+						title: 'Role',
+						value: user.Role,
+						hint: 'Current privilege',
+						icon: Shield,
+						accent: 'sky',
+					},
+					{
+						title: 'User ID',
+						value: `#${user.ID}`,
+						hint: 'Primary identifier',
+						icon: ClipboardList,
+						accent: 'slate',
+					},
+				],
+			},
+			{
+				type: 'description',
+				title: 'Account Profile',
+				items: [
+					{ label: 'Username', value: user.Username },
+					{ label: 'Role', value: user.Role },
+					{ label: 'Status', value: user.IsActive ? 'Approved' : 'Pending', badge: userStatusBadge(user.IsActive) },
+					{ label: 'User ID', value: `#${user.ID}` },
+				],
+			},
+		];
+	};
 
 	const applyFormFromUser = (user: UserSummary | null) => {
 		if (!user) {
@@ -72,6 +122,13 @@
 	const selectUser = (user: UserSummary) => {
 		selectedUser = user;
 		applyFormFromUser(user);
+	};
+
+	const openUserDetails = (user: UserSummary) => {
+		selectUser(user);
+		detailResourceId = user.ID;
+		detailModalSubtitle = user.Username;
+		detailModalOpen = true;
 	};
 
 	const updateUser = async () => {
@@ -165,6 +222,15 @@
 	</div>
 </section>
 
+<DetailsModal
+	bind:open={detailModalOpen}
+	resourceId={detailResourceId}
+	endpoint="/users"
+	title="User Details"
+	subtitle={detailModalSubtitle}
+	buildSections={buildUserSections}
+/>
+
 <!-- MAIN CONTENT -->
 <section class="max-w-7xl mx-auto py-12 sm:py-14 px-4 sm:px-6 bg-white space-y-10">
 	<!-- Search & Filter -->
@@ -225,7 +291,7 @@
 							{#each users as item}
 								<tr
 									class={selectedUser?.ID === item.ID ? 'bg-sky-50 border-l-4 border-sky-400' : 'hover:bg-white/90 cursor-pointer'}
-									onclick={() => selectUser(item)}
+									on:click={() => openUserDetails(item)}
 								>
 									<td class="px-4 py-3 font-mono text-xs text-slate-700">#{item.ID}</td>
 									<td class="px-4 py-3 text-slate-800">{item.Username}</td>
@@ -245,7 +311,10 @@
 											variant="ghost"
 											disabled={item.IsActive}
 											class="text-sky-700 hover:bg-sky-100 rounded-lg px-3 py-1.5"
-											onclick={(event) => { event.stopPropagation(); approveUser(item.ID); }}
+											on:click={(event) => {
+												event.stopPropagation();
+												approveUser(item.ID);
+											}}
 										>
 											Approve
 										</Button>
@@ -253,7 +322,10 @@
 											size="sm"
 											variant="ghost"
 											class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
-											onclick={(event) => { event.stopPropagation(); deleteUser(item.ID, item.Username); }}
+											on:click={(event) => {
+												event.stopPropagation();
+												deleteUser(item.ID, item.Username);
+											}}
 										>
 											Delete
 										</Button>
