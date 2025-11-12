@@ -136,8 +136,8 @@ export const bulkApi = {
 	downloadTemplate: async () => (await api.get('/bulk/products/template', { responseType: 'blob' })).data as Blob,
 	uploadImport: async (formData: FormData) =>
 		(await api.post<BulkImportJob>('/bulk/products/import', formData)).data,
-	status: async (jobId: string) => (await api.get<BulkImportJob>(`/bulk/products/import/${jobId}/status`)).data,
-	confirm: async (jobId: string) => (await api.post(`/bulk/products/import/${jobId}/confirm`)).data,
+	status: async (jobId: number | string) => (await api.get<BulkImportJob>(`/bulk/products/import/${jobId}/status`)).data,
+	confirm: async (jobId: number | string) => (await api.post(`/bulk/products/import/${jobId}/confirm`)).data,
 	exportProducts: async (params: Record<string, string | number | undefined>) =>
 		(await api.get('/bulk/products/export', { params, responseType: 'blob' })).data as Blob,
 };

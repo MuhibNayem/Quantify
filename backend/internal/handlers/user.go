@@ -17,6 +17,18 @@ import (
 	"inventory/backend/internal/requests"
 )
 
+type UserHandler struct {
+	userRepo *repository.UserRepository
+	db       *gorm.DB
+}
+
+func NewUserHandler(userRepo *repository.UserRepository, db *gorm.DB) *UserHandler {
+	return &UserHandler{
+		userRepo: userRepo,
+		db:       db,
+	}
+}
+
 // ListUsers godoc
 // @Summary List users with optional status and search filters
 // @Description Retrieves all users, optionally filtered by status (approved/pending) and search query (username or ID)
@@ -29,9 +41,9 @@ import (
 // @Success 200 {array} domain.User
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users [get]
-func ListUsers(c *gin.Context) {
+func (h *UserHandler) ListUsers(c *gin.Context) {
 	var users []domain.User
-	db := repository.DB
+	db := h.db
 
 	switch strings.ToLower(c.Query("status")) {
 	case "approved":
@@ -68,7 +80,7 @@ func ListUsers(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/register [post]
-func RegisterUser(c *gin.Context) {
+func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var req requests.UserRegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -77,7 +89,7 @@ func RegisterUser(c *gin.Context) {
 
 	// Check if any user already exists
 	var userCount int64
-	if err := repository.DB.Model(&domain.User{}).Count(&userCount).Error; err != nil {
+	if err := h.db.Model(&domain.User{}).Count(&userCount).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to check for existing users", http.StatusInternalServerError, err))
 		return
 	}
@@ -110,7 +122,7 @@ func RegisterUser(c *gin.Context) {
 	}
 	user.Password = string(hashedPassword)
 
-	if err := repository.DB.Create(&user).Error; err != nil {
+	if err := h.userRepo.CreateUser(&user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to create user", http.StatusInternalServerError, err))
 		return
 	}
@@ -131,7 +143,7 @@ func RegisterUser(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized: Invalid credentials"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/login [post]
-func LoginUser(c *gin.Context) {
+func (h *UserHandler) LoginUser(c *gin.Context) {
 	var req requests.UserLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -139,7 +151,7 @@ func LoginUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := repository.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := h.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 			return
@@ -206,7 +218,7 @@ func LoginUser(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized: Invalid refresh token"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/refresh-token [post]
-func RefreshToken(c *gin.Context) {
+func (h *UserHandler) RefreshToken(c *gin.Context) {
 	var req requests.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -231,7 +243,7 @@ func RefreshToken(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := repository.DB.First(&user, userID).Error; err != nil {
+	if err := h.db.First(&user, userID).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
 		return
 	}
@@ -278,7 +290,7 @@ func RefreshToken(c *gin.Context) {
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/logout [post]
-func LogoutUser(c *gin.Context) {
+func (h *UserHandler) LogoutUser(c *gin.Context) {
 	var req requests.RefreshTokenRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -320,11 +332,11 @@ func LogoutUser(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{id} [get]
-func GetUser(c *gin.Context) {
+func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
 
-	if err := repository.DB.First(&user, id).Error; err != nil {
+	if err := h.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -357,7 +369,7 @@ func GetUser(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{id} [put]
-func UpdateUser(c *gin.Context) {
+func (h *UserHandler) UpdateUser(c *gin.Context) {
 	id := c.Param("id")
 	var req requests.UserUpdateRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -366,7 +378,7 @@ func UpdateUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := repository.DB.First(&user, id).Error; err != nil {
+	if err := h.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -403,7 +415,7 @@ func UpdateUser(c *gin.Context) {
 		user.Role = req.Role
 	}
 
-	if err := repository.DB.Save(&user).Error; err != nil {
+	if err := h.userRepo.UpdateUser(&user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to update user", http.StatusInternalServerError, err))
 		return
 	}
@@ -425,11 +437,11 @@ func UpdateUser(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{id} [delete]
-func DeleteUser(c *gin.Context) {
+func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
 
-	if err := repository.DB.First(&user, id).Error; err != nil {
+	if err := h.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -438,7 +450,7 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Delete(&user).Error; err != nil {
+	if err := h.userRepo.DeleteUser(&user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete user", http.StatusInternalServerError, err))
 		return
 	}
@@ -459,11 +471,11 @@ func DeleteUser(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "User not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{id}/approve [put]
-func ApproveUser(c *gin.Context) {
+func (h *UserHandler) ApproveUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
 
-	if err := repository.DB.First(&user, id).Error; err != nil {
+	if err := h.db.First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -473,7 +485,7 @@ func ApproveUser(c *gin.Context) {
 	}
 
 	user.IsActive = true
-	if err := repository.DB.Save(&user).Error; err != nil {
+	if err := h.userRepo.UpdateUser(&user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to approve user", http.StatusInternalServerError, err))
 		return
 	}

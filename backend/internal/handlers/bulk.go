@@ -36,7 +36,7 @@ func NewBulkHandler(jobRepo *repository.JobRepository, uploader storage.Uploader
 // @Success 200 {file} text/csv "CSV template file"
 // @Router /bulk/products/template [get]
 func (h *BulkHandler) GetProductImportTemplate(c *gin.Context) {
-	templateHeaders := "SKU,Name,Description,CategoryID,SubCategoryID,SupplierID,Brand,PurchasePrice,SellingPrice,BarcodeUPC,ImageURLs,Status\n"
+	templateHeaders := "SKU,Name,Description,CategoryName,SubCategoryName,SupplierName,Brand,PurchasePrice,SellingPrice,LocationName,Status\n"
 	c.Header("Content-Disposition", "attachment; filename=product_import_template.csv")
 	c.Data(http.StatusOK, "text/csv", []byte(templateHeaders))
 }
@@ -169,13 +169,7 @@ func (h *BulkHandler) ConfirmBulkImport(c *gin.Context) {
 		return
 	}
 
-	job.Status = "PROCESSING"
-	if err := h.JobRepo.UpdateJob(job); err != nil {
-		c.Error(appErrors.NewAppError("Failed to update job status", http.StatusInternalServerError, err))
-		return
-	}
-
-	c.JSON(http.StatusAccepted, gin.H{"jobId": job.ID, "status": "PROCESSING", "message": "Bulk import confirmation received"})
+	c.JSON(http.StatusAccepted, gin.H{"jobId": job.ID, "status": "PENDING_CONFIRMATION", "message": "Bulk import confirmation received"})
 }
 
 // ExportProducts godoc

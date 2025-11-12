@@ -138,16 +138,28 @@ export interface DemandForecast extends BaseEntity {
 	Product?: Product;
 }
 
-export interface BulkImportJob {
-	jobId: string;
+export interface BulkImportValidationResult {
+	totalRecords: number;
+	validRecords: number;
+	invalidRecords: number;
+	errors: string[];
+	validProducts: Array<Record<string, unknown>>;
+	newEntities: {
+		categories: Record<string, boolean>;
+		subCategories: Record<string, boolean>;
+		suppliers: Record<string, boolean>;
+	};
+}
+
+export interface BulkImportJob extends BaseEntity {
+	type: string;
 	status: string;
+	payload?: string;
+	result?: string | BulkImportValidationResult;
+	lastError?: string;
+	retryCount?: number;
+	maxRetries?: number;
 	message?: string;
-	totalRecords?: number;
-	validRecords?: number;
-	invalidRecords?: number;
-	errors?: Array<Record<string, unknown>>;
-	preview?: Array<Record<string, unknown>>;
-	filePath?: string;
 }
 
 export interface UserSummary extends BaseEntity {

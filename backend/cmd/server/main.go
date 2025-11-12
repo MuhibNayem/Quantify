@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"inventory/backend/internal/consumers"
+	"inventory/backend/internal/migrations"
 	"net/http"
 	"os"
 	"os/signal"
@@ -59,6 +60,15 @@ func main() {
 	repository.InitDB(cfg)
 	defer repository.CloseDB()
 
+	// Check if search index migration should run
+	if os.Getenv("RUN_MIGRATIONS") == "true" {
+		logrus.Info("RUN_MIGRATIONS environment variable is true. Running search index population...")
+		if err := migrations.PopulateSearchIndex(repository.DB); err != nil {
+			logrus.Fatalf("Failed to run search index population on startup: %v", err)
+		}
+		logrus.Info("Search index population completed.")
+	}
+
 	// Initialize Redis client
 	repository.InitRedis(cfg)
 	defer repository.CloseRedis()
@@ -85,9 +95,11 @@ func main() {
 	productRepo := repository.NewProductRepository(repository.DB)
 	reportsRepo := repository.NewReportsRepository(repository.DB)
 	notificationRepo := repository.NewNotificationRepository(repository.DB)
+	categoryRepo := repository.NewCategoryRepository(repository.DB)
+	supplierRepo := repository.NewSupplierRepository(repository.DB)
 
 	// Initialize Services
-	bulkImportSvc := services.NewBulkImportService()
+	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo)
 	bulkExportSvc := services.NewBulkExportService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 
@@ -100,7 +112,7 @@ func main() {
 	}
 
 	// Initialize and start the BulkConsumer
-	bulkConsumer := consumers.NewBulkConsumer(jobRepo, productRepo, minioUploader, bulkImportSvc, bulkExportSvc)
+	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub)
 	workerCount := 1
 	if cfg.ConsumerConcurrency > 0 {
 		workerCount = cfg.ConsumerConcurrency

@@ -132,9 +132,14 @@ function createNotificationStore() {
 			update((state) => ({ ...state, connected: false }));
 		};
 		socket.onmessage = (event) => {
-			
 			try {
-				const notification = JSON.parse(event.data) as Notification;
+				const payload = JSON.parse(event.data);
+				if (browser && payload?.event === 'BULK_JOB_STATUS') {
+					window.dispatchEvent(new CustomEvent('bulk-job-status', { detail: payload }));
+					return;
+				}
+
+				const notification = payload as Notification;
 				update((state) => {
 					const nextItems = [notification, ...state.items.filter((item) => item.ID !== notification.ID)].slice(
 						0,
@@ -145,7 +150,7 @@ function createNotificationStore() {
 					return { ...state, items: nextItems, unreadCount };
 				});
 			} catch (error) {
-				console.error('Failed to parse notification payload', error);
+				console.error('Failed to parse websocket payload', error);
 			}
 		};
 	};

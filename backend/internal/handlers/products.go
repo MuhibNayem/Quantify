@@ -73,7 +73,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 		LocationID:    req.LocationID,
 	}
 
-	if err := h.db.Create(&product).Error; err != nil {
+	if err := h.productRepo.CreateProduct(&product); err != nil {
 		// Check for unique constraint violation (e.g., SKU, BarcodeUPC)
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Product with this SKU or BarcodeUPC already exists", http.StatusConflict, err))
@@ -297,31 +297,35 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
+	// Find the product first
 	var product domain.Product
 	if err := h.db.First(&product, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
 		}
-		c.Error(appErrors.NewAppError("Failed to fetch product", http.StatusInternalServerError, err))
+		c.Error(appErrors.NewAppError("Failed to fetch product for update", http.StatusInternalServerError, err))
 		return
 	}
 
-	// Update fields
-	if err := h.db.Model(&product).Updates(domain.Product{
-		Name:          req.Name,
-		Description:   req.Description,
-		CategoryID:    req.CategoryID,
-		SubCategoryID: req.SubCategoryID,
-		SupplierID:    req.SupplierID,
-		Brand:         req.Brand,
-		PurchasePrice: req.PurchasePrice,
-		SellingPrice:  req.SellingPrice,
-		BarcodeUPC:    req.BarcodeUPC,
-		ImageURLs:     req.ImageURLs,
-		Status:        req.Status,
-		LocationID:    req.LocationID,
-	}).Error; err != nil {
+	// Create a map of updates from the request
+	updates := map[string]interface{}{
+		"Name":          req.Name,
+		"Description":   req.Description,
+		"CategoryID":    req.CategoryID,
+		"SubCategoryID": req.SubCategoryID,
+		"SupplierID":    req.SupplierID,
+		"Brand":         req.Brand,
+		"PurchasePrice": req.PurchasePrice,
+		"SellingPrice":  req.SellingPrice,
+		"BarcodeUPC":    req.BarcodeUPC,
+		"ImageURLs":     req.ImageURLs,
+		"Status":        req.Status,
+		"LocationID":    req.LocationID,
+	}
+
+	// Update fields using the repository method
+	if err := h.productRepo.UpdateProduct(&product, updates); err != nil {
 		c.Error(appErrors.NewAppError("Failed to update product", http.StatusInternalServerError, err))
 		return
 	}
@@ -383,8 +387,8 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	// For now, a simple delete
-	if err := h.db.Delete(&product).Error; err != nil {
+	// Use the repository method to delete the product and update the index
+	if err := h.productRepo.DeleteProduct(&product); err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete product", http.StatusInternalServerError, err))
 		return
 	}

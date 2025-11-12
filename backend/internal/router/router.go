@@ -49,6 +49,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	timeTrackingRepo := repository.NewTimeTrackingRepository(db)
 	reportsRepo := repository.NewReportsRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
+	searchRepo := repository.NewSearchRepository(db)
+	userRepo := repository.NewUserRepository(db)
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
@@ -58,6 +60,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo)
 	integrationService := services.NewIntegrationService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
+	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
 
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler(productRepo, db)
@@ -72,6 +75,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
 	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
+	userHandler := handlers.NewUserHandler(userRepo, db)
+	searchHandler := handlers.NewSearchHandler(searchService)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -106,8 +111,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	{
 		userRoutes := publicAPI.Group("/users")
 		{
-			userRoutes.POST("/register", handlers.RegisterUser)
-			userRoutes.POST("/login", handlers.LoginUser)
+			userRoutes.POST("/register", userHandler.RegisterUser)
+			userRoutes.POST("/login", userHandler.LoginUser)
 		}
 	}
 
@@ -262,13 +267,13 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		// Users
 		users := api.Group("/users")
 		{
-			users.GET("", middleware.AdminOnly(), handlers.ListUsers)
-			users.POST("/refresh-token", handlers.RefreshToken)
-			users.POST("/logout", handlers.LogoutUser)
-			users.GET("/:id", handlers.GetUser)
-			users.PUT("/:id", middleware.AdminOnly(), handlers.UpdateUser)
-			users.DELETE("/:id", middleware.AdminOnly(), handlers.DeleteUser)
-			users.PUT("/:id/approve", middleware.AdminOnly(), handlers.ApproveUser)
+			users.GET("", middleware.AdminOnly(), userHandler.ListUsers)
+			users.POST("/refresh-token", userHandler.RefreshToken)
+			users.POST("/logout", userHandler.LogoutUser)
+			users.GET("/:id", userHandler.GetUser)
+			users.PUT("/:id", middleware.AdminOnly(), userHandler.UpdateUser)
+			users.DELETE("/:id", middleware.AdminOnly(), userHandler.DeleteUser)
+			users.PUT("/:id/approve", middleware.AdminOnly(), userHandler.ApproveUser)
 
 			// Notification routes
 			notifications := users.Group("/:id/notifications")
@@ -305,6 +310,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			timeTracking.GET("/last-entry/:userId", timeTrackingHandler.GetLastTimeClock)
 			timeTracking.GET("/last-entry/username/:username", timeTrackingHandler.GetLastTimeClockByUsername)
 		}
+		// Global Search
+		api.GET("/search", searchHandler.Search)
 	}
 
 	return r

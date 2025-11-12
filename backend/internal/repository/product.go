@@ -14,6 +14,59 @@ func NewProductRepository(db *gorm.DB) *ProductRepository {
 	return &ProductRepository{db: db}
 }
 
+func (r *ProductRepository) CreateProduct(product *domain.Product) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Create the product
+		if err := tx.Create(product).Error; err != nil {
+			return err
+		}
+
+		// Update the search index
+		if err := UpdateSearchIndex(tx, product); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (r *ProductRepository) UpdateProduct(product *domain.Product, updates map[string]interface{}) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Update the product
+		if err := tx.Model(product).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		// Reload the product to get all fields for indexing
+		if err := tx.First(product, product.ID).Error; err != nil {
+			return err
+		}
+
+		// Update the search index
+		if err := UpdateSearchIndex(tx, product); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (r *ProductRepository) DeleteProduct(product *domain.Product) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Delete the product
+		if err := tx.Delete(product).Error; err != nil {
+			return err
+		}
+
+		// Delete from the search index
+		if err := DeleteFromSearchIndex(tx, product.GetEntityType(), product.GetID()); err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
 func (r *ProductRepository) GetProductBySKU(sku string) (*domain.Product, error) {
 	var product domain.Product
 	if err := r.db.Where("sku = ?", sku).First(&product).Error; err != nil {

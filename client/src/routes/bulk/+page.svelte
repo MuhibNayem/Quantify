@@ -1,13 +1,23 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import { onMount } from 'svelte';
 	import { bulkApi } from '$lib/api/resources';
-	import type { BulkImportJob } from '$lib/types';
+	import type { BulkImportJob, BulkImportValidationResult } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Upload } from 'lucide-svelte';
+
+	type JobStatusEventDetail = {
+		event: string;
+		jobId: number;
+		status: string;
+		type: string;
+		result?: string;
+		lastError?: string;
+	};
 
 	// --- State ---
 	let file: File | null = null;
@@ -54,7 +64,8 @@
 	};
 
 	const loadJobStatus = async (id?: string) => {
-		const lookupId = id ?? jobIdQuery ?? job?.jobId;
+		const fallbackId = job?.ID ? String(job.ID) : '';
+		const lookupId = id ?? jobIdQuery ?? fallbackId;
 		if (!lookupId) {
 			toast.warning('Enter a job ID first');
 			return;
@@ -70,25 +81,25 @@
 		}
 	};
 
-	$effect(() => {
-		let intervalId: any;
-		if (job?.jobId && (job.status === 'PENDING' || job.status === 'IN_PROGRESS')) {
-			intervalId = setInterval(() => {
-				loadJobStatus(job.jobId);
-			}, 3000);
-		}
-		return () => intervalId && clearInterval(intervalId);
-	});
-
-	const confirmJob = async () => {
-		if (!job?.jobId) {
-			toast.warning('Load a job first');
-			return;
-		}
-		await bulkApi.confirm(job.jobId);
-		toast.success('Bulk import confirmed');
-		await loadJobStatus(job.jobId);
+	const applyJobStatusUpdate = (detail: JobStatusEventDetail) => {
+		if (!job || detail.jobId !== job.ID) return;
+		job = {
+			...job,
+			status: detail.status,
+			result: detail.result ?? job.result,
+			lastError: detail.lastError ?? job.lastError,
+		};
 	};
+
+	onMount(() => {
+		if (!browser) return;
+		const handler = (event: Event) => {
+			const custom = event as CustomEvent<JobStatusEventDetail>;
+			applyJobStatusUpdate(custom.detail);
+		};
+		window.addEventListener('bulk-job-status', handler);
+		return () => window.removeEventListener('bulk-job-status', handler);
+	});
 
 	const exportCatalog = async () => {
 		try {
@@ -108,6 +119,19 @@
 			const errorMessage = error.response?.data?.error || 'Unable to export';
 			toast.error('Failed to Export Catalog', { description: errorMessage });
 		}
+	};
+
+	const extractValidation = (currentJob?: BulkImportJob | null): BulkImportValidationResult | null => {
+		if (!currentJob?.result) return null;
+		if (typeof currentJob.result === 'string') {
+			try {
+				return JSON.parse(currentJob.result) as BulkImportValidationResult;
+			} catch (error) {
+				console.error('Failed to parse validation result', error);
+				return null;
+			}
+		}
+		return currentJob.result as BulkImportValidationResult;
 	};
 
 	// --- Parallax (soft) for hero ---
@@ -214,38 +238,29 @@
 					>
 						Load status
 					</Button>
-					<Button
-						class="bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-xl"
-						onclick={confirmJob}
-						disabled={!job || job.status !== 'PENDING_CONFIRMATION'}
-					>
-						Confirm import
-					</Button>
 				</div>
 			</div>
 
 			{#if statusLoading}
 				<Skeleton class="h-24 w-full bg-white/70" />
 			{:else if job}
+				{@const summary = extractValidation(job)}
 				<div class="rounded-2xl border border-sky-200 bg-white/80 backdrop-blur p-4 text-sm shadow-sm">
 					<p class="text-xs uppercase text-slate-500">Job</p>
-					<div class="text-2xl font-semibold text-slate-800">{job.jobId}</div>
+					<div class="text-2xl font-semibold text-slate-800">{job.ID}</div>
 					<p class="text-sm text-slate-600">Status: {job.status}</p>
-					{#if job.message}
-						<p class="mt-1 text-sm text-slate-700">{job.message}</p>
-					{/if}
 					<div class="mt-3 grid grid-cols-3 gap-3 text-center">
 						<div class="rounded-xl bg-white/70 border border-sky-200 py-2">
 							<p class="text-xs text-slate-500">Valid</p>
-							<p class="text-lg font-semibold text-sky-700">{job.validRecords ?? 0}</p>
+							<p class="text-lg font-semibold text-sky-700">{summary?.validRecords ?? 0}</p>
 						</div>
 						<div class="rounded-xl bg-white/70 border border-sky-200 py-2">
 							<p class="text-xs text-slate-500">Invalid</p>
-							<p class="text-lg font-semibold text-rose-600">{job.invalidRecords ?? 0}</p>
+							<p class="text-lg font-semibold text-rose-600">{summary?.invalidRecords ?? 0}</p>
 						</div>
 						<div class="rounded-xl bg-white/70 border border-sky-200 py-2">
 							<p class="text-xs text-slate-500">Total</p>
-							<p class="text-lg font-semibold text-slate-800">{job.totalRecords ?? 0}</p>
+							<p class="text-lg font-semibold text-slate-800">{summary?.totalRecords ?? 0}</p>
 						</div>
 					</div>
 				</div>

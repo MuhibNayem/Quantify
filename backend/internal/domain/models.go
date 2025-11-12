@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -21,11 +22,26 @@ type Product struct {
 	Brand         string
 	PurchasePrice float64
 	SellingPrice  float64
-	BarcodeUPC    string `gorm:"uniqueIndex"`
+	BarcodeUPC    string
 	ImageURLs     string // Storing as comma-separated string or JSON string for simplicity
 	Status        string `gorm:"default:'Active'"` // Active, Archived, Discontinued
 	LocationID    uint
 	Location      Location
+}
+
+// GetID implements the Searchable interface for Product.
+func (p *Product) GetID() uint {
+	return p.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Product.
+func (p *Product) GetSearchableContent() string {
+	return strings.Join([]string{p.Name, p.SKU, p.Description, p.Brand, p.BarcodeUPC}, " ")
+}
+
+// GetEntityType implements the Searchable interface for Product.
+func (p *Product) GetEntityType() string {
+	return "product"
 }
 
 // Category represents a product category.
@@ -33,6 +49,21 @@ type Category struct {
 	gorm.Model
 	Name          string `gorm:"uniqueIndex;not null"`
 	SubCategories []SubCategory
+}
+
+// GetID implements the Searchable interface for Category.
+func (c *Category) GetID() uint {
+	return c.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Category.
+func (c *Category) GetSearchableContent() string {
+	return c.Name
+}
+
+// GetEntityType implements the Searchable interface for Category.
+func (c *Category) GetEntityType() string {
+	return "category"
 }
 
 // SubCategory represents a product sub-category.
@@ -51,6 +82,21 @@ type Supplier struct {
 	Email         string
 	Phone         string
 	Address       string
+}
+
+// GetID implements the Searchable interface for Supplier.
+func (s *Supplier) GetID() uint {
+	return s.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Supplier.
+func (s *Supplier) GetSearchableContent() string {
+	return strings.Join([]string{s.Name, s.ContactPerson, s.Email, s.Phone}, " ")
+}
+
+// GetEntityType implements the Searchable interface for Supplier.
+func (s *Supplier) GetEntityType() string {
+	return "supplier"
 }
 
 // Location represents a physical inventory location (e.g., warehouse, store).
@@ -114,6 +160,21 @@ type User struct {
 	Email       string `gorm:"uniqueIndex"`
 	PhoneNumber string `gorm:"uniqueIndex"`
 	Address     string
+}
+
+// GetID implements the Searchable interface for User.
+func (u *User) GetID() uint {
+	return u.ID
+}
+
+// GetSearchableContent implements the Searchable interface for User.
+func (u *User) GetSearchableContent() string {
+	return strings.Join([]string{u.Username, u.FirstName, u.LastName, u.Email, u.PhoneNumber}, " ")
+}
+
+// GetEntityType implements the Searchable interface for User.
+func (u *User) GetEntityType() string {
+	return "user"
 }
 
 // ProductAlertSettings stores alert thresholds per product.
@@ -233,20 +294,20 @@ type LoyaltyAccount struct {
 
 type Job struct {
 	gorm.Model
-	Type         string    `json:"type"`
-	Status       string    `json:"status"`
-	Payload      string    `json:"payload"`
-	Result       string    `json:"result"`
-	LastError    string    `json:"lastError"`
-	RetryCount   int       `json:"retryCount"`
-	MaxRetries   int       `json:"maxRetries"`
+	Type          string     `json:"type"`
+	Status        string     `json:"status"`
+	Payload       string     `json:"payload"`
+	Result        string     `json:"result"`
+	LastError     string     `json:"lastError"`
+	RetryCount    int        `json:"retryCount"`
+	MaxRetries    int        `json:"maxRetries"`
 	LastAttemptAt *time.Time `json:"lastAttemptAt"`
 }
 
 // Notification represents an in-app notification for a user.
 type Notification struct {
 	gorm.Model
-	UserID      uint   `gorm:"not null"`
+	UserID      uint `gorm:"not null"`
 	User        User
 	Type        string `gorm:"not null"` // e.g., "ALERT", "SYSTEM", "PROMOTIONAL"
 	Title       string `gorm:"not null"`

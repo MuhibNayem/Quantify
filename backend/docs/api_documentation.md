@@ -272,17 +272,74 @@ For all authenticated requests that mutate state (POST/PUT/PATCH/DELETE), client
     -   **404 Not Found:** If the product is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+## Search
+
+### GET /api/v1/search
+
+-   **Summary:** Perform a global search across all major entities.
+-   **Description:** Searches for a given query string across Products, Users, Suppliers, and Categories. The results are ranked by relevance and include the full entity object for easy display.
+-   **Request:**
+    -   **Query Params:**
+        -   `q` (string, required): The search term.
+-   **Response:**
+    -   **200 OK:** An array of search results. Each result has an `entity_type` and the full `entity` object.
+        ```json
+        [
+            {
+                "entity_type": "product",
+                "entity_id": 1,
+                "content": "Sample Product SKU123 This is a sample product. Sample Brand 123456789012",
+                "entity": {
+                    "ID": 1,
+                    "SKU": "SKU123",
+                    "Name": "Sample Product",
+                    "Description": "This is a sample product.",
+                    "CategoryID": 1,
+                    "SubCategoryID": 1,
+                    "SupplierID": 1,
+                    "Brand": "Sample Brand",
+                    "PurchasePrice": 10.50,
+                    "SellingPrice": 20.00,
+                    "BarcodeUPC": "123456789012",
+                    "ImageURLs": "",
+                    "Status": "Active",
+                    "LocationID": 1
+                }
+            },
+            {
+                "entity_type": "user",
+                "entity_id": 2,
+                "content": "sampleuser Sample User sample@example.com 555-1234",
+                "entity": {
+                    "ID": 2,
+                    "Username": "sampleuser",
+                    "Role": "Manager",
+                    "IsActive": true,
+                    "FirstName": "Sample",
+                    "LastName": "User",
+                    "Email": "sample@example.com",
+                    "PhoneNumber": "555-1234",
+                    "Address": ""
+                }
+            }
+        ]
+        ```
+    -   **400 Bad Request:** If the `q` query parameter is missing.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## Bulk Operations
 
 Bulk operations are now processed asynchronously. When you initiate a bulk import or export, a job is created and its status can be tracked using the job ID.
 
+**NOTE on Auto-Creation**: The product bulk import process now supports on-the-fly creation of related entities. If a `CategoryName`, `SubCategoryName`, or `SupplierName` is provided in the CSV that does not exist in the database, a new entity with that name will be created automatically.
+
 ### GET /bulk/products/template
 
 -   **Summary:** Download product import template
--   **Description:** Downloads a CSV/Excel template file with required headers for product creation.
+-   **Description:** Downloads a CSV template file with required headers for product creation.
 -   **Request:** None
 -   **Response:**
-    -   **200 OK:** Returns a CSV file with the following headers: `SKU,Name,Description,CategoryID,SubCategoryID,SupplierID,Brand,PurchasePrice,SellingPrice,BarcodeUPC,ImageURLs,Status`
+-   **200 OK:** Returns a CSV file with the following headers: `SKU,Name,Description,CategoryName,SubCategoryName,SupplierName,Brand,PurchasePrice,SellingPrice,LocationName,Status`
 
 ### POST /bulk/products/import
 
