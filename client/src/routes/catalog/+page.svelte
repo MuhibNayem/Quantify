@@ -470,7 +470,7 @@ const viewDetails = (resource: any, type: TabKey) => {
 			const locationList = await locationsApi.list();
 			locations = Array.isArray(locationList) ? locationList : [locationList];
 
-			const productResponse = await productsApi.list(page, 100);
+			const productResponse = await productsApi.list(page, 10);
 			products = productResponse.products || [];
 
 			pagination.currentPage = productResponse.currentPage;
@@ -487,7 +487,7 @@ const viewDetails = (resource: any, type: TabKey) => {
 
 	const loadProductPerPage = async (page = 1) => {
 		try {
-			const productResponse = await productsApi.list(page, 1);
+			const productResponse = await productsApi.list(page, 10);
 			products = productResponse.products || [];
 
 			pagination.currentPage = productResponse.currentPage;
