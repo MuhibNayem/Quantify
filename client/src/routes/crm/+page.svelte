@@ -19,7 +19,10 @@
         Zap,
         Filter,
         ChevronRight,
-        ChevronLeft
+        ChevronLeft,
+
+		Edit2
+
     } from 'lucide-svelte';
     import { toast } from 'svelte-sonner';
     import * as Dialog from '$lib/components/ui/dialog';
@@ -89,6 +92,7 @@
     };
 
     const deleteCustomer = (customer: any) => {
+		console.log({customer})
         toast.confirm(`Are you sure you want to delete ${customer.name}?`, {
             onConfirm: () => {
                 customers = customers.filter((c) => c.id !== customer.id);
@@ -422,13 +426,13 @@
                                             <Edit class="h-4 w-4" />
                                         </Button>
                                         <Button
-                                            size="sm"
-                                            variant="destructive"
-                                            onclick={() => deleteCustomer(customer)}
-                                            class="ml-2 rounded-lg"
-                                        >
-                                            <Trash2 class="h-4 w-4" />
-                                        </Button>
+											size="sm"
+											variant="destructive"
+											onclick={() => deleteCustomer(selectedCustomer)}
+											class="bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg"
+										>
+											<Trash2 class="h-4 w-4 text-red-500" />
+										</Button>
                                     </TableCell>
                                 </TableRow>
                             {/each}
@@ -503,16 +507,16 @@
                                     onclick={() => openModal(selectedCustomer)}
                                     class="border-white/30 text-white hover:bg-white/20 rounded-lg"
                                 >
-                                    <Edit class="h-4 w-4" />
+                                    <Edit2 class="h-4 w-4" />
                                 </Button>
                                 <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onclick={() => deleteCustomer(selectedCustomer)}
-                                    class="bg-white/20 hover:bg-white/30 text-white rounded-lg"
-                                >
-                                    <Trash2 class="h-4 w-4" />
-                                </Button>
+									size="sm"
+									variant="destructive"
+									onclick={() => deleteCustomer(selectedCustomer)}
+									class="bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded-lg"
+								>
+									<Trash2 class="h-4 w-4 text-red-500" />
+								</Button>
                             </div>
                         </div>
 
