@@ -7,7 +7,9 @@ import {
 	BellRing,
 	UploadCloud,
 	Users2,
-	Sparkles
+	Sparkles,
+	Clock,
+	Users
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -50,6 +52,12 @@ export const navSections: NavSection[] = [
 				icon: Workflow,
 			},
 			{
+				label: 'Time Tracking',
+				description: 'Clock in/out and manage shifts',
+				href: '/time-tracking',
+				icon: Clock,
+			},
+			{
 				label: 'Intelligence',
 				description: 'Forecasts & business reports',
 				href: '/intelligence',
@@ -60,6 +68,17 @@ export const navSections: NavSection[] = [
 				description: 'Checkout & payments',
 				href: '/pos',
 				icon: Sparkles,
+			},
+		],
+	},
+	{
+		title: 'Business',
+		items: [
+			{
+				label: 'CRM',
+				description: 'Customers & loyalty',
+				href: '/crm',
+				icon: Users,
 			},
 		],
 	},

@@ -66,30 +66,29 @@ Improve the search functionality to allow users to find resources by alternative
 A new section in the application to manage customers and their loyalty points. This will involve creating, viewing, updating, and deleting customer profiles, as well as managing their loyalty accounts.
 
 ### 3.2. Design & UI/UX
-*   [ ] **New Route:** Create a new route at `/crm`.
-*   [ ] **Layout:** Use a two-column layout. The left column will be a searchable list of customers, and the right column will display the details of the selected customer, including their loyalty account.
-*   [ ] **Color Palette:** Use a new color palette to distinguish the CRM section. A warm palette based on `amber`, `yellow`, and `lime` would fit well with the existing design.
-*   [ ] **Components:**
-    *   [ ] Use `Card` components for customer details and loyalty information.
-    *   [ ] Use a `Table` to display the list of customers.
-    *   [ ] Use `Input` and `Button` components for forms.
-    *   [ ] Use `Skeleton` components for loading states.
-    *   [ ] Use `lucide-svelte` icons for actions (e.g., `UserPlus`, `Edit`, `Trash2`, `Star`).
+*   [x] **New Route:** Create a new route at `/crm`.
+*   [x] **Layout:** Use a two-column layout. The left column will be a searchable list of customers, and the right column will display the details of the selected customer, including their loyalty account.
+*   [x] **Components:**
+    *   [x] Use `Card` components for customer details and loyalty information.
+    *   [x] Use a `Table` to display the list of customers.
+    *   [x] Use `Input` and `Button` components for forms.
+    *   [x] Use `Skeleton` components for loading states.
+    *   [x] Use `lucide-svelte` icons for actions (e.g., `UserPlus`, `Edit`, `Trash2`, `Star`).
 
 ### 3.3. Subtasks
-*   [ ] **Task 1: Create CRM Route & Page:**
-    *   [ ] Create a new directory `client/src/routes/crm`.
-    *   [ ] Create a `+page.svelte` file inside the new directory.
-    *   [ ] Add a link to the CRM page in the `Sidebar.svelte` component.
-*   [ ] **Task 2: Implement Customer List:**
-    *   [ ] Fetch and display a list of customers using the `GET /crm/customers/{identifier}` endpoint (or a new endpoint for listing all customers if available).
-    *   [ ] Implement a search bar to filter customers by name, email, or phone.
-*   [ ] **Task 3: Implement Customer Details View:**
-    *   [ ] When a customer is selected from the list, display their details in a `Card`.
-    *   [ ] Implement forms to create, update, and delete customers using the `POST /crm/customers`, `PUT /crm/customers/{userId}`, and `DELETE /crm/customers/{userId}` endpoints.
-*   [ ] **Task 4: Implement Loyalty Management:**
-    *   [ ] Display the selected customer's loyalty account information using the `GET /crm/loyalty/{userId}` endpoint.
-    *   [ ] Implement forms to add and redeem loyalty points using the `POST /crm/loyalty/{userId}/points` and `POST /crm/loyalty/{userId}/redeem` endpoints.
+*   [x] **Task 1: Create CRM Route & Page:**
+    *       [x] Create a new directory `client/src/routes/crm`.
+    *       [x] Create a `+page.svelte` file inside the new directory.
+    *       [x] Add a link to the CRM page in the `Sidebar.svelte` component.
+*   [x] **Task 2: Implement Customer List:**
+    *       [x] Fetch and display a list of customers using the `GET /crm/customers/{identifier}` endpoint (or a new endpoint for listing all customers if available).
+    *       [x] Implement a search bar to filter customers by name, email, or phone.
+*   [x] **Task 3: Implement Customer Details View:**
+    *       [x] When a customer is selected from the list, display their details in a `Card`.
+    *       [x] Implement forms to create, update, and delete customers using the `POST /crm/customers`, `PUT /crm/customers/{userId}`, and `DELETE /crm/customers/{userId}` endpoints.
+*   [x] **Task 4: Implement Loyalty Management:**
+    *       [x] Display the selected customer's loyalty account information using the `GET /crm/loyalty/{userId}` endpoint.
+    *       [x] Implement forms to add and redeem loyalty points using the `POST /crm/loyalty/{userId}/points` and `POST /crm/loyalty/{userId}/redeem` endpoints.
 
 ## 4. Notification Center
 

@@ -246,60 +246,63 @@
 		</div>
 	</div>
 
+	<!-- POS header bar -->
+	
+
 	<!-- Main content -->
 	<div class="flex h-full min-h-0 flex-col px-4 py-4">
 		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-		>
-			<CardHeader class="flex flex-row items-center justify-between gap-3 pb-3">
-				<div>
-					<CardTitle
-						class="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900"
+		class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+	>
+		<CardHeader class="flex flex-row items-center justify-between gap-3 pb-3">
+			<div>
+				<CardTitle
+					class="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900"
+				>
+					<span
+						class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
 					>
-						<span
-							class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
-						>
-							<CreditCard class="h-4 w-4" />
-						</span>
-						Point of Sale
-					</CardTitle>
-					<CardDescription class="text-[0.75rem] text-slate-500">
-						Tap products to build the cart, review below, then confirm on the right.
-					</CardDescription>
+						<CreditCard class="h-4 w-4" />
+					</span>
+					Point of Sale
+				</CardTitle>
+				<CardDescription class="text-[0.75rem] text-slate-500">
+					Tap products to build the cart, review below, then confirm on the right.
+				</CardDescription>
+			</div>
+			<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
+				<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
+					>Super shop mode</span
+				>
+			</div>
+		</CardHeader>
+		<CardContent class="pt-0 pb-3">
+			<div class="flex flex-col items-stretch gap-3 sm:flex-row">
+				<div class="relative flex-1">
+					<Search class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+					<Input
+						bind:value={searchTerm}
+						placeholder="Search by name, barcode, or SKU..."
+						class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
+						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+					/>
 				</div>
-				<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
-					<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
-						>Super shop mode</span
-					>
-				</div>
-			</CardHeader>
-			<CardContent class="pt-0 pb-3">
-				<div class="flex flex-col items-stretch gap-3 sm:flex-row">
-					<div class="relative flex-1">
-						<Search class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
-						<Input
-							bind:value={searchTerm}
-							placeholder="Search by name, barcode, or SKU..."
-							class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
-							onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-						/>
-					</div>
-					<Button
-						class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
-						onclick={handleSearch}
-					>
-						<Search class="mr-2 h-4 w-4" />
-						Search
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+				<Button
+					class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
+					onclick={handleSearch}
+				>
+					<Search class="mr-2 h-4 w-4" />
+					Search
+				</Button>
+			</div>
+		</CardContent>
+	</Card>
 		<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-2">
 			<!-- LEFT STACK: Products + Cart -->
-			<div class="flex flex-col gap-4" data-animate="fade-up" style="animation-delay:120ms">
+			<div class="space-y-5" data-animate="fade-up" style="animation-delay:120ms">
 				<!-- Product grid -->
 				<Card
-					class="flex flex-1 flex-col overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+					class="flex-1 overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
 				>
 					<CardHeader class="border-b border-white/60 bg-white/70 pb-3 backdrop-blur">
 						<div class="flex items-center justify-between gap-2">
@@ -314,9 +317,7 @@
 							</div>
 						</div>
 					</CardHeader>
-
-					<!-- FIX: Make this flex-1 so it fills all remaining space -->
-					<CardContent class="flex-1 overflow-y-auto p-3 pt-3">
+					<CardContent class="max-h-[22rem] overflow-y-auto p-3 pt-3">
 						{#if products.length === 0}
 							<div class="flex h-full items-center justify-center text-[0.8rem] text-slate-500">
 								No products found. Try adjusting your search.
@@ -330,28 +331,26 @@
 										class="group flex flex-col justify-between rounded-xl border border-indigo-50 bg-white/80 p-3 text-left shadow-sm transition-all duration-200 hover:border-indigo-200 hover:bg-indigo-50/80 hover:shadow-md"
 									>
 										<div class="space-y-1.5">
-											<div
-												class="line-clamp-2 text-[0.8rem] font-medium break-words break-all hyphens-auto text-slate-900"
-											>
+											<div class="line-clamp-2 text-[0.8rem] font-medium text-slate-900">
 												{product.Name}
 											</div>
-
 											<div class="mt-0.5 flex items-center justify-between">
 												<div class="text-[0.8rem] font-semibold text-indigo-600">
 													{formatCurrency(product.SellingPrice)}
 												</div>
-
 												<div class="flex items-center gap-1 text-[0.7rem] text-slate-500">
 													<span
-														class="h-1.5 w-1.5 rounded-full {product.stock?.currentQuantity > 0
+														class="h-1.5 w-1.5 rounded-full {product.stock &&
+														product.stock.currentQuantity > 0
 															? 'bg-emerald-500'
 															: 'bg-rose-400'}"
 													/>
-													<span>{product.stock?.currentQuantity ?? 'N/A'} in stock</span>
+													<span>
+														{product.stock ? product.stock.currentQuantity : 'N/A'} in stock
+													</span>
 												</div>
 											</div>
 										</div>
-
 										<div
 											class="mt-3 flex items-center justify-between text-[0.7rem] text-slate-400"
 										>
@@ -428,7 +427,6 @@
 					{#each cart as item}
 						<TableRow class="border-slate-100 hover:bg-slate-50/60">
 
-							<!-- ⭐ PRODUCT CELL WITH PERFECT LINE WRAPPING -->
 							<TableCell class="align-top min-w-0 whitespace-normal">
 	<div
 		class="
@@ -438,7 +436,7 @@
 		"
 		style="
 			display: -webkit-box;
-			-webkit-line-clamp: 5;
+			-webkit-line-clamp: 8;
 			-webkit-box-orient: vertical;
 			overflow: hidden;
 			word-break: break-word;
@@ -495,10 +493,11 @@
 	</CardContent>
 </Card>
 
+
 			</div>
 
 			<!-- RIGHT STACK: Customer + Payment + Summary -->
-			<div class="flex flex-col gap-4">
+			<div class="space-y-5">
 				<!-- Customer card -->
 				<Card
 					class="overflow-hidden rounded-2xl border-0 bg-white/90 shadow-lg backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
