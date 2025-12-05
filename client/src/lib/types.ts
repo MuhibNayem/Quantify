@@ -73,6 +73,7 @@ export interface Alert extends BaseEntity {
 	TriggeredAt: string;
 	Status: string;
 	BatchID?: number;
+	Batch?: Batch;
 	Product?: Product;
 }
 
