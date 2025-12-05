@@ -219,6 +219,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			replenishment.POST("/purchase-orders/:poId/cancel", handlers.CancelPurchaseOrder)
 		}
 
+		// Sales
+		sales := api.Group("/sales")
+		sales.Use(middleware.AuthorizeMiddleware("Admin", "Manager", "Staff"))
+		{
+			sales.POST("/checkout", handlers.NewSalesHandler(db).Checkout)
+			sales.GET("/products", handlers.NewSalesHandler(db).ListProducts)
+		}
+
 		// Reports (Manager/Admin)
 		reports := api.Group("/reports")
 		reports.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))

@@ -18,8 +18,9 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card';
-	import { Search, UserPlus, X, Zap, CreditCard } from 'lucide-svelte';
+	import { Search, UserPlus, X, Zap, CreditCard, Loader2 } from 'lucide-svelte';
 	import api from '$lib/api';
+	import { toast } from 'svelte-sonner';
 
 	// Runes state
 	let products = $state<any[]>([]);
@@ -28,6 +29,7 @@
 	let customerSearchTerm = $state('');
 	let selectedCustomer = $state<any | null>(null);
 	let paymentMethod = $state<string | null>(null);
+	let isProcessing = $state(false);
 
 	const currencyFormatter = new Intl.NumberFormat('en-US', {
 		style: 'currency',
@@ -41,22 +43,33 @@
 
 	const fetchProducts = async (search = '') => {
 		try {
-			const response = await api.get(`/products?search=${search}`);
-			const productsData = response.data.products;
+			// Efficiently fetch products with stock in one go
+			const response = await api.get('/sales/products');
+			let productsData = response.data.products;
 
-			for (const product of productsData) {
-				try {
-					const stockResponse = await api.get(`/products/${product.ID}/stock`);
-					product.stock = stockResponse.data;
-				} catch (stockError) {
-					console.error(`Error fetching stock for product ${product.ID}:`, stockError);
-					product.stock = { currentQuantity: 'N/A' };
-				}
+			// Client-side filtering for search (since the optimized endpoint returns all active products for POS cache)
+			// For a large catalog, we should add server-side search to the sales/products endpoint.
+			// Assuming simpler POS requirement for now, or we can filter if the endpoint supports it.
+			// The current implementations of ListProducts doesn't accept search query, so we filter here.
+			if (search) {
+				const lowerSearch = search.toLowerCase();
+				productsData = productsData.filter(
+					(p: any) =>
+						p.Name.toLowerCase().includes(lowerSearch) ||
+						p.SKU.toLowerCase().includes(lowerSearch) ||
+						p.ID.toString().includes(search)
+				);
 			}
 
-			products = productsData;
+			// Map to expected structure (or update usage in template)
+			// Flattening structure for easier access
+			products = productsData.map((p: any) => ({
+				...p,
+				stock: { currentQuantity: p.StockQuantity } // Adapter for existing template usage
+			}));
 		} catch (error) {
 			console.error('Error fetching products:', error);
+			// toast.error('Failed to load product catalog');
 		}
 	};
 
@@ -154,23 +167,33 @@
 	};
 
 	const completeOrder = async () => {
-		if (!canCompleteOrder) return;
+		if (!canCompleteOrder || isProcessing) return;
+		isProcessing = true;
+
+		const toastId = toast.loading('Processing transaction...');
+
 		try {
-			for (const item of cart) {
-				await api.post(`/products/${item.id}/stock/adjustments`, {
-					type: 'STOCK_OUT',
-					quantity: item.quantity,
-					reasonCode: 'SALE',
-					notes: `Sale to ${selectedCustomer ? selectedCustomer.Username : 'customer'}`
-				});
-			}
-			alert('Order completed successfully!');
+			const payload = {
+				items: cart.map((item) => ({
+					productId: item.ID,
+					quantity: item.quantity
+				})),
+				customerId: selectedCustomer ? selectedCustomer.ID : null,
+				paymentMethod: paymentMethod
+			};
+
+			await api.post('/sales/checkout', payload);
+
+			toast.success('Order completed successfully!', { id: toastId });
 			cart = [];
 			paymentMethod = null;
-			await fetchProducts();
-		} catch (error) {
+			await fetchProducts(); // Refresh stock
+		} catch (error: any) {
 			console.error('Error completing order:', error);
-			alert('Failed to complete order.');
+			const msg = error.response?.data?.error || 'Failed to complete order';
+			toast.error(`Transaction Failed: ${msg}`, { id: toastId });
+		} finally {
+			isProcessing = false;
 		}
 	};
 </script>
@@ -186,15 +209,15 @@
 
 	<!-- Floating glow blobs -->
 	<div
-		class="animate-pulseGlow pointer-events-none absolute -top-32 -left-24 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl"
+		class="animate-pulseGlow pointer-events-none absolute -left-24 -top-32 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl"
 	/>
 	<div
-		class="animate-pulseGlow pointer-events-none absolute -right-24 -bottom-36 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl delay-700"
+		class="animate-pulseGlow pointer-events-none absolute -bottom-36 -right-24 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl delay-700"
 	/>
 
 	<!-- Hero -->
 	<div
-		class="parallax-hero relative mx-auto max-w-7xl px-4 pt-14 pb-6 text-center sm:px-6 sm:pt-20 sm:pb-10 sm:text-left lg:px-8"
+		class="parallax-hero relative mx-auto max-w-7xl px-4 pb-6 pt-14 text-center sm:px-6 sm:pb-10 sm:pt-20 sm:text-left lg:px-8"
 	>
 		<div
 			class="animate-cardFloat mb-3 inline-flex items-center justify-center gap-3 sm:justify-start"
@@ -206,7 +229,7 @@
 			</span>
 			<div class="flex flex-col items-start">
 				<p
-					class="text-[0.65rem] font-semibold tracking-[0.22em] text-indigo-700 uppercase sm:text-xs"
+					class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-indigo-700 sm:text-xs"
 				>
 					Point of Sale
 				</p>
@@ -247,56 +270,55 @@
 	</div>
 
 	<!-- POS header bar -->
-	
 
 	<!-- Main content -->
 	<div class="flex h-full min-h-0 flex-col px-4 py-4">
 		<Card
-		class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-	>
-		<CardHeader class="flex flex-row items-center justify-between gap-3 pb-3">
-			<div>
-				<CardTitle
-					class="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900"
-				>
-					<span
-						class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
+			class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+		>
+			<CardHeader class="flex flex-row items-center justify-between gap-3 pb-3">
+				<div>
+					<CardTitle
+						class="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900"
 					>
-						<CreditCard class="h-4 w-4" />
-					</span>
-					Point of Sale
-				</CardTitle>
-				<CardDescription class="text-[0.75rem] text-slate-500">
-					Tap products to build the cart, review below, then confirm on the right.
-				</CardDescription>
-			</div>
-			<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
-				<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
-					>Super shop mode</span
-				>
-			</div>
-		</CardHeader>
-		<CardContent class="pt-0 pb-3">
-			<div class="flex flex-col items-stretch gap-3 sm:flex-row">
-				<div class="relative flex-1">
-					<Search class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
-					<Input
-						bind:value={searchTerm}
-						placeholder="Search by name, barcode, or SKU..."
-						class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
-						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-					/>
+						<span
+							class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
+						>
+							<CreditCard class="h-4 w-4" />
+						</span>
+						Point of Sale
+					</CardTitle>
+					<CardDescription class="text-[0.75rem] text-slate-500">
+						Tap products to build the cart, review below, then confirm on the right.
+					</CardDescription>
 				</div>
-				<Button
-					class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
-					onclick={handleSearch}
-				>
-					<Search class="mr-2 h-4 w-4" />
-					Search
-				</Button>
-			</div>
-		</CardContent>
-	</Card>
+				<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
+					<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
+						>Super shop mode</span
+					>
+				</div>
+			</CardHeader>
+			<CardContent class="pb-3 pt-0">
+				<div class="flex flex-col items-stretch gap-3 sm:flex-row">
+					<div class="relative flex-1">
+						<Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Input
+							bind:value={searchTerm}
+							placeholder="Search by name, barcode, or SKU..."
+							class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
+							onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+						/>
+					</div>
+					<Button
+						class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
+						onclick={handleSearch}
+					>
+						<Search class="mr-2 h-4 w-4" />
+						Search
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
 		<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-2">
 			<!-- LEFT STACK: Products + Cart -->
 			<div class="space-y-5" data-animate="fade-up" style="animation-delay:120ms">
@@ -362,7 +384,7 @@
 												</span>
 												to add
 											</span>
-											<span class="text-[0.65rem] tracking-wide text-slate-400 uppercase"
+											<span class="text-[0.65rem] uppercase tracking-wide text-slate-400"
 												>#{product.ID}</span
 											>
 										</div>
@@ -375,125 +397,116 @@
 
 				<!-- Cart -->
 				<Card
-	class="overflow-hidden rounded-2xl border-0 bg-white/90 shadow-lg backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-	data-animate="fade-up"
-	style="animation-delay:200ms"
->
-	<CardHeader
-		class="flex flex-row items-center justify-between border-b border-slate-100/80 bg-slate-50/70 pb-3"
-	>
-		<div>
-			<CardTitle class="text-sm text-slate-900">Cart</CardTitle>
-			<CardDescription class="text-[0.75rem] text-slate-500">
-				{cart.length === 0
-					? 'No items added yet.'
-					: `${cart.length} item${cart.length > 1 ? 's' : ''} in cart`}
-			</CardDescription>
-		</div>
+					class="overflow-hidden rounded-2xl border-0 bg-white/90 shadow-lg backdrop-blur-xl transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+					data-animate="fade-up"
+					style="animation-delay:200ms"
+				>
+					<CardHeader
+						class="flex flex-row items-center justify-between border-b border-slate-100/80 bg-slate-50/70 pb-3"
+					>
+						<div>
+							<CardTitle class="text-sm text-slate-900">Cart</CardTitle>
+							<CardDescription class="text-[0.75rem] text-slate-500">
+								{cart.length === 0
+									? 'No items added yet.'
+									: `${cart.length} item${cart.length > 1 ? 's' : ''} in cart`}
+							</CardDescription>
+						</div>
 
-		{#if cart.length > 0}
-			<Button
-				variant="ghost"
-				size="sm"
-				class="rounded-xl px-3 py-1.5 text-[0.75rem] text-slate-500 hover:bg-rose-50 hover:text-rose-500"
-				onclick={clearCart}
-			>
-				Clear cart
-			</Button>
-		{/if}
-	</CardHeader>
+						{#if cart.length > 0}
+							<Button
+								variant="ghost"
+								size="sm"
+								class="rounded-xl px-3 py-1.5 text-[0.75rem] text-slate-500 hover:bg-rose-50 hover:text-rose-500"
+								onclick={clearCart}
+							>
+								Clear cart
+							</Button>
+						{/if}
+					</CardHeader>
 
-	<CardContent class="max-h-[20rem] overflow-y-auto pt-0">
-		{#if cart.length === 0}
-			<div class="py-6 text-center text-[0.8rem] text-slate-400">
-				Add products from the grid above to start a new order.
-			</div>
-		{:else}
+					<CardContent class="max-h-[20rem] overflow-y-auto pt-0">
+						{#if cart.length === 0}
+							<div class="py-6 text-center text-[0.8rem] text-slate-400">
+								Add products from the grid above to start a new order.
+							</div>
+						{:else}
+							<!-- ⭐ FIX: force proper word wrapping and no horizontal scroll -->
+							<Table class="w-full table-fixed">
+								<TableHeader>
+									<TableRow class="border-slate-100 bg-slate-50/80">
+										<TableHead class="w-1/3 text-[0.7rem] text-slate-500">Product</TableHead>
+										<TableHead class="text-[0.7rem] text-slate-500">Price</TableHead>
+										<TableHead class="text-[0.7rem] text-slate-500">Qty</TableHead>
+										<TableHead class="text-right text-[0.7rem] text-slate-500">Total</TableHead>
+										<TableHead />
+									</TableRow>
+								</TableHeader>
 
-			<!-- ⭐ FIX: force proper word wrapping and no horizontal scroll -->
-			<Table class="table-fixed w-full">
-
-				<TableHeader>
-					<TableRow class="border-slate-100 bg-slate-50/80">
-						<TableHead class="w-1/3 text-[0.7rem] text-slate-500">Product</TableHead>
-						<TableHead class="text-[0.7rem] text-slate-500">Price</TableHead>
-						<TableHead class="text-[0.7rem] text-slate-500">Qty</TableHead>
-						<TableHead class="text-right text-[0.7rem] text-slate-500">Total</TableHead>
-						<TableHead />
-					</TableRow>
-				</TableHeader>
-
-				<TableBody>
-					{#each cart as item}
-						<TableRow class="border-slate-100 hover:bg-slate-50/60">
-
-							<TableCell class="align-top min-w-0 whitespace-normal">
-	<div
-		class="
-			text-[0.8rem] font-medium text-slate-900
-			break-words hyphens-auto
-			line-clamp-2
+								<TableBody>
+									{#each cart as item}
+										<TableRow class="border-slate-100 hover:bg-slate-50/60">
+											<TableCell class="min-w-0 whitespace-normal align-top">
+												<div
+													class="
+			line-clamp-2 hyphens-auto break-words
+			text-[0.8rem] font-medium
+			text-slate-900
 		"
-		style="
+													style="
 			display: -webkit-box;
 			-webkit-line-clamp: 8;
 			-webkit-box-orient: vertical;
 			overflow: hidden;
 			word-break: break-word;
 		"
-	>
-		{item.Name}
-	</div>
+												>
+													{item.Name}
+												</div>
 
-	<div class="mt-0.5 text-[0.7rem] text-slate-400 break-words">
-		#{item.id}
-	</div>
-</TableCell>
+												<div class="mt-0.5 break-words text-[0.7rem] text-slate-400">
+													#{item.id}
+												</div>
+											</TableCell>
 
+											<TableCell class="align-top text-[0.8rem] text-slate-800">
+												{formatCurrency(item.SellingPrice)}
+											</TableCell>
 
-							<TableCell class="align-top text-[0.8rem] text-slate-800">
-								{formatCurrency(item.SellingPrice)}
-							</TableCell>
+											<!-- Quantity input -->
+											<TableCell class="min-w-[4rem] align-top">
+												<Input
+													type="number"
+													class="h-8 w-full rounded-lg border-slate-200 bg-slate-50/80 px-2 text-[0.8rem]"
+													min="1"
+													value={item.quantity}
+													onchange={(e) => updateQuantity(item.id, parseInt(e.currentTarget.value))}
+												/>
+											</TableCell>
 
-							<!-- Quantity input -->
-							<TableCell class="min-w-[4rem] align-top">
-								<Input
-									type="number"
-									class="h-8 w-full rounded-lg border-slate-200 bg-slate-50/80 px-2 text-[0.8rem]"
-									min="1"
-									value={item.quantity}
-									onchange={(e) =>
-										updateQuantity(item.id, parseInt(e.currentTarget.value))
-									}
-								/>
-							</TableCell>
+											<TableCell
+												class="text-right align-top text-[0.8rem] font-semibold text-slate-900"
+											>
+												{formatCurrency((item.SellingPrice || 0) * item.quantity)}
+											</TableCell>
 
-							<TableCell class="text-right align-top text-[0.8rem] font-semibold text-slate-900">
-								{formatCurrency((item.SellingPrice || 0) * item.quantity)}
-							</TableCell>
-
-							<TableCell class="text-right align-top">
-								<Button
-									variant="ghost"
-									size="icon"
-									class="h-7 w-7 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
-									onclick={() => removeFromCart(item.id)}
-								>
-									<X class="h-3 w-3" />
-								</Button>
-							</TableCell>
-
-						</TableRow>
-					{/each}
-				</TableBody>
-
-			</Table>
-
-		{/if}
-	</CardContent>
-</Card>
-
-
+											<TableCell class="text-right align-top">
+												<Button
+													variant="ghost"
+													size="icon"
+													class="h-7 w-7 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+													onclick={() => removeFromCart(item.id)}
+												>
+													<X class="h-3 w-3" />
+												</Button>
+											</TableCell>
+										</TableRow>
+									{/each}
+								</TableBody>
+							</Table>
+						{/if}
+					</CardContent>
+				</Card>
 			</div>
 
 			<!-- RIGHT STACK: Customer + Payment + Summary -->
@@ -513,7 +526,7 @@
 					<CardContent class="space-y-3 pt-3">
 						<div class="flex items-center gap-2">
 							<div class="relative flex-1">
-								<Search class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
+								<Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 								<Input
 									bind:value={customerSearchTerm}
 									placeholder="Search by ID, username, email, phone"
@@ -593,7 +606,7 @@
 									}`}
 									onclick={() => setPayment(method.id)}
 								>
-									<span class="mb-1 block text-[0.65rem] tracking-wide uppercase opacity-70">
+									<span class="mb-1 block text-[0.65rem] uppercase tracking-wide opacity-70">
 										{method.id}
 									</span>
 									<span class="block text-sm">{method.label}</span>
@@ -653,9 +666,12 @@
 								size="lg"
 								class="h-11 w-full rounded-xl bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-500 text-sm font-semibold tracking-wide shadow-lg shadow-indigo-500/40 hover:from-emerald-400 hover:via-sky-400 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
 								onclick={completeOrder}
-								disabled={!canCompleteOrder}
+								disabled={!canCompleteOrder || isProcessing}
 							>
-								{#if !cart.length}
+								{#if isProcessing}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									Processing...
+								{:else if !cart.length}
 									Add items to cart to continue
 								{:else if !paymentMethod}
 									Select a payment method to complete
