@@ -37,13 +37,6 @@ type App struct {
 	notificationRepo repository.NotificationRepository
 }
 
-// Payloads for events
-type AlertTriggeredPayload struct {
-	ProductID uint   `json:"productId"`
-	Type      string `json:"type"`
-	Message   string `json:"message"`
-}
-
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -196,7 +189,7 @@ func main() {
 }
 
 func (app *App) handleAlertDelivery(d amqp091.Delivery) {
-	var payload AlertTriggeredPayload
+	var payload handlers.AlertTriggeredPayload
 	if err := json.Unmarshal(d.Body, &payload); err != nil {
 		logrus.Errorf("Failed to unmarshal alert payload: %v", err)
 		d.Nack(false, false)

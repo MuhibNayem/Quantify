@@ -36,6 +36,7 @@ type AlertTriggeredPayload struct {
 	ProductID uint   `json:"productId"`
 	Type      string `json:"type"`
 	Message   string `json:"message"`
+	Route     string `json:"route"`
 }
 
 // PutProductAlertSettings godoc
@@ -350,6 +351,7 @@ func triggerAlert(productID uint, alertType, message string, batchID *uint) {
 		ProductID: productID,
 		Type:      alertType,
 		Message:   message,
+		Route:     fmt.Sprintf("/products/%d", productID),
 	}
 	if err := message_broker.Publish(context.Background(), "inventory", "alert.triggered", payload); err != nil {
 		logrus.Errorf("Failed to publish alert triggered event: %v", err)
