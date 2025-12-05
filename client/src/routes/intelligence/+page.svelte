@@ -9,7 +9,7 @@
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
-	import { Download, TrendingUp, RotateCcw, Percent } from 'lucide-svelte';
+	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw } from 'lucide-svelte';
 
 	const forecastForm = $state({ periodInDays: '30', productId: '', result: '' });
 	let suggestions = $state<ReorderSuggestion[]>([]);
@@ -36,6 +36,26 @@
 
 	// Helper for safe number formatting
 	const fmt = (v: number | undefined) => (v ?? 0).toLocaleString();
+
+	const generateSparkline = (data: any[] | undefined) => {
+		if (!data || data.length === 0) return '0,40 100,40';
+		
+		const values = data.map(d => d.TotalSales);
+		const min = Math.min(...values);
+		const max = Math.max(...values);
+		const range = max - min || 1;
+		
+		// Map to 100x40 coordinate system
+		// X: 0 to 100
+		// Y: 40 (bottom) to 0 (top)
+		const points = values.map((val, i) => {
+			const x = (i / (values.length - 1)) * 100;
+			const y = 40 - ((val - min) / range) * 35; // Leave 5px padding at top
+			return `${x},${y}`;
+		});
+		
+		return points.join(' ');
+	};
 
 	const loadSuggestions = async () => {
 		suggestionsLoading = true;
@@ -79,7 +99,8 @@
 		reportsLoading = true;
 		const payload = {
 			startDate: new Date(reportRange.startDate).toISOString(),
-			endDate: new Date(reportRange.endDate).toISOString()
+			endDate: new Date(reportRange.endDate).toISOString(),
+			groupBy: 'daily'
 		};
 		try {
 			if (type === 'sales') {
@@ -190,8 +211,36 @@
 	<!-- Reorder suggestions -->
 	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-orange-100">
 		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-			<CardTitle class="text-slate-800">Reorder Suggestions</CardTitle>
-			<CardDescription class="text-slate-600">Convert high-signal suggestions into purchase orders</CardDescription>
+			<div class="flex items-center justify-between">
+				<div>
+					<CardTitle class="flex items-center gap-2 text-slate-800">
+						<ShoppingCart class="h-5 w-5 text-emerald-600" />
+						Reorder Suggestions
+					</CardTitle>
+					<CardDescription class="text-slate-600">AI-recommended purchase orders</CardDescription>
+				</div>
+				<Button 
+					variant="outline" 
+					size="sm" 
+					class="gap-2 text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+					onclick={async () => {
+						suggestionsLoading = true;
+						try {
+							await replenishmentApi.generateSuggestions();
+							await loadSuggestions();
+							toast.success('Suggestions refreshed');
+						} catch (e) {
+							toast.error('Failed to refresh suggestions');
+						} finally {
+							suggestionsLoading = false;
+						}
+					}}
+					disabled={suggestionsLoading}
+				>
+					<RefreshCw class={suggestionsLoading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+					Refresh
+				</Button>
+			</div>
 		</CardHeader>
 		<CardContent class="p-0">
 			<Table class="border border-amber-200/60 rounded-2xl overflow-hidden">
@@ -263,7 +312,7 @@
 			<div class="h-24 w-full relative">
 				<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0">
 					<polyline
-						points="0,35 10,28 20,25 30,18 40,20 50,14 60,12 70,18 80,22 90,15 100,10"
+						points={generateSparkline(reportResults.sales?.salesTrends)}
 						fill="none"
 						stroke="url(#salesGrad)"
 						stroke-width="2.5"

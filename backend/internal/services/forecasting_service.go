@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
+
+	"github.com/sirupsen/logrus"
 )
 
 type ForecastingService interface {
@@ -23,7 +24,6 @@ func NewForecastingService(repo repository.ForecastingRepository) ForecastingSer
 
 func (s *forecastingService) GenerateDemandForecast(productID *uint, periodInDays int) error {
 	var products []domain.Product
-	var err error
 
 	if productID != nil {
 		product, err := s.repo.GetProduct(*productID)
@@ -31,12 +31,33 @@ func (s *forecastingService) GenerateDemandForecast(productID *uint, periodInDay
 			return fmt.Errorf("failed to get product: %w", err)
 		}
 		products = append(products, *product)
-	} else {
-		products, err = s.repo.GetAllProducts()
-		if err != nil {
-			return fmt.Errorf("failed to get all products: %w", err)
-		}
+		return s.processForecastForProducts(products, periodInDays)
 	}
+
+	// Batch processing for all products
+	offset := 0
+	limit := 100
+	for {
+		batchProducts, err := s.repo.GetProductsBatch(offset, limit)
+		if err != nil {
+			return fmt.Errorf("failed to get products batch: %w", err)
+		}
+		if len(batchProducts) == 0 {
+			break
+		}
+
+		if err := s.processForecastForProducts(batchProducts, periodInDays); err != nil {
+			logrus.Errorf("Error processing batch offset %d: %v", offset, err)
+			// Continue to next batch? Or stop? Let's log and continue to try to process as much as possible.
+		}
+
+		offset += limit
+	}
+
+	return nil
+}
+
+func (s *forecastingService) processForecastForProducts(products []domain.Product, periodInDays int) error {
 
 	for _, product := range products {
 		salesData, err := s.repo.GetSalesDataForForecast(product.ID, periodInDays)
@@ -45,11 +66,38 @@ func (s *forecastingService) GenerateDemandForecast(productID *uint, periodInDay
 			continue
 		}
 
+		// Map sales to dates to handle missing days (0 sales)
+		salesMap := make(map[string]int)
+		for _, sale := range salesData {
+			dateStr := sale.AdjustedAt.Format("2006-01-02")
+			salesMap[dateStr] += sale.Quantity
+		}
+
 		var weightedSum float64
 		var weightSum float64
-		for i, sale := range salesData {
+
+		// Iterate through each day of the period
+		now := time.Now()
+		for i := 0; i < periodInDays; i++ {
+			// Calculate date: start from (now - period) + i
+			// actually, usually weighted average gives more weight to recent.
+			// So let's iterate i from 1 to periodInDays.
+			// Day 1 = (now - period) + 1 ... Day N = now.
+			// Let's align:
+			// targetDate = now.AddDate(0, 0, -periodInDays + i + 1)
+
+			// Let's say period is 30 days.
+			// i=0 -> weight=1. Date = now - 29 days.
+			// ...
+			// i=29 -> weight=30. Date = now.
+
+			targetDate := now.AddDate(0, 0, -periodInDays+i+1)
+			dateStr := targetDate.Format("2006-01-02")
+
+			quantity := salesMap[dateStr] // 0 if missing
+
 			weight := float64(i + 1)
-			weightedSum += float64(sale.Quantity) * weight
+			weightedSum += float64(quantity) * weight
 			weightSum += weight
 		}
 

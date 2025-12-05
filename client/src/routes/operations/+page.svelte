@@ -7,8 +7,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import { Activity } from 'lucide-svelte';
+	import { Activity, ArrowRightLeft, ClipboardCheck, ScanLine } from 'lucide-svelte';
 	import type { Batch, Product } from '$lib/types';
+	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 
 	const stockQuery = $state({ productId: '', locationId: '' });
 	let stockLoading = $state(false);
@@ -122,15 +123,25 @@
 		<!-- Inventory Snapshot -->
 		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-sky-50 to-blue-100">
 			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-				<CardTitle class="text-slate-800">Inventory Snapshot</CardTitle>
+				<CardTitle class="text-slate-800 flex items-center gap-2">
+					<ClipboardCheck class="h-5 w-5 text-sky-600" />
+					Inventory Snapshot
+				</CardTitle>
 				<CardDescription class="text-slate-600">View product balance and batch details</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
 				<div class="grid gap-3 sm:grid-cols-2">
-					<Input type="number" placeholder="Product ID" bind:value={stockQuery.productId} class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"/>
-					<Input type="number" placeholder="Location ID (optional)" bind:value={stockQuery.locationId} class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"/>
+					<ProductSelector 
+						bind:value={stockQuery.productId} 
+						placeholder="Search product..." 
+						className="w-full"
+						onSelect={() => setTimeout(loadStock, 100)} 
+					/>
+					<Input type="number" placeholder="Location ID (optional)" bind:value={stockQuery.locationId} class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" onkeydown={(e) => e.key === 'Enter' && loadStock()}/>
 				</div>
-				<Button class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all" onclick={loadStock}>Fetch stock levels</Button>
+				<Button class="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all" onclick={loadStock}>
+					Fetch stock levels
+				</Button>
 				{#if stockLoading}
 					<Skeleton class="h-32 w-full bg-white/70" />
 				{:else if stockSnapshot}
@@ -169,16 +180,25 @@
 		<!-- Manual Adjustment -->
 		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-emerald-50 to-green-100">
 			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-				<CardTitle class="text-slate-800">Manual Adjustment</CardTitle>
+				<CardTitle class="text-slate-800 flex items-center gap-2">
+					<Activity class="h-5 w-5 text-emerald-600" />
+					Manual Adjustment
+				</CardTitle>
 				<CardDescription class="text-slate-600">Perform adhoc cycle counts or receipts</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
-				<Input type="number" placeholder="Product ID" bind:value={adjustmentForm.productId} class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"/>
-				<select class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400" bind:value={adjustmentForm.type}>
-					<option value="STOCK_IN">Stock in</option>
-					<option value="STOCK_OUT">Stock out</option>
-				</select>
-				<Input type="number" placeholder="Quantity" bind:value={adjustmentForm.quantity} class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"/>
+				<ProductSelector 
+					bind:value={adjustmentForm.productId} 
+					placeholder="Select product to adjust..." 
+					className="w-full border-emerald-200"
+				/>
+				<div class="grid grid-cols-2 gap-3">
+					<select class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400" bind:value={adjustmentForm.type}>
+						<option value="STOCK_IN">Stock In (+)</option>
+						<option value="STOCK_OUT">Stock Out (-)</option>
+					</select>
+					<Input type="number" placeholder="Quantity" bind:value={adjustmentForm.quantity} class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"/>
+				</div>
 				<Input placeholder="Reason code" bind:value={adjustmentForm.reasonCode} class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"/>
 				<Input placeholder="Notes" bind:value={adjustmentForm.notes} class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"/>
 				<Button class="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all" onclick={submitAdjustment}>Apply adjustment</Button>
@@ -190,11 +210,18 @@
 		<!-- Stock Transfer -->
 		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-violet-50 to-purple-100">
 			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-				<CardTitle class="text-slate-800">Stock Transfer</CardTitle>
+				<CardTitle class="text-slate-800 flex items-center gap-2">
+					<ArrowRightLeft class="h-5 w-5 text-violet-600" />
+					Stock Transfer
+				</CardTitle>
 				<CardDescription class="text-slate-600">Move inventory across locations</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
-				<Input type="number" placeholder="Product ID" bind:value={transferForm.productId} class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"/>
+				<ProductSelector 
+					bind:value={transferForm.productId} 
+					placeholder="Select product to transfer..." 
+					className="w-full border-violet-200"
+				/>
 				<div class="grid grid-cols-2 gap-3">
 					<Input type="number" placeholder="Source location" bind:value={transferForm.sourceLocationId} class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"/>
 					<Input type="number" placeholder="Destination location" bind:value={transferForm.destLocationId} class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"/>
@@ -207,11 +234,14 @@
 		<!-- Barcode Intelligence -->
 		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-amber-50 to-orange-100">
 			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-				<CardTitle class="text-slate-800">Barcode Intelligence</CardTitle>
+				<CardTitle class="text-slate-800 flex items-center gap-2">
+					<ScanLine class="h-5 w-5 text-amber-600" />
+					Barcode Intelligence
+				</CardTitle>
 				<CardDescription class="text-slate-600">Lookup and generate barcodes for SKUs</CardDescription>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
-				<Input placeholder="Scan or type barcode / SKU" bind:value={barcodeLookup.value} class="rounded-xl border-amber-200 bg-white/90 focus:ring-2 focus:ring-amber-400"/>
+				<Input placeholder="Scan or type barcode / SKU" bind:value={barcodeLookup.value} class="rounded-xl border-amber-200 bg-white/90 focus:ring-2 focus:ring-amber-400" onkeydown={(e) => e.key === 'Enter' && runBarcodeLookup()}/>
 				<div class="flex flex-col sm:flex-row gap-3">
 	<Button
 		class="flex-1 bg-white/80 border border-amber-200 text-amber-700 hover:bg-amber-50 rounded-xl font-medium hover:scale-105 transition-all shadow-sm"

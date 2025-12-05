@@ -14,13 +14,15 @@ import (
 type BulkImportService struct {
 	categoryRepo *repository.CategoryRepository
 	supplierRepo *repository.SupplierRepository
+	locationRepo *repository.LocationRepository
 }
 
 // NewBulkImportService creates a new BulkImportService.
-func NewBulkImportService(categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository) *BulkImportService {
+func NewBulkImportService(categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository) *BulkImportService {
 	return &BulkImportService{
 		categoryRepo: categoryRepo,
 		supplierRepo: supplierRepo,
+		locationRepo: locationRepo,
 	}
 }
 
@@ -29,6 +31,7 @@ type NewEntities struct {
 	Categories    map[string]bool `json:"categories"`
 	SubCategories map[string]bool `json:"subCategories"`
 	Suppliers     map[string]bool `json:"suppliers"`
+	Locations     map[string]bool `json:"locations"`
 }
 
 // BulkImportResult holds the result of a bulk import validation.
@@ -46,13 +49,25 @@ type entityCache struct {
 	categories    map[string]uint
 	subCategories map[string]uint
 	suppliers     map[string]uint
+	locations     map[string]uint
 }
 
 // ProcessBulkImport reads a CSV file and produces a validation result.
-func (s *BulkImportService) ProcessBulkImport(file io.Reader) (*BulkImportResult, error) {
+func (s *BulkImportService) ProcessBulkImport(file io.ReadSeeker) (*BulkImportResult, error) {
+	// Pass 1: Collect unique names to build optimized cache
+	cache, err := s.buildOptimizedCache(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build optimized cache: %w", err)
+	}
+
+	// Reset file pointer for Pass 2
+	if _, err := file.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("failed to reset file pointer: %w", err)
+	}
+
 	reader := csv.NewReader(file)
 	// Read header row
-	_, err := reader.Read()
+	_, err = reader.Read()
 	if err != nil {
 		return nil, fmt.Errorf("failed to read header row: %w", err)
 	}
@@ -62,13 +77,8 @@ func (s *BulkImportService) ProcessBulkImport(file io.Reader) (*BulkImportResult
 			Categories:    make(map[string]bool),
 			SubCategories: make(map[string]bool),
 			Suppliers:     make(map[string]bool),
+			Locations:     make(map[string]bool),
 		},
-	}
-
-	// Pre-fetch existing entities into a cache
-	cache, err := s.buildEntityCache()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build entity cache: %w", err)
 	}
 
 	for {
@@ -187,39 +197,110 @@ func (s *BulkImportService) validateAndParseProduct(row []string, cache *entityC
 	}, nil
 }
 
-// buildEntityCache fetches existing entities from the database to speed up validation.
-func (s *BulkImportService) buildEntityCache() (*entityCache, error) {
+// buildOptimizedCache scans the file to find referenced entities and fetches only them.
+func (s *BulkImportService) buildOptimizedCache(file io.ReadSeeker) (*entityCache, error) {
+	reader := csv.NewReader(file)
+	// Skip header
+	if _, err := reader.Read(); err != nil {
+		return nil, err // Empty file or error
+	}
+
+	uniqueCategories := make(map[string]bool)
+	uniqueSubCategories := make(map[string]bool)
+	uniqueSuppliers := make(map[string]bool)
+	uniqueLocations := make(map[string]bool)
+
+	for {
+		row, err := reader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			continue // Skip bad rows during cache build
+		}
+		if len(row) >= 6 {
+			if cat := strings.TrimSpace(row[3]); cat != "" {
+				uniqueCategories[strings.ToLower(cat)] = true
+			}
+			if sub := strings.TrimSpace(row[4]); sub != "" {
+				uniqueSubCategories[strings.ToLower(sub)] = true
+			}
+			if sup := strings.TrimSpace(row[5]); sup != "" {
+				uniqueSuppliers[strings.ToLower(sup)] = true
+			}
+			if loc := strings.TrimSpace(row[9]); loc != "" {
+				uniqueLocations[strings.ToLower(loc)] = true
+			}
+		}
+	}
+
 	cache := &entityCache{
 		categories:    make(map[string]uint),
 		subCategories: make(map[string]uint),
 		suppliers:     make(map[string]uint),
+		locations:     make(map[string]uint),
 	}
 
-	// Cache Categories
-	cats, err := s.categoryRepo.GetAll()
-	if err != nil {
-		return nil, err
-	}
-	for _, cat := range cats {
-		cache.categories[strings.ToLower(cat.Name)] = cat.ID
+	// Fetch only referenced Categories
+	if len(uniqueCategories) > 0 {
+		var cats []domain.Category
+		names := make([]string, 0, len(uniqueCategories))
+		for name := range uniqueCategories {
+			names = append(names, name)
+		}
+		// Note: This assumes case-insensitive collation or we need to handle case in DB.
+		// For simplicity, we fetch by name IN (...) and map them.
+		// In a real scenario, we might need LOWER(name) IN (...)
+		// Here we assume the DB handles it or we fetch and match.
+		// GORM doesn't support map keys in Where easily without raw SQL for LOWER.
+		// We'll fetch all matches.
+		if err := s.categoryRepo.GetByNames(names, &cats); err == nil {
+			for _, c := range cats {
+				cache.categories[strings.ToLower(c.Name)] = c.ID
+			}
+		}
 	}
 
-	// Cache SubCategories
-	subCats, err := s.categoryRepo.GetAllSubCategories()
-	if err != nil {
-		return nil, err
-	}
-	for _, subCat := range subCats {
-		cache.subCategories[strings.ToLower(subCat.Name)] = subCat.ID
+	// Fetch only referenced SubCategories
+	if len(uniqueSubCategories) > 0 {
+		var subCats []domain.SubCategory
+		names := make([]string, 0, len(uniqueSubCategories))
+		for name := range uniqueSubCategories {
+			names = append(names, name)
+		}
+		if err := s.categoryRepo.GetSubCategoriesByNames(names, &subCats); err == nil {
+			for _, sc := range subCats {
+				cache.subCategories[strings.ToLower(sc.Name)] = sc.ID
+			}
+		}
 	}
 
-	// Cache Suppliers
-	sups, err := s.supplierRepo.GetAll()
-	if err != nil {
-		return nil, err
+	// Fetch only referenced Suppliers
+	if len(uniqueSuppliers) > 0 {
+		var sups []domain.Supplier
+		names := make([]string, 0, len(uniqueSuppliers))
+		for name := range uniqueSuppliers {
+			names = append(names, name)
+		}
+		if err := s.supplierRepo.GetByNames(names, &sups); err == nil {
+			for _, s := range sups {
+				cache.suppliers[strings.ToLower(s.Name)] = s.ID
+			}
+		}
 	}
-	for _, sup := range sups {
-		cache.suppliers[strings.ToLower(sup.Name)] = sup.ID
+
+	// Fetch only referenced Locations
+	if len(uniqueLocations) > 0 {
+		var locs []domain.Location
+		names := make([]string, 0, len(uniqueLocations))
+		for name := range uniqueLocations {
+			names = append(names, name)
+		}
+		if err := s.locationRepo.GetByNames(names, &locs); err == nil {
+			for _, l := range locs {
+				cache.locations[strings.ToLower(l.Name)] = l.ID
+			}
+		}
 	}
 
 	return cache, nil

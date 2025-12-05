@@ -27,3 +27,9 @@ func (r *JobRepository) GetJob(jobID uint) (*domain.Job, error) {
 func (r *JobRepository) UpdateJob(job *domain.Job) error {
 	return r.DB.Save(job).Error
 }
+
+func (r *JobRepository) ListJobs(limit int) ([]domain.Job, error) {
+	var jobs []domain.Job
+	err := r.DB.Order("created_at desc").Limit(limit).Find(&jobs).Error
+	return jobs, err
+}

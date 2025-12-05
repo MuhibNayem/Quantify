@@ -16,10 +16,15 @@ import type {
 	UserSummary,
 	PaginatedProducts,
 	Notification,
+	DashboardSummary,
 } from '$lib/types';
 
+export const dashboardApi = {
+	getSummary: async () => (await api.get<DashboardSummary>('/dashboard/summary')).data,
+};
+
 export const productsApi = {
-	list: async (page: number = 1, limit: number = 100, search?: string) => (await api.get<PaginatedProducts>(`/products?page=${page}&limit=${limit}${search ? `&search=${search}`: ''}`)).data,
+	list: async (page: number = 1, limit: number = 100, search?: string) => (await api.get<PaginatedProducts>(`/products?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`)).data,
 	get: async (id: number) => (await api.get<Product>(`/products/${id}`)).data,
 	getBySku: async (sku: string) => (await api.get<Product>(`/products/sku/${sku}`)).data,
 	create: async (payload: Record<string, unknown>) => (await api.post<Product>('/products', payload)).data,
@@ -87,6 +92,7 @@ export const replenishmentApi = {
 	getPO: async (id: number) => (await api.get<PurchaseOrder>(`/purchase-orders/${id}`)).data,
 	listSuggestions: async (params?: Record<string, unknown>) =>
 		(await api.get<ReorderSuggestion[]>('/replenishment/suggestions', { params })).data,
+	generateSuggestions: async () => (await api.post('/replenishment/suggestions/generate')).data,
 	createPOFromSuggestion: async (suggestionId: number) =>
 		(await api.post<PurchaseOrder>(`/replenishment/suggestions/${suggestionId}/create-po`)).data,
 	approvePO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/approve`)).data,
@@ -140,6 +146,7 @@ export const bulkApi = {
 	confirm: async (jobId: number | string) => (await api.post(`/bulk/products/import/${jobId}/confirm`)).data,
 	exportProducts: async (params: Record<string, string | number | undefined>) =>
 		(await api.get('/bulk/products/export', { params, responseType: 'blob' })).data as Blob,
+	listJobs: async () => (await api.get<BulkImportJob[]>('/bulk/jobs')).data,
 };
 
 export const usersApi = {

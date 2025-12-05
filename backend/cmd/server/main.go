@@ -97,9 +97,10 @@ func main() {
 	notificationRepo := repository.NewNotificationRepository(repository.DB)
 	categoryRepo := repository.NewCategoryRepository(repository.DB)
 	supplierRepo := repository.NewSupplierRepository(repository.DB)
+	locationRepo := repository.NewLocationRepository(repository.DB)
 
 	// Initialize Services
-	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo)
+	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo, locationRepo)
 	bulkExportSvc := services.NewBulkExportService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 
@@ -112,7 +113,7 @@ func main() {
 	}
 
 	// Initialize and start the BulkConsumer
-	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub)
+	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub)
 	workerCount := 1
 	if cfg.ConsumerConcurrency > 0 {
 		workerCount = cfg.ConsumerConcurrency

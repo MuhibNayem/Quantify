@@ -102,16 +102,26 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			return
 		}
 		user = domain.User{
-			Username: req.Username,
-			Role:     req.Role,
-			IsActive: true, // First user is active by default
+			Username:    req.Username,
+			Role:        req.Role,
+			IsActive:    true, // First user is active by default
+			FirstName:   req.FirstName,
+			LastName:    req.LastName,
+			Email:       req.Email,
+			PhoneNumber: req.PhoneNumber,
+			Address:     req.Address,
 		}
 	} else {
 		// Subsequent users are not active by default
 		user = domain.User{
-			Username: req.Username,
-			Role:     req.Role,
-			IsActive: false, // Subsequent users are inactive by default
+			Username:    req.Username,
+			Role:        req.Role,
+			IsActive:    false, // Subsequent users are inactive by default
+			FirstName:   req.FirstName,
+			LastName:    req.LastName,
+			Email:       req.Email,
+			PhoneNumber: req.PhoneNumber,
+			Address:     req.Address,
 		}
 	}
 
@@ -413,6 +423,21 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 	if req.Role != "" {
 		user.Role = req.Role
+	}
+	if req.FirstName != "" {
+		user.FirstName = req.FirstName
+	}
+	if req.LastName != "" {
+		user.LastName = req.LastName
+	}
+	if req.Email != "" {
+		user.Email = req.Email
+	}
+	if req.PhoneNumber != "" {
+		user.PhoneNumber = req.PhoneNumber
+	}
+	if req.Address != "" {
+		user.Address = req.Address
 	}
 
 	if err := h.userRepo.UpdateUser(&user); err != nil {

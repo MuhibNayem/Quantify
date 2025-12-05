@@ -5,7 +5,7 @@
 	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { toast } from 'svelte-sonner';
-	import { alertsApi, productsApi, categoriesApi, suppliersApi, replenishmentApi } from '$lib/api/resources';
+	import { dashboardApi } from '$lib/api/resources';
 	import type { Alert, Product, ReorderSuggestion } from '$lib/types';
 	import { Activity, AlertTriangle, Boxes, RefreshCcw, TrendingUp, Zap, ShoppingCart, Users, BarChart3 } from 'lucide-svelte';
 
@@ -14,29 +14,26 @@
 	let recentProducts = $state<Product[]>([]);
 	let recentAlerts = $state<Alert[]>([]);
 	let suggestions = $state<ReorderSuggestion[]>([]);
+	let trend = $state({ direction: 'neutral', percentage: 0 });
 
-	const chartSeries = [62, 48, 55, 61, 58, 72, 80];
-	const chartMax = Math.max(...chartSeries, 100);
+	let chartSeries = $state<number[]>([]);
+	let chartMax = $derived(Math.max(...chartSeries, 10));
 
 	const loadDashboard = async () => {
 		loading = true;
 		try {
-			const productList = await productsApi.list();
-			stats.products = productList.products?.length ?? 0;
-			recentProducts = productList.products?.slice(0, 5);
+			const data = await dashboardApi.getSummary();
+			
+			stats.products = data.stats.products;
+			stats.categories = data.stats.categories;
+			stats.suppliers = data.stats.suppliers;
+			stats.alerts = data.stats.alerts;
 
-			const categoryList = await categoriesApi.list();
-			stats.categories = (Array.isArray(categoryList) ? categoryList : [categoryList]).length;
-
-			const supplierList = await suppliersApi.list();
-			stats.suppliers = (Array.isArray(supplierList) ? supplierList : [supplierList]).length;
-
-			const suggestionList = await replenishmentApi.listSuggestions();
-			suggestions = suggestionList.slice(0, 5);
-
-			const alertList = await alertsApi.list({ status: 'ACTIVE' });
-			stats.alerts = alertList.length ?? 0;
-			recentAlerts = alertList.slice(0, 5);
+			recentProducts = data.recentProducts;
+			recentAlerts = data.recentAlerts;
+			suggestions = data.suggestions;
+			chartSeries = data.chartData || [];
+			trend = data.trend || { direction: 'neutral', percentage: 0 };
 		} catch (error: any) {
 			toast.error('Failed to Load Dashboard', {
 				description: error?.response?.data?.error || 'An unexpected error occurred'
@@ -201,8 +198,16 @@
 						<div class="flex items-center justify-between pt-4 border-t border-blue-100">
 							<p class="text-sm text-slate-600">📊 Based on sales velocity & stock buffers</p>
 							<div class="flex gap-2">
-								<span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">↑ Trend: Positive</span>
-								<span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">📈 12% Growth</span>
+								{#if trend.direction === 'up'}
+									<span class="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-medium border border-green-200">↑ Trend: Positive</span>
+									<span class="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium border border-blue-200">📈 {trend.percentage.toFixed(1)}% Growth</span>
+								{:else if trend.direction === 'down'}
+									<span class="px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-medium border border-red-200">↓ Trend: Negative</span>
+									<span class="px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs font-medium border border-orange-200">📉 {Math.abs(trend.percentage).toFixed(1)}% Decline</span>
+								{:else}
+									<span class="px-3 py-1 bg-slate-50 text-slate-700 rounded-full text-xs font-medium border border-slate-200">→ Trend: Stable</span>
+									<span class="px-3 py-1 bg-slate-50 text-slate-700 rounded-full text-xs font-medium border border-slate-200">No Change</span>
+								{/if}
 							</div>
 						</div>
 					</div>

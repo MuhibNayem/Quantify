@@ -109,9 +109,9 @@ type Location struct {
 // Batch represents a batch of stock for a product.
 type Batch struct {
 	gorm.Model
-	ProductID   uint `gorm:"not null"`
+	ProductID   uint `gorm:"not null;index:idx_product_location"`
 	Product     Product
-	LocationID  uint
+	LocationID  uint `gorm:"index:idx_product_location"`
 	Location    Location
 	BatchNumber string     `gorm:"not null"`
 	Quantity    int        `gorm:"not null"`
@@ -121,7 +121,7 @@ type Batch struct {
 // StockAdjustment represents a manual adjustment to stock levels.
 type StockAdjustment struct {
 	gorm.Model
-	ProductID        uint `gorm:"not null"`
+	ProductID        uint `gorm:"not null;index"`
 	Product          Product
 	LocationID       uint
 	Location         Location
@@ -129,10 +129,10 @@ type StockAdjustment struct {
 	Quantity         int    `gorm:"not null"`
 	ReasonCode       string `gorm:"not null"` // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
 	Notes            string
-	AdjustedBy       uint // UserID of the person who made the adjustment
-	AdjustedAt       time.Time
-	PreviousQuantity int // Snapshot of quantity before adjustment
-	NewQuantity      int // Snapshot of quantity after adjustment
+	AdjustedBy       uint      // UserID of the person who made the adjustment
+	AdjustedAt       time.Time `gorm:"index"`
+	PreviousQuantity int       // Snapshot of quantity before adjustment
+	NewQuantity      int       // Snapshot of quantity after adjustment
 }
 
 // Alert represents a stock-related alert.

@@ -2,9 +2,14 @@ package requests
 
 // UserRegisterRequest represents the request body for user registration.
 type UserRegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50"`
-	Password string `json:"password" binding:"required,min=6"`
-	Role     string `json:"role" binding:"required,oneof=Admin Manager Staff"`
+	Username    string `json:"username" binding:"required,min=3,max=50"`
+	Password    string `json:"password" binding:"required,min=6"`
+	Role        string `json:"role" binding:"required,oneof=Admin Manager Staff"`
+	FirstName   string `json:"firstName,omitempty"`
+	LastName    string `json:"lastName,omitempty"`
+	Email       string `json:"email,omitempty" binding:"omitempty,email"`
+	PhoneNumber string `json:"phoneNumber,omitempty"`
+	Address     string `json:"address,omitempty"`
 }
 
 // UserLoginRequest represents the request body for user login.
@@ -20,9 +25,14 @@ type RefreshTokenRequest struct {
 
 // UserUpdateRequest represents the request body for updating user information.
 type UserUpdateRequest struct {
-	Username string `json:"username,omitempty" binding:"omitempty,min=3,max=50"`
-	Password string `json:"password,omitempty" binding:"omitempty,min=6"`
-	Role     string `json:"role,omitempty" binding:"omitempty,oneof=Admin Manager Staff"`
+	Username    string `json:"username,omitempty" binding:"omitempty,min=3,max=50"`
+	Password    string `json:"password,omitempty" binding:"omitempty,min=6"`
+	Role        string `json:"role,omitempty" binding:"omitempty,oneof=Admin Manager Staff"`
+	FirstName   string `json:"firstName,omitempty"`
+	LastName    string `json:"lastName,omitempty"`
+	Email       string `json:"email,omitempty" binding:"omitempty,email"`
+	PhoneNumber string `json:"phoneNumber,omitempty"`
+	Address     string `json:"address,omitempty"`
 }
 
 // CreateCustomerRequest represents the request body for creating a new customer.

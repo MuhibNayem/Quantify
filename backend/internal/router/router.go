@@ -51,6 +51,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	notificationRepo := repository.NewNotificationRepository(db)
 	searchRepo := repository.NewSearchRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	dashboardRepo := repository.NewDashboardRepository(db)
+	replenishmentRepo := repository.NewReplenishmentRepository(db)
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
@@ -61,13 +63,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	integrationService := services.NewIntegrationService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
+	replenishmentService := services.NewReplenishmentService(replenishmentRepo)
 
 	// Initialize handlers
 	productHandler := handlers.NewProductHandler(productRepo, db)
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
-	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService)
+	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService)
 	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
 	crmHandler := handlers.NewCRMHandler(crmService)
 	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
@@ -77,6 +80,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
 	userHandler := handlers.NewUserHandler(userRepo, db)
 	searchHandler := handlers.NewSearchHandler(searchService)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -128,6 +132,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		{
 			jobs.POST("/:jobId/cancel", reportHandler.CancelJob)
 		}
+
+		// Dashboard
+		api.GET("/dashboard/summary", dashboardHandler.GetDashboardSummary)
 
 		// Products
 		products := api.Group("/products")
@@ -200,8 +207,9 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		replenishment.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
 			replenishment.POST("/forecast/generate", replenishmentHandler.GenerateDemandForecast)
+			replenishment.POST("/suggestions/generate", replenishmentHandler.GenerateReorderSuggestions)
 			replenishment.GET("/forecast/:forecastId", handlers.GetDemandForecast)
-			replenishment.GET("/suggestions", handlers.ListReorderSuggestions)
+			replenishment.GET("/suggestions", replenishmentHandler.ListReorderSuggestions)
 			replenishment.POST("/suggestions/:suggestionId/create-po", handlers.CreatePOFromSuggestion)
 			replenishment.POST("/purchase-orders/:poId/approve", handlers.ApprovePurchaseOrder)
 			replenishment.POST("/purchase-orders/:poId/send", handlers.SendPurchaseOrder)
@@ -255,6 +263,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			bulk.GET("/products/import/:jobId/status", bulkHandler.GetBulkImportStatus)
 			bulk.POST("/products/import/:jobId/confirm", bulkHandler.ConfirmBulkImport)
 			bulk.GET("/products/export", bulkHandler.ExportProducts)
+			bulk.GET("/jobs", bulkHandler.ListBulkJobs)
+			bulk.GET("/files/:bucket/:object", bulkHandler.DownloadFile)
 		}
 
 		// Inventory (Staff and above)

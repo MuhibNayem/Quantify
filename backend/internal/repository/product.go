@@ -94,3 +94,20 @@ func (r *ProductRepository) GetAll() ([]domain.Product, error) {
 	}
 	return products, nil
 }
+
+func (r *ProductRepository) GetFiltered(filters map[string]interface{}) ([]domain.Product, error) {
+	var products []domain.Product
+	query := r.db.Model(&domain.Product{})
+
+	if val, ok := filters["category"]; ok && val != "" {
+		query = query.Where("category_id = ?", val)
+	}
+	if val, ok := filters["supplier"]; ok && val != "" {
+		query = query.Where("supplier_id = ?", val)
+	}
+
+	if err := query.Preload("Category").Preload("SubCategory").Preload("Supplier").Preload("Location").Find(&products).Error; err != nil {
+		return nil, err
+	}
+	return products, nil
+}

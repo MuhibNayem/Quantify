@@ -31,8 +31,6 @@ func (r *SupplierRepository) CreateSupplier(supplier *domain.Supplier) error {
 
 }
 
-
-
 func (r *SupplierRepository) UpdateSupplier(supplier *domain.Supplier, updates map[string]interface{}) error {
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
@@ -55,8 +53,6 @@ func (r *SupplierRepository) UpdateSupplier(supplier *domain.Supplier, updates m
 
 }
 
-
-
 func (r *SupplierRepository) DeleteSupplier(supplier *domain.Supplier) error {
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
@@ -73,77 +69,35 @@ func (r *SupplierRepository) DeleteSupplier(supplier *domain.Supplier) error {
 
 }
 
-
-
 func (r *SupplierRepository) GetAll() ([]domain.Supplier, error) {
-
-
-
 	var suppliers []domain.Supplier
-
-
-
 	if err := r.db.Find(&suppliers).Error; err != nil {
-
-
-
 		return nil, err
-
-
-
 	}
-
-
-
 	return suppliers, nil
-
-
-
 }
 
-
-
-
-
-
+func (r *SupplierRepository) GetByNames(names []string, suppliers *[]domain.Supplier) error {
+	return r.db.Where("name IN ?", names).Find(suppliers).Error
+}
 
 func (r *SupplierRepository) GetSupplierByName(name string) (*domain.Supplier, error) {
 
-
-
 	var supplier domain.Supplier
-
-
 
 	if err := r.db.Where("name = ?", name).First(&supplier).Error; err != nil {
 
-
-
 		return nil, err
-
-
 
 	}
 
-
-
 	return &supplier, nil
 
-
-
 }
-
-
-
-
-
-
 
 func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, float64, error) {
 
 	var purchaseOrders []domain.PurchaseOrder
-
-
 
 	err := r.db.Where("supplier_id = ? AND status = ?", supplierID, "RECEIVED").Find(&purchaseOrders).Error
 
@@ -153,21 +107,15 @@ func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, f
 
 	}
 
-
-
 	if len(purchaseOrders) == 0 {
 
 		return 0, 0, nil
 
 	}
 
-
-
 	var totalLeadTime time.Duration
 
 	var onTimeDeliveries int
-
-
 
 	for _, po := range purchaseOrders {
 
@@ -176,8 +124,6 @@ func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, f
 			leadTime := po.ActualDeliveryDate.Sub(po.OrderDate)
 
 			totalLeadTime += leadTime
-
-
 
 			if po.ActualDeliveryDate.Before(*po.ExpectedDeliveryDate) || po.ActualDeliveryDate.Equal(*po.ExpectedDeliveryDate) {
 
@@ -189,13 +135,9 @@ func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, f
 
 	}
 
-
-
 	averageLeadTime := totalLeadTime.Hours() / 24 / float64(len(purchaseOrders))
 
 	onTimeDeliveryRate := float64(onTimeDeliveries) / float64(len(purchaseOrders))
-
-
 
 	return averageLeadTime, onTimeDeliveryRate, nil
 

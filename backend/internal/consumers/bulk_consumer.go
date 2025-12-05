@@ -29,16 +29,18 @@ type BulkConsumer struct {
 
 	SupplierRepo *repository.SupplierRepository
 
+	LocationRepo *repository.LocationRepository
+
 	Uploader storage.Uploader
 
-	BulkImportSvc *services.BulkImportService
+	BulkImportService *services.BulkImportService
 
 	BulkExportSvc *services.BulkExportService
 
 	Hub *ws.Hub
 }
 
-func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo *repository.ProductRepository, categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub) *BulkConsumer {
+func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo *repository.ProductRepository, categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub) *BulkConsumer {
 
 	return &BulkConsumer{
 
@@ -52,9 +54,11 @@ func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo
 
 		SupplierRepo: supplierRepo,
 
+		LocationRepo: locationRepo,
+
 		Uploader: uploader,
 
-		BulkImportSvc: bulkImportSvc,
+		BulkImportService: bulkImportSvc,
 
 		BulkExportSvc: bulkExportSvc,
 
@@ -169,7 +173,7 @@ func (c *BulkConsumer) processImportDelivery(d amqp091.Delivery) {
 	}
 	defer file.Close()
 
-	result, err := c.BulkImportSvc.ProcessBulkImport(file)
+	result, err := c.BulkImportService.ProcessBulkImport(file)
 	if err != nil {
 		logrus.Errorf("Failed to process bulk import for job %d: %v", jobID, err)
 		job.Status = "FAILED"
@@ -362,194 +366,98 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 		return tx.Error
 	}
 
-	normalize := func(s string) string {
-		return strings.ToLower(strings.TrimSpace(s))
-	}
+	// Maps to store IDs of newly created entities
+	newCategoryIDs := make(map[string]uint)
+	newSupplierIDs := make(map[string]uint)
+	newLocationIDs := make(map[string]uint)
 
-	categoryNameIDMap := make(map[string]uint)
-	var existingCategories []domain.Category
-	if err := tx.Find(&existingCategories).Error; err != nil {
-		tx.Rollback()
-		c.failJob(job, "failed to load categories during import finalization")
-		return err
-	}
-	for _, cat := range existingCategories {
-		categoryNameIDMap[normalize(cat.Name)] = cat.ID
-	}
-
-	supplierNameIDMap := make(map[string]uint)
-	var existingSuppliers []domain.Supplier
-	if err := tx.Find(&existingSuppliers).Error; err != nil {
-		tx.Rollback()
-		c.failJob(job, "failed to load suppliers during import finalization")
-		return err
-	}
-	for _, sup := range existingSuppliers {
-		supplierNameIDMap[normalize(sup.Name)] = sup.ID
-	}
-
-	subCategoryKey := func(categoryID uint, name string) string {
-		return fmt.Sprintf("%d::%s", categoryID, normalize(name))
-	}
-	subCategoryKeyIDMap := make(map[string]uint)
-	var existingSubCategories []domain.SubCategory
-	if err := tx.Find(&existingSubCategories).Error; err != nil {
-		tx.Rollback()
-		c.failJob(job, "failed to load sub-categories during import finalization")
-		return err
-	}
-	for _, subCat := range existingSubCategories {
-		subCategoryKeyIDMap[subCategoryKey(subCat.CategoryID, subCat.Name)] = subCat.ID
-	}
-
-	locationNameIDMap := make(map[string]uint)
-	var existingLocations []domain.Location
-	if err := tx.Find(&existingLocations).Error; err != nil {
-		tx.Rollback()
-		c.failJob(job, "failed to load locations during import finalization")
-		return err
-	}
-	for _, loc := range existingLocations {
-		locationNameIDMap[normalize(loc.Name)] = loc.ID
-	}
-
-	createSupplier := func(name string) error {
-		trimmed := strings.TrimSpace(name)
-		if trimmed == "" {
-			return nil
-		}
-		key := normalize(trimmed)
-		if _, exists := supplierNameIDMap[key]; exists {
-			return nil
-		}
-		supplier := &domain.Supplier{Name: trimmed}
-		if err := tx.Create(supplier).Error; err != nil {
+	// 1. Create New Categories
+	for name := range importResult.NewEntities.Categories {
+		cat := &domain.Category{Name: name}
+		if err := tx.Create(cat).Error; err != nil {
+			tx.Rollback()
+			c.failJob(job, fmt.Sprintf("failed to create category '%s'", name))
 			return err
 		}
-		supplierNameIDMap[key] = supplier.ID
-		return nil
+		newCategoryIDs[name] = cat.ID
 	}
 
-	createCategory := func(name string) (uint, error) {
-		trimmed := strings.TrimSpace(name)
-		if trimmed == "" {
-			return 0, fmt.Errorf("category name is required for sub-category creation")
+	// 2. Create New Suppliers
+	for name := range importResult.NewEntities.Suppliers {
+		sup := &domain.Supplier{Name: name}
+		if err := tx.Create(sup).Error; err != nil {
+			tx.Rollback()
+			c.failJob(job, fmt.Sprintf("failed to create supplier '%s'", name))
+			return err
 		}
-		key := normalize(trimmed)
-		if id, exists := categoryNameIDMap[key]; exists {
-			return id, nil
-		}
-		category := &domain.Category{Name: trimmed}
-		if err := tx.Create(category).Error; err != nil {
-			return 0, err
-		}
-		categoryNameIDMap[key] = category.ID
-		return category.ID, nil
+		newSupplierIDs[name] = sup.ID
 	}
 
-	createSubCategory := func(name string, categoryID uint) (uint, error) {
-		trimmed := strings.TrimSpace(name)
-		if trimmed == "" || categoryID == 0 {
-			return 0, nil
+	// 3. Create New Locations
+	for name := range importResult.NewEntities.Locations {
+		loc := &domain.Location{Name: name}
+		if err := tx.Create(loc).Error; err != nil {
+			tx.Rollback()
+			c.failJob(job, fmt.Sprintf("failed to create location '%s'", name))
+			return err
 		}
-		key := subCategoryKey(categoryID, trimmed)
-		if id, exists := subCategoryKeyIDMap[key]; exists {
-			return id, nil
-		}
-		subCat := &domain.SubCategory{Name: trimmed, CategoryID: categoryID}
-		if err := tx.Create(subCat).Error; err != nil {
-			return 0, err
-		}
-		subCategoryKeyIDMap[key] = subCat.ID
-		return subCat.ID, nil
+		newLocationIDs[name] = loc.ID
 	}
 
-	createLocation := func(name string) (uint, error) {
-		trimmed := strings.TrimSpace(name)
-		if trimmed == "" {
-			return 0, fmt.Errorf("location name is required")
-		}
-		key := normalize(trimmed)
-		if id, exists := locationNameIDMap[key]; exists {
-			return id, nil
-		}
-		location := &domain.Location{Name: trimmed}
-		if err := tx.Create(location).Error; err != nil {
-			return 0, err
-		}
-		locationNameIDMap[key] = location.ID
-		return location.ID, nil
-	}
+	// 4. Create New SubCategories
+	// We need to iterate ValidProducts to find the parent CategoryID for each new SubCategory
+	// OR we can rely on the fact that ProcessBulkImport validated that parent exists or is being created.
+	// But NewEntities.SubCategories is just a set of names. We don't know the parent from that set.
+	// We need to look at ValidProducts to find a product that uses this SubCategory and get its CategoryID.
+	// This is a bit tricky if multiple products use the same new SubCategory but with different Categories (which shouldn't happen for the same SubCategory name usually, but names are not unique across categories in some systems. In ours, SubCategory name is unique per Category).
+	// Let's iterate ValidProducts to create SubCategories on demand if they are new.
+
+	createdSubCategories := make(map[string]uint) // Key: "CategoryID::SubName"
 
 	for i := range importResult.ValidProducts {
 		p := &importResult.ValidProducts[i]
-		locName := strings.TrimSpace(p.Location.Name)
-		locID, err := createLocation(locName)
-		if err != nil {
-			tx.Rollback()
-			c.failJob(job, fmt.Sprintf("failed to ensure location '%s'", locName))
-			return err
-		}
-		if err := createSupplier(p.Supplier.Name); err != nil {
-			tx.Rollback()
-			c.failJob(job, fmt.Sprintf("failed to ensure supplier '%s'", p.Supplier.Name))
-			return err
-		}
 
-		var categoryID uint
-		catName := strings.TrimSpace(p.Category.Name)
-		if catName != "" {
-			id, err := createCategory(catName)
-			if err != nil {
-				tx.Rollback()
-				c.failJob(job, fmt.Sprintf("failed to ensure category '%s'", catName))
-				return err
-			}
-			categoryID = id
-		}
-
-		var subCategoryID uint
-		subName := strings.TrimSpace(p.SubCategory.Name)
-		if subName != "" {
-			if categoryID == 0 {
-				logrus.Warnf("Row missing category for sub-category '%s'; skipping sub-category creation", subName)
-			} else {
-				id, err := createSubCategory(subName, categoryID)
-				if err != nil {
-					tx.Rollback()
-					c.failJob(job, fmt.Sprintf("failed to create sub-category '%s'", subName))
-					return err
-				}
-				subCategoryID = id
+		// Resolve Category ID
+		if p.CategoryID == 0 && p.Category.Name != "" {
+			if id, ok := newCategoryIDs[p.Category.Name]; ok {
+				p.CategoryID = id
 			}
 		}
 
-		if catName != "" {
-			categoryKey := normalize(catName)
-			if id, ok := categoryNameIDMap[categoryKey]; ok {
-				categoryID = id
-			}
-		}
-
-		if categoryID == 0 && catName != "" {
-			logrus.Warnf("Category '%s' could not be resolved for job %d", catName, job.ID)
-		}
-
-		if subName != "" && categoryID == 0 {
-			logrus.Warnf("Skipping sub-category '%s' due to missing parent category for job %d", subName, job.ID)
-		}
-
-		if supplierName := strings.TrimSpace(p.Supplier.Name); supplierName != "" {
-			if id, ok := supplierNameIDMap[normalize(supplierName)]; ok {
+		// Resolve Supplier ID
+		if p.SupplierID == 0 && p.Supplier.Name != "" {
+			if id, ok := newSupplierIDs[p.Supplier.Name]; ok {
 				p.SupplierID = id
 			}
 		}
 
-		p.CategoryID = categoryID
-		p.SubCategoryID = subCategoryID
-		p.LocationID = locID
+		// Resolve Location ID
+		if p.LocationID == 0 && p.Location.Name != "" {
+			if id, ok := newLocationIDs[p.Location.Name]; ok {
+				p.LocationID = id
+			}
+		}
 
-		// Prevent GORM from trying to upsert nested entities during CreateInBatches.
+		// Resolve SubCategory ID
+		// Now that we have CategoryID, we can create SubCategory if needed
+		if p.SubCategoryID == 0 && p.SubCategory.Name != "" && p.CategoryID != 0 {
+			key := fmt.Sprintf("%d::%s", p.CategoryID, strings.ToLower(p.SubCategory.Name))
+			if id, ok := createdSubCategories[key]; ok {
+				p.SubCategoryID = id
+			} else if importResult.NewEntities.SubCategories[p.SubCategory.Name] {
+				// It's marked as new, create it
+				subCat := &domain.SubCategory{Name: p.SubCategory.Name, CategoryID: p.CategoryID}
+				if err := tx.Create(subCat).Error; err != nil {
+					tx.Rollback()
+					c.failJob(job, fmt.Sprintf("failed to create sub-category '%s'", p.SubCategory.Name))
+					return err
+				}
+				p.SubCategoryID = subCat.ID
+				createdSubCategories[key] = subCat.ID
+			}
+		}
+
+		// Clear nested structs to prevent upsert
 		p.Category = domain.Category{}
 		p.SubCategory = domain.SubCategory{}
 		p.Supplier = domain.Supplier{}
@@ -630,9 +538,16 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 		return
 	}
 
-	// Fetch products from the database
-	// This is a simplified example. In a real application, you would use filters from the payload.
-	products, err := c.ProductRepo.GetAll()
+	// Fetch products using filters
+	filters := make(map[string]interface{})
+	if cat := payload["category"]; cat != nil && cat != "" {
+		filters["category"] = cat
+	}
+	if sup := payload["supplier"]; sup != nil && sup != "" {
+		filters["supplier"] = sup
+	}
+
+	products, err := c.ProductRepo.GetFiltered(filters)
 	if err != nil {
 		logrus.Errorf("Failed to get products for export job %d: %v", jobID, err)
 		job.Status = "FAILED"
@@ -669,7 +584,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 	}
 
 	result := gin.H{
-		"downloadUrl": fmt.Sprintf("/files/%s/%s", bucketName, objectName),
+		"downloadUrl": fmt.Sprintf("/api/v1/bulk/files/%s/%s", bucketName, objectName),
 	}
 	resultBytes, _ := json.Marshal(result)
 	job.Result = string(resultBytes)

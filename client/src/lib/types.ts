@@ -146,9 +146,13 @@ export interface BulkImportValidationResult {
 	validProducts: Array<Record<string, unknown>>;
 	newEntities: {
 		categories: Record<string, boolean>;
-		subCategories: Record<string, boolean>;
 		suppliers: Record<string, boolean>;
+		locations: Record<string, boolean>;
 	};
+}
+
+export interface BulkExportResult {
+	downloadUrl: string;
 }
 
 export interface BulkImportJob extends BaseEntity {
@@ -166,6 +170,11 @@ export interface UserSummary extends BaseEntity {
 	Username: string;
 	Role: string;
 	IsActive: boolean;
+	FirstName?: string;
+	LastName?: string;
+	Email?: string;
+	PhoneNumber?: string;
+	Address?: string;
 }
 
 export interface SupplierPerformance {
@@ -184,4 +193,21 @@ export interface Notification extends BaseEntity {
 	IsRead: boolean;
 	ReadAt?: string | null;
 	TriggeredAt: string;
+}
+
+export interface DashboardSummary {
+	stats: {
+		products: number;
+		categories: number;
+		suppliers: number;
+		alerts: number;
+	};
+	recentProducts: Product[];
+	recentAlerts: Alert[];
+	suggestions: ReorderSuggestion[];
+	chartData: number[];
+	trend: {
+		direction: 'up' | 'down' | 'neutral';
+		percentage: number;
+	};
 }

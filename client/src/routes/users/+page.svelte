@@ -25,7 +25,7 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 	let listLoading = $state(false);
 
 	let selectedUser = $state<UserSummary | null>(null);
-	const form = $state({ username: '', password: '', role: '' });
+	const form = $state({ username: '', password: '', role: '', firstName: '', lastName: '', email: '', phoneNumber: '', address: '' });
 	let detailModalOpen = $state(false);
 	let detailResourceId = $state<number | null>(null);
 	let detailModalSubtitle = $state<string | null>(null);
@@ -67,6 +67,11 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 				title: 'Account Profile',
 				items: [
 					{ label: 'Username', value: user.Username },
+					{ label: 'First Name', value: user.FirstName || 'Not set' },
+					{ label: 'Last Name', value: user.LastName || 'Not set' },
+					{ label: 'Email', value: user.Email || 'Not set' },
+					{ label: 'Phone Number', value: user.PhoneNumber || 'Not set' },
+					{ label: 'Address', value: user.Address || 'Not set' },
 					{ label: 'Role', value: user.Role },
 					{ label: 'Status', value: user.IsActive ? 'Approved' : 'Pending', badge: userStatusBadge(user.IsActive) },
 					{ label: 'User ID', value: `#${user.ID}` },
@@ -80,11 +85,21 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 			form.username = '';
 			form.password = '';
 			form.role = '';
+			form.firstName = '';
+			form.lastName = '';
+			form.email = '';
+			form.phoneNumber = '';
+			form.address = '';
 			return;
 		}
 		form.username = user.Username;
 		form.password = '';
 		form.role = user.Role;
+		form.firstName = user.FirstName || '';
+		form.lastName = user.LastName || '';
+		form.email = user.Email || '';
+		form.phoneNumber = user.PhoneNumber || '';
+		form.address = user.Address || '';
 	};
 
 	const loadUsers = async () => {
@@ -137,7 +152,12 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 			await usersApi.update(selectedUser.ID, {
 				username: form.username,
 				password: form.password || undefined,
-				role: form.role
+				role: form.role,
+				firstName: form.firstName || undefined,
+				lastName: form.lastName || undefined,
+				email: form.email || undefined,
+				phoneNumber: form.phoneNumber || undefined,
+				address: form.address || undefined
 			});
 			toast.success('User updated');
 			await loadUsers();
@@ -350,16 +370,34 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 				<p class="text-sm text-slate-600">Select a user from the table to edit access.</p>
 			</CardContent>
 		{:else}
-			<CardContent class="space-y-3 p-6">
+			<CardContent class="space-y-4 p-6">
 				<p class="text-xs text-slate-500">Editing #{selectedUser.ID}</p>
-				<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Username" bind:value={form.username} />
-				<Input type="password" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Reset password (optional)" bind:value={form.password} />
-				<select class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400" bind:value={form.role}>
-					<option value="Admin">Admin</option>
-					<option value="Manager">Manager</option>
-					<option value="Staff">Staff</option>
-				</select>
-				<div class="flex flex-col sm:flex-row gap-3 pt-1">
+				
+				<!-- Basic Info -->
+				<div class="space-y-3">
+					<p class="text-sm font-semibold text-slate-700 border-b border-sky-200 pb-2">Account Credentials</p>
+					<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Username" bind:value={form.username} />
+					<Input type="password" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Reset password (optional)" bind:value={form.password} />
+					<select class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400" bind:value={form.role}>
+						<option value="Admin">Admin</option>
+						<option value="Manager">Manager</option>
+						<option value="Staff">Staff</option>
+					</select>
+				</div>
+				
+				<!-- Personal Info -->
+				<div class="space-y-3">
+					<p class="text-sm font-semibold text-slate-700 border-b border-sky-200 pb-2">Personal Information</p>
+					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+						<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="First Name" bind:value={form.firstName} />
+						<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Last Name" bind:value={form.lastName} />
+					</div>
+					<Input type="email" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Email" bind:value={form.email} />
+					<Input type="tel" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Phone Number" bind:value={form.phoneNumber} />
+					<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Address" bind:value={form.address} />
+				</div>
+				
+				<div class="flex flex-col sm:flex-row gap-3 pt-2">
 					<Button class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all" onclick={updateUser}>
 						Save changes
 					</Button>

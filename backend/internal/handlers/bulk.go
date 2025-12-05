@@ -8,6 +8,7 @@ import (
 	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/storage"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -222,4 +223,72 @@ func (h *BulkHandler) ExportProducts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusAccepted, job)
+}
+
+// ListBulkJobs godoc
+// @Summary List recent bulk jobs
+// @Description Retrieves a list of the most recent bulk import/export jobs
+// @Tags bulk
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.Job "List of recent jobs"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /bulk/jobs [get]
+func (h *BulkHandler) ListBulkJobs(c *gin.Context) {
+	jobs, err := h.JobRepo.ListJobs(50)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to list jobs", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, jobs)
+}
+
+// DownloadFile godoc
+// @Summary Download a file from bulk storage
+// @Description Downloads a file (import/export) from the bulk storage bucket
+// @Tags bulk
+// @Accept json
+// @Produce octet-stream
+// @Param bucket path string true "Bucket Name"
+// @Param object path string true "Object Name"
+// @Success 200 {file} application/octet-stream "File content"
+// @Failure 404 {object} map[string]interface{} "File not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /bulk/files/{bucket}/{object} [get]
+func (h *BulkHandler) DownloadFile(c *gin.Context) {
+	bucket := c.Param("bucket")
+	object := c.Param("object")
+
+	if bucket == "" || object == "" {
+		c.Error(appErrors.NewAppError("Bucket and object names are required", http.StatusBadRequest, nil))
+		return
+	}
+
+	// Security check: Ensure bucket is one of the allowed bulk buckets
+	if bucket != "bulk-imports" && bucket != "bulk-exports" {
+		c.Error(appErrors.NewAppError("Invalid bucket access", http.StatusForbidden, nil))
+		return
+	}
+
+	file, err := h.Uploader.DownloadFile(bucket, object)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to download file", http.StatusNotFound, err))
+		return
+	}
+	defer file.Close()
+
+	// Set headers for download
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", object))
+	c.Header("Content-Type", "application/octet-stream")
+
+	// Stream the file to the response
+	// Note: io.Copy is efficient for streaming
+	_, err = io.Copy(c.Writer, file)
+	if err != nil {
+		// If streaming fails mid-way, we can't really change the status code, but we can log it
+		// c.Error is still useful for logging
+		c.Error(appErrors.NewAppError("Failed to stream file", http.StatusInternalServerError, err))
+	}
 }

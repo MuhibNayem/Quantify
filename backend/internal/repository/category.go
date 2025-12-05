@@ -64,6 +64,14 @@ func (r *CategoryRepository) GetAllSubCategories() ([]domain.SubCategory, error)
 	return subCategories, nil
 }
 
+func (r *CategoryRepository) GetByNames(names []string, categories *[]domain.Category) error {
+	return r.db.Where("name IN ?", names).Find(categories).Error
+}
+
+func (r *CategoryRepository) GetSubCategoriesByNames(names []string, subCategories *[]domain.SubCategory) error {
+	return r.db.Where("name IN ?", names).Find(subCategories).Error
+}
+
 func (r *CategoryRepository) GetCategoryByName(name string) (*domain.Category, error) {
 	var category domain.Category
 	if err := r.db.Where("name = ?", name).First(&category).Error; err != nil {

@@ -12,6 +12,11 @@
   let username = $state('');
   let password = $state('');
   let confirmPassword = $state('');
+  let firstName = $state('');
+  let lastName = $state('');
+  let email = $state('');
+  let phoneNumber = $state('');
+  let address = $state('');
   let selectedRole = $state<'Admin' | 'Manager' | 'Staff'>('Staff'); // Default role
   let availableRoles: { value: string; label: string }[] = [
     { value: 'Admin', label: 'Administrator' },
@@ -54,7 +59,16 @@
     }
 
     try {
-      await api.post('/users/register', { username, password, role: selectedRole });
+      await api.post('/users/register', { 
+        username, 
+        password, 
+        role: selectedRole,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        email: email || undefined,
+        phoneNumber: phoneNumber || undefined,
+        address: address || undefined
+      });
       toast.success('Registration successful! Please log in.');
       goto('/login');
     } catch (error: any) {
@@ -237,6 +251,78 @@
                     Standard user access for daily operations
                   {/if}
                 </p>
+              </div>
+
+              <!-- Personal Information Section -->
+              <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+                <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">Personal Information (Optional)</h3>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <Label for="firstName" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      First Name
+                    </Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="John"
+                      bind:value={firstName}
+                      class="h-12 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                    />
+                  </div>
+
+                  <div class="space-y-2">
+                    <Label for="lastName" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Last Name
+                    </Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      bind:value={lastName}
+                      class="h-12 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div class="space-y-2 mt-4">
+                  <Label for="email" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="john.doe@example.com"
+                    bind:value={email}
+                    class="h-12 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                  />
+                </div>
+
+                <div class="space-y-2 mt-4">
+                  <Label for="phoneNumber" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="+1 (555) 123-4567"
+                    bind:value={phoneNumber}
+                    class="h-12 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                  />
+                </div>
+
+                <div class="space-y-2 mt-4">
+                  <Label for="address" class="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Address
+                  </Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    placeholder="123 Main Street, City, State"
+                    bind:value={address}
+                    class="h-12 rounded-lg border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus:border-emerald-500 focus:ring-emerald-500 transition-colors"
+                  />
+                </div>
               </div>
             </div>
             

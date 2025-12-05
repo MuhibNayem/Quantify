@@ -16,11 +16,15 @@ import (
 )
 
 type ReplenishmentHandler struct {
-	forecastingService services.ForecastingService
+	forecastingService   services.ForecastingService
+	replenishmentService services.ReplenishmentService
 }
 
-func NewReplenishmentHandler(forecastingService services.ForecastingService) *ReplenishmentHandler {
-	return &ReplenishmentHandler{forecastingService: forecastingService}
+func NewReplenishmentHandler(forecastingService services.ForecastingService, replenishmentService services.ReplenishmentService) *ReplenishmentHandler {
+	return &ReplenishmentHandler{
+		forecastingService:   forecastingService,
+		replenishmentService: replenishmentService,
+	}
 }
 
 // Mock storage for forecast jobs and POs
@@ -79,6 +83,23 @@ func GetDemandForecast(c *gin.Context) {
 	c.JSON(http.StatusOK, forecast)
 }
 
+// GenerateReorderSuggestions godoc
+// @Summary Generate reorder suggestions
+// @Description Triggers the generation of reorder suggestions based on current stock levels
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Generation status"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/suggestions/generate [post]
+func (h *ReplenishmentHandler) GenerateReorderSuggestions(c *gin.Context) {
+	if err := h.replenishmentService.GenerateReorderSuggestions(); err != nil {
+		c.Error(appErrors.NewAppError("Failed to generate reorder suggestions", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Reorder suggestions generated successfully"})
+}
+
 // ListReorderSuggestions godoc
 // @Summary Get a list of reorder suggestions
 // @Description Retrieves a list of suggested reorders based on forecast and stock levels
@@ -90,7 +111,7 @@ func GetDemandForecast(c *gin.Context) {
 // @Success 200 {array} domain.ReorderSuggestion
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/suggestions [get]
-func ListReorderSuggestions(c *gin.Context) {
+func (h *ReplenishmentHandler) ListReorderSuggestions(c *gin.Context) {
 	var suggestions []domain.ReorderSuggestion
 	db := repository.DB.Preload("Product").Preload("Supplier")
 
@@ -104,20 +125,6 @@ func ListReorderSuggestions(c *gin.Context) {
 	if err := db.Find(&suggestions).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch reorder suggestions", http.StatusInternalServerError, err))
 		return
-	}
-
-	// Mock a suggestion if none found for demonstration
-	if len(suggestions) == 0 {
-		suggestions = append(suggestions, domain.ReorderSuggestion{
-			ProductID:              1, // Mock product
-			SupplierID:             1, // Mock supplier
-			CurrentStock:           10,
-			PredictedDemand:        100,
-			SuggestedOrderQuantity: 90,
-			LeadTimeDays:           7,
-			Status:                 "PENDING",
-			SuggestedAt:            time.Now(),
-		})
 	}
 
 	c.JSON(http.StatusOK, suggestions)

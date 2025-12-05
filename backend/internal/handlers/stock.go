@@ -107,14 +107,20 @@ func GetProductStock(c *gin.Context) {
 		db = db.Where("location_id = ?", locationID)
 	}
 
-	if err := db.Find(&batches).Error; err != nil {
-		c.Error(appErrors.NewAppError("Failed to fetch batches", http.StatusInternalServerError, err))
+	// Optimize total quantity calculation using DB aggregation
+	var totalQuantity int64
+	// Use a new session for aggregation to avoid polluting the base query or subsequent queries
+	if err := db.Session(&gorm.Session{}).Model(&domain.Batch{}).Select("COALESCE(SUM(quantity), 0)").Row().Scan(&totalQuantity); err != nil {
+		c.Error(appErrors.NewAppError("Failed to calculate total stock", http.StatusInternalServerError, err))
 		return
 	}
 
-	totalQuantity := 0
-	for _, batch := range batches {
-		totalQuantity += batch.Quantity
+	// Fetch batches with a limit to prevent large payloads
+	// Order by expiry date to show nearest expiry first (FEFO)
+	// Use a new session for fetching batches
+	if err := db.Session(&gorm.Session{}).Order("expiry_date asc").Limit(50).Find(&batches).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch batches", http.StatusInternalServerError, err))
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
