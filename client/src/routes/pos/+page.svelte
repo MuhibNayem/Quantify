@@ -18,9 +18,25 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card';
-	import { Search, UserPlus, X, Zap, CreditCard, Loader2 } from 'lucide-svelte';
+	import {
+		Search,
+		UserPlus,
+		X,
+		Zap,
+		CreditCard,
+		Loader2,
+		Users,
+		Mail,
+		Phone,
+		Banknote,
+		QrCode,
+		Wallet,
+		Check
+	} from 'lucide-svelte';
 	import api from '$lib/api';
+	import { crmApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
+	import * as Dialog from '$lib/components/ui/dialog';
 
 	// Runes state
 	let products = $state<any[]>([]);
@@ -30,6 +46,14 @@
 	let selectedCustomer = $state<any | null>(null);
 	let paymentMethod = $state<string | null>(null);
 	let isProcessing = $state(false);
+
+	// New Customer Modal State
+	let isNewCustomerModalOpen = $state(false);
+	let newCustomerForm = $state({
+		name: '',
+		email: '',
+		phone: ''
+	});
 
 	const currencyFormatter = new Intl.NumberFormat('en-US', {
 		style: 'currency',
@@ -112,11 +136,30 @@
 			return;
 		}
 		try {
-			const response = await api.get(`/crm/customers/${customerSearchTerm}`);
-			selectedCustomer = response.data;
+			// Search using the list endpoint which supports name/email/phone/id via 'q'
+			const response = await api.get('/crm/customers', {
+				params: {
+					q: customerSearchTerm,
+					limit: 1
+				}
+			});
+
+			if (response.data.users && response.data.users.length > 0) {
+				selectedCustomer = response.data.users[0];
+			} else {
+				// If no results from search, try strict ID fetch just in case user typed exact numeric ID (though search usually covers this)
+				try {
+					const idResp = await api.get(`/crm/customers/${customerSearchTerm}`);
+					selectedCustomer = idResp.data;
+				} catch (e) {
+					selectedCustomer = null;
+					toast.error('Customer not found');
+				}
+			}
 		} catch (error) {
 			console.error('Error fetching customer:', error);
 			selectedCustomer = null;
+			toast.error('Error searching for customer');
 		}
 	};
 
@@ -194,6 +237,37 @@
 			toast.error(`Transaction Failed: ${msg}`, { id: toastId });
 		} finally {
 			isProcessing = false;
+		}
+	};
+
+	const saveNewCustomer = async () => {
+		const nameParts = newCustomerForm.name.trim().split(' ');
+		const firstName = nameParts[0] || '';
+		const lastName = nameParts.slice(1).join(' ') || '';
+
+		if (!firstName) {
+			toast.error('Name is required');
+			return;
+		}
+
+		try {
+			const newUser = await crmApi.createCustomer({
+				username: newCustomerForm.email || `user${Date.now()}`,
+				email: newCustomerForm.email,
+				firstName: firstName,
+				lastName: lastName,
+				phoneNumber: newCustomerForm.phone,
+				role: 'Customer',
+				password: 'TempPassword123!'
+			} as any);
+
+			selectedCustomer = newUser;
+			isNewCustomerModalOpen = false;
+			toast.success('Customer created and selected!');
+			newCustomerForm = { name: '', email: '', phone: '' };
+		} catch (error) {
+			console.error('Error creating customer:', error);
+			toast.error('Failed to create customer');
 		}
 	};
 </script>
@@ -545,6 +619,7 @@
 							<Button
 								variant="secondary"
 								class="flex items-center gap-1 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-[0.75rem] text-indigo-700 hover:bg-indigo-100"
+								onclick={() => (isNewCustomerModalOpen = true)}
 							>
 								<UserPlus class="h-4 w-4" />
 								<span class="font-medium">New</span>
@@ -572,6 +647,18 @@
 								{#if selectedCustomer.PhoneNumber}
 									<div>{selectedCustomer.PhoneNumber}</div>
 								{/if}
+								{#if selectedCustomer.loyalty}
+									<div class="mt-1 flex items-center gap-2 border-t border-emerald-100/50 pt-1">
+										<span class="font-semibold text-emerald-700">
+											{selectedCustomer.loyalty.Points} pts
+										</span>
+										<span
+											class="rounded-sm bg-emerald-100 px-1 text-[0.65rem] uppercase text-emerald-800"
+										>
+											{selectedCustomer.loyalty.Tier}
+										</span>
+									</div>
+								{/if}
 							</div>
 						{:else}
 							<div class="text-[0.75rem] text-slate-400">
@@ -594,23 +681,50 @@
 						</CardDescription>
 					</CardHeader>
 					<CardContent class="pt-3">
-						<div class="grid grid-cols-2 gap-3">
-							{#each [{ id: 'CASH', label: 'Cash' }, { id: 'CARD', label: 'Card' }, { id: 'BKASH', label: 'bKash' }, { id: 'OTHER', label: 'Other' }] as method}
-								<Button
+						<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+							{#each [{ id: 'CASH', label: 'Cash', icon: Banknote, color: 'text-emerald-500', sub: 'Physical' }, { id: 'CARD', label: 'Card', icon: CreditCard, color: 'text-violet-500', sub: 'Terminal' }, { id: 'BKASH', label: 'bKash', icon: QrCode, color: 'text-pink-500', sub: 'Mobile' }, { id: 'OTHER', label: 'Other', icon: Wallet, color: 'text-orange-500', sub: 'Check/Due' }] as method}
+								<button
 									type="button"
-									variant={paymentMethod === method.id ? 'default' : 'outline'}
-									class={`h-20 rounded-xl border text-[0.8rem] font-medium shadow-sm transition-all duration-200 ${
-										paymentMethod === method.id
-											? 'border-transparent bg-gradient-to-br from-indigo-500 to-sky-500 text-white hover:from-indigo-500 hover:to-sky-500'
-											: 'border-slate-200 bg-slate-50/90 text-slate-700 hover:bg-slate-100'
-									}`}
 									onclick={() => setPayment(method.id)}
+									class={`group relative flex flex-col items-center justify-center gap-2 rounded-2xl border p-3 transition-all duration-200 hover:shadow-md ${
+										paymentMethod === method.id
+											? 'scale-[1.02] border-transparent bg-gradient-to-br from-indigo-600 to-violet-600 shadow-lg shadow-indigo-500/25 ring-2 ring-indigo-500/10'
+											: 'border-slate-100 bg-white/50 text-slate-600 hover:border-indigo-100 hover:bg-white'
+									}`}
 								>
-									<span class="mb-1 block text-[0.65rem] uppercase tracking-wide opacity-70">
-										{method.id}
-									</span>
-									<span class="block text-sm">{method.label}</span>
-								</Button>
+									{#if paymentMethod === method.id}
+										<div class="absolute right-2 top-2 rounded-full bg-white/20 p-0.5">
+											<Check class="h-3 w-3 text-white" />
+										</div>
+									{/if}
+
+									<div
+										class={`rounded-xl p-2.5 transition-colors ${
+											paymentMethod === method.id
+												? 'bg-white/10 text-white'
+												: 'bg-slate-50 ' + method.color + ' group-hover:bg-indigo-50/50'
+										}`}
+									>
+										<svelte:component this={method.icon} class="h-5 w-5" />
+									</div>
+
+									<div class="text-center">
+										<span
+											class={`block text-xs font-semibold ${
+												paymentMethod === method.id ? 'text-white' : 'text-slate-700'
+											}`}
+										>
+											{method.label}
+										</span>
+										<span
+											class={`block text-[0.65rem] ${
+												paymentMethod === method.id ? 'text-indigo-100' : 'text-slate-400'
+											}`}
+										>
+											{method.sub}
+										</span>
+									</div>
+								</button>
 							{/each}
 						</div>
 					</CardContent>
@@ -685,6 +799,120 @@
 			</div>
 		</div>
 	</div>
+
+	<Dialog.Root bind:open={isNewCustomerModalOpen}>
+		<Dialog.Content
+			class="overflow-hidden rounded-3xl border-0 bg-white/95 p-0 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:max-w-[425px]"
+		>
+			<!-- Header with gradient and pattern -->
+			<div
+				class="relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 px-6 py-6 sm:px-10 sm:py-10"
+			>
+				<!-- Background decorative elements -->
+				<div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+				<div
+					class="absolute bottom-0 right-0 h-32 w-32 translate-x-12 translate-y-12 rounded-full bg-indigo-500/30 blur-2xl"
+				></div>
+
+				<div class="relative z-10">
+					<Dialog.Title class="text-2xl font-bold tracking-tight text-white">
+						New Customer
+					</Dialog.Title>
+					<Dialog.Description class="mt-1.5 text-violet-100">
+						Add a new member to your customer base.
+					</Dialog.Description>
+				</div>
+			</div>
+
+			<!-- Body -->
+			<div class="space-y-6 px-6 py-8 sm:px-10">
+				{#key isNewCustomerModalOpen}
+					<!-- Name Field -->
+					<div class="group space-y-2">
+						<label
+							for="name"
+							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
+						>
+							Full Name
+						</label>
+						<div class="relative">
+							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+								<Users class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							</div>
+							<Input
+								id="name"
+								bind:value={newCustomerForm.name}
+								placeholder="Jane Doe"
+								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							/>
+						</div>
+					</div>
+
+					<!-- Email Field -->
+					<div class="group space-y-2">
+						<label
+							for="email"
+							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
+						>
+							Email Address
+						</label>
+						<div class="relative">
+							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+								<Mail class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							</div>
+							<Input
+								id="email"
+								type="email"
+								bind:value={newCustomerForm.email}
+								placeholder="jane@example.com"
+								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							/>
+						</div>
+					</div>
+
+					<!-- Phone Field -->
+					<div class="group space-y-2">
+						<label
+							for="phone"
+							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
+						>
+							Phone Number
+						</label>
+						<div class="relative">
+							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+								<Phone class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							</div>
+							<Input
+								id="phone"
+								bind:value={newCustomerForm.phone}
+								placeholder="+1 (555) 000-0000"
+								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							/>
+						</div>
+					</div>
+				{/key}
+			</div>
+
+			<!-- Footer -->
+			<div
+				class="flex items-center justify-end gap-3 bg-slate-50/50 px-6 py-4 backdrop-blur sm:px-10"
+			>
+				<Button
+					variant="ghost"
+					onclick={() => (isNewCustomerModalOpen = false)}
+					class="rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+				>
+					Cancel
+				</Button>
+				<Button
+					onclick={saveNewCustomer}
+					class="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/35 active:scale-[0.98]"
+				>
+					Create Customer
+				</Button>
+			</div>
+		</Dialog.Content>
+	</Dialog.Root>
 </section>
 
 <style lang="postcss">

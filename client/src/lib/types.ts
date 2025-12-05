@@ -167,6 +167,12 @@ export interface BulkImportJob extends BaseEntity {
 	message?: string;
 }
 
+export interface LoyaltyAccount extends BaseEntity {
+	UserID: number;
+	Points: number;
+	Tier: string;
+}
+
 export interface UserSummary extends BaseEntity {
 	Username: string;
 	Role: string;
@@ -176,6 +182,15 @@ export interface UserSummary extends BaseEntity {
 	Email?: string;
 	PhoneNumber?: string;
 	Address?: string;
+	loyalty?: LoyaltyAccount;
+}
+
+export interface PaginatedUsers {
+	currentPage: number;
+	itemsPerPage: number;
+	totalItems: number;
+	totalPages: number;
+	users: UserSummary[];
 }
 
 export interface SupplierPerformance {

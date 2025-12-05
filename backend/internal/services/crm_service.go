@@ -5,7 +5,9 @@ import (
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type CRMService interface {
@@ -20,14 +22,19 @@ type CRMService interface {
 	CreateCustomer(req *requests.CreateCustomerRequest) (*domain.User, error)
 	UpdateCustomer(userID uint, req *requests.UpdateCustomerRequest) (*domain.User, error)
 	DeleteCustomer(userID uint) error
+	ListCustomers(page, limit int, search string) ([]domain.User, int64, error)
 }
 
 type crmService struct {
 	repo repository.CRMRepository
+	db   *gorm.DB
 }
 
-func NewCRMService(repo repository.CRMRepository) CRMService {
-	return &crmService{repo: repo}
+func NewCRMService(repo repository.CRMRepository, db *gorm.DB) CRMService {
+	return &crmService{
+		repo: repo,
+		db:   db,
+	}
 }
 
 func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domain.User, error) {
@@ -47,12 +54,25 @@ func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domai
 		PhoneNumber: req.PhoneNumber,
 	}
 
-	if err := s.repo.CreateUser(user); err != nil {
-		return nil, err
-	}
+	// Wrap in transaction to ensure atomicity
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Create user
+		if err := tx.Create(user).Error; err != nil {
+			return err
+		}
 
-	if _, err := s.CreateLoyaltyAccount(user.ID); err != nil {
-		// TODO: Handle user creation rollback
+		// Create loyalty account
+		account := &domain.LoyaltyAccount{
+			UserID: user.ID,
+		}
+		if err := tx.Create(account).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return nil, err
 	}
 
@@ -98,29 +118,44 @@ func (s *crmService) CreateLoyaltyAccount(userID uint) (*domain.LoyaltyAccount, 
 	return account, nil
 }
 
+// calculateTier determines the loyalty tier based on points (bidirectional)
+func calculateTier(points int) string {
+	if points >= 10000 {
+		return "Platinum"
+	} else if points >= 5000 {
+		return "Gold"
+	} else if points >= 1000 {
+		return "Silver"
+	}
+	return "Bronze"
+}
+
 func (s *crmService) AddLoyaltyPoints(userID uint, points int) (*domain.LoyaltyAccount, error) {
+	// Use atomic operation to prevent race conditions
+	if err := s.repo.AddLoyaltyPointsAtomic(userID, points); err != nil {
+		return nil, err
+	}
+
+	// Fetch updated account
 	account, err := s.repo.GetLoyaltyAccountByUserID(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	account.Points += points
-	// Add logic for tier upgrades
-	if account.Points >= 10000 {
-		account.Tier = "Platinum"
-	} else if account.Points >= 5000 {
-		account.Tier = "Gold"
-	} else if account.Points >= 1000 {
-		account.Tier = "Silver"
+	// Update tier based on new balance
+	newTier := calculateTier(account.Points)
+	if account.Tier != newTier {
+		account.Tier = newTier
+		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
+			return nil, err
+		}
 	}
 
-	if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
-		return nil, err
-	}
 	return account, nil
 }
 
 func (s *crmService) RedeemLoyaltyPoints(userID uint, points int) (*domain.LoyaltyAccount, error) {
+	// First check if user has enough points
 	account, err := s.repo.GetLoyaltyAccountByUserID(userID)
 	if err != nil {
 		return nil, err
@@ -130,10 +165,26 @@ func (s *crmService) RedeemLoyaltyPoints(userID uint, points int) (*domain.Loyal
 		return nil, fmt.Errorf("not enough points to redeem")
 	}
 
-	account.Points -= points
-	if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
+	// Use atomic operation to prevent race conditions
+	if err := s.repo.AddLoyaltyPointsAtomic(userID, -points); err != nil {
 		return nil, err
 	}
+
+	// Fetch updated account
+	account, err = s.repo.GetLoyaltyAccountByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update tier based on new balance (supports downgrades)
+	newTier := calculateTier(account.Points)
+	if account.Tier != newTier {
+		account.Tier = newTier
+		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
+			return nil, err
+		}
+	}
+
 	return account, nil
 }
 
@@ -155,4 +206,8 @@ func (s *crmService) GetCustomerByID(userID uint) (*domain.User, error) {
 
 func (s *crmService) GetCustomerByPhone(phone string) (*domain.User, error) {
 	return s.repo.GetUserByPhone(phone)
+}
+
+func (s *crmService) ListCustomers(page, limit int, search string) ([]domain.User, int64, error) {
+	return s.repo.ListCustomers(page, limit, search)
 }

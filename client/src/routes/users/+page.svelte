@@ -3,13 +3,19 @@
 	import { usersApi } from '$lib/api/resources';
 	import type { UserSummary } from '$lib/types';
 	import { toast } from 'svelte-sonner';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
-import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
+	import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 
 	const tabFilters = [
 		{ value: 'all', label: 'All users' },
@@ -25,13 +31,24 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 	let listLoading = $state(false);
 
 	let selectedUser = $state<UserSummary | null>(null);
-	const form = $state({ username: '', password: '', role: '', firstName: '', lastName: '', email: '', phoneNumber: '', address: '' });
+	const form = $state({
+		username: '',
+		password: '',
+		role: '',
+		firstName: '',
+		lastName: '',
+		email: '',
+		phoneNumber: '',
+		address: ''
+	});
 	let detailModalOpen = $state(false);
 	let detailResourceId = $state<number | null>(null);
 	let detailModalSubtitle = $state<string | null>(null);
 
 	const userStatusBadge = (isActive: boolean) =>
-		isActive ? { text: 'Approved', variant: 'success' as const } : { text: 'Pending', variant: 'warning' as const };
+		isActive
+			? { text: 'Approved', variant: 'success' as const }
+			: { text: 'Pending', variant: 'warning' as const };
 
 	const buildUserSections = ({ data }: DetailBuilderContext): DetailSection[] => {
 		const user = data as UserSummary;
@@ -44,23 +61,23 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 						value: user.IsActive ? 'Approved' : 'Pending',
 						hint: user.IsActive ? 'Active access' : 'Awaiting approval',
 						icon: CheckCircle2,
-						accent: user.IsActive ? 'emerald' : 'amber',
+						accent: user.IsActive ? 'emerald' : 'amber'
 					},
 					{
 						title: 'Role',
 						value: user.Role,
 						hint: 'Current privilege',
 						icon: Shield,
-						accent: 'sky',
+						accent: 'sky'
 					},
 					{
 						title: 'User ID',
 						value: `#${user.ID}`,
 						hint: 'Primary identifier',
 						icon: ClipboardList,
-						accent: 'slate',
-					},
-				],
+						accent: 'slate'
+					}
+				]
 			},
 			{
 				type: 'description',
@@ -73,10 +90,14 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 					{ label: 'Phone Number', value: user.PhoneNumber || 'Not set' },
 					{ label: 'Address', value: user.Address || 'Not set' },
 					{ label: 'Role', value: user.Role },
-					{ label: 'Status', value: user.IsActive ? 'Approved' : 'Pending', badge: userStatusBadge(user.IsActive) },
-					{ label: 'User ID', value: `#${user.ID}` },
-				],
-			},
+					{
+						label: 'Status',
+						value: user.IsActive ? 'Approved' : 'Pending',
+						badge: userStatusBadge(user.IsActive)
+					},
+					{ label: 'User ID', value: `#${user.ID}` }
+				]
+			}
 		];
 	};
 
@@ -108,8 +129,10 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 			const params: Record<string, unknown> = {};
 			if (activeTab !== 'all') params.status = activeTab;
 			if (searchTerm.trim()) params.q = searchTerm.trim();
-			const data = await usersApi.list(params);
+			const response = await usersApi.list(params);
+			const data = response.users || [];
 			users = data;
+
 			if (data.length === 0) {
 				selectedUser = null;
 				applyFormFromUser(null);
@@ -216,28 +239,49 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 </script>
 
 <!-- HERO -->
-<section class="relative w-full overflow-hidden bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-100 animate-gradientShift py-16 sm:py-20 px-6">
+<section
+	class="animate-gradientShift relative w-full overflow-hidden bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-100 px-6 py-16 sm:py-20"
+>
 	<div class="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
 
 	<!-- floating blobs -->
-	<div class="pointer-events-none absolute -top-24 -right-20 h-56 w-56 rounded-full bg-gradient-to-br from-sky-300/50 to-teal-300/50 blur-3xl animate-floatSlow"></div>
-	<div class="pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-300/50 to-sky-300/50 blur-3xl animate-floatSlow delay-500"></div>
+	<div
+		class="animate-floatSlow pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-gradient-to-br from-sky-300/50 to-teal-300/50 blur-3xl"
+	></div>
+	<div
+		class="animate-floatSlow pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-300/50 to-sky-300/50 blur-3xl delay-500"
+	></div>
 
 	<!-- hero content -->
-	<div class="relative z-10 max-w-5xl mx-auto flex flex-col items-center text-center gap-4 parallax-hero will-change-transform">
-		<div class="p-4 sm:p-5 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-2xl shadow-xl animate-pulseGlow">
-			<UserCheck class="h-8 w-8 sm:h-9 sm:w-9 text-white" />
+	<div
+		class="parallax-hero relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-4 text-center will-change-transform"
+	>
+		<div
+			class="animate-pulseGlow rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 p-4 shadow-xl sm:p-5"
+		>
+			<UserCheck class="h-8 w-8 text-white sm:h-9 sm:w-9" />
 		</div>
-		<h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-sky-700 via-indigo-700 to-teal-700 bg-clip-text text-transparent animate-fadeUp">
+		<h1
+			class="animate-fadeUp bg-gradient-to-r from-sky-700 via-indigo-700 to-teal-700 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-5xl"
+		>
 			User Access Management
 		</h1>
-		<p class="max-w-2xl text-slate-700 animate-fadeUp delay-150">
+		<p class="animate-fadeUp max-w-2xl text-slate-700 delay-150">
 			Approve, edit, or revoke workspace access — with live filters and secure updates.
 		</p>
-		<div class="mt-2 flex flex-wrap items-center justify-center gap-2 animate-fadeUp delay-200">
-			<span class="px-3 py-1.5 text-xs sm:text-sm rounded-full border border-sky-200 bg-white/70 text-sky-700 shadow-sm">Role-based control</span>
-			<span class="px-3 py-1.5 text-xs sm:text-sm rounded-full border border-indigo-200 bg-white/70 text-indigo-700 shadow-sm">Status filters</span>
-			<span class="px-3 py-1.5 text-xs sm:text-sm rounded-full border border-teal-200 bg-white/70 text-teal-700 shadow-sm">Inline edits</span>
+		<div class="animate-fadeUp mt-2 flex flex-wrap items-center justify-center gap-2 delay-200">
+			<span
+				class="rounded-full border border-sky-200 bg-white/70 px-3 py-1.5 text-xs text-sky-700 shadow-sm sm:text-sm"
+				>Role-based control</span
+			>
+			<span
+				class="rounded-full border border-indigo-200 bg-white/70 px-3 py-1.5 text-xs text-indigo-700 shadow-sm sm:text-sm"
+				>Status filters</span
+			>
+			<span
+				class="rounded-full border border-teal-200 bg-white/70 px-3 py-1.5 text-xs text-teal-700 shadow-sm sm:text-sm"
+				>Inline edits</span
+			>
 		</div>
 	</div>
 </section>
@@ -252,11 +296,15 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 />
 
 <!-- MAIN CONTENT -->
-<section class="max-w-7xl mx-auto py-12 sm:py-14 px-4 sm:px-6 bg-white space-y-10">
+<section class="mx-auto max-w-7xl space-y-10 bg-white px-4 py-12 sm:px-6 sm:py-14">
 	<!-- Search & Filter -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-sky-50 to-indigo-100">
-		<CardHeader class="space-y-4 bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-			<div class="flex flex-col sm:flex-row gap-3">
+	<Card
+		class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-indigo-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+	>
+		<CardHeader
+			class="space-y-4 rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+		>
+			<div class="flex flex-col gap-3 sm:flex-row">
 				<Input
 					class="flex-1 rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
 					placeholder="Search by username or ID"
@@ -265,7 +313,7 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 					onkeydown={(event) => event.key === 'Enter' && handleSearch()}
 				/>
 				<Button
-					class="bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all"
+					class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
 					onclick={handleSearch}
 				>
 					Search
@@ -275,7 +323,7 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 				{#each tabFilters as tab}
 					<Button
 						variant={tab.value === activeTab ? 'default' : 'secondary'}
-						class={`flex-1 rounded-xl ${tab.value === activeTab ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white' : 'bg-white/70 border border-sky-200 text-sky-700 hover:bg-sky-50'}`}
+						class={`flex-1 rounded-xl ${tab.value === activeTab ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white' : 'border border-sky-200 bg-white/70 text-sky-700 hover:bg-sky-50'}`}
 						onclick={() => (activeTab = tab.value)}
 					>
 						{tab.label}
@@ -284,22 +332,27 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 			</div>
 		</CardHeader>
 
-		<CardContent class="p-0 overflow-hidden rounded-b-2xl">
+		<CardContent class="overflow-hidden rounded-b-2xl p-0">
 			<div class="overflow-x-auto">
 				<table class="min-w-full divide-y divide-sky-200 text-sm">
-					<thead class="bg-gradient-to-r from-sky-100 to-indigo-100 text-left text-xs uppercase tracking-wide text-slate-600">
+					<thead
+						class="bg-gradient-to-r from-sky-100 to-indigo-100 text-left text-xs uppercase tracking-wide text-slate-600"
+					>
 						<tr>
 							<th class="px-4 py-3 font-medium">ID</th>
 							<th class="px-4 py-3 font-medium">Username</th>
 							<th class="px-4 py-3 font-medium">Role</th>
 							<th class="px-4 py-3 font-medium">Status</th>
-							<th class="px-4 py-3 font-medium text-right">Actions</th>
+							<th class="px-4 py-3 text-right font-medium">Actions</th>
 						</tr>
 					</thead>
 					<tbody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
 						{#if listLoading}
 							{#each Array(4) as _, i}
-								<tr><td colspan="5" class="px-4 py-3"><Skeleton class="h-6 w-full bg-white/60" /></td></tr>
+								<tr
+									><td colspan="5" class="px-4 py-3"><Skeleton class="h-6 w-full bg-white/60" /></td
+									></tr
+								>
 							{/each}
 						{:else if users.length === 0}
 							<tr>
@@ -310,27 +363,31 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 						{:else}
 							{#each users as item}
 								<tr
-									class={selectedUser?.ID === item.ID ? 'bg-sky-50 border-l-4 border-sky-400' : 'hover:bg-white/90 cursor-pointer'}
+									class={selectedUser?.ID === item.ID
+										? 'border-l-4 border-sky-400 bg-sky-50'
+										: 'cursor-pointer hover:bg-white/90'}
 									on:click={() => openUserDetails(item)}
 								>
 									<td class="px-4 py-3 font-mono text-xs text-slate-700">#{item.ID}</td>
 									<td class="px-4 py-3 text-slate-800">{item.Username}</td>
 									<td class="px-4 py-3 text-slate-700">{item.Role}</td>
 									<td class="px-4 py-3">
-										<span class={`rounded-full px-2.5 py-0.5 text-xs capitalize shadow-sm ${
-											item.IsActive
-												? 'bg-sky-100 text-sky-700 border border-sky-200'
-												: 'bg-amber-100 text-amber-800 border border-amber-200'
-										}`}>
+										<span
+											class={`rounded-full px-2.5 py-0.5 text-xs capitalize shadow-sm ${
+												item.IsActive
+													? 'border border-sky-200 bg-sky-100 text-sky-700'
+													: 'border border-amber-200 bg-amber-100 text-amber-800'
+											}`}
+										>
 											{item.IsActive ? 'Approved' : 'Pending'}
 										</span>
 									</td>
-									<td class="px-4 py-3 text-right space-x-1">
+									<td class="space-x-1 px-4 py-3 text-right">
 										<Button
 											size="sm"
 											variant="ghost"
 											disabled={item.IsActive}
-											class="text-sky-700 hover:bg-sky-100 rounded-lg px-3 py-1.5"
+											class="rounded-lg px-3 py-1.5 text-sky-700 hover:bg-sky-100"
 											on:click={(event) => {
 												event.stopPropagation();
 												approveUser(item.ID);
@@ -341,7 +398,7 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 										<Button
 											size="sm"
 											variant="ghost"
-											class="text-rose-700 hover:bg-rose-100 rounded-lg px-3 py-1.5"
+											class="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-rose-100"
 											on:click={(event) => {
 												event.stopPropagation();
 												deleteUser(item.ID, item.Username);
@@ -360,10 +417,14 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 	</Card>
 
 	<!-- User Details -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-teal-50 to-sky-100">
-		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
+	<Card
+		class="rounded-2xl border-0 bg-gradient-to-br from-teal-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+	>
+		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
 			<CardTitle class="text-slate-800">User Details</CardTitle>
-			<CardDescription class="text-slate-600">Update role or credentials for the selected user</CardDescription>
+			<CardDescription class="text-slate-600"
+				>Update role or credentials for the selected user</CardDescription
+			>
 		</CardHeader>
 		{#if !selectedUser}
 			<CardContent class="p-6">
@@ -372,39 +433,87 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 		{:else}
 			<CardContent class="space-y-4 p-6">
 				<p class="text-xs text-slate-500">Editing #{selectedUser.ID}</p>
-				
+
 				<!-- Basic Info -->
 				<div class="space-y-3">
-					<p class="text-sm font-semibold text-slate-700 border-b border-sky-200 pb-2">Account Credentials</p>
-					<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Username" bind:value={form.username} />
-					<Input type="password" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Reset password (optional)" bind:value={form.password} />
-					<select class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400" bind:value={form.role}>
+					<p class="border-b border-sky-200 pb-2 text-sm font-semibold text-slate-700">
+						Account Credentials
+					</p>
+					<Input
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						placeholder="Username"
+						bind:value={form.username}
+					/>
+					<Input
+						type="password"
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						placeholder="Reset password (optional)"
+						bind:value={form.password}
+					/>
+					<select
+						class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+						bind:value={form.role}
+					>
 						<option value="Admin">Admin</option>
 						<option value="Manager">Manager</option>
 						<option value="Staff">Staff</option>
 					</select>
 				</div>
-				
+
 				<!-- Personal Info -->
 				<div class="space-y-3">
-					<p class="text-sm font-semibold text-slate-700 border-b border-sky-200 pb-2">Personal Information</p>
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-						<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="First Name" bind:value={form.firstName} />
-						<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Last Name" bind:value={form.lastName} />
+					<p class="border-b border-sky-200 pb-2 text-sm font-semibold text-slate-700">
+						Personal Information
+					</p>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<Input
+							class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+							placeholder="First Name"
+							bind:value={form.firstName}
+						/>
+						<Input
+							class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+							placeholder="Last Name"
+							bind:value={form.lastName}
+						/>
 					</div>
-					<Input type="email" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Email" bind:value={form.email} />
-					<Input type="tel" class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Phone Number" bind:value={form.phoneNumber} />
-					<Input class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" placeholder="Address" bind:value={form.address} />
+					<Input
+						type="email"
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						placeholder="Email"
+						bind:value={form.email}
+					/>
+					<Input
+						type="tel"
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						placeholder="Phone Number"
+						bind:value={form.phoneNumber}
+					/>
+					<Input
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						placeholder="Address"
+						bind:value={form.address}
+					/>
 				</div>
-				
-				<div class="flex flex-col sm:flex-row gap-3 pt-2">
-					<Button class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all" onclick={updateUser}>
+
+				<div class="flex flex-col gap-3 pt-2 sm:flex-row">
+					<Button
+						class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
+						onclick={updateUser}
+					>
 						Save changes
 					</Button>
-					<Button class="flex-1 border border-sky-200 text-sky-700 hover:bg-sky-50 rounded-xl" onclick={() => approveUser()} disabled={selectedUser.IsActive}>
+					<Button
+						class="flex-1 rounded-xl border border-sky-200 text-sky-700 hover:bg-sky-50"
+						onclick={() => approveUser()}
+						disabled={selectedUser.IsActive}
+					>
 						Approve
 					</Button>
-					<Button class="flex-1 border border-rose-200 text-rose-700 hover:bg-rose-50 rounded-xl" onclick={() => deleteUser()}>
+					<Button
+						class="flex-1 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50"
+						onclick={() => deleteUser()}
+					>
 						Delete
 					</Button>
 				</div>
@@ -415,9 +524,15 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 
 <style lang="postcss">
 	@keyframes gradientShift {
-		0% { background-position: 0% 50%; }
-		50% { background-position: 100% 50%; }
-		100% { background-position: 0% 50%; }
+		0% {
+			background-position: 0% 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
+		100% {
+			background-position: 0% 50%;
+		}
 	}
 	.animate-gradientShift {
 		background-size: 200% 200%;
@@ -425,27 +540,56 @@ import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
 	}
 
 	@keyframes pulseGlow {
-		0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(59, 130, 246, 0.3); }
-		50% { transform: scale(1.08); box-shadow: 0 0 25px rgba(59, 130, 246, 0.5); }
+		0%,
+		100% {
+			transform: scale(1);
+			box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+		}
+		50% {
+			transform: scale(1.08);
+			box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+		}
 	}
-	.animate-pulseGlow { animation: pulseGlow 8s ease-in-out infinite; }
+	.animate-pulseGlow {
+		animation: pulseGlow 8s ease-in-out infinite;
+	}
 
 	@keyframes fadeUp {
-		from { opacity: 0; transform: translateY(20px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
-	.animate-fadeUp { animation: fadeUp 1.3s ease forwards; }
-	.animate-fadeUp.delay-150 { animation-delay: 150ms; }
-	.animate-fadeUp.delay-200 { animation-delay: 200ms; }
+	.animate-fadeUp {
+		animation: fadeUp 1.3s ease forwards;
+	}
+	.animate-fadeUp.delay-150 {
+		animation-delay: 150ms;
+	}
+	.animate-fadeUp.delay-200 {
+		animation-delay: 200ms;
+	}
 
 	@keyframes floatSlow {
-		0%, 100% { transform: translateY(0px) scale(1); }
-		50% { transform: translateY(-10px) scale(1.03); }
+		0%,
+		100% {
+			transform: translateY(0px) scale(1);
+		}
+		50% {
+			transform: translateY(-10px) scale(1.03);
+		}
 	}
-	.animate-floatSlow { animation: floatSlow 10s ease-in-out infinite; }
+	.animate-floatSlow {
+		animation: floatSlow 10s ease-in-out infinite;
+	}
 
 	* {
-		transition-property: color, background-color, border-color, box-shadow, transform, filter, backdrop-filter;
+		transition-property:
+			color, background-color, border-color, box-shadow, transform, filter, backdrop-filter;
 		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 		transition-duration: 300ms;
 	}

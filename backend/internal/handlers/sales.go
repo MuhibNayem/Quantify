@@ -120,7 +120,45 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 			totalAmount += product.SellingPrice * float64(item.Quantity)
 		}
 
-		// 2. Record the Sale Transaction (Simplified domain model for now)
+		// 2. Update Loyalty Points if CustomerID is provided
+		if req.CustomerID != nil && *req.CustomerID > 0 {
+			var loyalty domain.LoyaltyAccount
+			result := tx.Where("user_id = ?", *req.CustomerID).First(&loyalty)
+			if result.Error != nil {
+				if result.Error == gorm.ErrRecordNotFound {
+					// Create if missing (auto-enrollment)
+					loyalty = domain.LoyaltyAccount{
+						UserID: *req.CustomerID,
+						Points: 0,
+						Tier:   "Bronze",
+					}
+					// Verify user exists first? Assuming foreign key constraint will catch it if not.
+					if err := tx.Create(&loyalty).Error; err != nil {
+						return fmt.Errorf("failed to create loyalty account: %w", err)
+					}
+				} else {
+					return fmt.Errorf("failed to fetch loyalty account: %w", result.Error)
+				}
+			}
+
+			pointsEarned := int(totalAmount) // 1 point per $1 spent
+			loyalty.Points += pointsEarned
+
+			// Update Tier
+			if loyalty.Points >= 10000 {
+				loyalty.Tier = "Platinum"
+			} else if loyalty.Points >= 2500 {
+				loyalty.Tier = "Gold"
+			} else if loyalty.Points >= 500 {
+				loyalty.Tier = "Silver"
+			}
+
+			if err := tx.Save(&loyalty).Error; err != nil {
+				return fmt.Errorf("failed to update loyalty points: %w", err)
+			}
+		}
+
+		// 3. Record the Sale Transaction (Simplified domain model for now)
 		// We can add a Sales/Order record here if the domain exists.
 		// For now we assume StockAdjustment is the primary record for inventory content.
 		// We will record a financial transaction.

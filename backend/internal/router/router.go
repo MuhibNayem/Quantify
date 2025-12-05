@@ -58,7 +58,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
 	forecastingService := services.NewForecastingService(forecastingRepo)
 	barcodeService := services.NewBarcodeService(barcodeRepo)
-	crmService := services.NewCRMService(crmRepo)
+	crmService := services.NewCRMService(crmRepo, db)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo)
 	integrationService := services.NewIntegrationService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
@@ -307,6 +307,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		crm := api.Group("/crm")
 		crm.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
 		{
+			crm.GET("/customers", crmHandler.ListCustomers)
 			crm.POST("/customers", crmHandler.CreateCustomer)
 			crm.GET("/customers/:identifier", crmHandler.GetCustomer)
 			crm.GET("/customers/username/:username", crmHandler.GetCustomerByUsername)

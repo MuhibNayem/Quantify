@@ -20,6 +20,34 @@ func NewCRMHandler(crmService services.CRMService) *CRMHandler {
 	return &CRMHandler{crmService: crmService}
 }
 
+func (h *CRMHandler) ListCustomers(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit > 200 {
+		limit = 200
+	}
+	search := c.Query("q")
+
+	users, total, err := h.crmService.ListCustomers(page, limit, search)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to list customers", http.StatusInternalServerError, err))
+		return
+	}
+
+	// Remove passwords
+	for i := range users {
+		users[i].Password = ""
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users":        users,
+		"totalItems":   total,
+		"currentPage":  page,
+		"totalPages":   (total + int64(limit) - 1) / int64(limit),
+		"itemsPerPage": limit,
+	})
+}
+
 func (h *CRMHandler) CreateCustomer(c *gin.Context) {
 	var req requests.CreateCustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -41,17 +69,37 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	var user *domain.User
 	var err error
 
-	// Check if identifier is a number (ID)
+	// Try parsing as numeric ID first (most common case)
 	if userID, parseErr := strconv.ParseUint(identifier, 10, 32); parseErr == nil {
 		user, err = h.crmService.GetCustomerByID(uint(userID))
-	} else if strings.Contains(identifier, "@") { // Check if identifier is an email
-		user, err = h.crmService.GetCustomerByEmail(identifier)
-	} else if _, parseErr := strconv.Atoi(identifier); parseErr == nil { // Check if identifier is a phone number
-		user, err = h.crmService.GetCustomerByPhone(identifier)
-	} else { // Assume identifier is a username
-		user, err = h.crmService.GetCustomerByUsername(identifier)
+		if err == nil {
+			c.JSON(http.StatusOK, user)
+			return
+		}
+		// If not found by ID, continue to other methods
 	}
 
+	// Check if identifier contains '@' (email)
+	if strings.Contains(identifier, "@") && strings.Contains(identifier, ".") {
+		user, err = h.crmService.GetCustomerByEmail(identifier)
+		if err == nil {
+			c.JSON(http.StatusOK, user)
+			return
+		}
+	}
+
+	// Try phone number (digits with possible +, -, or spaces)
+	cleanedPhone := strings.ReplaceAll(strings.ReplaceAll(identifier, "-", ""), " ", "")
+	if len(cleanedPhone) >= 10 && (cleanedPhone[0] == '+' || (cleanedPhone[0] >= '0' && cleanedPhone[0] <= '9')) {
+		user, err = h.crmService.GetCustomerByPhone(identifier)
+		if err == nil {
+			c.JSON(http.StatusOK, user)
+			return
+		}
+	}
+
+	// Finally, try username
+	user, err = h.crmService.GetCustomerByUsername(identifier)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
@@ -89,7 +137,6 @@ func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, user)
 }
-
 
 func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)

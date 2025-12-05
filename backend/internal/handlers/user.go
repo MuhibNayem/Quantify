@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,19 +32,29 @@ func NewUserHandler(userRepo *repository.UserRepository, db *gorm.DB) *UserHandl
 
 // ListUsers godoc
 // @Summary List users with optional status and search filters
-// @Description Retrieves all users, optionally filtered by status (approved/pending) and search query (username or ID)
+// @Description Retrieves all users, optionally filtered by status (approved/pending) and search query (username or ID). Supports pagination.
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param status query string false "Filter by user status (approved, pending)"
 // @Param q query string false "Search by username or ID"
+// @Param page query int false "Page number (default: 1)"
+// @Param limit query int false "Items per page (default: 50, max: 200)"
 // @Security ApiKeyAuth
-// @Success 200 {array} domain.User
+// @Success 200 {object} map[string]interface{} "Paginated list of users"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
 	var users []domain.User
 	db := h.db
+
+	// Pagination (optional - backward compatible)
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit > 200 {
+		limit = 200 // Cap at 200 to prevent abuse
+	}
+	offset := (page - 1) * limit
 
 	switch strings.ToLower(c.Query("status")) {
 	case "approved":
@@ -57,16 +68,34 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 		db = db.Where("username ILIKE ? OR CAST(id AS TEXT) ILIKE ?", pattern, pattern)
 	}
 
-	if err := db.Order("id ASC").Find(&users).Error; err != nil {
+	// Get total count
+	var total int64
+	if err := db.Model(&domain.User{}).Count(&total).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to count users", http.StatusInternalServerError, err))
+		return
+	}
+
+	// Apply pagination
+	if err := db.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to list users", http.StatusInternalServerError, err))
 		return
 	}
 
+	// Remove passwords from response
 	for i := range users {
 		users[i].Password = ""
 	}
 
-	c.JSON(http.StatusOK, users)
+	// Return paginated response
+	response := gin.H{
+		"users":        users,
+		"totalItems":   total,
+		"currentPage":  page,
+		"totalPages":   (total + int64(limit) - 1) / int64(limit),
+		"itemsPerPage": limit,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // RegisterUser godoc

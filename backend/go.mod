@@ -24,7 +24,6 @@ require (
 
 require (
 	github.com/jung-kurt/gofpdf v1.16.2
-	github.com/lib/pq v1.10.9
 	github.com/minio/minio-go/v7 v7.0.97
 )
 

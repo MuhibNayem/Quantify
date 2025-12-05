@@ -11,21 +11,21 @@ import (
 type Product struct {
 	gorm.Model
 	SKU           string `gorm:"uniqueIndex;not null"`
-	Name          string `gorm:"not null"`
+	Name          string `gorm:"not null;index"` // Index for name searches
 	Description   string
-	CategoryID    uint
+	CategoryID    uint `gorm:"index"` // Index for category filters
 	Category      Category
-	SubCategoryID uint
+	SubCategoryID uint `gorm:"index"` // Index for subcategory filters
 	SubCategory   SubCategory
-	SupplierID    uint
+	SupplierID    uint `gorm:"index"` // Index for supplier filters
 	Supplier      Supplier
-	Brand         string
+	Brand         string `gorm:"index"` // Index for brand filters
 	PurchasePrice float64
 	SellingPrice  float64
-	BarcodeUPC    string
+	BarcodeUPC    string `gorm:"index"` // Index for barcode lookups
 	ImageURLs     string // Storing as comma-separated string or JSON string for simplicity
-	Status        string `gorm:"default:'Active'"` // Active, Archived, Discontinued
-	LocationID    uint
+	Status        string `gorm:"default:'Active';index"` // Index for status filters (Active, Archived, Discontinued)
+	LocationID    uint   `gorm:"index"`                  // Index for location filters
 	Location      Location
 }
 
@@ -69,18 +69,18 @@ func (c *Category) GetEntityType() string {
 // SubCategory represents a product sub-category.
 type SubCategory struct {
 	gorm.Model
-	Name       string `gorm:"not null"`
-	CategoryID uint   `gorm:"not null"`
+	Name       string `gorm:"not null;index"`
+	CategoryID uint   `gorm:"not null;index"` // Index for category lookups
 	Category   Category
 }
 
 // Supplier represents a product supplier.
 type Supplier struct {
 	gorm.Model
-	Name          string `gorm:"not null"`
+	Name          string `gorm:"not null;index"` // Index for name searches
 	ContactPerson string
-	Email         string
-	Phone         string
+	Email         string `gorm:"index"` // Index for email lookups
+	Phone         string `gorm:"index"` // Index for phone lookups
 	Address       string
 }
 
@@ -138,28 +138,29 @@ type StockAdjustment struct {
 // Alert represents a stock-related alert.
 type Alert struct {
 	gorm.Model
-	ProductID   uint `gorm:"not null"`
+	ProductID   uint `gorm:"not null;index:idx_alert_product_status"` // Composite index for product + status queries
 	Product     Product
-	Type        string `gorm:"not null"` // e.g., "LOW_STOCK", "OUT_OF_STOCK", "OVERSTOCK", "EXPIRY_ALERT"
-	Message     string `gorm:"not null"`
-	TriggeredAt time.Time
-	Status      string `gorm:"default:'ACTIVE'"` // ACTIVE, RESOLVED
-	BatchID     *uint  // Optional, for expiry alerts
+	Type        string    `gorm:"not null;index"` // Index for filtering by alert type
+	Message     string    `gorm:"not null"`
+	TriggeredAt time.Time `gorm:"index"`                                           // Index for date range queries
+	Status      string    `gorm:"default:'ACTIVE';index:idx_alert_product_status"` // ACTIVE, RESOLVED
+	BatchID     *uint     // Optional, for expiry alerts
 	Batch       *Batch
 }
 
 // User represents a system user (for AdjustedBy in StockAdjustment, etc.)
 type User struct {
 	gorm.Model
-	Username    string `gorm:"uniqueIndex;not null"`
-	Password    string `gorm:"not null"`
-	Role        string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff", "Customer"
-	IsActive    bool   `gorm:"default:false"`
-	FirstName   string
-	LastName    string
-	Email       string `gorm:"uniqueIndex"`
-	PhoneNumber string `gorm:"uniqueIndex"`
-	Address     string
+	Username       string `gorm:"uniqueIndex;not null"`
+	Password       string `gorm:"not null"`
+	Role           string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff", "Customer"
+	IsActive       bool   `gorm:"default:false"`
+	FirstName      string
+	LastName       string
+	Email          string `gorm:"uniqueIndex"`
+	PhoneNumber    string `gorm:"uniqueIndex"`
+	Address        string
+	LoyaltyAccount *LoyaltyAccount `json:"loyalty,omitempty"`
 }
 
 // GetID implements the Searchable interface for User.
@@ -307,15 +308,15 @@ type Job struct {
 // Notification represents an in-app notification for a user.
 type Notification struct {
 	gorm.Model
-	UserID      uint `gorm:"not null"`
+	UserID      uint `gorm:"not null;index:idx_user_read"` // Composite index for user + read status
 	User        User
-	Type        string `gorm:"not null"` // e.g., "ALERT", "SYSTEM", "PROMOTIONAL"
+	Type        string `gorm:"not null;index"` // Index for filtering by type
 	Title       string `gorm:"not null"`
 	Message     string `gorm:"not null"`
 	Payload     string // JSON string for additional data (e.g., productID, orderID)
-	IsRead      bool   `gorm:"default:false"`
+	IsRead      bool   `gorm:"default:false;index:idx_user_read"` // Part of composite index
 	ReadAt      *time.Time
-	TriggeredAt time.Time
+	TriggeredAt time.Time `gorm:"index"` // Index for date sorting
 }
 
 // AlertRoleSubscription links an alert type to a user role.

@@ -14,9 +14,11 @@ import type {
 	Supplier,
 	SupplierPerformance,
 	UserSummary,
+	PaginatedUsers,
 	PaginatedProducts,
 	Notification,
 	DashboardSummary,
+	LoyaltyAccount,
 } from '$lib/types';
 
 export const dashboardApi = {
@@ -150,9 +152,25 @@ export const bulkApi = {
 };
 
 export const usersApi = {
-	list: async (params?: Record<string, unknown>) => (await api.get<UserSummary[]>('/users', { params })).data,
+	list: async (params?: Record<string, unknown>) => (await api.get<PaginatedUsers>('/users', { params })).data,
 	get: async (id: number) => (await api.get<UserSummary>(`/users/${id}`)).data,
 	update: async (id: number, payload: Record<string, unknown>) => (await api.put(`/users/${id}`, payload)).data,
 	approve: async (id: number) => (await api.put(`/users/${id}/approve`)).data,
 	remove: async (id: number) => (await api.delete(`/users/${id}`)).data,
+};
+
+export const crmApi = {
+	listCustomers: async (params?: Record<string, unknown>) =>
+		(await api.get<PaginatedUsers>('/crm/customers', { params })).data,
+	createCustomer: async (payload: Record<string, unknown>) =>
+		(await api.post<UserSummary>('/crm/customers', payload)).data,
+	getCustomer: async (id: number | string) => (await api.get<UserSummary>(`/crm/customers/${id}`)).data,
+	updateCustomer: async (id: number, payload: Record<string, unknown>) =>
+		(await api.put<UserSummary>(`/crm/customers/${id}`, payload)).data,
+	deleteCustomer: async (id: number) => (await api.delete(`/crm/customers/${id}`)).data,
+	getLoyalty: async (id: number) => (await api.get<LoyaltyAccount>(`/crm/loyalty/${id}`)).data,
+	addPoints: async (id: number, points: number) =>
+		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/points`, { points })).data,
+	redeemPoints: async (id: number, points: number) =>
+		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/redeem`, { points })).data,
 };

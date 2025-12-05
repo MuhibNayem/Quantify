@@ -21,11 +21,21 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Button } from '$lib/components/ui/button';
 	import { ArrowLeft, Info, History } from 'lucide-svelte';
+	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import type { PageData } from './$types';
 
 	export let data: PageData;
 
 	$: ({ product, stockHistory } = data);
+
+	const statusBadge = (status?: string) => {
+		if (!status) return undefined;
+		const normalized = status.toLowerCase();
+		if (normalized === 'active') return { text: status, variant: 'success' as const };
+		if (normalized === 'inactive') return { text: status, variant: 'warning' as const };
+		if (normalized === 'archived') return { text: status, variant: 'danger' as const };
+		return { text: status, variant: 'info' as const };
+	};
 </script>
 
 <div class="mx-auto w-full max-w-7xl px-6 py-8">
@@ -97,11 +107,24 @@
 								</div>
 								<div>
 									<p class="font-medium text-slate-500">Status</p>
-									<span
-										class="rounded-full border border-sky-200 bg-sky-100 px-2.5 py-0.5 text-xs capitalize text-sky-700 shadow-sm"
-									>
-										{product.Status || 'active'}
-									</span>
+									{#if product.Status}
+										{@const badge = statusBadge(product.Status)}
+										{#if badge}
+											<span
+												class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize shadow-sm
+								{badge.variant === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}
+								{badge.variant === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-700' : ''}
+								{badge.variant === 'danger' ? 'border-rose-200 bg-rose-50 text-rose-700' : ''}
+								{badge.variant === 'info' ? 'border-sky-200 bg-sky-50 text-sky-700' : ''}"
+											>
+												{badge.text}
+											</span>
+										{:else}
+											<span class="text-slate-400">—</span>
+										{/if}
+									{:else}
+										<span class="text-slate-400">—</span>
+									{/if}
 								</div>
 							</div>
 						</CardContent>
@@ -110,51 +133,40 @@
 
 				<!-- Stock History -->
 				<div class="lg:col-span-1">
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					<div class="flex flex-col gap-4">
+						<div
+							class="flex flex-col gap-2 rounded-2xl border border-emerald-100 bg-white/50 p-4 shadow-sm backdrop-blur"
 						>
-							<CardTitle class="flex items-center text-slate-800">
+							<h3 class="flex items-center text-lg font-semibold text-slate-800">
 								<History class="mr-2 h-5 w-5 text-emerald-600" />
 								Stock History
-							</CardTitle>
-							<CardDescription class="text-slate-600">Recent stock adjustments</CardDescription>
-						</CardHeader>
-						<CardContent class="p-0">
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Type</TableHead>
-										<TableHead>Qty</TableHead>
-										<TableHead>Date</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{#if stockHistory && stockHistory.length > 0}
-										{#each stockHistory as item}
-											<TableRow>
-												<TableCell>{item.Type}</TableCell>
-												<TableCell
-													class={item.Type === 'STOCK_IN' ? 'text-green-600' : 'text-red-600'}
-												>
-													{item.Type === 'STOCK_IN' ? '+' : '-'}{item.Quantity}
-												</TableCell>
-												<TableCell>{new Date(item.AdjustedAt).toLocaleDateString()}</TableCell>
-											</TableRow>
-										{/each}
-									{:else}
-										<TableRow>
-											<TableCell colspan="3" class="py-4 text-center text-slate-500">
-												No stock history found.
-											</TableCell>
-										</TableRow>
-									{/if}
-								</TableBody>
-							</Table>
-						</CardContent>
-					</Card>
+							</h3>
+							<p class="text-sm text-slate-500">Recent stock adjustments</p>
+						</div>
+
+						<DataTable
+							data={stockHistory || []}
+							columns={[
+								{ header: 'Type', accessorKey: 'Type' },
+								{ header: 'Qty', accessorKey: 'Quantity' },
+								{ header: 'Date', accessorKey: 'AdjustedAt' }
+							]}
+						>
+							{#snippet children(item)}
+								<TableCell class="font-medium text-slate-700">{item.Type}</TableCell>
+								<TableCell
+									class="font-semibold {item.Type === 'STOCK_IN'
+										? 'text-emerald-600'
+										: 'text-rose-600'}"
+								>
+									{item.Type === 'STOCK_IN' ? '+' : '-'}{item.Quantity}
+								</TableCell>
+								<TableCell class="text-slate-500">
+									{new Date(item.AdjustedAt).toLocaleDateString()}
+								</TableCell>
+							{/snippet}
+						</DataTable>
+					</div>
 				</div>
 			</div>
 		{:else}
