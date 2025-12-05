@@ -506,12 +506,14 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 	var msgPayload map[string]interface{}
 	if err := json.Unmarshal(d.Body, &msgPayload); err != nil {
 		logrus.Errorf("Failed to unmarshal message payload: %v", err)
+		d.Nack(false, false)
 		return
 	}
 
 	jobIDFloat, ok := msgPayload["jobId"].(float64)
 	if !ok {
 		logrus.Errorf("Invalid job ID in message payload")
+		d.Nack(false, false)
 		return
 	}
 	jobID := uint(jobIDFloat)
@@ -519,6 +521,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 	job, err := c.JobRepo.GetJob(jobID)
 	if err != nil {
 		logrus.Errorf("Failed to get job %d: %v", jobID, err)
+		d.Nack(false, false)
 		return
 	}
 
@@ -535,6 +538,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 		if err := c.saveJob(job); err != nil {
 			logrus.Errorf("Failed to update job %d after payload error: %v", jobID, err)
 		}
+		d.Nack(false, false)
 		return
 	}
 
@@ -555,6 +559,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 		if err := c.saveJob(job); err != nil {
 			logrus.Errorf("Failed to update job %d after product fetch error: %v", jobID, err)
 		}
+		d.Nack(false, false)
 		return
 	}
 
@@ -567,6 +572,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 		if err := c.saveJob(job); err != nil {
 			logrus.Errorf("Failed to update job %d after export generation error: %v", jobID, err)
 		}
+		d.Nack(false, false)
 		return
 	}
 
@@ -580,6 +586,7 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 		if err := c.saveJob(job); err != nil {
 			logrus.Errorf("Failed to update job %d after upload error: %v", jobID, err)
 		}
+		d.Nack(false, false)
 		return
 	}
 
@@ -592,4 +599,5 @@ func (c *BulkConsumer) processExportDelivery(d amqp091.Delivery) {
 	if err := c.saveJob(job); err != nil {
 		logrus.Errorf("Failed to update job %d: %v", jobID, err)
 	}
+	d.Ack(false)
 }

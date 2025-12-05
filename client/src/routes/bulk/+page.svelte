@@ -2,13 +2,49 @@
 	import { browser } from '$app/environment';
 	import { bulkApi, categoriesApi, suppliersApi } from '$lib/api/resources';
 	import api from '$lib/api';
-	import type { BulkImportJob, BulkImportValidationResult, Category, Supplier, BulkExportResult } from '$lib/types';
+	import type {
+		BulkImportJob,
+		BulkImportValidationResult,
+		Category,
+		Supplier,
+		BulkExportResult
+	} from '$lib/types';
 	import { toast } from 'svelte-sonner';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Upload, FileDown, CheckCircle, AlertTriangle, Loader, Download, Search, FileText } from 'lucide-svelte';
-	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
+	import {
+		Upload,
+		FileDown,
+		CheckCircle,
+		AlertTriangle,
+		Loader,
+		Download,
+		Search,
+		FileText,
+		Clock,
+		RefreshCw,
+		X,
+		FileSpreadsheet,
+		Package,
+		ArrowRight,
+		AlertCircle,
+		Check
+	} from 'lucide-svelte';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { onMount } from 'svelte';
 
@@ -27,7 +63,9 @@
 	let importJob = $state<BulkImportJob | null>(null);
 	let validationResult = $state<BulkImportValidationResult | null>(null);
 	let hasShownValidation = $state(false);
-	let currentStep = $state<'idle' | 'uploading' | 'validating' | 'importing' | 'complete' | 'failed'>('idle');
+	let currentStep = $state<
+		'idle' | 'uploading' | 'validating' | 'importing' | 'complete' | 'failed'
+	>('idle');
 	let isDragging = false;
 
 	// --- State: Export ---
@@ -43,14 +81,15 @@
 	let recentJobs = $state<BulkImportJob[]>([]);
 
 	// --- Helpers ---
-	const stepIndex = (s: typeof currentStep): number => ({
-		idle: 0,
-		uploading: 1,
-		validating: 2,
-		importing: 3,
-		complete: 4,
-		failed: 4
-	}[s]);
+	const stepIndex = (s: typeof currentStep): number =>
+		({
+			idle: 0,
+			uploading: 1,
+			validating: 2,
+			importing: 3,
+			complete: 4,
+			failed: 4
+		})[s];
 
 	const parseValidationResult = (raw: unknown): BulkImportValidationResult | null => {
 		if (!raw) return null;
@@ -163,14 +202,17 @@
 	};
 
 	const downloadExport = async (job: BulkImportJob) => {
-		const result = parseExportResult(job.Result);
+		const result = parseExportResult(job.result);
 		if (!result?.downloadUrl) {
 			toast.error('Download URL not found');
 			return;
 		}
 
 		try {
-			const response = await api.get(result.downloadUrl, { responseType: 'blob' });
+			// Backend returns full path with /api/v1/ prefix, but api client already has baseURL set.
+			// We need to strip the prefix to avoid double /api/v1/api/v1/
+			const cleanUrl = result.downloadUrl.replace(/^\/api\/v1/, '');
+			const response = await api.get(cleanUrl, { responseType: 'blob' });
 			const blob = response.data as Blob;
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement('a');
@@ -228,7 +270,7 @@
 				...importJob,
 				status: detail.status,
 				result: detail.result ?? importJob.result,
-				lastError: detail.lastError ?? importJob.lastError,
+				lastError: detail.lastError ?? importJob.lastError
 			};
 
 			if (detail.result) {
@@ -262,17 +304,17 @@
 				...lookupJob,
 				status: detail.status,
 				result: detail.result ?? lookupJob.result,
-				lastError: detail.lastError ?? lookupJob.lastError,
+				lastError: detail.lastError ?? lookupJob.lastError
 			};
 		}
-		
+
 		// Refresh list on any update to keep status current
 		refreshJobs();
 	};
 
 	onMount(async () => {
 		if (!browser) return;
-		
+
 		// Load initial data
 		try {
 			const [cats, sups, jobs] = await Promise.all([
@@ -298,18 +340,32 @@
 </script>
 
 <!-- Wrapper with animated gradient + hero consistency -->
-<div class="relative min-h-[100dvh] isolate overflow-hidden bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-100">
-	<div class="absolute -top-32 -left-24 w-[28rem] h-[28rem] rounded-full bg-sky-200/40 blur-3xl animate-pulseGlow"></div>
-	<div class="absolute -bottom-28 -right-24 w-[24rem] h-[24rem] rounded-full bg-cyan-200/30 blur-3xl animate-pulseGlow delay-700"></div>
+<div
+	class="relative isolate min-h-[100dvh] overflow-hidden bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-100"
+>
+	<div
+		class="animate-pulseGlow absolute -left-24 -top-32 h-[28rem] w-[28rem] rounded-full bg-sky-200/40 blur-3xl"
+	></div>
+	<div
+		class="animate-pulseGlow absolute -bottom-28 -right-24 h-[24rem] w-[24rem] rounded-full bg-cyan-200/30 blur-3xl delay-700"
+	></div>
 
-	<div class="relative container mx-auto max-w-6xl px-4 pb-20 pt-16">
+	<div class="container relative mx-auto max-w-6xl px-4 pb-20 pt-16">
 		<header class="mb-10 text-center sm:text-left">
-			<h1 class="text-4xl font-extrabold bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-transparent mb-2">Bulk Operations</h1>
-			<p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto sm:mx-0">Manage your catalog efficiently with bulk imports, exports, and job tracking.</p>
+			<h1
+				class="mb-2 bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-4xl font-extrabold text-transparent"
+			>
+				Bulk Operations
+			</h1>
+			<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
+				Manage your catalog efficiently with bulk imports, exports, and job tracking.
+			</p>
 		</header>
 
 		<Tabs value="import" class="w-full space-y-8">
-			<TabsList class="grid w-full grid-cols-3 lg:w-[400px] bg-white/60 backdrop-blur-sm border border-sky-100">
+			<TabsList
+				class="grid w-full grid-cols-3 border border-sky-100 bg-white/60 backdrop-blur-sm lg:w-[400px]"
+			>
 				<TabsTrigger value="import">Import</TabsTrigger>
 				<TabsTrigger value="export">Export</TabsTrigger>
 				<TabsTrigger value="status">Status</TabsTrigger>
@@ -318,23 +374,27 @@
 			<!-- IMPORT TAB -->
 			<TabsContent value="import" class="space-y-8 outline-none">
 				<!-- Step Indicator -->
-				<ol class="flex items-center justify-center sm:justify-start overflow-x-auto rounded-2xl border border-sky-100 bg-white/70 backdrop-blur-sm px-4 py-3 shadow-sm">
-					{#each ['Download Template','Upload','Validate','Import','Done'] as label, i}
+				<ol
+					class="flex items-center justify-center overflow-x-auto rounded-2xl border border-sky-100 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm sm:justify-start"
+				>
+					{#each ['Download Template', 'Upload', 'Validate', 'Import', 'Done'] as label, i}
 						<li class="relative flex items-center">
-							<div class="grid place-items-center rounded-full size-8 font-semibold text-xs border transition-all duration-300 shadow-sm mr-2"
+							<div
+								class="mr-2 grid size-8 place-items-center rounded-full border text-xs font-semibold shadow-sm transition-all duration-300"
 								class:bg-gradient-to-r={i <= stepIndex(currentStep)}
 								class:from-sky-500={i <= stepIndex(currentStep)}
 								class:to-blue-600={i <= stepIndex(currentStep)}
 								class:text-white={i <= stepIndex(currentStep)}
 								class:border-sky-200={i > stepIndex(currentStep)}
-								class:text-slate-500={i > stepIndex(currentStep)}>
+								class:text-slate-500={i > stepIndex(currentStep)}
+							>
 								{#if i < stepIndex(currentStep)}
 									<CheckCircle class="size-4" />
 								{:else}
 									<span>{i + 1}</span>
 								{/if}
 							</div>
-							<span class="text-xs sm:text-sm text-slate-700 mr-3 whitespace-nowrap">{label}</span>
+							<span class="mr-3 whitespace-nowrap text-xs text-slate-700 sm:text-sm">{label}</span>
 							{#if i < 5}<div class="h-[2px] w-8 bg-slate-200/70"></div>{/if}
 						</li>
 					{/each}
@@ -342,29 +402,51 @@
 
 				<div class="grid gap-8 lg:grid-cols-2">
 					<!-- Step 1 -->
-					<Card class="rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 shadow-md hover:shadow-xl transition-all duration-300">
+					<Card
+						class="rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 shadow-md transition-all duration-300 hover:shadow-xl"
+					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
 								<FileDown class="h-5 w-5 text-sky-600" /> Step 1: Download & Prepare
 							</CardTitle>
-							<CardDescription class="text-slate-600">Use the correct CSV format for seamless import.</CardDescription>
+							<CardDescription class="text-slate-600"
+								>Use the correct CSV format for seamless import.</CardDescription
+							>
 						</CardHeader>
 						<CardContent class="p-6">
-							<Button onclick={downloadTemplate} class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white rounded-xl px-5 py-2.5 shadow-md hover:shadow-lg">Download Template</Button>
+							<Button
+								onclick={downloadTemplate}
+								class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-white shadow-md hover:from-sky-600 hover:to-blue-700 hover:shadow-lg sm:w-auto"
+								>Download Template</Button
+							>
 						</CardContent>
 					</Card>
 
 					<!-- Step 2 -->
-					<Card class="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-100 shadow-md hover:shadow-xl transition-all duration-300">
+					<Card
+						class="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-100 shadow-md transition-all duration-300 hover:shadow-xl"
+					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
 								<Upload class="h-5 w-5 text-sky-600" /> Step 2: Upload File
 							</CardTitle>
-							<CardDescription class="text-slate-600">Validate your CSV before importing products.</CardDescription>
+							<CardDescription class="text-slate-600"
+								>Validate your CSV before importing products.</CardDescription
+							>
 						</CardHeader>
-						<CardContent class="flex flex-col sm:flex-row items-center gap-4 p-6">
-							<Input type="file" accept=".csv" onchange={handleFileChange} disabled={currentStep !== 'idle'} class="rounded-xl border border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" />
-							<Button onclick={uploadFile} disabled={!file || currentStep !== 'idle'} class="w-full sm:w-auto bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl px-6 py-2.5 shadow-md hover:shadow-lg flex items-center justify-center">
+						<CardContent class="flex flex-col items-center gap-4 p-6 sm:flex-row">
+							<Input
+								type="file"
+								accept=".csv"
+								onchange={handleFileChange}
+								disabled={currentStep !== 'idle'}
+								class="rounded-xl border border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+							/>
+							<Button
+								onclick={uploadFile}
+								disabled={!file || currentStep !== 'idle'}
+								class="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-2.5 text-white shadow-md hover:shadow-lg sm:w-auto"
+							>
 								{#if currentStep === 'uploading'}<Loader class="mr-2 h-4 w-4 animate-spin" />{/if}
 								Upload & Validate
 							</Button>
@@ -373,80 +455,136 @@
 				</div>
 
 				<!-- Step 3: Validation & Progress -->
-				{#if ['validating','importing','complete','failed'].includes(currentStep)}
-					<Card class="rounded-2xl bg-gradient-to-br from-white/90 to-sky-50 shadow-md hover:shadow-xl transition-all duration-300">
+				{#if ['validating', 'importing', 'complete', 'failed'].includes(currentStep)}
+					<Card
+						class="rounded-2xl bg-gradient-to-br from-white/90 to-sky-50 shadow-md transition-all duration-300 hover:shadow-xl"
+					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
 								<CheckCircle class="h-5 w-5 text-sky-600" /> Step 3: Review & Confirm
 							</CardTitle>
-							<CardDescription class="text-slate-600">Ensure validation passes before final import.</CardDescription>
+							<CardDescription class="text-slate-600"
+								>Ensure validation passes before final import.</CardDescription
+							>
 						</CardHeader>
-						<CardContent class="p-6 space-y-6">
+						<CardContent class="space-y-6 p-6">
 							{#if currentStep === 'validating'}
-								<div class="flex items-center gap-2 text-sky-700"><Loader class="h-4 w-4 animate-spin" /> Validating file...</div>
+								<div class="flex items-center gap-2 text-sky-700">
+									<Loader class="h-4 w-4 animate-spin" /> Validating file...
+								</div>
 							{/if}
 
 							{#if validationResult}
-								<div class="grid sm:grid-cols-3 gap-4">
-									<div class="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-center"><p class="text-xs text-slate-500">Valid</p><p class="text-xl font-bold text-sky-700">{validationResult.validRecords}</p></div>
-									<div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center"><p class="text-xs text-slate-500">Invalid</p><p class="text-xl font-bold text-rose-700">{validationResult.invalidRecords}</p></div>
-									<div class="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center"><p class="text-xs text-slate-500">Total</p><p class="text-xl font-bold text-amber-700">{validationResult.totalRecords}</p></div>
+								<div class="grid gap-4 sm:grid-cols-3">
+									<div class="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-center">
+										<p class="text-xs text-slate-500">Valid</p>
+										<p class="text-xl font-bold text-sky-700">{validationResult.validRecords}</p>
+									</div>
+									<div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
+										<p class="text-xs text-slate-500">Invalid</p>
+										<p class="text-xl font-bold text-rose-700">{validationResult.invalidRecords}</p>
+									</div>
+									<div class="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center">
+										<p class="text-xs text-slate-500">Total</p>
+										<p class="text-xl font-bold text-amber-700">{validationResult.totalRecords}</p>
+									</div>
 								</div>
 
 								{#if validationResult.newEntities}
 									<div class="grid grid-cols-3 gap-4">
 										<div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-											<p class="text-xs text-indigo-600 font-medium">New Categories</p>
-											<p class="text-lg font-bold text-indigo-800">{Object.keys(validationResult.newEntities.categories || {}).length}</p>
+											<p class="text-xs font-medium text-indigo-600">New Categories</p>
+											<p class="text-lg font-bold text-indigo-800">
+												{Object.keys(validationResult.newEntities.categories || {}).length}
+											</p>
 										</div>
 										<div class="rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-3 text-center">
-											<p class="text-xs text-fuchsia-600 font-medium">New Suppliers</p>
-											<p class="text-lg font-bold text-fuchsia-800">{Object.keys(validationResult.newEntities.suppliers || {}).length}</p>
+											<p class="text-xs font-medium text-fuchsia-600">New Suppliers</p>
+											<p class="text-lg font-bold text-fuchsia-800">
+												{Object.keys(validationResult.newEntities.suppliers || {}).length}
+											</p>
 										</div>
 										<div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-											<p class="text-xs text-emerald-600 font-medium">New Locations</p>
-											<p class="text-lg font-bold text-emerald-800">{Object.keys(validationResult.newEntities.locations || {}).length}</p>
+											<p class="text-xs font-medium text-emerald-600">New Locations</p>
+											<p class="text-lg font-bold text-emerald-800">
+												{Object.keys(validationResult.newEntities.locations || {}).length}
+											</p>
 										</div>
 									</div>
 								{/if}
 
 								{#if validationResult.errors?.length}
-									<div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-										<ul class="list-disc list-inside space-y-1">{#each validationResult.errors as e}<li>{e}</li>{/each}</ul>
+									<div
+										class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+									>
+										<ul class="list-inside list-disc space-y-1">
+											{#each validationResult.errors as e}<li>{e}</li>{/each}
+										</ul>
 									</div>
 								{/if}
 
 								{#if validationResult.validProducts?.length}
-									<div class="max-h-64 overflow-y-auto border rounded-xl bg-white/70">
+									<div class="max-h-64 overflow-y-auto rounded-xl border bg-white/70">
 										<Table>
-											<TableHeader class="bg-gradient-to-r from-sky-100/70 to-blue-100/70 backdrop-blur">
-												<TableRow><TableHead>SKU</TableHead><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Supplier</TableHead><TableHead class="text-right">Price</TableHead></TableRow>
+											<TableHeader
+												class="bg-gradient-to-r from-sky-100/70 to-blue-100/70 backdrop-blur"
+											>
+												<TableRow
+													><TableHead>SKU</TableHead><TableHead>Name</TableHead><TableHead
+														>Category</TableHead
+													><TableHead>Supplier</TableHead><TableHead class="text-right"
+														>Price</TableHead
+													></TableRow
+												>
 											</TableHeader>
-											<TableBody>{#each validationResult.validProducts as p}<TableRow class="hover:bg-sky-50"><TableCell>{p.SKU}</TableCell><TableCell>{p.Name}</TableCell><TableCell>{p.CategoryName}</TableCell><TableCell>{p.SupplierName}</TableCell><TableCell class="text-right">{p.SellingPrice}</TableCell></TableRow>{/each}</TableBody>
+											<TableBody
+												>{#each validationResult.validProducts as p}<TableRow
+														class="hover:bg-sky-50"
+														><TableCell>{p.SKU}</TableCell><TableCell>{p.Name}</TableCell><TableCell
+															>{p.CategoryName}</TableCell
+														><TableCell>{p.SupplierName}</TableCell><TableCell class="text-right"
+															>{p.SellingPrice}</TableCell
+														></TableRow
+													>{/each}</TableBody
+											>
 										</Table>
 									</div>
 								{/if}
 							{/if}
 
 							{#if currentStep === 'importing'}
-								<p class="text-sky-700 flex items-center gap-2"><Loader class="h-4 w-4 animate-spin" /> Importing products...</p>
+								<p class="flex items-center gap-2 text-sky-700">
+									<Loader class="h-4 w-4 animate-spin" /> Importing products...
+								</p>
 							{/if}
 
 							{#if currentStep === 'complete'}
-								<div class="text-center p-6 bg-green-50 rounded-2xl border border-green-200">
-									<CheckCircle class="h-12 w-12 mx-auto text-green-600" />
-									<h3 class="text-lg font-semibold text-green-700 mt-2">Import Complete</h3>
-									<p class="text-slate-600 mt-1">{importJob?.message || 'Products imported successfully.'}</p>
-									<Button onclick={resetImportState} class="mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl px-5 py-2.5 hover:brightness-110">New Import</Button>
+								<div class="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
+									<CheckCircle class="mx-auto h-12 w-12 text-green-600" />
+									<h3 class="mt-2 text-lg font-semibold text-green-700">Import Complete</h3>
+									<p class="mt-1 text-slate-600">
+										{importJob?.message || 'Products imported successfully.'}
+									</p>
+									<Button
+										onclick={resetImportState}
+										class="mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-white hover:brightness-110"
+										>New Import</Button
+									>
 								</div>
 							{/if}
 
 							{#if currentStep === 'failed'}
-								<div class="text-center p-6 bg-rose-50 rounded-2xl border border-rose-200">
-									<AlertTriangle class="h-12 w-12 mx-auto text-rose-600" />
-									<h3 class="text-lg font-semibold text-rose-700 mt-2">Import Failed</h3>
-									<p class="text-slate-600 mt-1">{importJob?.lastError || 'Unknown error occurred.'}</p>
-									<Button onclick={resetImportState} class="mt-4 bg-gradient-to-r from-rose-500 to-orange-500 text-white rounded-xl px-5 py-2.5 hover:brightness-110">Try Again</Button>
+								<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
+									<AlertTriangle class="mx-auto h-12 w-12 text-rose-600" />
+									<h3 class="mt-2 text-lg font-semibold text-rose-700">Import Failed</h3>
+									<p class="mt-1 text-slate-600">
+										{importJob?.lastError || 'Unknown error occurred.'}
+									</p>
+									<Button
+										onclick={resetImportState}
+										class="mt-4 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 text-white hover:brightness-110"
+										>Try Again</Button
+									>
 								</div>
 							{/if}
 						</CardContent>
@@ -456,12 +594,18 @@
 
 			<!-- EXPORT TAB -->
 			<TabsContent value="export" class="outline-none">
-				<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-violet-50 to-purple-100">
-					<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
+				<Card
+					class="rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all duration-300 hover:shadow-xl"
+				>
+					<CardHeader
+						class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+					>
 						<CardTitle class="flex items-center gap-2 text-slate-800">
 							<Download class="h-5 w-5 text-violet-600" /> Catalog Export
 						</CardTitle>
-						<CardDescription class="text-slate-600">Filter and download your product catalog.</CardDescription>
+						<CardDescription class="text-slate-600"
+							>Filter and download your product catalog.</CardDescription
+						>
 					</CardHeader>
 					<CardContent class="space-y-6 p-6">
 						<div class="grid gap-4 sm:grid-cols-3">
@@ -477,7 +621,10 @@
 							</div>
 							<div class="space-y-2">
 								<label class="text-sm font-medium text-slate-700">Category (Optional)</label>
-								<select class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" bind:value={exportParams.category}>
+								<select
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+									bind:value={exportParams.category}
+								>
 									<option value="">All Categories</option>
 									{#each categories as cat}
 										<option value={cat.ID.toString()}>{cat.Name}</option>
@@ -486,7 +633,10 @@
 							</div>
 							<div class="space-y-2">
 								<label class="text-sm font-medium text-slate-700">Supplier (Optional)</label>
-								<select class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" bind:value={exportParams.supplier}>
+								<select
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+									bind:value={exportParams.supplier}
+								>
 									<option value="">All Suppliers</option>
 									{#each suppliers as sup}
 										<option value={sup.ID.toString()}>{sup.Name}</option>
@@ -495,7 +645,7 @@
 							</div>
 						</div>
 						<Button
-							class="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all flex items-center justify-center"
+							class="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-semibold text-white shadow-md transition-all hover:scale-[1.02] hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
 							onclick={exportCatalog}
 							disabled={exporting}
 						>
@@ -507,117 +657,323 @@
 			</TabsContent>
 
 			<!-- STATUS TAB -->
-			<TabsContent value="status" class="outline-none">
-				<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-orange-100">
-					<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<Search class="h-5 w-5 text-amber-600" /> Recent Jobs
-						</CardTitle>
-						<CardDescription class="text-slate-600">View the status and history of your bulk operations.</CardDescription>
-					</CardHeader>
-					<CardContent class="p-0">
+			<TabsContent value="status" class="space-y-6 outline-none">
+				<!-- Header / Search -->
+				<div
+					class="flex flex-col items-center justify-between gap-4 rounded-2xl border border-sky-100 bg-white/60 p-4 backdrop-blur-sm sm:flex-row"
+				>
+					<div class="relative w-full sm:w-72">
+						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Input
+							placeholder="Search by Job ID..."
+							bind:value={jobIdQuery}
+							onkeydown={(e) => e.key === 'Enter' && loadJobStatus()}
+							class="rounded-xl border-slate-200 bg-white/80 pl-10 focus:ring-sky-200"
+						/>
+					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={refreshJobs}
+						class="gap-2 rounded-xl border-slate-200 text-slate-600 hover:bg-sky-50 hover:text-sky-700"
+					>
+						<RefreshCw class="h-4 w-4" /> Refresh
+					</Button>
+				</div>
+
+				<div class="grid gap-6 lg:grid-cols-3">
+					<!-- JOB LIST -->
+					<div class="space-y-4 lg:col-span-2">
 						{#if lookupLoading}
-							<div class="p-8 text-center text-slate-500"><Loader class="h-6 w-6 animate-spin mx-auto mb-2" /> Loading jobs...</div>
+							<div class="p-12 text-center">
+								<Loader class="mx-auto mb-3 h-8 w-8 animate-spin text-sky-500" />
+								<p class="font-medium text-slate-500">Loading jobs...</p>
+							</div>
 						{:else if recentJobs.length === 0}
-							<div class="p-8 text-center text-slate-500">No recent jobs found.</div>
+							<div
+								class="rounded-3xl border border-dashed border-slate-300 bg-white/40 p-12 text-center"
+							>
+								<div
+									class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50"
+								>
+									<Clock class="h-8 w-8 text-slate-300" />
+								</div>
+								<h3 class="text-lg font-medium text-slate-700">No History</h3>
+								<p class="text-slate-500">Recent import and export jobs will appear here.</p>
+							</div>
 						{:else}
-							<div class="overflow-x-auto">
-								<Table>
-									<TableHeader class="bg-amber-100/50">
-										<TableRow>
-											<TableHead>ID</TableHead>
-											<TableHead>Type</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead>Date</TableHead>
-											<TableHead class="text-right">Action</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{#each recentJobs as job}
-											<TableRow class="hover:bg-amber-50/50 cursor-pointer" onclick={() => viewJobDetails(job)}>
-												<TableCell class="font-medium">#{job.ID}</TableCell>
-												<TableCell class="capitalize">{job.Type?.toLowerCase() ?? 'unknown'}</TableCell>
-												<TableCell>
-													<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-														{job.Status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-														 job.Status === 'FAILED' ? 'bg-rose-100 text-rose-800' :
-														 job.Status === 'PENDING_CONFIRMATION' ? 'bg-blue-100 text-blue-800' :
-														 'bg-amber-100 text-amber-800'}">
-														{job.Status}
-													</span>
-												</TableCell>
-												<TableCell>{new Date(job.CreatedAt || '').toLocaleDateString()} {new Date(job.CreatedAt || '').toLocaleTimeString()}</TableCell>
-												<TableCell class="text-right flex items-center justify-end gap-2">
-													{#if job.Type === 'BULK_EXPORT' && job.Status === 'COMPLETED'}
-														<Button variant="ghost" size="sm" class="h-8 w-8 p-0" onclick={(e) => { e.stopPropagation(); downloadExport(job); }}>
-															<Download class="h-4 w-4 text-violet-600" />
-														</Button>
+							<div class="space-y-3">
+								{#each recentJobs as job}
+									<!-- Job Card -->
+									<div
+										role="button"
+										tabindex="0"
+										onclick={() => viewJobDetails(job)}
+										onkeydown={(e) => e.key === 'Enter' && viewJobDetails(job)}
+										class="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition-all duration-300 hover:border-sky-200 hover:bg-white hover:shadow-md"
+									>
+										<!-- Hover Gradient -->
+										<div
+											class="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-sky-50/50 opacity-0 transition-opacity group-hover:opacity-100"
+										></div>
+
+										<div class="relative flex items-center justify-between gap-4">
+											<div class="flex items-center gap-4">
+												<!-- Icon Box -->
+												<div
+													class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
+													{job.type === 'BULK_IMPORT' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'}"
+												>
+													{#if job.type === 'BULK_IMPORT'}
+														<Package class="h-6 w-6" />
+													{:else}
+														<FileSpreadsheet class="h-6 w-6" />
 													{/if}
-													<Button variant="ghost" size="sm" class="h-8 w-8 p-0">
-														<FileText class="h-4 w-4 text-slate-500" />
-													</Button>
-												</TableCell>
-											</TableRow>
-										{/each}
-									</TableBody>
-								</Table>
+
+													<!-- Status Indicator Dot -->
+													<div
+														class="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white
+														{job.status === 'COMPLETED'
+															? 'bg-emerald-500'
+															: job.status === 'FAILED'
+																? 'bg-rose-500'
+																: job.status === 'PROCESSING'
+																	? 'animate-pulse bg-sky-500'
+																	: 'bg-amber-500'}"
+													></div>
+												</div>
+
+												<div>
+													<div class="mb-0.5 flex items-center gap-2">
+														<span class="font-bold text-slate-700">#{job.ID}</span>
+														<span class="text-xs font-medium text-slate-400">•</span>
+														<span class="text-sm font-medium capitalize text-slate-600"
+															>{(job.type || '').toLowerCase().replace('_', ' ')}</span
+														>
+													</div>
+													<div class="flex items-center gap-2 text-xs text-slate-500">
+														<Clock class="h-3 w-3" />
+														<span
+															>{new Date(job.CreatedAt || '').toLocaleDateString()}
+															{new Date(job.CreatedAt || '').toLocaleTimeString([], {
+																hour: '2-digit',
+																minute: '2-digit'
+															})}</span
+														>
+													</div>
+												</div>
+											</div>
+
+											<div class="flex items-center gap-4">
+												<div class="hidden text-right sm:block">
+													<div
+														class="mb-1 text-xs font-semibold uppercase tracking-wider
+														{job.status === 'COMPLETED'
+															? 'text-emerald-600'
+															: job.status === 'FAILED'
+																? 'text-rose-600'
+																: job.status === 'PROCESSING'
+																	? 'text-sky-600'
+																	: 'text-amber-600'}"
+													>
+														{(job.status || '').replace('_', ' ')}
+													</div>
+													{#if job.status === 'FAILED'}
+														<p class="max-w-[150px] truncate text-[10px] text-rose-400">
+															Check details
+														</p>
+													{:else if job.status === 'COMPLETED'}
+														<p class="text-[10px] text-slate-400">Success</p>
+													{/if}
+												</div>
+												<div class="text-slate-300 transition-colors group-hover:text-sky-400">
+													<ArrowRight class="h-5 w-5" />
+												</div>
+											</div>
+										</div>
+									</div>
+								{/each}
 							</div>
 						{/if}
+					</div>
 
+					<!-- DETAILS PANEL -->
+					<div class="lg:col-span-1">
 						{#if lookupJob}
 							{@const summary = parseValidationResult(lookupJob.result)}
-							<div class="border-t border-amber-200 bg-white/60 p-6 animate-in slide-in-from-top-2">
-								<div class="flex items-center justify-between mb-4">
-									<h3 class="font-semibold text-lg text-slate-800">Job #{lookupJob.ID} Details</h3>
-									<Button variant="ghost" size="sm" onclick={() => lookupJob = null}>Close</Button>
+							<div
+								class="animate-in slide-in-from-right-4 sticky top-24 overflow-hidden rounded-3xl border border-sky-100 bg-white/80 shadow-xl backdrop-blur-md duration-300"
+							>
+								<!-- Header -->
+								<div
+									class="flex items-start justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 p-5"
+								>
+									<div>
+										<p class="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+											Job Details
+										</p>
+										<h2 class="text-2xl font-extrabold text-slate-800">#{lookupJob.ID}</h2>
+									</div>
+									<Button
+										variant="ghost"
+										size="icon"
+										class="h-8 w-8 rounded-full hover:bg-white hover:text-rose-500"
+										onclick={() => (lookupJob = null)}
+									>
+										<X class="h-4 w-4" />
+									</Button>
 								</div>
 
-								<div class="grid grid-cols-3 gap-4 text-center mb-4">
-									<div class="rounded-xl bg-white border border-amber-100 py-3">
-										<p class="text-xs text-slate-500 mb-1">Valid</p>
-										<p class="text-2xl font-bold text-green-600">{summary?.validRecords ?? 0}</p>
+								<div class="space-y-6 p-6">
+									<!-- Status Badge Large -->
+									<div
+										class="flex items-center gap-3 rounded-2xl p-3
+										{lookupJob.status === 'COMPLETED'
+											? 'border border-emerald-100 bg-emerald-50 text-emerald-800'
+											: lookupJob.status === 'FAILED'
+												? 'border border-rose-100 bg-rose-50 text-rose-800'
+												: 'border border-amber-100 bg-amber-50 text-amber-800'}"
+									>
+										{#if lookupJob.status === 'COMPLETED'}
+											<CheckCircle class="h-5 w-5 shrink-0" />
+										{:else if lookupJob.status === 'FAILED'}
+											<AlertTriangle class="h-5 w-5 shrink-0" />
+										{:else}
+											<Loader class="h-5 w-5 shrink-0 animate-spin" />
+										{/if}
+										<div class="flex-1">
+											<p class="text-sm font-bold">{(lookupJob.status || '').replace('_', ' ')}</p>
+											{#if lookupJob.lastError}
+												<p class="mt-0.5 line-clamp-2 text-xs opacity-90">{lookupJob.lastError}</p>
+											{/if}
+										</div>
 									</div>
-									<div class="rounded-xl bg-white border border-amber-100 py-3">
-										<p class="text-xs text-slate-500 mb-1">Invalid</p>
-										<p class="text-2xl font-bold text-rose-600">{summary?.invalidRecords ?? 0}</p>
-									</div>
-									<div class="rounded-xl bg-white border border-amber-100 py-3">
-										<p class="text-xs text-slate-500 mb-1">Total</p>
-										<p class="text-2xl font-bold text-slate-800">{summary?.totalRecords ?? 0}</p>
-									</div>
+
+									<!-- Actions -->
+									{#if lookupJob.type === 'BULK_EXPORT' && lookupJob.status === 'COMPLETED'}
+										<Button
+											class="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200 hover:from-violet-700 hover:to-indigo-700"
+											onclick={() => lookupJob && downloadExport(lookupJob)}
+										>
+											<Download class="mr-2 h-4 w-4" /> Download Export
+										</Button>
+									{/if}
+
+									<!-- Stats Grid -->
+									{#if summary}
+										<div class="grid grid-cols-2 gap-3">
+											<div
+												class="rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm"
+											>
+												<p class="mb-1 text-xs font-medium text-slate-400">Processed</p>
+												<p class="text-2xl font-bold text-slate-700">{summary.totalRecords || 0}</p>
+											</div>
+											<div
+												class="rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm"
+											>
+												<p class="mb-1 text-xs font-medium text-slate-400">Success Rate</p>
+												<p class="text-2xl font-bold text-emerald-600">
+													{summary.totalRecords
+														? Math.round((summary.validRecords / summary.totalRecords) * 100)
+														: 0}%
+												</p>
+											</div>
+										</div>
+
+										<!-- Breakdown -->
+										<div class="space-y-3">
+											<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
+												Breakdown
+											</h4>
+
+											<div
+												class="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"
+											>
+												<div class="flex items-center gap-2">
+													<Check class="h-4 w-4 text-emerald-600" />
+													<span class="text-sm font-medium text-emerald-900">Valid Records</span>
+												</div>
+												<span class="font-bold text-emerald-700">{summary.validRecords}</span>
+											</div>
+
+											<div
+												class="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/50 p-3"
+											>
+												<div class="flex items-center gap-2">
+													<AlertCircle class="h-4 w-4 text-rose-600" />
+													<span class="text-sm font-medium text-rose-900">Invalid Records</span>
+												</div>
+												<span class="font-bold text-rose-700">{summary.invalidRecords}</span>
+											</div>
+										</div>
+
+										<!-- New Entities -->
+										{#if summary.newEntities && (Object.keys(summary.newEntities.categories || {}).length > 0 || Object.keys(summary.newEntities.suppliers || {}).length > 0)}
+											<div class="space-y-3">
+												<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
+													Changes
+												</h4>
+												<div class="flex flex-wrap gap-2">
+													{#if Object.keys(summary.newEntities.categories || {}).length > 0}
+														<span
+															class="inline-flex items-center rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
+														>
+															+{Object.keys(summary.newEntities.categories || {}).length} Categories
+														</span>
+													{/if}
+													{#if Object.keys(summary.newEntities.suppliers || {}).length > 0}
+														<span
+															class="inline-flex items-center rounded-lg border border-fuchsia-100 bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700"
+														>
+															+{Object.keys(summary.newEntities.suppliers || {}).length} Suppliers
+														</span>
+													{/if}
+													{#if Object.keys(summary.newEntities.locations || {}).length > 0}
+														<span
+															class="inline-flex items-center rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700"
+														>
+															+{Object.keys(summary.newEntities.locations || {}).length} Locations
+														</span>
+													{/if}
+												</div>
+											</div>
+										{/if}
+									{/if}
 								</div>
-
-								{#if summary?.newEntities}
-									<div class="grid grid-cols-3 gap-4 mb-4">
-										<div class="rounded-xl border border-indigo-100 bg-indigo-50/50 p-2 text-center">
-											<p class="text-[10px] uppercase text-indigo-600 font-bold">New Categories</p>
-											<p class="text-lg font-bold text-indigo-800">{Object.keys(summary.newEntities.categories || {}).length}</p>
-										</div>
-										<div class="rounded-xl border border-fuchsia-100 bg-fuchsia-50/50 p-2 text-center">
-											<p class="text-[10px] uppercase text-fuchsia-600 font-bold">New Suppliers</p>
-											<p class="text-lg font-bold text-fuchsia-800">{Object.keys(summary.newEntities.suppliers || {}).length}</p>
-										</div>
-										<div class="rounded-xl border border-emerald-100 bg-emerald-50/50 p-2 text-center">
-											<p class="text-[10px] uppercase text-emerald-600 font-bold">New Locations</p>
-											<p class="text-lg font-bold text-emerald-800">{Object.keys(summary.newEntities.locations || {}).length}</p>
-										</div>
-									</div>
-								{/if}
-
-								{#if lookupJob.lastError}
-									<div class="p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-sm">
-										<span class="font-semibold">Error:</span> {lookupJob.lastError}
-									</div>
-								{/if}
+							</div>
+						{:else}
+							<!-- Empty State for Details -->
+							<div
+								class="hidden h-full min-h-[400px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white/30 p-8 text-center lg:flex"
+							>
+								<div
+									class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300"
+								>
+									<ArrowRight class="h-6 w-6" />
+								</div>
+								<p class="font-medium text-slate-500">Select a job to view details</p>
 							</div>
 						{/if}
-					</CardContent>
-				</Card>
+					</div>
+				</div>
 			</TabsContent>
 		</Tabs>
 	</div>
 </div>
 
 <style lang="postcss">
-@keyframes pulseGlow { 0%,100%{transform:scale(1);opacity:.45}50%{transform:scale(1.08);opacity:.7}} .animate-pulseGlow{animation:pulseGlow 12s ease-in-out infinite}
+	@keyframes pulseGlow {
+		0%,
+		100% {
+			transform: scale(1);
+			opacity: 0.45;
+		}
+		50% {
+			transform: scale(1.08);
+			opacity: 0.7;
+		}
+	}
+	.animate-pulseGlow {
+		animation: pulseGlow 12s ease-in-out infinite;
+	}
 </style>
