@@ -31,6 +31,7 @@
 
 	// Icon
 	import { Bell, Activity, CalendarClock, Package, AlertTriangle } from 'lucide-svelte';
+	import { auth } from '$lib/stores/auth';
 
 	// --- State ---
 	const filters = $state({ type: '', status: 'ACTIVE' });
@@ -339,22 +340,25 @@
 						<TableHead class="px-4 py-3 text-slate-700">Product</TableHead>
 						<TableHead class="px-4 py-3 text-slate-700">Message</TableHead>
 						<TableHead class="px-4 py-3 text-slate-700">Status</TableHead>
-						<TableHead class="px-4 py-3 text-right text-slate-700">Action</TableHead>
+						{#if auth.hasPermission('alerts.manage')}
+							<TableHead class="px-4 py-3 text-right text-slate-700">Action</TableHead>
+						{/if}
 					</TableRow>
 				</TableHeader>
 				<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
 					{#if loading}
 						{#each Array(4) as _, i}
 							<TableRow class="hover:bg-white/80">
-								<TableCell colspan="5" class="px-4 py-3">
+								<TableCell colspan={auth.hasPermission('alerts.manage') ? 5 : 4} class="px-4 py-3">
 									<Skeleton class="h-6 w-full bg-white/70" />
 								</TableCell>
 							</TableRow>
 						{/each}
 					{:else if alerts.length === 0}
 						<TableRow>
-							<TableCell colspan="5" class="py-6 text-center text-sm text-slate-600"
-								>No alerts found</TableCell
+							<TableCell
+								colspan={auth.hasPermission('alerts.manage') ? 5 : 4}
+								class="py-6 text-center text-sm text-slate-600">No alerts found</TableCell
 							>
 						</TableRow>
 					{:else}
@@ -382,21 +386,23 @@
 										{alert.Status}
 									</span>
 								</TableCell>
-								<TableCell class="px-4 py-3 text-right">
-									{#if alert.Status !== 'RESOLVED'}
-										<Button
-											size="sm"
-											variant="ghost"
-											class="rounded-lg px-3 py-1.5 text-amber-700 hover:bg-amber-100"
-											onclick={(event) => {
-												event.stopPropagation();
-												resolveAlert(alert.ID);
-											}}
-										>
-											Resolve
-										</Button>
-									{/if}
-								</TableCell>
+								{#if auth.hasPermission('alerts.manage')}
+									<TableCell class="px-4 py-3 text-right">
+										{#if alert.Status !== 'RESOLVED'}
+											<Button
+												size="sm"
+												variant="ghost"
+												class="rounded-lg px-3 py-1.5 text-amber-700 hover:bg-amber-100"
+												onclick={(event) => {
+													event.stopPropagation();
+													resolveAlert(alert.ID);
+												}}
+											>
+												Resolve
+											</Button>
+										{/if}
+									</TableCell>
+								{/if}
 							</TableRow>
 						{/each}
 					{/if}
@@ -406,100 +412,103 @@
 	</Card>
 
 	<!-- Forms -->
-	<div class="grid gap-8 lg:grid-cols-2">
-		<!-- Product thresholds -->
-		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
-		>
-			<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-				<CardTitle class="text-slate-800">Product Thresholds</CardTitle>
-				<CardDescription class="text-slate-600">Configure alerting per SKU</CardDescription>
-			</CardHeader>
-			<CardContent class="space-y-3 p-6">
-				<div class="space-y-1">
-					<label class="text-sm font-medium text-slate-700">Product</label>
-					<ProductSelector
-						bind:value={productSettingsForm.productId}
-						placeholder="Search product..."
-						className="w-full"
-					/>
-				</div>
-				<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-					<Input
-						type="number"
-						placeholder="Low stock"
-						bind:value={productSettingsForm.lowStockLevel}
-						class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
-					/>
-					<Input
-						type="number"
-						placeholder="Overstock"
-						bind:value={productSettingsForm.overStockLevel}
-						class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
-					/>
-					<Input
-						type="number"
-						placeholder="Expiry days"
-						bind:value={productSettingsForm.expiryAlertDays}
-						class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
-					/>
-				</div>
-				<Button
-					class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md transition-all hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
-					onclick={updateProductSettings}
-				>
-					Save thresholds
-				</Button>
-			</CardContent>
-		</Card>
+	{#if auth.hasPermission('alerts.manage')}
+		<div class="grid gap-8 lg:grid-cols-2">
+			<!-- Product thresholds -->
+			<Card
+				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
+			>
+				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
+					<CardTitle class="text-slate-800">Product Thresholds</CardTitle>
+					<CardDescription class="text-slate-600">Configure alerting per SKU</CardDescription>
+				</CardHeader>
+				<CardContent class="space-y-3 p-6">
+					<div class="space-y-1">
+						<label class="text-sm font-medium text-slate-700">Product</label>
+						<ProductSelector
+							bind:value={productSettingsForm.productId}
+							placeholder="Search product..."
+							className="w-full"
+						/>
+					</div>
+					<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+						<Input
+							type="number"
+							placeholder="Low stock"
+							bind:value={productSettingsForm.lowStockLevel}
+							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+						/>
+						<Input
+							type="number"
+							placeholder="Overstock"
+							bind:value={productSettingsForm.overStockLevel}
+							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+						/>
+						<Input
+							type="number"
+							placeholder="Expiry days"
+							bind:value={productSettingsForm.expiryAlertDays}
+							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+						/>
+					</div>
+					<Button
+						class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md transition-all hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
+						onclick={updateProductSettings}
+					>
+						Save thresholds
+					</Button>
+				</CardContent>
+			</Card>
 
-		<!-- User notifications -->
-		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
-		>
-			<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-				<CardTitle class="text-slate-800">User Notifications</CardTitle>
-				<CardDescription class="text-slate-600">Escalation preferences per operator</CardDescription
-				>
-			</CardHeader>
-			<CardContent class="space-y-3 p-6">
-				<div class="space-y-1">
-					<label class="text-sm font-medium text-slate-700">User</label>
-					<UserSelector
-						bind:value={userSettingsForm.userId}
-						placeholder="Search user..."
-						className="w-full border-violet-200"
+			<!-- User notifications -->
+			<Card
+				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
+			>
+				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
+					<CardTitle class="text-slate-800">User Notifications</CardTitle>
+					<CardDescription class="text-slate-600"
+						>Escalation preferences per operator</CardDescription
+					>
+				</CardHeader>
+				<CardContent class="space-y-3 p-6">
+					<div class="space-y-1">
+						<label class="text-sm font-medium text-slate-700">User</label>
+						<UserSelector
+							bind:value={userSettingsForm.userId}
+							placeholder="Search user..."
+							className="w-full border-violet-200"
+						/>
+					</div>
+					<Input
+						placeholder="Email"
+						bind:value={userSettingsForm.emailAddress}
+						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 					/>
-				</div>
-				<Input
-					placeholder="Email"
-					bind:value={userSettingsForm.emailAddress}
-					class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
-				/>
-				<Input
-					placeholder="Phone"
-					bind:value={userSettingsForm.phoneNumber}
-					class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
-				/>
-				<div class="flex flex-wrap items-center gap-4 text-sm">
-					<label class="flex items-center gap-2">
-						<input type="checkbox" bind:checked={userSettingsForm.emailNotificationsEnabled} />
-						Email
-					</label>
-					<label class="flex items-center gap-2">
-						<input type="checkbox" bind:checked={userSettingsForm.smsNotificationsEnabled} />
-						SMS
-					</label>
-				</div>
-				<Button
-					class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md transition-all hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
-					onclick={updateUserSettings}
-				>
-					Save preferences
-				</Button>
-			</CardContent>
-		</Card>
-	</div>
+					<Input
+						placeholder="Phone"
+						bind:value={userSettingsForm.phoneNumber}
+						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
+					/>
+					<div class="flex flex-wrap items-center gap-4 text-sm">
+						<label class="flex items-center gap-2">
+							<input type="checkbox" bind:checked={userSettingsForm.emailNotificationsEnabled} />
+							Email
+						</label>
+						<label class="flex items-center gap-2">
+							<input type="checkbox" bind:checked={userSettingsForm.smsNotificationsEnabled} />
+							SMS
+						</label>
+					</div>
+					<Button
+						class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md transition-all hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
+						onclick={updateUserSettings}
+					>
+						Save preferences
+					</Button>
+				</CardContent>
+			</Card>
+		</div>
+	{/if}
 </section>
 
 <style lang="postcss">

@@ -176,6 +176,17 @@ func seedData() {
 		// Alerts
 		{Name: "alerts.view", Group: "Inventory", Description: "View alerts"},
 		{Name: "alerts.manage", Group: "Inventory", Description: "Resolve alerts"},
+		// Dashboard
+		{Name: "dashboard.view", Group: "System", Description: "View dashboard overview"},
+		// Module Access
+		{Name: "inventory.view", Group: "Inventory", Description: "View inventory module"},
+		{Name: "inventory.read", Group: "Inventory", Description: "Read inventory data"},
+		{Name: "inventory.write", Group: "Inventory", Description: "Modify inventory data"},
+		{Name: "crm.view", Group: "CRM", Description: "View CRM module"},
+		{Name: "crm.read", Group: "CRM", Description: "Read CRM data"},
+		{Name: "crm.write", Group: "CRM", Description: "Modify CRM data"},
+		{Name: "pos.view", Group: "POS", Description: "View POS module"},
+		{Name: "reports.view", Group: "Reports", Description: "View reports"},
 	}
 
 	permMap := make(map[string]domain.Permission)
@@ -225,6 +236,8 @@ func seedData() {
 				permMap["bulk.import"], permMap["bulk.export"],
 				permMap["users.view"], permMap["users.manage"],
 				permMap["settings.view"],
+				permMap["dashboard.view"],
+				permMap["inventory.view"], permMap["crm.view"], permMap["pos.view"],
 			)
 		case "Staff":
 			permsToAssign = append(permsToAssign,
@@ -236,6 +249,8 @@ func seedData() {
 				permMap["customers.read"],
 				permMap["pos.access"],
 				permMap["alerts.view"],
+				permMap["dashboard.view"],
+				permMap["inventory.view"], permMap["crm.view"], permMap["pos.view"],
 			)
 		}
 

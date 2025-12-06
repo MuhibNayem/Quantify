@@ -16,6 +16,7 @@
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
 	import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
+	import { auth } from '$lib/stores/auth';
 
 	const tabFilters = [
 		{ value: 'all', label: 'All users' },

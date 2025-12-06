@@ -116,9 +116,16 @@ func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) er
 		}
 	}
 
-	// Helper to replace association
-	if err := r.db.Model(&role).Association("Permissions").Replace(perms); err != nil {
+	// Explicitly clear existing permissions first to ensure no duplicates
+	if err := r.db.Model(&role).Association("Permissions").Clear(); err != nil {
 		return err
+	}
+
+	// Add new permissions
+	if len(perms) > 0 {
+		if err := r.db.Model(&role).Association("Permissions").Append(perms); err != nil {
+			return err
+		}
 	}
 
 	// Invalidate Cache

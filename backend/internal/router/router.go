@@ -140,7 +140,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		}
 
 		// Dashboard
-		api.GET("/dashboard/summary", dashboardHandler.GetDashboardSummary)
+		api.GET("/dashboard/summary", middleware.RequirePermission(roleRepo, "dashboard.view"), dashboardHandler.GetDashboardSummary)
 
 		// Products
 		products := api.Group("/products")
