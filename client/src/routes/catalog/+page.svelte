@@ -116,7 +116,47 @@
 	let supplierSearchTerm = $state('');
 
 	const locationForm = $state({ name: '', address: '' });
-	let editingLocation: Location | null = null;
+	let editingLocation = $state<Location | null>(null);
+
+	// Column definitions with permission checks
+	const productColumns = $derived([
+		{ header: 'SKU', accessorKey: 'SKU' },
+		{ header: 'Name', accessorKey: 'Name' },
+		{ header: 'Status', accessorKey: 'Status' },
+		...(auth.hasPermission('products.write') || auth.hasPermission('products.delete')
+			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			: [])
+	]);
+
+	const categoryColumns = $derived([
+		{ header: 'Name', accessorKey: 'Name' },
+		...(auth.hasPermission('categories.write')
+			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			: [])
+	]);
+
+	const subCategoryColumns = $derived([
+		{ header: 'Name', accessorKey: 'Name' },
+		...(auth.hasPermission('categories.write')
+			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			: [])
+	]);
+
+	const supplierColumns = $derived([
+		{ header: 'Name', accessorKey: 'Name' },
+		{ header: 'Contact', accessorKey: 'ContactPerson' },
+		...(auth.hasPermission('suppliers.write')
+			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			: [])
+	]);
+
+	const locationColumns = $derived([
+		{ header: 'Name', accessorKey: 'Name' },
+		{ header: 'Address', accessorKey: 'Address' },
+		...(auth.hasPermission('locations.write')
+			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			: [])
+	]);
 
 	let selectedResourceId: number | null = $state(null);
 	let isModalOpen = $state(false);
@@ -1073,7 +1113,11 @@
 	<section class="space-y-10">
 		{#key activeTab}
 			{#if activeTab === 'products'}
-				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+				<div
+					class="grid gap-8 {auth.hasPermission('products.write')
+						? 'lg:grid-cols-[2fr,1fr]'
+						: 'grid-cols-1'}"
+				>
 					<!-- Table Section Wrapper -->
 					<div class="flex flex-col gap-6">
 						<!-- Header with Search -->
@@ -1119,12 +1163,7 @@
 
 						<DataTable
 							data={products}
-							columns={[
-								{ header: 'SKU', accessorKey: 'SKU' },
-								{ header: 'Name', accessorKey: 'Name' },
-								{ header: 'Status', accessorKey: 'Status' },
-								{ header: 'Actions', accessorKey: 'id', class: 'text-right' }
-							]}
+							columns={productColumns}
 							totalItems={pagination.totalItems}
 							pageSize={pagination.itemsPerPage}
 							currentPage={pagination.currentPage}
@@ -1151,178 +1190,192 @@
 										<span class="text-slate-400">—</span>
 									{/if}
 								</TableCell>
-								<TableCell class="text-right">
-									<div class="flex items-center justify-end gap-1">
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												editProduct(product);
-											}}
-										>
-											Edit
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												deleteProduct(product);
-											}}
-										>
-											Delete
-										</Button>
-									</div>
-								</TableCell>
+								{#if auth.hasPermission('products.write') || auth.hasPermission('products.delete')}
+									<TableCell class="text-right">
+										<div class="flex items-center justify-end gap-1">
+											{#if auth.hasPermission('products.write')}
+												<Button
+													size="sm"
+													variant="ghost"
+													class="h-8 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+													onclick={(event) => {
+														event.stopPropagation();
+														editProduct(product);
+													}}
+												>
+													Edit
+												</Button>
+											{/if}
+											{#if auth.hasPermission('products.delete')}
+												<Button
+													size="sm"
+													variant="ghost"
+													class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+													onclick={(event) => {
+														event.stopPropagation();
+														deleteProduct(product.ID);
+													}}
+												>
+													Delete
+												</Button>
+											{/if}
+										</div>
+									</TableCell>
+								{/if}
 							{/snippet}
 						</DataTable>
 					</div>
 
 					<!-- Form -->
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-						data-animate="fade-up"
-						style="animation-delay:240ms"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					{#if auth.hasPermission('products.write')}
+						<Card
+							class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+							data-animate="fade-up"
+							style="animation-delay:240ms"
 						>
-							<CardTitle class="text-slate-800"
-								>{editingProduct ? 'Update product' : 'Create product'}</CardTitle
+							<CardHeader
+								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
-							<CardDescription class="text-slate-600">SKU-level metadata</CardDescription>
-						</CardHeader>
-						<CardContent class="space-y-4 p-6">
-							<Input
-								class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-								placeholder="SKU"
-								bind:value={productForm.sku}
-							/>
-							<Input
-								class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-								placeholder="Name"
-								bind:value={productForm.name}
-							/>
-							<Input
-								class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-								placeholder="Description"
-								bind:value={productForm.description}
-							/>
-							<Input
-								class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-								placeholder="Barcode / UPC (must be unique)"
-								bind:value={productForm.barCodeUPC}
-							/>
-
-							<div class="select-wrapper">
-								<select
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									bind:value={productForm.categoryId}
-									onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}
+								<CardTitle class="text-slate-800"
+									>{editingProduct ? 'Update product' : 'Create product'}</CardTitle
 								>
-									<option value="">Select category</option>
-									{#each categories as category}
-										<option value={String(category.ID)}>{category.Name}</option>
-									{/each}
-								</select>
-							</div>
+								<CardDescription class="text-slate-600">SKU-level metadata</CardDescription>
+							</CardHeader>
+							<CardContent class="space-y-4 p-6">
+								<Input
+									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+									placeholder="SKU"
+									bind:value={productForm.sku}
+								/>
+								<Input
+									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+									placeholder="Name"
+									bind:value={productForm.name}
+								/>
+								<Input
+									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+									placeholder="Description"
+									bind:value={productForm.description}
+								/>
+								<Input
+									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+									placeholder="Barcode / UPC (must be unique)"
+									bind:value={productForm.barCodeUPC}
+								/>
 
-							<div class="flex items-center gap-3">
 								<div class="select-wrapper">
 									<select
 										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-										bind:value={productForm.subCategoryId}
+										bind:value={productForm.categoryId}
+										onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}
 									>
-										<option value="">Select sub-category</option>
-										{#each subCategories.filter((sc) => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
-											<option value={String(subCategory.ID)}>{subCategory.Name}</option>
+										<option value="">Select category</option>
+										{#each categories as category}
+											<option value={String(category.ID)}>{category.Name}</option>
 										{/each}
 									</select>
 								</div>
 
-								<Button
-									size="sm"
-									variant="outline"
-									class="rounded-xl border border-sky-200 px-3 py-2 text-sky-700 hover:bg-sky-50"
-									onclick={() => (activeTab = 'sub-categories')}>New</Button
-								>
-							</div>
+								<div class="flex items-center gap-3">
+									<div class="select-wrapper">
+										<select
+											class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+											bind:value={productForm.subCategoryId}
+										>
+											<option value="">Select sub-category</option>
+											{#each subCategories.filter((sc) => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
+												<option value={String(subCategory.ID)}>{subCategory.Name}</option>
+											{/each}
+										</select>
+									</div>
 
-							<div class="select-wrapper">
-								<select
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									bind:value={productForm.supplierId}
-								>
-									<option value="">Select supplier</option>
-									{#each suppliers as supplier}
-										<option value={String(supplier.ID)}>{supplier.Name}</option>
-									{/each}
-								</select>
-							</div>
+									<Button
+										size="sm"
+										variant="outline"
+										class="rounded-xl border border-sky-200 px-3 py-2 text-sky-700 hover:bg-sky-50"
+										onclick={() => (activeTab = 'sub-categories')}>New</Button
+									>
+								</div>
 
-							<div class="select-wrapper">
-								<select
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									bind:value={productForm.locationId}
-								>
-									<option value="">Default location</option>
-									{#each locations as location}
-										<option value={String(location.ID)}>{location.Name}</option>
-									{/each}
-								</select>
-							</div>
+								<div class="select-wrapper">
+									<select
+										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+										bind:value={productForm.supplierId}
+									>
+										<option value="">Select supplier</option>
+										{#each suppliers as supplier}
+											<option value={String(supplier.ID)}>{supplier.Name}</option>
+										{/each}
+									</select>
+								</div>
 
-							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-								<Input
-									type="number"
-									min="0"
-									step="0.01"
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="Purchase price"
-									bind:value={productForm.purchasePrice}
-								/>
-								<Input
-									type="number"
-									min="0"
-									step="0.01"
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="Selling price"
-									bind:value={productForm.sellingPrice}
-								/>
-							</div>
+								<div class="select-wrapper">
+									<select
+										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+										bind:value={productForm.locationId}
+									>
+										<option value="">Default location</option>
+										{#each locations as location}
+											<option value={String(location.ID)}>{location.Name}</option>
+										{/each}
+									</select>
+								</div>
 
-							<div class="select-wrapper">
-								<select
-									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									bind:value={productForm.status}
-								>
-									<option value="Active">Active</option>
-									<option value="Archived">Archived</option>
-									<option value="Discontinued">Discontinued</option>
-								</select>
-							</div>
-							<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
-								<Button
-									class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl sm:w-1/2"
-									onclick={saveProduct}
-								>
-									{editingProduct ? 'Update' : 'Create'}
-								</Button>
-								<Button
-									class="w-full rounded-xl border border-sky-200 py-2.5 text-sky-700 transition hover:bg-sky-50 sm:w-1/2"
-									onclick={resetProductForm}
-								>
-									Reset
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
+								<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+									<Input
+										type="number"
+										min="0"
+										step="0.01"
+										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+										placeholder="Purchase price"
+										bind:value={productForm.purchasePrice}
+									/>
+									<Input
+										type="number"
+										min="0"
+										step="0.01"
+										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+										placeholder="Selling price"
+										bind:value={productForm.sellingPrice}
+									/>
+								</div>
+
+								<div class="select-wrapper">
+									<select
+										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
+										bind:value={productForm.status}
+									>
+										<option value="Active">Active</option>
+										<option value="Archived">Archived</option>
+										<option value="Discontinued">Discontinued</option>
+									</select>
+								</div>
+								<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
+									{#if auth.hasPermission('products.write')}
+										<Button
+											class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl sm:w-1/2"
+											onclick={saveProduct}
+										>
+											{editingProduct ? 'Update' : 'Create'}
+										</Button>
+									{/if}
+									<Button
+										class="w-full rounded-xl border border-sky-200 py-2.5 text-sky-700 transition hover:bg-sky-50 sm:w-1/2"
+										onclick={resetProductForm}
+									>
+										Reset
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					{/if}
 				</div>
 			{:else if activeTab === 'categories'}
-				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+				<div
+					class="grid gap-8 {auth.hasPermission('categories.write')
+						? 'lg:grid-cols-[2fr,1fr]'
+						: 'grid-cols-1'}"
+				>
 					<!-- Table Section Wrapper -->
 					<div class="flex flex-col gap-6">
 						<!-- Header with Search -->
@@ -1353,80 +1406,85 @@
 
 						<DataTable
 							data={categories}
-							columns={[
-								{ header: 'Name', accessorKey: 'Name' },
-								{ header: 'Actions', accessorKey: 'id', class: 'text-right' }
-							]}
+							columns={categoryColumns}
 							{loading}
 							onRowClick={(category) => viewDetails(category, 'categories')}
 						>
 							{#snippet children(category)}
 								<TableCell class="font-medium text-slate-800">{category.Name}</TableCell>
-								<TableCell class="text-right">
-									<div class="flex items-center justify-end gap-1">
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												editingCategory = category;
-												categoryForm.name = category.Name;
-											}}
-										>
-											Edit
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												deleteCategory(category);
-											}}
-										>
-											Delete
-										</Button>
-									</div>
-								</TableCell>
+								{#if auth.hasPermission('categories.write')}
+									<TableCell class="text-right">
+										<div class="flex items-center justify-end gap-1">
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													editingCategory = category;
+													categoryForm.name = category.Name;
+												}}
+											>
+												Edit
+											</Button>
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													deleteCategory(category);
+												}}
+											>
+												Delete
+											</Button>
+										</div>
+									</TableCell>
+								{/if}
 							{/snippet}
 						</DataTable>
 					</div>
 
 					<!-- Form -->
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-green-50 to-emerald-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-						data-animate="fade-up"
-						style="animation-delay:180ms"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					{#if auth.hasPermission('categories.write')}
+						<Card
+							class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-green-50 to-emerald-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+							data-animate="fade-up"
+							style="animation-delay:180ms"
 						>
-							<CardTitle class="text-slate-800"
-								>{editingCategory ? 'Update category' : 'Create category'}</CardTitle
+							<CardHeader
+								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
-						</CardHeader>
-						<CardContent class="space-y-4 p-6">
-							<Input
-								class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400"
-								placeholder="Name"
-								bind:value={categoryForm.name}
-							/>
-							<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
-								<Button
-									class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-xl sm:w-1/2"
-									onclick={saveCategory}>{editingCategory ? 'Update' : 'Create'}</Button
+								<CardTitle class="text-slate-800"
+									>{editingCategory ? 'Update category' : 'Create category'}</CardTitle
 								>
-								<Button
-									class="w-full rounded-xl border border-emerald-200 py-2.5 text-emerald-700 transition hover:bg-emerald-50 sm:w-1/2"
-									onclick={resetCategoryForm}>Reset</Button
-								>
-							</div>
-						</CardContent>
-					</Card>
+							</CardHeader>
+							<CardContent class="space-y-4 p-6">
+								<Input
+									class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400"
+									placeholder="Name"
+									bind:value={categoryForm.name}
+								/>
+								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
+									<Button
+										class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-xl sm:w-1/2"
+										onclick={saveCategory}>{editingCategory ? 'Update' : 'Create'}</Button
+									>
+									<Button
+										class="w-full rounded-xl border border-emerald-200 py-2.5 text-emerald-700 transition hover:bg-emerald-50 sm:w-1/2"
+										onclick={resetCategoryForm}>Reset</Button
+									>
+								</div>
+							</CardContent>
+						</Card>
+					{/if}
 				</div>
 			{:else if activeTab === 'sub-categories'}
-				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+				<div
+					class="grid gap-8 {auth.hasPermission('categories.write')
+						? 'lg:grid-cols-[2fr,1fr]'
+						: 'grid-cols-1'}"
+				>
 					<!-- TABLE SECTION -->
 					<div class="flex flex-col gap-6">
 						<!-- Header with Dropdown -->
@@ -1468,95 +1526,100 @@
 								data={subCategories.filter(
 									(sc) => sc.CategoryID === Number(subCategoryForm.categoryId)
 								)}
-								columns={[
-									{ header: 'Name', accessorKey: 'Name' },
-									{ header: 'Actions', accessorKey: 'id', class: 'text-right' }
-								]}
+								columns={subCategoryColumns}
 								{loading}
 								onRowClick={(subCategory) => viewDetails(subCategory, 'sub-categories')}
 							>
 								{#snippet children(subCategory)}
 									<TableCell class="font-medium text-slate-800">{subCategory.Name}</TableCell>
-									<TableCell class="text-right">
-										<div class="flex items-center justify-end gap-1">
-											<Button
-												size="sm"
-												variant="ghost"
-												class="h-8 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
-												onclick={(event) => {
-													event.stopPropagation();
-													editingSubCategory = subCategory;
-													subCategoryForm.name = subCategory.Name;
-													subCategoryForm.categoryId = String(subCategory.CategoryID);
-												}}
-											>
-												Edit
-											</Button>
-											<Button
-												size="sm"
-												variant="ghost"
-												class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-												onclick={(event) => {
-													event.stopPropagation();
-													deleteSubCategory(subCategory);
-												}}
-											>
-												Delete
-											</Button>
-										</div>
-									</TableCell>
+									{#if auth.hasPermission('categories.write')}
+										<TableCell class="text-right">
+											<div class="flex items-center justify-end gap-1">
+												<Button
+													size="sm"
+													variant="ghost"
+													class="h-8 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+													onclick={(event) => {
+														event.stopPropagation();
+														editingSubCategory = subCategory;
+														subCategoryForm.name = subCategory.Name;
+														subCategoryForm.categoryId = String(subCategory.CategoryID);
+													}}
+												>
+													Edit
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+													onclick={(event) => {
+														event.stopPropagation();
+														deleteSubCategory(subCategory);
+													}}
+												>
+													Delete
+												</Button>
+											</div>
+										</TableCell>
+									{/if}
 								{/snippet}
 							</DataTable>
 						{/if}
 					</div>
 
 					<!-- FORM SECTION -->
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-						data-animate="fade-up"
-						style="animation-delay:180ms"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					{#if auth.hasPermission('categories.write')}
+						<Card
+							class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+							data-animate="fade-up"
+							style="animation-delay:180ms"
 						>
-							<CardTitle class="text-slate-800"
-								>{editingSubCategory ? 'Update sub-category' : 'Create sub-category'}</CardTitle
+							<CardHeader
+								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
-						</CardHeader>
-						<CardContent class="space-y-4 p-6">
-							<Input
-								class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
-								placeholder="Name"
-								bind:value={subCategoryForm.name}
-							/>
-							<select
-								class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
-								bind:value={subCategoryForm.categoryId}
-							>
-								<option value="">Select category</option>
-								{#each categories as category}
-									<option value={category.ID}>{category.Name}</option>
-								{/each}
-							</select>
-							<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
-								<Button
-									class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl sm:w-1/2"
-									onclick={saveSubCategory}
+								<CardTitle class="text-slate-800"
+									>{editingSubCategory ? 'Update sub-category' : 'Create sub-category'}</CardTitle
 								>
-									{editingSubCategory ? 'Update' : 'Create'}
-								</Button>
-								<Button
-									class="w-full rounded-xl border border-amber-200 py-2.5 text-amber-700 transition hover:bg-amber-50 sm:w-1/2"
-									onclick={resetSubCategoryForm}
+							</CardHeader>
+							<CardContent class="space-y-4 p-6">
+								<Input
+									class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
+									placeholder="Name"
+									bind:value={subCategoryForm.name}
+								/>
+								<select
+									class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
+									bind:value={subCategoryForm.categoryId}
 								>
-									Reset
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
+									<option value="">Select category</option>
+									{#each categories as category}
+										<option value={category.ID}>{category.Name}</option>
+									{/each}
+								</select>
+								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
+									<Button
+										class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl sm:w-1/2"
+										onclick={saveSubCategory}
+									>
+										{editingSubCategory ? 'Update' : 'Create'}
+									</Button>
+									<Button
+										class="w-full rounded-xl border border-amber-200 py-2.5 text-amber-700 transition hover:bg-amber-50 sm:w-1/2"
+										onclick={resetSubCategoryForm}
+									>
+										Reset
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					{/if}
 				</div>
 			{:else if activeTab === 'suppliers'}
-				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+				<div
+					class="grid gap-8 {auth.hasPermission('suppliers.write')
+						? 'lg:grid-cols-[2fr,1fr]'
+						: 'grid-cols-1'}"
+				>
 					<!-- Table Section Wrapper -->
 					<div class="flex flex-col gap-6">
 						<!-- Header with Search -->
@@ -1587,11 +1650,7 @@
 
 						<DataTable
 							data={suppliers}
-							columns={[
-								{ header: 'Name', accessorKey: 'Name' },
-								{ header: 'Contact', accessorKey: 'ContactPerson' },
-								{ header: 'Actions', accessorKey: 'id', class: 'text-right' }
-							]}
+							columns={supplierColumns}
 							{loading}
 							onRowClick={(supplier) => viewDetails(supplier, 'suppliers')}
 						>
@@ -1601,98 +1660,106 @@
 									<p class="text-sm font-medium text-slate-700">{supplier.ContactPerson ?? '—'}</p>
 									<p class="text-xs text-slate-500">{supplier.Email ?? supplier.Phone ?? ''}</p>
 								</TableCell>
-								<TableCell class="text-right">
-									<div class="flex items-center justify-end gap-1">
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-violet-600 hover:bg-violet-50 hover:text-violet-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												editingSupplier = supplier;
-												Object.assign(supplierForm, {
-													name: supplier.Name,
-													contactPerson: supplier.ContactPerson ?? '',
-													email: supplier.Email ?? '',
-													phone: supplier.Phone ?? '',
-													address: supplier.Address ?? ''
-												});
-											}}
-										>
-											Edit
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												deleteSupplier(supplier);
-											}}
-										>
-											Delete
-										</Button>
-									</div>
-								</TableCell>
+								{#if auth.hasPermission('suppliers.write')}
+									<TableCell class="text-right">
+										<div class="flex items-center justify-end gap-1">
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-violet-600 hover:bg-violet-50 hover:text-violet-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													editingSupplier = supplier;
+													Object.assign(supplierForm, {
+														name: supplier.Name,
+														contactPerson: supplier.ContactPerson ?? '',
+														email: supplier.Email ?? '',
+														phone: supplier.Phone ?? '',
+														address: supplier.Address ?? ''
+													});
+												}}
+											>
+												Edit
+											</Button>
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													deleteSupplier(supplier);
+												}}
+											>
+												Delete
+											</Button>
+										</div>
+									</TableCell>
+								{/if}
 							{/snippet}
 						</DataTable>
 					</div>
 
 					<!-- Form -->
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-						data-animate="fade-up"
-						style="animation-delay:180ms"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					{#if auth.hasPermission('suppliers.write')}
+						<Card
+							class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+							data-animate="fade-up"
+							style="animation-delay:180ms"
 						>
-							<CardTitle class="text-slate-800"
-								>{editingSupplier ? 'Update supplier' : 'Create supplier'}</CardTitle
+							<CardHeader
+								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
-						</CardHeader>
-						<CardContent class="space-y-4 p-6">
-							<Input
-								class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-								placeholder="Name"
-								bind:value={supplierForm.name}
-							/>
-							<Input
-								class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-								placeholder="Contact person"
-								bind:value={supplierForm.contactPerson}
-							/>
-							<Input
-								class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-								placeholder="Email"
-								bind:value={supplierForm.email}
-							/>
-							<Input
-								class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-								placeholder="Phone"
-								bind:value={supplierForm.phone}
-							/>
-							<Input
-								class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-								placeholder="Address"
-								bind:value={supplierForm.address}
-							/>
-							<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
-								<Button
-									class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-xl sm:w-1/2"
-									onclick={saveSupplier}>{editingSupplier ? 'Update' : 'Create'}</Button
+								<CardTitle class="text-slate-800"
+									>{editingSupplier ? 'Update supplier' : 'Create supplier'}</CardTitle
 								>
-								<Button
-									class="w-full rounded-xl border border-violet-200 py-2.5 text-violet-700 transition hover:bg-violet-50 sm:w-1/2"
-									onclick={resetSupplierForm}>Reset</Button
-								>
-							</div>
-						</CardContent>
-					</Card>
+							</CardHeader>
+							<CardContent class="space-y-4 p-6">
+								<Input
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
+									placeholder="Name"
+									bind:value={supplierForm.name}
+								/>
+								<Input
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
+									placeholder="Contact person"
+									bind:value={supplierForm.contactPerson}
+								/>
+								<Input
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
+									placeholder="Email"
+									bind:value={supplierForm.email}
+								/>
+								<Input
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
+									placeholder="Phone"
+									bind:value={supplierForm.phone}
+								/>
+								<Input
+									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
+									placeholder="Address"
+									bind:value={supplierForm.address}
+								/>
+								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
+									<Button
+										class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-xl sm:w-1/2"
+										onclick={saveSupplier}>{editingSupplier ? 'Update' : 'Create'}</Button
+									>
+									<Button
+										class="w-full rounded-xl border border-violet-200 py-2.5 text-violet-700 transition hover:bg-violet-50 sm:w-1/2"
+										onclick={resetSupplierForm}>Reset</Button
+									>
+								</div>
+							</CardContent>
+						</Card>
+					{/if}
 				</div>
-			{:else}
+			{:else if activeTab === 'locations'}
 				<!-- LOCATIONS -->
-				<div class="grid gap-8 lg:grid-cols-[2fr,1fr]">
+				<div
+					class="grid gap-8 {auth.hasPermission('locations.write')
+						? 'lg:grid-cols-[2fr,1fr]'
+						: 'grid-cols-1'}"
+				>
 					<!-- Table Section Wrapper -->
 					<div class="flex flex-col gap-6">
 						<!-- Header -->
@@ -1707,85 +1774,85 @@
 
 						<DataTable
 							data={locations}
-							columns={[
-								{ header: 'Name', accessorKey: 'Name' },
-								{ header: 'Address', accessorKey: 'Address' },
-								{ header: 'Actions', accessorKey: 'id', class: 'text-right' }
-							]}
+							columns={locationColumns}
 							{loading}
 							onRowClick={(location) => viewDetails(location, 'locations')}
 						>
 							{#snippet children(location)}
 								<TableCell class="font-medium text-slate-800">{location.Name}</TableCell>
 								<TableCell class="text-slate-600">{location.Address ?? '—'}</TableCell>
-								<TableCell class="text-right">
-									<div class="flex items-center justify-end gap-1">
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-teal-600 hover:bg-teal-50 hover:text-teal-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												editingLocation = location;
-												locationForm.name = location.Name;
-												locationForm.address = location.Address ?? '';
-											}}
-										>
-											Edit
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-											onclick={(event) => {
-												event.stopPropagation();
-												deleteLocation(location);
-											}}
-										>
-											Delete
-										</Button>
-									</div>
-								</TableCell>
+								{#if auth.hasPermission('locations.write')}
+									<TableCell class="text-right">
+										<div class="flex items-center justify-end gap-1">
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													editingLocation = location;
+													locationForm.name = location.Name;
+													locationForm.address = location.Address;
+												}}
+											>
+												Edit
+											</Button>
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+												onclick={(event) => {
+													event.stopPropagation();
+													deleteLocation(location);
+												}}
+											>
+												Delete
+											</Button>
+										</div>
+									</TableCell>
+								{/if}
 							{/snippet}
 						</DataTable>
 					</div>
 
 					<!-- Form -->
-					<Card
-						class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-						data-animate="fade-up"
-						style="animation-delay:180ms"
-					>
-						<CardHeader
-							class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
+					{#if auth.hasPermission('locations.write')}
+						<Card
+							class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-teal-50 to-emerald-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+							data-animate="fade-up"
+							style="animation-delay:180ms"
 						>
-							<CardTitle class="text-slate-800"
-								>{editingLocation ? 'Update location' : 'Create location'}</CardTitle
+							<CardHeader
+								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
-						</CardHeader>
-						<CardContent class="space-y-4 p-6">
-							<Input
-								class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
-								placeholder="Name"
-								bind:value={locationForm.name}
-							/>
-							<Input
-								class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
-								placeholder="Address"
-								bind:value={locationForm.address}
-							/>
-							<div class="flex flex-col gap-3 pr-2 pt-1 sm:flex-row">
-								<Button
-									class="w-full rounded-xl bg-gradient-to-r from-cyan-500 to-teal-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-cyan-600 hover:to-teal-700 hover:shadow-xl sm:w-1/2"
-									onclick={saveLocation}>{editingLocation ? 'Update' : 'Create'}</Button
+								<CardTitle class="text-slate-800"
+									>{editingLocation ? 'Update location' : 'Create location'}</CardTitle
 								>
-								<Button
-									class="w-full rounded-xl border border-teal-200 py-2.5 text-teal-700 transition hover:bg-teal-50 sm:w-1/2"
-									onclick={resetLocationForm}>Reset</Button
-								>
-							</div>
-						</CardContent>
-					</Card>
+							</CardHeader>
+							<CardContent class="space-y-4 p-6">
+								<Input
+									class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
+									placeholder="Name"
+									bind:value={locationForm.name}
+								/>
+								<Input
+									class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
+									placeholder="Address"
+									bind:value={locationForm.address}
+								/>
+								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
+									<Button
+										class="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-teal-600 hover:to-emerald-700 hover:shadow-xl sm:w-1/2"
+										onclick={saveLocation}>{editingLocation ? 'Update' : 'Create'}</Button
+									>
+									<Button
+										class="w-full rounded-xl border border-teal-200 py-2.5 text-teal-700 transition hover:bg-teal-50 sm:w-1/2"
+										onclick={resetLocationForm}>Reset</Button
+									>
+								</div>
+							</CardContent>
+						</Card>
+					{/if}
 				</div>
 			{/if}
 		{/key}

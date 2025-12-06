@@ -70,7 +70,11 @@
 							class="h-14 px-6 text-xs font-bold uppercase tracking-widest text-indigo-900/60 {col.class ??
 								''}"
 						>
-							<div class="flex items-center gap-2">
+							<div
+								class="flex items-center gap-2 {col.class?.includes('text-right')
+									? 'justify-end'
+									: 'justify-start'}"
+							>
 								{#if col.sortable}
 									<Button
 										variant="ghost"
