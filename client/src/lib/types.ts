@@ -173,9 +173,17 @@ export interface LoyaltyAccount extends BaseEntity {
 	Tier: string;
 }
 
+export interface Role {
+	ID: number;
+	Name: string;
+	Description: string;
+	IsSystem: boolean;
+	Permissions?: any[];
+}
+
 export interface UserSummary extends BaseEntity {
 	Username: string;
-	Role: string;
+	Role: Role; // Updated from string
 	IsActive: boolean;
 	FirstName?: string;
 	LastName?: string;
@@ -226,4 +234,14 @@ export interface DashboardSummary {
 		direction: 'up' | 'down' | 'neutral';
 		percentage: number;
 	};
+}
+
+export interface TimeClock extends BaseEntity {
+	UserID: number;
+	ClockIn: string;
+	ClockOut?: string | null;
+	BreakStart?: string | null;
+	BreakEnd?: string | null;
+	Status: string;
+	Notes?: string;
 }

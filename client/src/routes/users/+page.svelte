@@ -51,7 +51,7 @@
 			: { text: 'Pending', variant: 'warning' as const };
 
 	const buildUserSections = ({ data }: DetailBuilderContext): DetailSection[] => {
-		const user = data as UserSummary;
+		const user = data as unknown as UserSummary;
 		return [
 			{
 				type: 'summary',
@@ -65,7 +65,7 @@
 					},
 					{
 						title: 'Role',
-						value: user.Role,
+						value: user.Role.Name,
 						hint: 'Current privilege',
 						icon: Shield,
 						accent: 'sky'
@@ -89,7 +89,7 @@
 					{ label: 'Email', value: user.Email || 'Not set' },
 					{ label: 'Phone Number', value: user.PhoneNumber || 'Not set' },
 					{ label: 'Address', value: user.Address || 'Not set' },
-					{ label: 'Role', value: user.Role },
+					{ label: 'Role', value: user.Role.Name },
 					{
 						label: 'Status',
 						value: user.IsActive ? 'Approved' : 'Pending',
@@ -115,7 +115,7 @@
 		}
 		form.username = user.Username;
 		form.password = '';
-		form.role = user.Role;
+		form.role = user.Role.Name;
 		form.firstName = user.FirstName || '';
 		form.lastName = user.LastName || '';
 		form.email = user.Email || '';
@@ -207,22 +207,20 @@
 		const targetId = userId ?? selectedUser?.ID;
 		if (!targetId) return;
 
-		toast.confirm(`Are you sure you want to delete ${username ?? selectedUser?.Username}?`, {
-			onConfirm: async () => {
-				try {
-					await usersApi.remove(targetId);
-					toast.success('User removed');
-					if (selectedUser?.ID === targetId) {
-						selectedUser = null;
-						applyFormFromUser(null);
-					}
-					await loadUsers();
-				} catch (error: any) {
-					const errorMessage = error.response?.data?.error || 'Unable to delete user';
-					toast.error('Failed to Delete User', { description: errorMessage });
+		if (confirm(`Are you sure you want to delete ${username ?? selectedUser?.Username}?`)) {
+			try {
+				await usersApi.remove(targetId);
+				toast.success('User removed');
+				if (selectedUser?.ID === targetId) {
+					selectedUser = null;
+					applyFormFromUser(null);
 				}
+				await loadUsers();
+			} catch (error: any) {
+				const errorMessage = error.response?.data?.error || 'Unable to delete user';
+				toast.error('Failed to Delete User', { description: errorMessage });
 			}
-		});
+		}
 	};
 
 	// --- Parallax Hero Motion ---
@@ -370,7 +368,7 @@
 								>
 									<td class="px-4 py-3 font-mono text-xs text-slate-700">#{item.ID}</td>
 									<td class="px-4 py-3 text-slate-800">{item.Username}</td>
-									<td class="px-4 py-3 text-slate-700">{item.Role}</td>
+									<td class="px-4 py-3 text-slate-700">{item.Role.Name}</td>
 									<td class="px-4 py-3">
 										<span
 											class={`rounded-full px-2.5 py-0.5 text-xs capitalize shadow-sm ${
@@ -388,7 +386,7 @@
 											variant="ghost"
 											disabled={item.IsActive}
 											class="rounded-lg px-3 py-1.5 text-sky-700 hover:bg-sky-100"
-											on:click={(event) => {
+											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
 												approveUser(item.ID);
 											}}
@@ -399,7 +397,7 @@
 											size="sm"
 											variant="ghost"
 											class="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-rose-100"
-											on:click={(event) => {
+											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
 												deleteUser(item.ID, item.Username);
 											}}

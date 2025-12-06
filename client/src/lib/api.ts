@@ -3,11 +3,11 @@ import axios from 'axios';
 import { get } from 'svelte/store';
 import { auth } from './stores/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080/api/v1';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080/api/v1';
 const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://127.0.0.1:8080/api/v1/users';
 
 const api = axios.create({
-	baseURL: API_BASE_URL,
+  baseURL: API_BASE_URL,
 });
 
 // Request interceptor for attaching access token and CSRF token
@@ -45,7 +45,10 @@ api.interceptors.response.use(
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, csrfToken: newCsrfToken } = refreshResponse.data;
 
           // Update auth store with new tokens
-          auth.login(newAccessToken, newRefreshToken, newCsrfToken, get(auth).user); // Assuming user data doesn't change on refresh
+          const currentUser = get(auth).user;
+          if (currentUser) {
+            auth.login(newAccessToken, newRefreshToken, newCsrfToken, currentUser);
+          }
 
           // Retry the original request with the new access token
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

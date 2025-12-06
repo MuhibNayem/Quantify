@@ -9,7 +9,8 @@ import {
 	Users2,
 	Sparkles,
 	Clock,
-	Users
+	Users,
+	Settings
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -102,6 +103,12 @@ export const navSections: NavSection[] = [
 				description: 'Approvals & roles',
 				href: '/users',
 				icon: Users2,
+			},
+			{
+				label: 'Settings',
+				description: 'Configuration & RBAC',
+				href: '/settings',
+				icon: Settings,
 			},
 		],
 	},

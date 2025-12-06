@@ -19,6 +19,7 @@ import type {
 	Notification,
 	DashboardSummary,
 	LoyaltyAccount,
+	TimeClock,
 } from '$lib/types';
 
 export const dashboardApi = {
@@ -173,4 +174,21 @@ export const crmApi = {
 		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/points`, { points })).data,
 	redeemPoints: async (id: number, points: number) =>
 		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/redeem`, { points })).data,
+};
+
+export const timeTrackingApi = {
+	clockIn: async (userId: number, notes?: string) =>
+		(await api.post<TimeClock>(`/time-tracking/clock-in/${userId}`, { notes })).data,
+	clockOut: async (userId: number, notes?: string) =>
+		(await api.post<TimeClock>(`/time-tracking/clock-out/${userId}`, { notes })).data,
+	startBreak: async (userId: number) => (await api.post<TimeClock>(`/time-tracking/break-start/${userId}`)).data,
+	endBreak: async (userId: number) => (await api.post<TimeClock>(`/time-tracking/break-end/${userId}`)).data,
+	getLastEntry: async (userId: number) => (await api.get<TimeClock>(`/time-tracking/last-entry/${userId}`)).data,
+	getHistory: async (userId: number) =>
+		(await api.get<{ history: TimeClock[] }>(`/time-tracking/history/${userId}`)).data.history,
+	getTeamStatus: async () => (await api.get<any[]>('/time-tracking/team-status')).data,
+	getRecentActivities: async () => (await api.get<TimeClock[]>('/time-tracking/activities')).data,
+	getWeeklySummary: async (userId: number) =>
+		(await api.get<any>(`/time-tracking/weekly-summary/${userId}`)).data,
+	getTeamOverview: async () => (await api.get<any>('/time-tracking/team-overview')).data
 };

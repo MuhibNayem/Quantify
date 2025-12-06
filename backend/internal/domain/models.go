@@ -151,10 +151,13 @@ type Alert struct {
 // User represents a system user (for AdjustedBy in StockAdjustment, etc.)
 type User struct {
 	gorm.Model
-	Username       string `gorm:"uniqueIndex;not null"`
-	Password       string `gorm:"not null"`
-	Role           string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff", "Customer"
-	IsActive       bool   `gorm:"default:false"`
+	Username string `gorm:"uniqueIndex;not null"`
+	Password string `gorm:"not null"`
+	// Role           string `gorm:"not null"` // Deprecated in favor of RoleID
+	LegacyRole     string `gorm:"column:role"`  // Map to old column for migration
+	RoleID         uint   `gorm:"default:null"` // Allow null during migration or for basic users
+	Role           Role
+	IsActive       bool `gorm:"default:false"`
 	FirstName      string
 	LastName       string
 	Email          string `gorm:"uniqueIndex"`
@@ -329,9 +332,12 @@ type AlertRoleSubscription struct {
 // TimeClock represents an employee's time clock entry.
 type TimeClock struct {
 	gorm.Model
-	UserID   uint `gorm:"not null"`
-	User     User
-	ClockIn  time.Time
-	ClockOut *time.Time
-	Notes    string
+	UserID     uint `gorm:"not null"`
+	User       User
+	ClockIn    time.Time
+	ClockOut   *time.Time
+	BreakStart *time.Time
+	BreakEnd   *time.Time
+	Status     string `gorm:"default:'CLOCKED_IN'"` // CLOCKED_IN, ON_BREAK, CLOCKED_OUT
+	Notes      string
 }

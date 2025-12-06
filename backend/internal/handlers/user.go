@@ -124,15 +124,28 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	}
 
 	var user domain.User
+	var role domain.Role
+
+	// Lookup the role
+	roleName := req.Role
+	// Enforce Admin for first user
 	if userCount == 0 {
-		// This is the first user, they must be an Admin and will be active
+		roleName = "Admin"
 		if req.Role != "Admin" {
 			c.Error(appErrors.NewAppError("The first user must be an Admin", http.StatusBadRequest, nil))
 			return
 		}
+	}
+
+	if err := h.db.Where("name = ?", roleName).First(&role).Error; err != nil {
+		c.Error(appErrors.NewAppError("Invalid role", http.StatusBadRequest, err))
+		return
+	}
+
+	if userCount == 0 {
 		user = domain.User{
 			Username:    req.Username,
-			Role:        req.Role,
+			RoleID:      role.ID,
 			IsActive:    true, // First user is active by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
@@ -144,7 +157,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		// Subsequent users are not active by default
 		user = domain.User{
 			Username:    req.Username,
-			Role:        req.Role,
+			RoleID:      role.ID,
 			IsActive:    false, // Subsequent users are inactive by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
@@ -190,7 +203,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := h.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
+	if err := h.db.Preload("Role").Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 			return
@@ -211,7 +224,24 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
+	// Dynamic RBAC Migration: If RoleID Is Missing but LegacyRole exists
+	if user.RoleID == 0 && user.LegacyRole != "" {
+		var mappedRole domain.Role
+		if err := h.db.Where("name = ?", user.LegacyRole).First(&mappedRole).Error; err == nil {
+			// Found matching role, migrate user
+			user.RoleID = mappedRole.ID
+			user.Role = mappedRole // Populate for token generation
+			h.db.Model(&user).Update("role_id", mappedRole.ID)
+		}
+	}
+
+	// Fallback/Safety: If still no role, try to default to Customer or fail
+	if user.Role.ID == 0 {
+		c.Error(appErrors.NewAppError("User has no role assigned. Please contact support.", http.StatusForbidden, nil))
+		return
+	}
+
+	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role.Name)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
@@ -287,7 +317,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role)
+	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role.Name)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
@@ -451,7 +481,12 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		user.Password = string(hashedPassword)
 	}
 	if req.Role != "" {
-		user.Role = req.Role
+		var role domain.Role
+		if err := h.db.Where("name = ?", req.Role).First(&role).Error; err != nil {
+			c.Error(appErrors.NewAppError("Invalid role", http.StatusBadRequest, err))
+			return
+		}
+		user.RoleID = role.ID
 	}
 	if req.FirstName != "" {
 		user.FirstName = req.FirstName

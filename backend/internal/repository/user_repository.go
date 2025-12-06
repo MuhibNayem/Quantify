@@ -44,3 +44,11 @@ func (r *UserRepository) DeleteUser(user *domain.User) error {
 		return DeleteFromSearchIndex(tx, user.GetEntityType(), user.GetID())
 	})
 }
+
+func (r *UserRepository) GetAllUsers() ([]domain.User, error) {
+	var users []domain.User
+	if err := r.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}

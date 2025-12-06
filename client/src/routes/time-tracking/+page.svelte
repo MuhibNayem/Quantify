@@ -34,59 +34,59 @@
 	});
 </script>
 
-<section class="relative w-full isolate overflow-hidden">
+<section class="relative isolate w-full overflow-hidden">
 	<!-- Gradient background with motion -->
 	<div
-		class="absolute inset-0 -z-10 animate-gradientShift bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-100 bg-[length:200%_200%]"
+		class="animate-gradientShift absolute inset-0 -z-10 bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-100 bg-[length:200%_200%]"
 	></div>
 
 	<!-- Floating glow blobs -->
 	<div
-		class="absolute -top-32 -left-24 w-96 h-96 rounded-full bg-teal-200/40 blur-3xl animate-pulseGlow"
+		class="animate-pulseGlow absolute -left-24 -top-32 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl"
 	></div>
 	<div
-		class="absolute -bottom-28 -right-24 w-80 h-80 rounded-full bg-cyan-200/30 blur-3xl animate-pulseGlow delay-700"
+		class="animate-pulseGlow absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl delay-700"
 	></div>
 
 	<!-- Hero container -->
 	<div
-		class="parallax-hero relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-10 sm:pb-16 text-center"
+		class="parallax-hero relative mx-auto max-w-7xl px-4 pb-10 pt-16 text-center sm:px-6 sm:pb-16 sm:pt-20 lg:px-8"
 	>
-		<div class="inline-flex items-center gap-3 justify-center mb-3">
+		<div class="mb-3 inline-flex items-center justify-center gap-3">
 			<span
-				class="inline-flex p-2 rounded-2xl shadow-md bg-gradient-to-br from-teal-500 to-cyan-600 animate-cardFloat"
+				class="animate-cardFloat inline-flex rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 p-2 shadow-md"
 			>
 				<Clock class="h-6 w-6 text-white" />
 			</span>
-			<p class="text-xs sm:text-sm uppercase tracking-[0.18em] text-teal-700 font-semibold">
+			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 sm:text-sm">
 				Time Management
 			</p>
 		</div>
 
 		<h1
-			class="text-3xl sm:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-700 bg-clip-text text-transparent mb-3"
+			class="mb-3 bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-700 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
 		>
 			Time Tracking Dashboard
 		</h1>
-		<p class="text-slate-600 text-sm sm:text-base max-w-2xl mx-auto">
+		<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:text-base">
 			Monitor and manage employee work hours with ease and precision.
 		</p>
 	</div>
 </section>
 
-<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-6">
-	<div class="flex justify-end mb-8">
-		<div class="flex items-center gap-2 p-1 bg-white/60 backdrop-blur rounded-xl">
+<div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
+	<div class="mb-8 flex justify-end">
+		<div class="flex items-center gap-2 rounded-xl bg-white/60 p-1 backdrop-blur">
 			<Button
-				variant="{currentRole === 'Staff' ? 'default' : 'ghost'}"
-				onclick="{() => (currentRole = 'Staff')}"
+				variant={currentRole === 'Staff' ? 'default' : 'ghost'}
+				onclick={() => (currentRole = 'Staff')}
 				class="rounded-lg {currentRole === 'Staff' ? 'bg-teal-600 text-white' : ''}"
 			>
 				Staff View
 			</Button>
 			<Button
-				variant="{currentRole === 'Manager' ? 'default' : 'ghost'}"
-				onclick="{() => (currentRole = 'Manager')}"
+				variant={currentRole === 'Manager' ? 'default' : 'ghost'}
+				onclick={() => (currentRole = 'Manager')}
 				class="rounded-lg {currentRole === 'Manager' ? 'bg-cyan-600 text-white' : ''}"
 			>
 				Manager View
@@ -104,8 +104,9 @@
 <style lang="postcss">
 	/* Smooth transitions globally */
 	* {
-		transition-property: color, background-color, border-color, text-decoration-color, fill, stroke,
-			opacity, box-shadow, transform, filter, backdrop-filter;
+		transition-property:
+			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
+			box-shadow, transform, filter, backdrop-filter;
 		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 		transition-duration: 300ms;
 	}
@@ -162,7 +163,8 @@
 	.parallax-hero {
 		transform: translateY(0);
 		will-change: transform, filter;
-		transition: transform 0.1s ease-out, filter 0.2s ease-out;
+		transition:
+			transform 0.1s ease-out,
+			filter 0.2s ease-out;
 	}
 </style>
-

@@ -10,53 +10,78 @@ import (
 	"inventory/backend/internal/config"
 )
 
-type ClusterClient struct {
-	*redis.ClusterClient
+type UniversalClient struct {
+	redis.UniversalClient
 }
 
-var RedisClient *ClusterClient
+var RedisClient *UniversalClient
 var ctx = context.Background()
 
-// InitRedis initializes the Redis client using Redis Cluster.
+// InitRedis initializes the Redis client using either Cluster or Single Node.
 func InitRedis(cfg *config.Config) {
-	client := redis.NewClusterClient(&redis.ClusterOptions{
-		Addrs:        cfg.RedisClusterAddrs,
-		Password:     cfg.RedisPassword,
-		DialTimeout:  5 * time.Second,
-		ReadTimeout:  3 * time.Second,
-		WriteTimeout: 3 * time.Second,
-		PoolSize:     200,
-		MinIdleConns: 20,
-		PoolTimeout:  3 * time.Second,
-	})
+	var client redis.UniversalClient
+
+	if cfg.RedisAddr != "" {
+		logrus.Infof("Initializing Single Node Redis Client at %s", cfg.RedisAddr)
+		client = redis.NewClient(&redis.Options{
+			Addr:         cfg.RedisAddr,
+			Password:     cfg.RedisPassword,
+			DialTimeout:  5 * time.Second,
+			ReadTimeout:  3 * time.Second,
+			WriteTimeout: 3 * time.Second,
+			PoolSize:     200,
+			MinIdleConns: 20,
+			PoolTimeout:  3 * time.Second,
+		})
+	} else {
+		logrus.Infof("Initializing Redis Cluster Client at %v", cfg.RedisClusterAddrs)
+		client = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs:        cfg.RedisClusterAddrs,
+			Password:     cfg.RedisPassword,
+			DialTimeout:  5 * time.Second,
+			ReadTimeout:  3 * time.Second,
+			WriteTimeout: 3 * time.Second,
+			PoolSize:     200,
+			MinIdleConns: 20,
+			PoolTimeout:  3 * time.Second,
+		})
+	}
 
 	_, err := client.Ping(ctx).Result()
 	if err != nil {
-		logrus.Fatalf("Could not connect to Redis Cluster: %v", err)
+		logrus.Fatalf("Could not connect to Redis: %v", err)
 	}
 
-	logrus.Info("Connected to Redis Cluster successfully!")
-	RedisClient = &ClusterClient{client}
+	logrus.Info("Connected to Redis successfully!")
+	RedisClient = &UniversalClient{client}
 }
 
 // CloseRedis closes the Redis client connection.
 func CloseRedis() {
-	if RedisClient != nil && RedisClient.ClusterClient != nil {
-		if err := RedisClient.ClusterClient.Close(); err != nil {
+	if RedisClient != nil && RedisClient.UniversalClient != nil {
+		if err := RedisClient.UniversalClient.Close(); err != nil {
 			logrus.Errorf("Error closing Redis client: %v", err)
 		}
 		logrus.Info("Redis connection closed")
 	}
 }
 
+// GetClient returns the underlying Redis client for direct usage.
+func GetClient() redis.UniversalClient {
+	if RedisClient == nil {
+		return nil
+	}
+	return RedisClient.UniversalClient
+}
+
 // SetCache sets a key-value pair in Redis with an expiration.
 func SetCache(key string, value interface{}, expiration time.Duration) error {
-	return RedisClient.ClusterClient.Set(ctx, key, value, expiration).Err()
+	return RedisClient.UniversalClient.Set(ctx, key, value, expiration).Err()
 }
 
 // GetCache gets a value from Redis.
 func GetCache(key string) (string, error) {
-	val, err := RedisClient.ClusterClient.Get(ctx, key).Result()
+	val, err := RedisClient.UniversalClient.Get(ctx, key).Result()
 	if err == redis.Nil {
 		return "", nil // Key does not exist
 	} else if err != nil {
@@ -68,5 +93,5 @@ func GetCache(key string) (string, error) {
 
 // DeleteCache deletes a key from Redis.
 func DeleteCache(key string) error {
-	return RedisClient.ClusterClient.Del(ctx, key).Err()
+	return RedisClient.UniversalClient.Del(ctx, key).Err()
 }

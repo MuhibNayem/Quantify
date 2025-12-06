@@ -2,6 +2,8 @@ package repository
 
 import (
 	"inventory/backend/internal/domain"
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -10,6 +12,11 @@ type TimeTrackingRepository interface {
 	GetLastTimeClock(userID uint) (*domain.TimeClock, error)
 	UpdateTimeClock(timeClock *domain.TimeClock) error
 	GetUserByUsername(username string) (*domain.User, error)
+	GetRecentTimeClocks(userID uint, limit int) ([]domain.TimeClock, error)
+	GetAllRecentTimeClocks(limit int) ([]domain.TimeClock, error)
+	GetActiveTimeClocks() ([]domain.TimeClock, error)
+	GetTimeClocksByDateRange(userID uint, start, end time.Time) ([]domain.TimeClock, error)
+	GetAllTimeClocksByDateRange(start, end time.Time) ([]domain.TimeClock, error)
 }
 
 type timeTrackingRepository struct {
@@ -42,4 +49,44 @@ func (r *timeTrackingRepository) GetUserByUsername(username string) (*domain.Use
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *timeTrackingRepository) GetRecentTimeClocks(userID uint, limit int) ([]domain.TimeClock, error) {
+	var clocks []domain.TimeClock
+	if err := r.db.Where("user_id = ?", userID).Order("clock_in desc").Limit(limit).Find(&clocks).Error; err != nil {
+		return nil, err
+	}
+	return clocks, nil
+}
+
+func (r *timeTrackingRepository) GetAllRecentTimeClocks(limit int) ([]domain.TimeClock, error) {
+	var clocks []domain.TimeClock
+	if err := r.db.Preload("User").Order("clock_in desc").Limit(limit).Find(&clocks).Error; err != nil {
+		return nil, err
+	}
+	return clocks, nil
+}
+
+func (r *timeTrackingRepository) GetActiveTimeClocks() ([]domain.TimeClock, error) {
+	var clocks []domain.TimeClock
+	if err := r.db.Preload("User").Where("status IN ?", []string{"CLOCKED_IN", "ON_BREAK"}).Find(&clocks).Error; err != nil {
+		return nil, err
+	}
+	return clocks, nil
+}
+
+func (r *timeTrackingRepository) GetTimeClocksByDateRange(userID uint, start, end time.Time) ([]domain.TimeClock, error) {
+	var clocks []domain.TimeClock
+	if err := r.db.Where("user_id = ? AND clock_in >= ? AND clock_in <= ?", userID, start, end).Order("clock_in asc").Find(&clocks).Error; err != nil {
+		return nil, err
+	}
+	return clocks, nil
+}
+
+func (r *timeTrackingRepository) GetAllTimeClocksByDateRange(start, end time.Time) ([]domain.TimeClock, error) {
+	var clocks []domain.TimeClock
+	if err := r.db.Preload("User").Where("clock_in >= ? AND clock_in <= ?", start, end).Order("clock_in asc").Find(&clocks).Error; err != nil {
+		return nil, err
+	}
+	return clocks, nil
 }

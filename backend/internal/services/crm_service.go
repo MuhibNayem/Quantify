@@ -43,10 +43,15 @@ func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domai
 		return nil, err
 	}
 
+	var role domain.Role
+	if err := s.db.Where("name = ?", "Customer").First(&role).Error; err != nil {
+		return nil, fmt.Errorf("customer role not found: %w", err)
+	}
+
 	user := &domain.User{
 		Username:    req.Username,
 		Password:    string(hashedPassword),
-		Role:        "Customer",
+		RoleID:      role.ID,
 		IsActive:    true,
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,

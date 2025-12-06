@@ -4,7 +4,7 @@ import { writable } from 'svelte/store';
 interface User {
   ID: number;
   Username: string;
-  Role: string;
+  Role: { Name: string } | string; // Support both for safety during migration
   IsActive: boolean;
 }
 
