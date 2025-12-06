@@ -27,6 +27,8 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
 
+	import { auth } from '$lib/stores/auth';
+
 	let settings: any = {
 		business_name: '',
 		currency_symbol: '$',
@@ -90,12 +92,19 @@
 		}
 	}
 
-	const tabItems = [
-		{ id: 'general', label: 'General', icon: Settings },
-		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck },
-		{ id: 'policies', label: 'Policies', icon: FileText },
-		{ id: 'notifications', label: 'Notifications', icon: Bell }
+	const allTabs = [
+		{ id: 'general', label: 'General', icon: Settings, permission: 'settings.view' },
+		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck, permission: 'roles.view' },
+		{ id: 'policies', label: 'Policies', icon: FileText, permission: 'settings.view' },
+		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
 	];
+
+	$: tabs = allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission));
+
+	// Auto-select first available tab if current one becomes hidden
+	$: if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
+		activeTab = tabs[0].id;
+	}
 </script>
 
 <div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
@@ -125,12 +134,16 @@
 			</p>
 		</div>
 
-		<Tabs.Root value="general" class="w-full space-y-8" onValueChange={(val) => (activeTab = val)}>
+		<Tabs.Root
+			value={activeTab}
+			class="w-full space-y-8"
+			onValueChange={(val) => (activeTab = val)}
+		>
 			<!-- Light Glass Tabs List -->
 			<Tabs.List
 				class="inline-flex h-auto w-full rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-lg backdrop-blur-xl"
 			>
-				{#each tabItems as tab}
+				{#each tabs as tab}
 					<Tabs.Trigger
 						value={tab.id}
 						class={cn(

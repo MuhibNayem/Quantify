@@ -44,6 +44,7 @@
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import { crmApi } from '$lib/api/resources';
 	import type { UserSummary } from '$lib/types';
+	import { auth } from '$lib/stores/auth';
 
 	let customers = $state<UserSummary[]>([]);
 	let filteredCustomers = $state<UserSummary[]>([]);
@@ -456,66 +457,68 @@
 					</div>
 
 					<!-- Loyalty Card -->
-					<div
-						class="rounded-2xl border border-violet-200/50 bg-white/90 p-6 shadow-lg backdrop-blur"
-					>
-						<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
-							<Star class="text-violet-600" />
-							Loyalty Program
-						</h3>
+					{#if auth.hasPermission('loyalty.read')}
+						<div
+							class="rounded-2xl border border-violet-200/50 bg-white/90 p-6 shadow-lg backdrop-blur"
+						>
+							<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
+								<Star class="text-violet-600" />
+								Loyalty Program
+							</h3>
 
-						<div class="mb-6 text-center">
-							<p class="text-3xl font-bold text-violet-600">
-								{selectedCustomer.loyalty?.Points || 0}
-							</p>
-							<p class="text-sm text-slate-500">Available Points</p>
-							<Badge class={`mt-2 ${getTierColor(selectedCustomer.loyalty?.Tier || 'Bronze')}`}>
-								<svelte:component
-									this={getTierIcon(selectedCustomer.loyalty?.Tier || 'Bronze')}
-									class="mr-1 h-3 w-3"
-								/>
-								{selectedCustomer.loyalty?.Tier || 'Bronze'} Member
-							</Badge>
-						</div>
-
-						<div class="space-y-3">
-							<div>
-								<label class="text-sm font-medium text-slate-700">Add Points</label>
-								<div class="mt-1 flex gap-2">
-									<Input
-										type="number"
-										placeholder="Amount"
-										bind:value={pointsToAdd}
-										class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+							<div class="mb-6 text-center">
+								<p class="text-3xl font-bold text-violet-600">
+									{selectedCustomer.loyalty?.Points || 0}
+								</p>
+								<p class="text-sm text-slate-500">Available Points</p>
+								<Badge class={`mt-2 ${getTierColor(selectedCustomer.loyalty?.Tier || 'Bronze')}`}>
+									<svelte:component
+										this={getTierIcon(selectedCustomer.loyalty?.Tier || 'Bronze')}
+										class="mr-1 h-3 w-3"
 									/>
-									<Button
-										onclick={addPoints}
-										class="rounded-lg bg-violet-600 px-3 py-2 text-white hover:bg-violet-700"
-									>
-										<Gift class="h-4 w-4" />
-									</Button>
-								</div>
+									{selectedCustomer.loyalty?.Tier || 'Bronze'} Member
+								</Badge>
 							</div>
 
-							<div>
-								<label class="text-sm font-medium text-slate-700">Redeem Points</label>
-								<div class="mt-1 flex gap-2">
-									<Input
-										type="number"
-										placeholder="Amount"
-										bind:value={pointsToRedeem}
-										class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
-									/>
-									<Button
-										onclick={redeemPoints}
-										class="rounded-lg bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700"
-									>
-										Redeem
-									</Button>
+							<div class="space-y-3">
+								<div>
+									<label class="text-sm font-medium text-slate-700">Add Points</label>
+									<div class="mt-1 flex gap-2">
+										<Input
+											type="number"
+											placeholder="Amount"
+											bind:value={pointsToAdd}
+											class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+										/>
+										<Button
+											onclick={addPoints}
+											class="rounded-lg bg-violet-600 px-3 py-2 text-white hover:bg-violet-700"
+										>
+											<Gift class="h-4 w-4" />
+										</Button>
+									</div>
+								</div>
+
+								<div>
+									<label class="text-sm font-medium text-slate-700">Redeem Points</label>
+									<div class="mt-1 flex gap-2">
+										<Input
+											type="number"
+											placeholder="Amount"
+											bind:value={pointsToRedeem}
+											class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+										/>
+										<Button
+											onclick={redeemPoints}
+											class="rounded-lg bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700"
+										>
+											Redeem
+										</Button>
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
+					{/if}
 
 					<!-- Quick Stats -->
 					<div

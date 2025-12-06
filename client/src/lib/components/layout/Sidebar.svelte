@@ -20,6 +20,22 @@
 		if (href === '/') return pathname === '/';
 		return pathname === href || pathname.startsWith(`${href}/`);
 	};
+	/* Reactive filtered navigation based on permissions */
+	const permissions = $derived($auth.permissions || []);
+
+	const filteredSections = $derived(
+		navSections
+			.map((section) => ({
+				...section,
+				items: section.items.filter((item) => {
+					// If no permission is specified, show the item
+					if (!item.permission) return true;
+					// Otherwise, check if user has the required permission
+					return permissions.includes(item.permission);
+				})
+			}))
+			.filter((section) => section.items.length > 0)
+	);
 </script>
 
 <!-- Mobile toggle button -->
@@ -71,7 +87,7 @@
 		<div
 			class="scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent flex-1 space-y-6 overflow-y-auto px-5 py-6"
 		>
-			{#each navSections as section}
+			{#each filteredSections as section}
 				<div class="group">
 					<p
 						class="px-3 text-xs font-semibold uppercase tracking-wider text-purple-600/60 transition-colors duration-300 group-hover:text-purple-700/80"

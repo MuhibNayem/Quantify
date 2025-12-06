@@ -495,25 +495,33 @@
 				</div>
 
 				<div class="flex flex-col gap-3 pt-2 sm:flex-row">
-					<Button
-						class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
-						onclick={updateUser}
-					>
-						Save changes
-					</Button>
-					<Button
-						class="flex-1 rounded-xl border border-sky-200 text-sky-700 hover:bg-sky-50"
-						onclick={() => approveUser()}
-						disabled={selectedUser.IsActive}
-					>
-						Approve
-					</Button>
-					<Button
-						class="flex-1 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50"
-						onclick={() => deleteUser()}
-					>
-						Delete
-					</Button>
+					{#if auth.hasPermission('users.manage')}
+						<Button
+							class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
+							onclick={updateUser}
+						>
+							Save changes
+						</Button>
+						<Button
+							class="flex-1 rounded-xl border border-sky-200 text-sky-700 hover:bg-sky-50"
+							onclick={() => approveUser()}
+							disabled={selectedUser.IsActive}
+						>
+							Approve
+						</Button>
+						<Button
+							class="flex-1 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50"
+							onclick={() => deleteUser()}
+						>
+							Delete
+						</Button>
+					{:else}
+						<div
+							class="w-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-700"
+						>
+							You have read-only access to user management.
+						</div>
+					{/if}
 				</div>
 			</CardContent>
 		{/if}

@@ -203,7 +203,8 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := h.db.Preload("Role").Where("username = ?", req.Username).First(&user).Error; err != nil {
+	// Preload Role AND Permissions
+	if err := h.db.Preload("Role.Permissions").Where("username = ?", req.Username).First(&user).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 			return
@@ -227,10 +228,11 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 	// Dynamic RBAC Migration: If RoleID Is Missing but LegacyRole exists
 	if user.RoleID == 0 && user.LegacyRole != "" {
 		var mappedRole domain.Role
-		if err := h.db.Where("name = ?", user.LegacyRole).First(&mappedRole).Error; err == nil {
+		// FIXED: Preload Permissions when fetching the mapped role
+		if err := h.db.Preload("Permissions").Where("name = ?", user.LegacyRole).First(&mappedRole).Error; err == nil {
 			// Found matching role, migrate user
 			user.RoleID = mappedRole.ID
-			user.Role = mappedRole // Populate for token generation
+			user.Role = mappedRole // Populate for token generation and response
 			h.db.Model(&user).Update("role_id", mappedRole.ID)
 		}
 	}
@@ -249,13 +251,13 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 
 	// Store tokens in Redis
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
-	if err := repository.SetCache("access_token:"+accessToken, user.ID, accessTokenExpiresAt.Sub(time.Now())); err != nil {
+	if err := repository.SetCache("access_token:"+accessToken, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
 
 	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour) // 10 years
-	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, refreshTokenExpiresAt.Sub(time.Now())); err != nil {
+	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, time.Until(refreshTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
 		return
 	}
@@ -266,12 +268,24 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
+	// Extract permissions
+	var permissions []string
+	if user.Role.Permissions != nil {
+		for _, p := range user.Role.Permissions {
+			permissions = append(permissions, p.Name)
+		}
+	}
+
+	// DEBUG: Log the role and extracted permissions
+	fmt.Printf("DEBUG: LoginUser - User Role: %s (ID: %d), Found %d permissions\n", user.Role.Name, user.Role.ID, len(permissions))
+
 	user.Password = ""
 	c.JSON(http.StatusOK, gin.H{
 		"accessToken":  accessToken,
 		"refreshToken": refreshToken,
 		"csrfToken":    csrfToken,
 		"user":         user,
+		"permissions":  permissions,
 	})
 }
 
@@ -324,13 +338,13 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 	}
 
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
-	if err := repository.SetCache("access_token:"+accessToken, user.ID, accessTokenExpiresAt.Sub(time.Now())); err != nil {
+	if err := repository.SetCache("access_token:"+accessToken, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
 
 	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour)
-	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, refreshTokenExpiresAt.Sub(time.Now())); err != nil {
+	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, time.Until(refreshTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
 		return
 	}

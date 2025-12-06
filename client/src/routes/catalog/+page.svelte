@@ -64,8 +64,10 @@
 		RefreshCcw,
 		Tag,
 		Users,
-		Zap
+		Zap,
+		Search
 	} from 'lucide-svelte';
+	import { auth } from '$lib/stores/auth';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
@@ -1082,30 +1084,36 @@
 								<h2 class="text-lg font-semibold text-slate-800">SKU Registry</h2>
 								<p class="text-sm text-slate-500">Manage items synced with the warehouse</p>
 							</div>
-							<div class="flex flex-wrap items-center gap-2">
-								<Input
-									class="w-full rounded-xl border-sky-200 bg-white/80 px-3 text-sm focus:ring-2 focus:ring-sky-400 sm:w-48"
-									placeholder="Search..."
-									bind:value={search.term}
-								/>
-								<div class="select-wrapper">
-									<select
-										class="rounded-xl border border-sky-200 bg-white/80 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-400"
-										bind:value={search.key}
-									>
-										<option value="name">Name</option>
-										<option value="sku">SKU</option>
-									</select>
+							<div class="flex flex-col gap-3 sm:flex-row">
+								<div class="relative flex-1">
+									<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+									<Input
+										placeholder="Search products..."
+										bind:value={search.term}
+										onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+										class="rounded-xl border-sky-200 bg-white/90 pl-9 focus:ring-2 focus:ring-sky-400"
+									/>
 								</div>
-								<Button
-									class="rounded-xl bg-sky-500 px-4 py-2 text-white hover:bg-sky-600"
-									onclick={handleSearch}>Search</Button
-								>
-								<Button
-									variant="ghost"
-									class="rounded-xl px-4 py-2 text-sky-600 hover:bg-sky-50"
-									onclick={clearSearch}>Clear</Button
-								>
+								<div class="flex gap-2">
+									<Button
+										variant="secondary"
+										onclick={handleSearch}
+										class="rounded-xl border border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
+									>
+										Search
+									</Button>
+									{#if auth.hasPermission('products.write')}
+										<Button
+											onclick={() => {
+												resetProductForm();
+												openModal('/products', 'Add Product');
+											}}
+											class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
+										>
+											<PlusCircle class="mr-2 h-4 w-4" /> Add Product
+										</Button>
+									{/if}
+								</div>
 							</div>
 						</div>
 

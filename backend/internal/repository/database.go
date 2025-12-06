@@ -113,8 +113,9 @@ func AutoMigrate() {
 
 	logrus.Info("Database schema auto-migrated")
 
-	seedData()
+	// Fix schema first (drop legacy columns) before seeding
 	fixRolePermissionsSchema()
+	seedData()
 }
 
 func fixRolePermissionsSchema() {

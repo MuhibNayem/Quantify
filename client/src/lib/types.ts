@@ -191,6 +191,7 @@ export interface UserSummary extends BaseEntity {
 	PhoneNumber?: string;
 	Address?: string;
 	loyalty?: LoyaltyAccount;
+	Permissions?: string[];
 }
 
 export interface PaginatedUsers {
