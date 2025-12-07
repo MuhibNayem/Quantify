@@ -597,7 +597,7 @@
 										{/if}
 									</div>
 									<Button
-										href="/replenishment/po/{po.ID}"
+										href="/purchase-orders/{po.ID}"
 										variant="ghost"
 										size="sm"
 										class="text-purple-600 hover:bg-purple-50 hover:text-purple-700"

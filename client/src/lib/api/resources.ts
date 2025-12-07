@@ -92,19 +92,19 @@ export const replenishmentApi = {
 		await api.post('/replenishment/forecast/generate', payload)
 	).data,
 	getForecast: async (id: number) => (await api.get<DemandForecast>(`/replenishment/forecast/${id}`)).data,
-	getPO: async (id: number) => (await api.get<PurchaseOrder>(`/purchase-orders/${id}`)).data,
+	getPO: async (id: number) => (await api.get<PurchaseOrder>(`/replenishment/purchase-orders/${id}`)).data,
 	listSuggestions: async (params?: Record<string, unknown>) =>
 		(await api.get<ReorderSuggestion[]>('/replenishment/suggestions', { params })).data,
 	generateSuggestions: async () => (await api.post('/replenishment/suggestions/generate')).data,
 	createPOFromSuggestion: async (suggestionId: number) =>
 		(await api.post<PurchaseOrder>(`/replenishment/suggestions/${suggestionId}/create-po`)).data,
-	approvePO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/approve`)).data,
-	sendPO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/send`)).data,
+	approvePO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/approve`)).data,
+	sendPO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/send`)).data,
 	updatePO: async (poId: number, payload: Record<string, unknown>) =>
-		(await api.put(`/purchase-orders/${poId}`, payload)).data,
+		(await api.put(`/replenishment/purchase-orders/${poId}`, payload)).data,
 	receivePO: async (poId: number, payload: Record<string, unknown>) =>
-		(await api.post(`/purchase-orders/${poId}/receive`, payload)).data,
-	cancelPO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/cancel`)).data,
+		(await api.post(`/replenishment/purchase-orders/${poId}/receive`, payload)).data,
+	cancelPO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/cancel`)).data,
 };
 
 export const reportsApi = {
