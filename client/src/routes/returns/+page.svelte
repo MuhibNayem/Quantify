@@ -7,7 +7,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Badge } from '$lib/components/ui/badge';
-	import { Undo2, Package, History, ShieldCheck, Search, Filter } from 'lucide-svelte';
+	import { Undo2, Package, History, ShieldCheck, Search, Filter, Loader2 } from 'lucide-svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
@@ -20,6 +20,9 @@
 	let adminReturns: any[] = [];
 	let selectedOrder: any = null;
 	let isRequestModalOpen = false;
+
+	let searchQuery = '';
+	let isSearching = false;
 
 	onMount(async () => {
 		loadOrders();
@@ -36,6 +39,32 @@
 		} catch (e) {
 			console.error(e);
 			toast.error('Failed to load orders');
+		}
+	}
+
+	async function searchOrder() {
+		if (!searchQuery.trim()) {
+			loadOrders();
+			return;
+		}
+
+		isSearching = true;
+		try {
+			const data = await ordersApi.getOrder(searchQuery.trim());
+			// API returns { order: ... }
+			if (data && data.order) {
+				orders = [data.order];
+				toast.success('Order found');
+			} else {
+				orders = [];
+				toast.warning('Order not found');
+			}
+		} catch (e) {
+			console.error(e);
+			orders = []; // Clear list if not found
+			toast.error('Order not found or access denied');
+		} finally {
+			isSearching = false;
 		}
 	}
 
@@ -65,7 +94,11 @@
 
 	function handleReturnSubmitted() {
 		isRequestModalOpen = false;
-		loadOrders(); // Refresh orders (maybe status changed?)
+		if (searchQuery) {
+			searchOrder(); // Refresh search result
+		} else {
+			loadOrders(); // Refresh list
+		}
 		loadMyReturns();
 		toast.success('Return requested successfully');
 	}
@@ -133,6 +166,43 @@
 
 			<!-- Request Return Tab -->
 			<Tabs.Content value="request" class="space-y-6 pt-2 outline-none">
+				<!-- Search -->
+				<div class="flex items-center gap-4 rounded-2xl bg-white/60 p-4 shadow-sm backdrop-blur-md">
+					<div class="relative flex-1">
+						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Input
+							placeholder="Search by Order Number (e.g., ORD-12345...)"
+							class="border-slate-200 bg-white/50 pl-9 transition-all focus:bg-white"
+							bind:value={searchQuery}
+							onkeydown={(e) => e.key === 'Enter' && searchOrder()}
+						/>
+					</div>
+					<Button
+						variant="default"
+						class="bg-blue-600 shadow-md transition-all hover:bg-blue-700 hover:shadow-lg"
+						onclick={searchOrder}
+						disabled={isSearching}
+					>
+						{#if isSearching}
+							<Loader2 class="mr-2 h-4 w-4 animate-spin" /> Searching...
+						{:else}
+							Find Order
+						{/if}
+					</Button>
+					{#if searchQuery}
+						<Button
+							variant="ghost"
+							class="text-slate-500 hover:text-slate-700"
+							onclick={() => {
+								searchQuery = '';
+								loadOrders();
+							}}
+						>
+							Clear
+						</Button>
+					{/if}
+				</div>
+
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Orders List -->
 					{#each orders as order}

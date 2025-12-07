@@ -233,6 +233,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).Checkout)
 			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).ListProducts)
 			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService).ListOrders)
+			sales.GET("/orders/:orderNumber", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService).GetOrderByNumber)
 			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService).ListAllOrders)
 		}
 

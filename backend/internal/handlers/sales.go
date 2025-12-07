@@ -374,3 +374,31 @@ func (h *SalesHandler) ListAllOrders(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"orders": orders})
 }
+
+// GetOrderByNumber godoc
+// @Summary Get order details by order number
+// @Description Retrieves a specific order by its unique order number
+// @Tags sales
+// @Accept json
+// @Produce json
+// @Param orderNumber path string true "Order Number"
+// @Success 200 {object} domain.Order
+// @Failure 404 {object} map[string]interface{} "Order not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /sales/orders/{orderNumber} [get]
+func (h *SalesHandler) GetOrderByNumber(c *gin.Context) {
+	orderNumber := c.Param("orderNumber")
+
+	var order domain.Order
+	// Preload items, product details, and the user who placed the order
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Where("order_number = ?", orderNumber).First(&order).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("Order not found", http.StatusNotFound, err))
+		} else {
+			c.Error(appErrors.NewAppError("Failed to fetch order", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"order": order})
+}

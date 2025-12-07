@@ -20,8 +20,8 @@ export const ordersApi = {
     },
 
     // Get order details
-    getOrder: async (orderId: number) => {
-        const response = await api.get(`/sales/orders/${orderId}`);
+    getOrder: async (orderNumber: string) => {
+        const response = await api.get(`/sales/orders/${orderNumber}`);
         return response.data;
     }
 };
