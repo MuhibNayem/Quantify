@@ -22,3 +22,21 @@ export type WithoutChildrenOrChild<T> = Omit<T, 'children' | 'child'>;
 export type WithoutChildren<T> = Omit<T, 'children' | 'child'>;
 
 export type WithoutChild<T> = Omit<T, 'children' | 'child'>;
+
+// Format date to readable string
+export function formatDate(dateString: string): string {
+	const date = new Date(dateString);
+	return date.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+	});
+}
+
+// Format number as currency
+export function formatCurrency(amount: number): string {
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+	}).format(amount);
+}

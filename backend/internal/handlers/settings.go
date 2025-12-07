@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"inventory/backend/internal/services"
 	"net/http"
 
@@ -26,14 +27,16 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 
 func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 	var req struct {
-		Key   string `json:"key"`
-		Value string `json:"value"`
+		Key   string      `json:"key"`
+		Value interface{} `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
 		return
 	}
-	if err := h.service.UpdateSetting(req.Key, req.Value); err != nil {
+	// Convert the value to string
+	valueStr := fmt.Sprintf("%v", req.Value)
+	if err := h.service.UpdateSetting(req.Key, valueStr); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update setting"})
 		return
 	}

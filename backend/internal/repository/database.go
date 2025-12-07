@@ -169,6 +169,8 @@ func seedPermissions() map[string]domain.Permission {
 		{Name: "loyalty.write", Group: "CRM", Description: "Manage loyalty points"},
 		// POS / Sales
 		{Name: "pos.access", Group: "POS", Description: "Access Point of Sale terminal"},
+		{Name: "orders.read", Group: "Orders", Description: "View order history"},
+		{Name: "orders.manage", Group: "Orders", Description: "Manage orders"},
 		// Returns
 		{Name: "returns.request", Group: "POS", Description: "Request a return"},
 		{Name: "returns.manage", Group: "POS", Description: "Approve/Reject returns"},
@@ -200,6 +202,9 @@ func seedPermissions() map[string]domain.Permission {
 		{Name: "crm.write", Group: "CRM", Description: "Modify CRM data"},
 		{Name: "pos.view", Group: "POS", Description: "View POS module"},
 		{Name: "reports.view", Group: "Reports", Description: "View reports"},
+		// Notifications
+		{Name: "notifications.read", Group: "System", Description: "View consolidated notifications"},
+		{Name: "notifications.write", Group: "System", Description: "Mark notifications as read/unread"},
 	}
 
 	permMap := make(map[string]domain.Permission)
@@ -244,6 +249,7 @@ func seedRoles(permMap map[string]domain.Permission) {
 				permMap["customers.read"], permMap["customers.write"],
 				permMap["loyalty.read"], permMap["loyalty.write"],
 				permMap["pos.access"],
+				permMap["orders.read"], permMap["orders.manage"],
 				permMap["returns.request"], permMap["returns.manage"],
 				permMap["reports.sales"], permMap["reports.inventory"], permMap["reports.financial"],
 				permMap["alerts.view"], permMap["alerts.manage"],
@@ -252,6 +258,7 @@ func seedRoles(permMap map[string]domain.Permission) {
 				permMap["settings.view"],
 				permMap["dashboard.view"],
 				permMap["inventory.view"], permMap["crm.view"], permMap["pos.view"],
+				permMap["notifications.read"], permMap["notifications.write"],
 			)
 		case "Staff":
 			permsToAssign = append(permsToAssign,
@@ -262,10 +269,12 @@ func seedRoles(permMap map[string]domain.Permission) {
 				permMap["barcode.read"],
 				permMap["customers.read"],
 				permMap["pos.access"],
+				permMap["orders.read"],
 				permMap["returns.request"],
 				permMap["alerts.view"],
 				permMap["dashboard.view"],
 				permMap["inventory.view"], permMap["crm.view"], permMap["pos.view"],
+				permMap["notifications.read"], permMap["notifications.write"],
 			)
 		}
 

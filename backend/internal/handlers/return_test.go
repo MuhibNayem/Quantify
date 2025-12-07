@@ -19,6 +19,7 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/websocket"
 )
 
 func setupTestDB() *gorm.DB {
@@ -39,6 +40,9 @@ func setupTestDB() *gorm.DB {
 		&domain.Return{},
 		&domain.ReturnItem{},
 		&domain.SystemSetting{},
+		&domain.Role{},
+		&domain.Permission{},
+		&domain.RolePermission{},
 	)
 	return db
 }
@@ -50,8 +54,13 @@ func TestRefundReturnFlow(t *testing.T) {
 
 	salesHandler := handlers.NewSalesHandler(db, settingsService)
 
+	hub := websocket.NewHub()
+	go hub.Run()
+
 	cfg := &config.Config{}
-	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService)
+	// Create handler
+	notificationRepo := repository.NewNotificationRepository(db)
+	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo)
 
 	// Setup Router
 	r := gin.Default()
@@ -113,12 +122,12 @@ func TestRefundReturnFlow(t *testing.T) {
 		"order_number": order.OrderNumber,
 		"items": []map[string]interface{}{
 			{
-				"product_id": product.ID,
-				"quantity":   1,
-				"condition":  "GOOD",
+				"order_item_id": order.OrderItems[0].ID,
+				"quantity":      1,
+				"condition":     "GOOD",
+				"reason":        "Defective",
 			},
 		},
-		"reason": "Defective",
 	}
 	body, _ = json.Marshal(returnReq)
 	req, _ = http.NewRequest("POST", "/returns/request", bytes.NewBuffer(body))

@@ -14,17 +14,22 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/websocket"
 )
 
 type ReplenishmentHandler struct {
-	forecastingService   services.ForecastingService
-	replenishmentService services.ReplenishmentService
+	ForecastingService   services.ForecastingService
+	ReplenishmentService services.ReplenishmentService
+	Hub                  *websocket.Hub
+	NotificationRepo     repository.NotificationRepository
 }
 
-func NewReplenishmentHandler(forecastingService services.ForecastingService, replenishmentService services.ReplenishmentService) *ReplenishmentHandler {
+func NewReplenishmentHandler(forecastingService services.ForecastingService, replenishmentService services.ReplenishmentService, hub *websocket.Hub, notificationRepo repository.NotificationRepository) *ReplenishmentHandler {
 	return &ReplenishmentHandler{
-		forecastingService:   forecastingService,
-		replenishmentService: replenishmentService,
+		ForecastingService:   forecastingService,
+		ReplenishmentService: replenishmentService,
+		Hub:                  hub,
+		NotificationRepo:     notificationRepo,
 	}
 }
 
@@ -50,7 +55,7 @@ func (h *ReplenishmentHandler) GenerateDemandForecast(c *gin.Context) {
 		return
 	}
 
-	if err := h.forecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays); err != nil {
+	if err := h.ForecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays); err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate demand forecast", http.StatusInternalServerError, err))
 		return
 	}
@@ -94,7 +99,7 @@ func GetDemandForecast(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/suggestions/generate [post]
 func (h *ReplenishmentHandler) GenerateReorderSuggestions(c *gin.Context) {
-	if err := h.replenishmentService.GenerateReorderSuggestions(); err != nil {
+	if err := h.ReplenishmentService.GenerateReorderSuggestions(); err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate reorder suggestions", http.StatusInternalServerError, err))
 		return
 	}
@@ -546,4 +551,185 @@ func CancelPurchaseOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, po)
+}
+
+// ListPurchaseOrders godoc
+// @Summary List all purchase orders
+// @Description Retrieves all purchase orders
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.PurchaseOrder
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/purchase-orders [get]
+func (h *ReplenishmentHandler) ListPurchaseOrders(c *gin.Context) {
+	var pos []domain.PurchaseOrder
+	if err := repository.DB.Preload("Supplier").Preload("PurchaseOrderItems.Product").Order("created_at desc").Find(&pos).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch purchase orders", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"purchaseOrders": pos})
+}
+
+type CreatePurchaseReturnRequest struct {
+	PurchaseOrderID uint   `json:"purchase_order_id"` // Optional
+	SupplierID      uint   `json:"supplier_id" binding:"required"`
+	Reason          string `json:"reason" binding:"required"`
+	Items           []struct {
+		ProductID uint   `json:"product_id" binding:"required"`
+		Quantity  int    `json:"quantity" binding:"required"`
+		BatchID   uint   `json:"batch_id" binding:"required"`
+		Reason    string `json:"reason"`
+	} `json:"items" binding:"required"`
+}
+
+// CreatePurchaseReturn godoc
+// @Summary Create a return to supplier (Vendor Return)
+// @Description Creates a return request to a supplier and deducts stock from the specified batch.
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param request body CreatePurchaseReturnRequest true "Return request"
+// @Success 201 {object} domain.PurchaseReturn
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/returns [post]
+func (h *ReplenishmentHandler) CreatePurchaseReturn(c *gin.Context) {
+	var req CreatePurchaseReturnRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	userIDVal, _ := c.Get("user_id")
+	userID := userIDVal.(uint)
+
+	var returnRecord domain.PurchaseReturn
+
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		returnRecord = domain.PurchaseReturn{
+			PurchaseOrderID: req.PurchaseOrderID,
+			SupplierID:      req.SupplierID,
+			Status:          "COMPLETED", // Auto-complete for now as it deducts stock immediately
+			Reason:          req.Reason,
+			ReturnedBy:      userID,
+			ReturnedAt:      time.Now(),
+		}
+
+		if err := tx.Create(&returnRecord).Error; err != nil {
+			return appErrors.NewAppError("Failed to create return record", http.StatusInternalServerError, err)
+		}
+
+		var totalRefundAmount float64
+
+		for _, item := range req.Items {
+			// 1. Validate Batch and Stock
+			var batch domain.Batch
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&batch, item.BatchID).Error; err != nil {
+				return appErrors.NewAppError(fmt.Sprintf("Batch %d not found", item.BatchID), http.StatusNotFound, err)
+			}
+			if batch.ProductID != item.ProductID {
+				return appErrors.NewAppError("Batch does not match product", http.StatusBadRequest, nil)
+			}
+			if batch.Quantity < item.Quantity {
+				return appErrors.NewAppError(fmt.Sprintf("Insufficient quantity in batch %s", batch.BatchNumber), http.StatusBadRequest, nil)
+			}
+
+			// 2. Deduct Stock
+			batch.Quantity -= item.Quantity
+			if err := tx.Save(&batch).Error; err != nil {
+				return appErrors.NewAppError("Failed to update batch quantity", http.StatusInternalServerError, err)
+			}
+
+			// 3. Create Return Item
+			batchID := item.BatchID
+			returnItem := domain.PurchaseReturnItem{
+				PurchaseReturnID: returnRecord.ID,
+				ProductID:        item.ProductID,
+				Quantity:         item.Quantity,
+				BatchID:          &batchID, // Link to specific batch
+				Reason:           item.Reason,
+			}
+			if err := tx.Create(&returnItem).Error; err != nil {
+				return appErrors.NewAppError("Failed to create return item", http.StatusInternalServerError, err)
+			}
+
+			// 4. Create Stock Adjustment Record (STOCK_OUT)
+			// Need to fetch product location for record
+			var product domain.Product
+			tx.First(&product, item.ProductID) // Optimize: preload or fetch
+
+			// Calculate Refund Amount (using PurchasePrice)
+			totalRefundAmount += product.PurchasePrice * float64(item.Quantity)
+
+			stockAdj := domain.StockAdjustment{
+				ProductID:   item.ProductID,
+				LocationID:  product.LocationID, // Or batch location
+				Type:        "STOCK_OUT",
+				Quantity:    item.Quantity,
+				ReasonCode:  "VENDOR_RETURN",
+				Notes:       fmt.Sprintf("Vendor Return ID: %d", returnRecord.ID),
+				AdjustedBy:  userID,
+				AdjustedAt:  time.Now(),
+				NewQuantity: batch.Quantity, // Approx batch qty
+			}
+			if err := tx.Create(&stockAdj).Error; err != nil {
+				return appErrors.NewAppError("Failed to create stock adjustment log", http.StatusInternalServerError, err)
+			}
+		}
+
+		// Update total amount
+		if err := tx.Model(&returnRecord).Update("refund_amount", totalRefundAmount).Error; err != nil {
+			return appErrors.NewAppError("Failed to update refund amount", http.StatusInternalServerError, err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+		} else {
+			c.Error(appErrors.NewAppError("Transaction failed", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	// Broadcast event with FULL payload to authorized users (inventory.view)
+	h.Hub.BroadcastToPermission("inventory.view", gin.H{
+		"event": "RETURN_UPDATED",
+		"type":  "VENDOR_RETURN",
+		"data":  returnRecord,
+	})
+
+	// Create persistent notification for inventory staff
+	invNotif := domain.Notification{
+		Type:        "VENDOR_RETURN",
+		Title:       "Vendor Return Created",
+		Message:     fmt.Sprintf("Return #%d to Supplier #%d has been created.", returnRecord.ID, returnRecord.SupplierID),
+		TriggeredAt: time.Now(),
+	}
+	h.NotificationRepo.CreateNotificationsForPermission("inventory.view", invNotif)
+
+	// Reload with items
+	repository.DB.Preload("PurchaseReturnItems.Product").First(&returnRecord, returnRecord.ID)
+	c.JSON(http.StatusCreated, returnRecord)
+}
+
+// ListPurchaseReturns godoc
+// @Summary List vendor returns
+// @Description Retrieves all returns to suppliers
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.PurchaseReturn
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/returns [get]
+func (h *ReplenishmentHandler) ListPurchaseReturns(c *gin.Context) {
+	var returns []domain.PurchaseReturn
+	if err := repository.DB.Preload("Supplier").Preload("PurchaseReturnItems.Product").Order("created_at desc").Find(&returns).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch returns", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"returns": returns})
 }

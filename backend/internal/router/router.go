@@ -74,7 +74,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
-	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService)
+	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService, hub, notificationRepo)
 	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
 	crmHandler := handlers.NewCRMHandler(crmService)
 	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
@@ -87,14 +87,14 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	roleHandler := handlers.NewRoleHandler(roleService)
-	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService)
+	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
 		publicRoutes.GET("/ws", func(c *gin.Context) {
-			handlers.ServeWs(hub, c, notificationRepo)
+			handlers.ServeWs(hub, c, notificationRepo, roleRepo)
 		})
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
@@ -219,9 +219,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			replenishment.POST("/purchase-orders/:poId/approve", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.ApprovePurchaseOrder)
 			replenishment.POST("/purchase-orders/:poId/send", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.SendPurchaseOrder)
 			replenishment.GET("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "replenishment.read"), handlers.GetPurchaseOrder)
-			replenishment.PUT("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.UpdatePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/receive", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.ReceivePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/cancel", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.CancelPurchaseOrder)
+			replenishment.PUT("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "inventory.write"), handlers.UpdatePurchaseOrder)
+			replenishment.POST("/purchase-orders/:poId/receive", middleware.RequirePermission(roleRepo, "inventory.write"), handlers.ReceivePurchaseOrder)
+			replenishment.POST("/purchase-orders/:poId/cancel", middleware.RequirePermission(roleRepo, "inventory.write"), handlers.CancelPurchaseOrder)
+			replenishment.GET("/purchase-orders", middleware.RequirePermission(roleRepo, "inventory.view"), replenishmentHandler.ListPurchaseOrders)
+			replenishment.POST("/returns", middleware.RequirePermission(roleRepo, "inventory.write"), replenishmentHandler.CreatePurchaseReturn)
+			replenishment.GET("/returns", middleware.RequirePermission(roleRepo, "inventory.view"), replenishmentHandler.ListPurchaseReturns)
 		}
 
 		// Sales
@@ -229,7 +232,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		{
 			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).Checkout)
 			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).ListProducts)
-			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).ListOrders)
+			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService).ListOrders)
+			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService).ListAllOrders)
 		}
 
 		// Returns
@@ -302,13 +306,13 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			users.DELETE("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.DeleteUser)
 			users.PUT("/:id/approve", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.ApproveUser)
 
-			// Notification routes (Self access usually)
+			// Notification routes (Self access usually, but now permission enforced)
 			notifications := users.Group("/:id/notifications")
 			{
-				notifications.GET("", notificationHandler.ListNotifications)
-				notifications.GET("/unread/count", notificationHandler.GetUnreadNotificationCount)
-				notifications.PATCH("/:notificationId/read", notificationHandler.MarkNotificationAsRead)
-				notifications.PATCH("/read-all", notificationHandler.MarkAllNotificationsAsRead)
+				notifications.GET("", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.ListNotifications)
+				notifications.GET("/unread/count", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.GetUnreadNotificationCount)
+				notifications.PATCH("/:notificationId/read", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkNotificationAsRead)
+				notifications.PATCH("/read-all", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkAllNotificationsAsRead)
 			}
 		}
 

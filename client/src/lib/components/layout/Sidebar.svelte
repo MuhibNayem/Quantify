@@ -28,9 +28,7 @@
 			.map((section) => ({
 				...section,
 				items: section.items.filter((item) => {
-					// If no permission is specified, show the item
 					if (!item.permission) return true;
-					// Otherwise, check if user has the required permission
 					return permissions.includes(item.permission);
 				})
 			}))

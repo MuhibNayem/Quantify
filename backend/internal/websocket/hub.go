@@ -91,3 +91,25 @@ func (h *Hub) SendToUser(userID uint, message interface{}) {
 		}
 	}
 }
+
+// BroadcastToPermission sends a message to all clients that have the specific permission.
+func (h *Hub) BroadcastToPermission(permission string, message interface{}) {
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		logrus.Errorf("Failed to marshal message to json: %v", err)
+		return
+	}
+
+	for _, userClients := range h.clients {
+		for client := range userClients {
+			if hasPerm, ok := client.Permissions[permission]; ok && hasPerm {
+				select {
+				case client.Send <- jsonMessage:
+				default:
+					close(client.Send)
+					delete(userClients, client)
+				}
+			}
+		}
+	}
+}

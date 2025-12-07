@@ -11,7 +11,8 @@ import {
 	Clock,
 	Users,
 	Settings,
-	Undo2
+	Undo2,
+	ShoppingBag
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -75,6 +76,13 @@ export const navSections: NavSection[] = [
 				description: 'Checkout & payments',
 				href: '/pos',
 				icon: Sparkles,
+				permission: 'pos.view',
+			},
+			{
+				label: 'Orders',
+				description: 'Sales & Restock',
+				href: '/orders',
+				icon: ShoppingBag,
 				permission: 'pos.view',
 			},
 		],

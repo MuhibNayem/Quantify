@@ -33,6 +33,9 @@ type Client struct {
 
 	// UserID is the authenticated user's ID.
 	UserID uint
+
+	// Permissions holds the user's granular permissions for quick lookup.
+	Permissions map[string]bool
 }
 
 // ReadPump pumps messages from the websocket connection to the hub.

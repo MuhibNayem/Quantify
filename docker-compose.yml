@@ -8,8 +8,8 @@ services:
     volumes:
       - minio_data:/data
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: minioadmin4321
+      MINIO_ROOT_PASSWORD: minioadmin4321
     command: server /data --console-address ":9001"
     networks:
       - my_network

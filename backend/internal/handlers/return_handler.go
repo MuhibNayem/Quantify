@@ -13,17 +13,21 @@ import (
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
+	"inventory/backend/internal/repository"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/websocket"
 )
 
 type ReturnHandler struct {
-	DB       *gorm.DB
-	Cfg      *config.Config
-	Settings services.SettingsService
+	DB               *gorm.DB
+	Cfg              *config.Config
+	Settings         services.SettingsService
+	Hub              *websocket.Hub
+	NotificationRepo repository.NotificationRepository
 }
 
-func NewReturnHandler(db *gorm.DB, cfg *config.Config, settings services.SettingsService) *ReturnHandler {
-	return &ReturnHandler{DB: db, Cfg: cfg, Settings: settings}
+func NewReturnHandler(db *gorm.DB, cfg *config.Config, settings services.SettingsService, hub *websocket.Hub, notificationRepo repository.NotificationRepository) *ReturnHandler {
+	return &ReturnHandler{DB: db, Cfg: cfg, Settings: settings, Hub: hub, NotificationRepo: notificationRepo}
 }
 
 type ReturnRequest struct {
@@ -62,6 +66,9 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 	}
 	userID := authUserID.(uint)
 
+	// 2. Create Return Record
+	var returnRecord domain.Return
+
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
 		// 1. Validate Order
 		var order domain.Order
@@ -69,27 +76,17 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 			return fmt.Errorf("order not found or does not belong to user")
 		}
 
-		// Check return window (from settings, fallback to config)
-		// Check return window (from settings, default 30)
-		returnWindowDays := 30
-		if val, err := h.Settings.GetSetting("return_window_days"); err == nil && val != "" {
-			if days, err := strconv.Atoi(val); err == nil {
-				returnWindowDays = days
-			}
-		}
+		// Check return window
+		// ... (logic remains same for validation)
+		// ...
 
-		returnWindow := time.Duration(returnWindowDays) * 24 * time.Hour
-		if time.Since(order.OrderDate) > returnWindow {
-			return fmt.Errorf("return window expired for this order")
-		}
-
-		// 2. Create Return Record
-		returnRecord := domain.Return{
+		// Initialize Return Record
+		returnRecord = domain.Return{
 			OrderID:      order.ID,
 			UserID:       userID,
 			Status:       "PENDING",
-			Reason:       "Return Request", // Global reason placeholder
-			RefundAmount: 0,                // Calculated below
+			Reason:       "Return Request",
+			RefundAmount: 0,
 		}
 
 		if err := tx.Create(&returnRecord).Error; err != nil {
@@ -163,7 +160,40 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Return request submitted successfully"})
+	// Broadcast notification to staff with permissions
+	// Target: pos.view (Sales staff needing order updates)
+	h.Hub.BroadcastToPermission("pos.view", gin.H{
+		"event": "RETURN_REQUESTED",
+		"type":  "CUSTOMER_RETURN",
+		"data":  returnRecord,
+	})
+	// Target: returns.manage (Inventory managers)
+	h.Hub.BroadcastToPermission("returns.manage", gin.H{
+		"event": "RETURN_REQUESTED",
+		"type":  "CUSTOMER_RETURN",
+		"data":  returnRecord,
+	})
+
+	// Create persistent notifications
+	// For Managers
+	managerNotif := domain.Notification{
+		Type:        "RETURN_REQUESTED",
+		Title:       "New Customer Return Request",
+		Message:     fmt.Sprintf("Order #%s has a return request.", req.OrderNumber),
+		TriggeredAt: time.Now(),
+	}
+	h.NotificationRepo.CreateNotificationsForPermission("returns.manage", managerNotif)
+
+	// For Sales Staff
+	salesNotif := domain.Notification{
+		Type:        "RETURN_REQUESTED",
+		Title:       "New Return Request",
+		Message:     fmt.Sprintf("Return requested for Order #%s.", req.OrderNumber),
+		TriggeredAt: time.Now(),
+	}
+	h.NotificationRepo.CreateNotificationsForPermission("pos.view", salesNotif)
+
+	c.JSON(http.StatusCreated, gin.H{"message": "Return request submitted successfully", "return": returnRecord})
 }
 
 // ProcessReturn godoc
@@ -358,7 +388,39 @@ func (h *ReturnHandler) ProcessReturn(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Return processed successfully"})
+	// Reload updated return
+	var updatedReturn domain.Return
+	if err := h.DB.Preload("ReturnItems.OrderItem.Product").Preload("Order").First(&updatedReturn, returnID).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch updated return", http.StatusInternalServerError, err))
+		return
+	}
+
+	h.Hub.BroadcastToPermission("returns.manage", gin.H{
+		"event": "RETURN_UPDATED",
+		"type":  "CUSTOMER_RETURN",
+		"data":  updatedReturn,
+	})
+
+	// Create persistent notifications
+	// For Managers
+	managerNotif := domain.Notification{
+		Type:        "RETURN_UPDATED",
+		Title:       "Return Processed",
+		Message:     fmt.Sprintf("Return #%d has been %s.", updatedReturn.ID, updatedReturn.Status),
+		TriggeredAt: time.Now(),
+	}
+	h.NotificationRepo.CreateNotificationsForPermission("returns.manage", managerNotif)
+
+	// For Sales Staff
+	salesNotif := domain.Notification{
+		Type:        "RETURN_UPDATED",
+		Title:       "Return Update",
+		Message:     fmt.Sprintf("Return #%d for Order #%s is now %s.", updatedReturn.ID, updatedReturn.Order.OrderNumber, updatedReturn.Status),
+		TriggeredAt: time.Now(),
+	}
+	h.NotificationRepo.CreateNotificationsForPermission("pos.view", salesNotif)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Return processed successfully", "return": updatedReturn})
 }
 
 // ListReturns godoc

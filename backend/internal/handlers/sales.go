@@ -346,8 +346,29 @@ func (h *SalesHandler) ListOrders(c *gin.Context) {
 
 	var orders []domain.Order
 	// Preload items and their products
-	if err := h.DB.Preload("Items.Product").Where("user_id = ?", userID).Order("created_at desc").Find(&orders).Error; err != nil {
+	if err := h.DB.Preload("OrderItems.Product").Where("user_id = ?", userID).Order("created_at desc").Find(&orders).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch orders", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": orders})
+}
+
+// ListAllOrders godoc
+// @Summary List all sales orders (Admin/Manager)
+// @Description Retrieves all sales orders in the system
+// @Tags sales
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.Order
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /sales/history [get]
+func (h *SalesHandler) ListAllOrders(c *gin.Context) {
+	var orders []domain.Order
+	// Preload items and their products
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Order("created_at desc").Find(&orders).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch all orders", http.StatusInternalServerError, err))
 		return
 	}
 

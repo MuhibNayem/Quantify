@@ -341,3 +341,31 @@ type TimeClock struct {
 	Status     string `gorm:"default:'CLOCKED_IN'"` // CLOCKED_IN, ON_BREAK, CLOCKED_OUT
 	Notes      string
 }
+
+// PurchaseReturn represents a return of goods to a supplier.
+type PurchaseReturn struct {
+	gorm.Model
+	PurchaseOrderID     uint `gorm:"index"` // Optional link to original PO
+	PurchaseOrder       PurchaseOrder
+	SupplierID          uint `gorm:"not null;index"`
+	Supplier            Supplier
+	Status              string `gorm:"default:'PENDING'"` // PENDING, APPROVED, COMPLETED
+	Reason              string
+	RefundAmount        float64 // Estimated refund value
+	ReturnedBy          uint    // UserID
+	ReturnedAt          time.Time
+	PurchaseReturnItems []PurchaseReturnItem
+}
+
+// PurchaseReturnItem represents an item within a purchase return.
+type PurchaseReturnItem struct {
+	gorm.Model
+	PurchaseReturnID uint `gorm:"not null;index"`
+	PurchaseReturn   PurchaseReturn
+	ProductID        uint `gorm:"not null"`
+	Product          Product
+	Quantity         int    `gorm:"not null"`
+	Reason           string `gorm:"not null"`
+	BatchID          *uint  // Specific batch being returned (critical for stock deduction)
+	Batch            *Batch
+}
