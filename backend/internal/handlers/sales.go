@@ -175,7 +175,21 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 			}
 		}
 
-		// 4. Update Loyalty Points
+		// Apply Tax
+		taxRate := 0.0
+		if val, err := h.Settings.GetSetting("tax_rate_percentage"); err == nil {
+			if v, err := strconv.ParseFloat(val, 64); err == nil {
+				taxRate = v / 100.0
+			}
+		}
+
+		taxAmount := totalAmount * taxRate
+		totalAmount += taxAmount // Update total to include tax
+
+		var discountAmount float64
+		var pointsRedeemed int
+
+		// 4. Update Loyalty Points (Redemption & Earning)
 		if req.CustomerID != nil && *req.CustomerID > 0 {
 			var loyalty domain.LoyaltyAccount
 			result := tx.Where("user_id = ?", *req.CustomerID).First(&loyalty)
@@ -194,6 +208,30 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 				}
 			}
 
+			// Handle Redemption
+			if req.PointsToRedeem > 0 {
+				if loyalty.Points < req.PointsToRedeem {
+					return fmt.Errorf("insufficient loyalty points (Available: %d, Requested: %d)", loyalty.Points, req.PointsToRedeem)
+				}
+
+				// Get redemption rate
+				redemptionRate := 0.01 // Default $0.01 per point
+				if val, err := h.Settings.GetSetting("loyalty_points_redemption_rate"); err == nil {
+					if v, err := strconv.ParseFloat(val, 64); err == nil {
+						redemptionRate = v
+					}
+				}
+
+				discountAmount = float64(req.PointsToRedeem) * redemptionRate
+				if discountAmount > totalAmount {
+					return fmt.Errorf("discount amount (%.2f) exceeds order total (%.2f)", discountAmount, totalAmount)
+				}
+
+				loyalty.Points -= req.PointsToRedeem
+				pointsRedeemed = req.PointsToRedeem
+			}
+
+			// Handle Earning (on Net Amount)
 			// Get earning rate from settings
 			earningRate := 1.0
 			if val, err := h.Settings.GetSetting("loyalty_points_earning_rate"); err == nil {
@@ -202,7 +240,12 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 				}
 			}
 
-			pointsEarned := int(totalAmount * earningRate)
+			netAmount := totalAmount - discountAmount
+			if netAmount < 0 {
+				netAmount = 0
+			}
+
+			pointsEarned := int(netAmount * earningRate)
 			loyalty.Points += pointsEarned
 
 			// Get tier thresholds from settings
@@ -237,17 +280,21 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 			if err := tx.Save(&loyalty).Error; err != nil {
 				return fmt.Errorf("failed to update loyalty points: %w", err)
 			}
+		} else if req.PointsToRedeem > 0 {
+			return fmt.Errorf("cannot redeem points without a customer selected")
 		}
 
 		// 5. Create Order and Order Items
 		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
 		order := domain.Order{
-			OrderNumber:   orderNumber,
-			UserID:        userID,
-			TotalAmount:   totalAmount,
-			Status:        "COMPLETED",
-			PaymentMethod: req.PaymentMethod,
-			OrderDate:     time.Now(),
+			OrderNumber:    orderNumber,
+			UserID:         userID,
+			TotalAmount:    totalAmount - discountAmount, // Store net amount or total? Usually total paid.
+			Status:         "COMPLETED",
+			PaymentMethod:  req.PaymentMethod,
+			OrderDate:      time.Now(),
+			PointsRedeemed: pointsRedeemed,
+			DiscountAmount: discountAmount,
 		}
 
 		if err := tx.Create(&order).Error; err != nil {
@@ -265,7 +312,7 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		// 6. Create Transaction
 		saletransaction := domain.Transaction{
 			OrderID:              orderNumber,
-			Amount:               int64(totalAmount * 100),
+			Amount:               int64((totalAmount - discountAmount) * 100),
 			Currency:             "USD",
 			PaymentMethod:        req.PaymentMethod,
 			Status:               "COMPLETED",

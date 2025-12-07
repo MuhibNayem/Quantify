@@ -445,7 +445,7 @@
 					out:fade={{ duration: 150 }}
 					class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
 				>
-					{#if activeTab === 'sales'}
+					{#if activeTab === 'sales' && subTab === 'orders'}
 						{#each filteredSales as order (order.ID)}
 							<GlassCard
 								class="group relative flex flex-col overflow-hidden transition-all hover:shadow-lg"

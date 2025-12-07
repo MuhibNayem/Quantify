@@ -184,15 +184,8 @@
 	class="relative h-[calc(100vh-140px)] w-full overflow-hidden rounded-3xl bg-white/40 shadow-2xl ring-1 ring-white/60"
 >
 	<!-- Soft Light Background Effects -->
-	<div class="absolute -left-20 -top-20 h-96 w-96 rounded-full bg-blue-100/50 blur-[80px]"></div>
-	<div
-		class="absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-purple-100/50 blur-[80px]"
-	></div>
-	<div
-		class="absolute left-1/3 top-1/2 h-64 w-64 -translate-y-1/2 rounded-full bg-pink-100/40 blur-[60px]"
-	></div>
 
-	<div class="relative z-10 flex h-full flex-col gap-6 p-4 backdrop-blur-xl lg:flex-row lg:p-6">
+	<div class="relative z-10 flex h-full flex-col gap-6 p-4 backdrop-blur-xl lg:flex-row">
 		<!-- Left Column: Role List -->
 		<div
 			class="flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/60 shadow-lg backdrop-blur-md transition-all hover:bg-white/70 lg:w-80"

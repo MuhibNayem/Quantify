@@ -45,6 +45,7 @@
 	import { crmApi } from '$lib/api/resources';
 	import type { UserSummary } from '$lib/types';
 	import { auth } from '$lib/stores/auth';
+	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 
 	let customers = $state<UserSummary[]>([]);
@@ -488,6 +489,10 @@
 									/>
 									{selectedCustomer.loyalty?.Tier || 'Bronze'} Member
 								</Badge>
+								<div class="mt-3 text-[0.65rem] text-slate-400">
+									Earning Rate: {$settings.loyalty_points_earning_rate} pt / {$settings.currency_symbol}1
+									spent
+								</div>
 							</div>
 
 							<div class="space-y-3">

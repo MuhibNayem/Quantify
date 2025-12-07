@@ -28,6 +28,7 @@
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
+	import { adaptiveText, liquidGlass } from '$lib/styles/liquid-glass';
 
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -126,17 +127,17 @@
 	});
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
-	<!-- Soothing Soft Background -->
-	<div class="absolute left-0 top-0 -z-10 h-full w-full overflow-hidden bg-white/50">
+<div class="relative min-h-screen overflow-hidden bg-[#F9FAFB] p-8 font-sans lg:p-12">
+	<!-- Organic Mesh Gradient Background (Apple-style) -->
+	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
 		<div
-			class="animate-blob absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-blue-100/60 blur-[100px]"
+			class="absolute left-[10%] top-[5%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
 		></div>
 		<div
-			class="animate-blob animation-delay-2000 absolute -right-[10%] top-[20%] h-[60%] w-[60%] rounded-full bg-purple-100/60 blur-[100px]"
+			class="absolute right-[5%] top-[30%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
 		></div>
 		<div
-			class="animate-blob animation-delay-4000 absolute -bottom-[20%] left-[20%] h-[50%] w-[50%] rounded-full bg-pink-100/60 blur-[100px]"
+			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
 		></div>
 	</div>
 
@@ -148,7 +149,7 @@
 			>
 				Configuration
 			</h1>
-			<p class="font-medium text-slate-500">
+			<p class={cn('font-medium', adaptiveText.onGlass.secondary)}>
 				Manage system preferences, security controls, and global policies.
 			</p>
 		</div>
@@ -160,15 +161,23 @@
 		>
 			<!-- Light Glass Tabs List -->
 			<Tabs.List
-				class="inline-flex h-auto w-full rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-lg backdrop-blur-xl"
+				class={cn(
+					liquidGlass.radius.medium,
+					liquidGlass.border.light,
+					liquidGlass.background.light,
+					liquidGlass.blur.heavy,
+					liquidGlass.shadow.light,
+					'inline-flex h-auto w-full p-1.5'
+				)}
 			>
 				{#each tabs as tab}
 					<Tabs.Trigger
 						value={tab.id}
 						class={cn(
 							'flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300',
-							'data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/50',
-							'text-slate-500 hover:bg-white/40 hover:text-slate-700'
+							'data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/50',
+							adaptiveText.onGlass.secondary,
+							'hover:bg-white/40 data-[state=active]:text-blue-600'
 						)}
 					>
 						<div class="flex items-center justify-center gap-2">
@@ -184,7 +193,16 @@
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Business Profile Card -->
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-8 flex items-start gap-5">
 							<div
@@ -193,8 +211,8 @@
 								<Building2 size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">Business Profile</h3>
-								<p class="text-slate-500">
+								<h3 class={cn('text-xl', adaptiveText.heading)}>Business Profile</h3>
+								<p class={adaptiveText.onGlass.secondary}>
 									Your organization's visible identity across the platform.
 								</p>
 							</div>
@@ -202,7 +220,7 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">Business Name</Label>
+								<Label class={cn('ml-1', adaptiveText.label)}>Business Name</Label>
 								<div class="flex gap-3">
 									<Input
 										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
@@ -223,13 +241,24 @@
 					<!-- Localization -->
 					<div class="grid gap-6 md:grid-cols-2">
 						<div
-							class="group rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl transition-all hover:bg-white/80"
+							class={cn(
+								liquidGlass.radius.medium,
+								liquidGlass.border.medium,
+								liquidGlass.background.medium,
+								liquidGlass.blur.heavy,
+								liquidGlass.saturate,
+								liquidGlass.shadow.medium,
+								liquidGlass.innerGlow.medium,
+								liquidGlass.transition,
+								liquidGlass.hover.shadow,
+								'group p-8'
+							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-blue-50 p-3 text-blue-600 ring-1 ring-blue-100">
 									<Globe size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">Currency</h3>
+								<h3 class={cn('text-lg', adaptiveText.heading)}>Currency</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
@@ -250,7 +279,18 @@
 						</div>
 
 						<div
-							class="group rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl transition-all hover:bg-white/80"
+							class={cn(
+								liquidGlass.radius.medium,
+								liquidGlass.border.medium,
+								liquidGlass.background.medium,
+								liquidGlass.blur.heavy,
+								liquidGlass.saturate,
+								liquidGlass.shadow.medium,
+								liquidGlass.innerGlow.medium,
+								liquidGlass.transition,
+								liquidGlass.hover.shadow,
+								'group p-8'
+							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-emerald-50 p-3 text-emerald-600 ring-1 ring-emerald-100">
@@ -284,7 +324,16 @@
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Loyalty Program -->
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-8 flex items-start gap-5">
 							<div
@@ -420,7 +469,16 @@
 
 					<!-- Tax Settings -->
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-8 flex items-start gap-5">
 							<div
@@ -472,7 +530,16 @@
 			<Tabs.Content value="policies" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-6 flex items-center gap-4">
 							<div class="rounded-xl bg-violet-50 p-3 text-violet-600 ring-1 ring-violet-100">
@@ -496,7 +563,16 @@
 					</div>
 
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-6 flex items-center gap-4">
 							<div class="rounded-xl bg-pink-50 p-3 text-pink-600 ring-1 ring-pink-100">
@@ -521,7 +597,16 @@
 
 					<!-- Return Policy Settings -->
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-6 flex items-center gap-4">
 							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">

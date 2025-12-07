@@ -2,274 +2,417 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
-	import { formatDate, formatCurrency } from '$lib/utils';
+	import { formatCurrency, formatDate } from '$lib/utils';
+	import { adaptiveText, liquidGlass, glassCard } from '$lib/styles/liquid-glass';
 	import { fade, fly } from 'svelte/transition';
 	import api from '$lib/api';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { settings } from '$lib/stores/settings';
 
-	let orderId = $page.params.id; // actually OrderNumber
-	let order = $state(null);
+	let orderId = $page.params.id; // actually OrderNumber or ID, usually number in URL, but backend uses string OrderNumber.
+	// Assuming route is /orders/[id], if id is the db ID, we fetch by ID. If orderNumber, by Number.
+	// The previous code used $page.params.id.
+
+	let order = $state<any>(null);
 	let loading = $state(true);
 	let showReturnModal = $state(false);
 	let returnReason = $state('');
-	let selectedItems = $state({}); // { orderItemId: quantity }
-	let error = $state(null);
+	let selectedItems = $state<Record<number, number>>({}); // { orderItemId: quantity }
+	let error = $state<string | null>(null);
+
+	// Dynamic settings derived state
+	const returnWindowDays = $derived($settings.return_window_days || 30);
+	const returnDeadline = $derived(
+		order ? new Date(new Date(order.OrderDate).getTime() + returnWindowDays * 86400000) : null
+	);
+	const isReturnEligible = $derived(returnDeadline ? new Date() <= returnDeadline : false);
 
 	onMount(async () => {
-		if (!$auth.permissions.includes('pos.view')) {
-			toast.error('Permission denied', { description: 'You cannot view order details.' });
-			goto('/orders');
+		if (!$auth.isAuthenticated) {
+			goto('/login');
 			return;
 		}
+		await fetchOrder();
+	});
 
+	const fetchOrder = async () => {
+		loading = true;
 		try {
-			const res = await api.get(`/sales/orders/${orderId}`);
-			order = res.data.order;
-		} catch (err) {
-			console.error('Failed to fetch order', err);
-			// Fallback or error state
-			error = 'Failed to load order.';
+			// Try fetching by ID or OrderNumber depending on what [id] is.
+			// Usually [id] in frontend routes maps to an ID.
+			// Backend endpoint: /sales/orders/{orderNumber}
+			// If [id] is numeric ID, we might need a different endpoint or use the order number if available.
+			// Let's assume the user navigated from a list where they clicked an Order Number.
+			const response = await api.get(`/sales/orders/${orderId}`);
+			order = response.data.order;
+		} catch (err: any) {
+			console.error('Error fetching order:', err);
+			error = 'Failed to load order details.';
+			toast.error('Could not fetch order details');
 		} finally {
 			loading = false;
 		}
-	});
+	};
 
-	function toggleItemSelection(orderItemId, maxQty) {
-		if (selectedItems[orderItemId]) {
-			const newItems = { ...selectedItems };
-			delete newItems[orderItemId];
-			selectedItems = newItems;
+	const toggleItemSelection = (itemId: number, maxQty: number) => {
+		if (selectedItems[itemId]) {
+			const newSelected = { ...selectedItems };
+			delete newSelected[itemId];
+			selectedItems = newSelected;
 		} else {
-			selectedItems = { ...selectedItems, [orderItemId]: 1 };
+			selectedItems = {
+				...selectedItems,
+				[itemId]: 1 // Start with 1
+			};
 		}
-	}
+	};
 
-	function updateQuantity(orderItemId, qty, max) {
-		if (qty > 0 && qty <= max) {
-			selectedItems = { ...selectedItems, [orderItemId]: qty };
-		}
-	}
-
-	async function submitReturn() {
-		// Construct payload strictly matching ReturnRequest in backend
-		/* 
-       Items: []struct {
-		OrderItemID uint   `json:"order_item_id"`
-		Quantity    int    `json:"quantity"`
-        ...
-       }
-    */
-		const itemsToReturn = Object.entries(selectedItems).map(([oid, qty]) => ({
-			order_item_id: parseInt(oid),
-			quantity: qty,
-			condition: 'GOOD', // Default
-			reason: returnReason
-		}));
-
-		const payload = {
-			order_number: order.OrderNumber,
-			items: itemsToReturn
+	const updateQuantity = (itemId: number, newQty: number, maxQty: number) => {
+		if (newQty < 1) return;
+		if (newQty > maxQty) return;
+		selectedItems = {
+			...selectedItems,
+			[itemId]: newQty
 		};
+	};
 
-		console.log('Submitting Return:', payload);
+	const submitReturn = async () => {
+		if (!order) return;
 
 		try {
+			const itemsToReturn = Object.entries(selectedItems).map(([itemIdStr, qty]) => ({
+				order_item_id: parseInt(itemIdStr),
+				quantity: qty,
+				reason: returnReason,
+				condition: 'GOOD' // Default, maybe add UI selector later
+			}));
+
+			const payload = {
+				order_number: order.OrderNumber,
+				items: itemsToReturn
+			};
+
 			await api.post('/returns/request', payload);
-			toast.success('Return Request Submitted', {
-				description: 'The return has been created successfully.'
-			});
+			toast.success('Return request submitted successfully');
 			showReturnModal = false;
-			// Refresh?
-			setTimeout(() => window.location.reload(), 1500);
+			returnReason = '';
+			selectedItems = {};
+			// Refresh order
+			await fetchOrder();
 		} catch (err: any) {
-			toast.error('Return Failed', { description: err.response?.data?.error || 'Unknown error' });
+			console.error('Error requesting return:', err);
+			toast.error(err.response?.data?.error || 'Failed to submit return request');
 		}
-	}
+	};
 </script>
 
-<div class="container mx-auto space-y-8 p-6">
-	<div class="flex items-center justify-between">
-		<h1
-			class="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text text-3xl font-bold text-transparent"
-		>
-			Order Details
-		</h1>
-		<a href="/orders" class="text-gray-400 transition-colors hover:text-white">← Back to Orders</a>
+<div
+	class="relative min-h-screen overflow-hidden bg-[#F9FAFB] p-8 font-sans text-slate-800 lg:p-12"
+>
+	<!-- Organic Mesh Gradient Background (Apple-style) -->
+	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
+		<div
+			class="absolute left-[10%] top-[5%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
+		></div>
+		<div
+			class="absolute right-[5%] top-[30%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
+		></div>
+		<div
+			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
+		></div>
 	</div>
 
-	{#if loading}
-		<div class="text-center text-gray-400">Loading details...</div>
-	{:else if error}
-		<div class="text-center text-red-400">{error}</div>
-	{:else if order}
-		<div class="grid gap-6 lg:grid-cols-3">
-			<!-- Order Info -->
-			<div class="space-y-6 lg:col-span-2">
-				<GlassCard>
-					<div class="mb-6 flex items-start justify-between">
-						<div>
-							<h2 class="text-xl font-semibold text-white">Order #{order.OrderNumber}</h2>
-							<p class="text-sm text-gray-400">{formatDate(order.OrderDate)}</p>
+	<div class="relative mx-auto max-w-5xl">
+		<button
+			onclick={() => goto('/orders')}
+			class="group mb-8 flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-blue-500"
+		>
+			<div
+				class="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100 transition-all group-hover:bg-blue-50 group-hover:text-blue-500 group-hover:ring-blue-100"
+			>
+				←
+			</div>
+			Back to Orders
+		</button>
+
+		{#if loading}
+			<div class="flex h-64 items-center justify-center">
+				<div
+					class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-blue-400"
+				></div>
+			</div>
+		{:else if error}
+			<GlassCard class="border-red-100 bg-red-50/40 p-12 text-center backdrop-blur-xl">
+				<div
+					class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-400"
+				>
+					!
+				</div>
+				<h3 class="text-lg font-semibold text-red-800">Unable to load order</h3>
+				<p class="mt-2 text-red-600/70">{error}</p>
+			</GlassCard>
+		{:else if order}
+			<div in:fade={{ duration: 300 }}>
+				<!-- Header Section -->
+				<div class="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-center">
+					<div>
+						<div class="flex items-center gap-4">
+							<h1 class="text-4xl font-bold tracking-tight text-slate-900">
+								Order #{order.OrderNumber}
+							</h1>
+							<span
+								class={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide shadow-sm ring-1 backdrop-blur-md ${
+									order.Status === 'COMPLETED'
+										? 'bg-emerald-50/50 text-emerald-600 ring-emerald-100'
+										: order.Status === 'PENDING'
+											? 'bg-amber-50/50 text-amber-600 ring-amber-100'
+											: 'bg-slate-50 text-slate-500 ring-slate-100'
+								}`}
+							>
+								{order.Status}
+							</span>
 						</div>
-						<span class="rounded-full bg-green-400/10 px-3 py-1 text-sm text-green-400">
-							{order.Status}
+						<div class="mt-2 flex items-center gap-4 text-sm text-slate-400">
+							<span class="flex items-center gap-1.5">
+								📅 {formatDate(order.OrderDate)}
+							</span>
+							<span class="h-1 w-1 rounded-full bg-slate-200"></span>
+							<span class="flex items-center gap-1.5">
+								📦 {order.OrderItems?.length || 0} Items
+							</span>
+						</div>
+					</div>
+
+					<div class="flex flex-col items-end">
+						<span class="text-sm font-medium text-slate-500">Total Amount</span>
+						<span class="text-3xl font-bold tracking-tight text-slate-900">
+							{formatCurrency(order.TotalAmount)}
 						</span>
 					</div>
+				</div>
 
-					<div class="space-y-4">
-						{#each order.OrderItems as item}
-							<div
-								class="flex items-center justify-between rounded-lg bg-white/5 p-4 transition-colors hover:bg-white/10"
-							>
-								<div class="flex items-center gap-4">
-									<!-- Placeholder image or item image -->
-									<div
-										class="flex h-12 w-12 items-center justify-center rounded bg-slate-700 text-xs text-slate-400"
-									>
-										IMG
-									</div>
-									<div>
-										<h3 class="font-medium text-white">
-											{item.Product?.Name || 'Unknown Product'}
-										</h3>
-										<p class="text-sm text-gray-400">
-											Qty: {item.Quantity} x {formatCurrency(item.UnitPrice)}
-										</p>
-										{#if item.IsReturned}
-											<span class="text-xs text-orange-400">Returned: {item.ReturnedQty}</span>
-										{/if}
-									</div>
-								</div>
-								<span class="font-semibold text-white">{formatCurrency(item.TotalPrice)}</span>
+				<div class="grid gap-8 lg:grid-cols-3">
+					<!-- Order Items -->
+					<div class="space-y-6 lg:col-span-2">
+						<GlassCard
+							class="overflow-hidden border-white/60 bg-white/80 p-0 shadow-sm backdrop-blur-3xl transition-all hover:bg-white"
+						>
+							<div class="border-b border-slate-50 bg-white/50 px-6 py-4">
+								<h3 class="font-semibold text-slate-800">Order Items</h3>
 							</div>
-						{/each}
+							<div class="divide-y divide-slate-50">
+								{#each order.OrderItems as item}
+									<div
+										class="group flex items-center justify-between p-6 transition-colors hover:bg-slate-50/50"
+									>
+										<div class="flex items-center gap-4">
+											<div
+												class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
+											>
+												{item.Quantity}x
+											</div>
+											<div>
+												<p class="font-semibold text-slate-900">
+													{item.Product?.Name || `Product #${item.ProductID}`}
+												</p>
+												<p class="text-sm text-slate-400">
+													{formatCurrency(item.UnitPrice)} / unit
+												</p>
+											</div>
+										</div>
+										<div class="text-right">
+											<div class="font-bold text-slate-900">{formatCurrency(item.TotalPrice)}</div>
+											{#if item.ReturnedQty > 0}
+												<div class="mt-1 flex justify-end">
+													<span
+														class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-500 ring-1 ring-amber-100"
+													>
+														{item.ReturnedQty} Returned
+													</span>
+												</div>
+											{/if}
+										</div>
+									</div>
+								{/each}
+							</div>
+						</GlassCard>
 					</div>
-				</GlassCard>
-			</div>
 
-			<!-- Summary & Actions -->
-			<div class="space-y-6">
-				<GlassCard>
-					<h3 class="mb-4 text-lg font-semibold text-white">Summary</h3>
-					<div class="space-y-2 text-sm">
-						<div class="flex justify-between text-gray-400">
-							<span>Subtotal</span>
-							<span>{formatCurrency(order.TotalAmount)}</span>
-							<!-- Note: TotalAmount is usually total. Adding shipping logic if needed -->
-						</div>
-						<div
-							class="my-2 flex justify-between border-t border-white/10 pt-2 text-lg font-bold text-white"
+					<!-- Sidebar -->
+					<div class="space-y-6">
+						<!-- Actions Card -->
+						<GlassCard
+							class="space-y-6 border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-3xl hover:bg-white"
 						>
-							<span>Total</span>
-							<span>{formatCurrency(order.TotalAmount)}</span>
-						</div>
+							<h3 class="border-b border-slate-50 pb-2 font-semibold text-slate-800">Actions</h3>
+
+							{#if order.Status === 'COMPLETED'}
+								{#if isReturnEligible}
+									<div class="rounded-xl bg-emerald-50/30 p-4 ring-1 ring-emerald-100/50">
+										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-500">
+											Return Window Open
+										</p>
+										<p class="text-sm text-emerald-600/70">
+											Until {returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}
+										</p>
+									</div>
+									<button
+										onclick={() => (showReturnModal = true)}
+										class="w-full transform rounded-xl bg-blue-500 py-3.5 font-medium text-white shadow-lg shadow-blue-200 transition-all hover:scale-[1.01] hover:bg-blue-600 active:scale-[0.99]"
+									>
+										Request Return
+									</button>
+								{:else}
+									<div class="rounded-xl bg-slate-50 p-4 text-center ring-1 ring-slate-100">
+										<p class="text-sm font-semibold text-slate-500">Return Window Closed</p>
+										<p class="mt-1 text-xs text-slate-400">
+											Deadline was {returnDeadline
+												? formatDate(returnDeadline.toISOString())
+												: 'N/A'}
+										</p>
+									</div>
+								{/if}
+							{:else}
+								<div class="rounded-xl bg-slate-50 p-4 text-center">
+									<p class="text-sm text-slate-400">Actions available when order is completed.</p>
+								</div>
+							{/if}
+						</GlassCard>
+
+						<!-- Order Info -->
+						<GlassCard
+							class="space-y-4 border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-3xl hover:bg-white"
+						>
+							<h3 class="border-b border-slate-50 pb-2 font-semibold text-slate-800">
+								Payment Info
+							</h3>
+							<div class="flex justify-between text-sm">
+								<span class="text-slate-500">Method</span>
+								<span class="font-medium text-slate-800">{order.PaymentMethod || 'N/A'}</span>
+							</div>
+							<div class="flex justify-between text-sm">
+								<span class="text-slate-500">Status</span>
+								<span class="font-medium text-slate-800">{order.Status}</span>
+							</div>
+						</GlassCard>
 					</div>
-
-					{#if order.Status === 'COMPLETED'}
-						<button
-							onclick={() => (showReturnModal = true)}
-							class="mt-6 w-full transform rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 py-3 font-semibold text-white shadow-lg transition-all hover:scale-[1.02] hover:from-purple-500 hover:to-pink-500"
-						>
-							Request Return
-						</button>
-					{/if}
-				</GlassCard>
+				</div>
 			</div>
-		</div>
-	{/if}
+		{/if}
+	</div>
 
 	<!-- Return Modal -->
 	{#if showReturnModal && order}
 		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-			transition:fade
+			class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/5 p-4 backdrop-blur-md"
+			transition:fade={{ duration: 200 }}
 		>
-			<div class="w-full max-w-lg" transition:fly={{ y: 20 }}>
-				<GlassCard class="relative">
+			<div class="w-full max-w-lg" transition:fly={{ y: 20, duration: 300 }}>
+				<!-- Liquid Glass Modal -->
+				<div class={glassCard.modal}>
 					<button
 						onclick={() => (showReturnModal = false)}
-						class="absolute right-4 top-4 text-gray-400 hover:text-white"
+						class="absolute right-4 top-4 rounded-full bg-slate-50 p-1.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
 					>
 						✕
 					</button>
 
-					<h2 class="mb-6 text-2xl font-bold text-white">Request Return</h2>
+					<div class="mb-6">
+						<h2 class="text-2xl font-bold tracking-tight text-slate-900">Request Return</h2>
+						<p class="text-sm text-slate-500">Select items and quantities to return</p>
+					</div>
 
-					<div class="max-h-[60vh] space-y-4 overflow-y-auto pr-2">
-						<p class="text-sm text-gray-300">Select items to return:</p>
+					<div class="custom-scrollbar max-h-[60vh] space-y-3 overflow-y-auto pr-2">
 						{#each order.OrderItems as item}
 							{@const remainingQty = item.Quantity - item.ReturnedQty}
 							{#if remainingQty > 0}
 								<div
-									class="flex items-center justify-between rounded-lg border border-white/10 bg-black/20 p-3"
+									class={`rounded-2xl border p-4 transition-all ${
+										selectedItems[item.ID]
+											? 'border-blue-100 bg-blue-50/30'
+											: 'border-slate-50 bg-white hover:bg-slate-50/50'
+									}`}
 								>
-									<div class="flex items-center gap-3">
-										<input
-											type="checkbox"
-											checked={!!selectedItems[item.ID]}
-											onchange={() => toggleItemSelection(item.ID, remainingQty)}
-											class="rounded border-gray-600 bg-gray-700 text-purple-600 focus:ring-purple-500"
-										/>
-										<div>
-											<p class="text-sm font-medium text-white">{item.Product?.Name}</p>
-											<p class="text-xs text-gray-500">
-												{formatCurrency(item.UnitPrice)} (Max: {remainingQty})
-											</p>
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											<div class="relative flex h-5 w-5 items-center justify-center">
+												<input
+													type="checkbox"
+													checked={!!selectedItems[item.ID]}
+													onchange={() => toggleItemSelection(item.ID, remainingQty)}
+													class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-200 transition-all checked:border-blue-500 checked:bg-blue-500 hover:border-blue-400"
+												/>
+												<div
+													class="pointer-events-none absolute text-xs text-white opacity-0 peer-checked:opacity-100"
+												>
+													✓
+												</div>
+											</div>
+											<div>
+												<p class="font-medium text-slate-900">{item.Product?.Name}</p>
+												<p class="text-xs text-slate-500">
+													Max Return: {remainingQty}
+												</p>
+											</div>
 										</div>
-									</div>
 
-									{#if selectedItems[item.ID]}
-										<div class="flex items-center gap-2">
-											<button
-												class="flex h-6 w-6 items-center justify-center rounded bg-white/10 text-white hover:bg-white/20"
-												onclick={() =>
-													updateQuantity(item.ID, selectedItems[item.ID] - 1, remainingQty)}
-												>-</button
+										{#if selectedItems[item.ID]}
+											<div
+												class="flex items-center rounded-lg bg-white shadow-sm ring-1 ring-slate-100"
 											>
-											<span class="w-4 text-center text-sm text-white"
-												>{selectedItems[item.ID]}</span
-											>
-											<button
-												class="flex h-6 w-6 items-center justify-center rounded bg-white/10 text-white hover:bg-white/20"
-												onclick={() =>
-													updateQuantity(item.ID, selectedItems[item.ID] + 1, remainingQty)}
-												>+</button
-											>
-										</div>
-									{/if}
+												<button
+													class="h-7 w-7 rounded-l-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-blue-500"
+													onclick={() =>
+														updateQuantity(item.ID, selectedItems[item.ID] - 1, remainingQty)}
+												>
+													-
+												</button>
+												<span class="w-8 text-center text-sm font-semibold text-slate-800">
+													{selectedItems[item.ID]}
+												</span>
+												<button
+													class="h-7 w-7 rounded-r-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-blue-500"
+													onclick={() =>
+														updateQuantity(item.ID, selectedItems[item.ID] + 1, remainingQty)}
+												>
+													+
+												</button>
+											</div>
+										{/if}
+									</div>
 								</div>
 							{/if}
 						{/each}
 
 						<div class="pt-4">
-							<label class="mb-2 block text-sm font-medium text-gray-300">Reason for Return</label>
+							<label class="mb-2 block text-sm font-medium text-slate-700">Reason for Return</label>
 							<textarea
 								bind:value={returnReason}
-								class="w-full rounded-lg border border-white/10 bg-black/20 p-3 text-white outline-none focus:ring-2 focus:ring-purple-500"
+								class="w-full rounded-2xl border border-slate-100 bg-slate-50/30 p-3 text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-100 focus:bg-white focus:ring-4 focus:ring-blue-50"
 								rows="3"
-								placeholder="Please describe why you are returning these items..."
+								placeholder="Please tell us why you are returning these items..."
 							></textarea>
 						</div>
 					</div>
 
-					<div class="mt-8 flex gap-3">
+					<div class="mt-8 flex gap-3 border-t border-slate-50 pt-6">
 						<button
 							onclick={() => (showReturnModal = false)}
-							class="flex-1 rounded-lg border border-white/10 py-2 text-gray-300 transition-colors hover:bg-white/5"
+							class="flex-1 rounded-xl border border-slate-100 bg-white py-3 font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
 						>
 							Cancel
 						</button>
 						<button
 							onclick={submitReturn}
 							disabled={Object.keys(selectedItems).length === 0 || !returnReason}
-							class="flex-1 rounded-lg bg-purple-600 py-2 font-medium text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+							class="flex-1 rounded-xl bg-blue-500 py-3 font-medium text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
 						>
 							Submit Request
 						</button>
 					</div>
-				</GlassCard>
+				</div>
 			</div>
 		</div>
 	{/if}

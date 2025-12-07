@@ -37,8 +37,11 @@
 	import { crmApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { Label } from '$lib/components/ui/label';
 	import { auth } from '$lib/stores/auth';
+	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
+	import { formatCurrency } from '$lib/utils';
 
 	$effect(() => {
 		if (!auth.hasPermission('pos.view')) {
@@ -64,15 +67,7 @@
 		phone: ''
 	});
 
-	const currencyFormatter = new Intl.NumberFormat('en-US', {
-		style: 'currency',
-		currency: 'USD'
-	});
-
-	const formatCurrency = (value?: number | null) => {
-		if (value === null || value === undefined || Number.isNaN(value)) return '$0.00';
-		return currencyFormatter.format(value);
-	};
+	let pointsToRedeem = $state(0);
 
 	const fetchProducts = async (search = '') => {
 		try {
@@ -209,9 +204,15 @@
 	const subtotal = $derived(
 		cart.reduce((acc, item) => acc + (item.SellingPrice || 0) * item.quantity, 0)
 	);
-	const taxRate = 0.1; // 10% tax
+	// Tax Calculation
+	const taxRate = $derived(($settings.tax_rate_percentage || 0) / 100);
 	const tax = $derived(subtotal * taxRate);
 	const total = $derived(subtotal + tax);
+
+	const potentialPoints = $derived(
+		Math.floor(subtotal * ($settings.loyalty_points_earning_rate || 0))
+	);
+
 	const canCompleteOrder = $derived(cart.length > 0 && !!paymentMethod);
 
 	const setPayment = (method: string) => {
@@ -227,16 +228,23 @@
 		try {
 			const payload = {
 				items: cart.map((item) => ({
-					productId: item.ID,
+					productId: item.id,
 					quantity: item.quantity
 				})),
 				customerId: selectedCustomer ? selectedCustomer.ID : null,
-				paymentMethod: paymentMethod
+				paymentMethod: paymentMethod,
+				pointsToRedeem: Math.min(
+					pointsToRedeem,
+					selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
+				)
 			};
 
 			await api.post('/sales/checkout', payload);
 
 			toast.success('Order completed successfully!', { id: toastId });
+			if (selectedCustomer && potentialPoints > 0) {
+				toast.info(`Customer earned ${potentialPoints} loyalty points!`);
+			}
 			cart = [];
 			paymentMethod = null;
 			await fetchProducts(); // Refresh stock
@@ -736,6 +744,44 @@
 								</button>
 							{/each}
 						</div>
+
+						<!-- Loyalty Redemption -->
+						{#if selectedCustomer && selectedCustomer.loyalty && selectedCustomer.loyalty.Points > 0}
+							<div class="mt-4 border-t border-slate-100/80 pt-4">
+								<div class="flex items-center justify-between">
+									<Label class="text-[0.7rem] font-medium text-slate-500"
+										>Redeem Loyalty Points</Label
+									>
+									<span class="text-[0.7rem] font-medium text-emerald-600">
+										Available: {selectedCustomer.loyalty.Points} pts (${formatCurrency(
+											selectedCustomer.loyalty.Points *
+												($settings.loyalty_points_redemption_rate || 0.01)
+										)} value)
+									</span>
+								</div>
+								<div class="mt-2 flex items-center gap-3">
+									<Input
+										type="number"
+										min="0"
+										max={selectedCustomer.loyalty.Points}
+										bind:value={pointsToRedeem}
+										class="h-9 w-24 rounded-lg border-slate-200 bg-slate-50 text-right text-sm"
+									/>
+									<span class="text-xs text-slate-400">points</span>
+
+									{#if pointsToRedeem > 0}
+										<span class="ml-auto text-sm font-semibold text-emerald-500">
+											- {formatCurrency(
+												pointsToRedeem * ($settings.loyalty_points_redemption_rate || 0.01)
+											)}
+										</span>
+									{/if}
+								</div>
+								{#if pointsToRedeem > selectedCustomer.loyalty.Points}
+									<p class="mt-1 text-[0.65rem] text-rose-500">Cannot exceed available balance.</p>
+								{/if}
+							</div>
+						{/if}
 					</CardContent>
 				</Card>
 
@@ -783,6 +829,18 @@
 									<span class="ml-1">{cart.length}</span>
 								</div>
 							</div>
+
+							{#if selectedCustomer && potentialPoints > 0}
+								<div
+									class="flex items-center justify-between border-t border-slate-700/50 pt-2 text-[0.7rem] text-emerald-400"
+								>
+									<div class="flex items-center gap-1">
+										<Zap class="h-3 w-3" />
+										<span class="font-medium">Loyalty Earnings</span>
+									</div>
+									<span class="font-bold">+{potentialPoints} pts</span>
+								</div>
+							{/if}
 						</CardContent>
 						<CardFooter class="pt-3">
 							<Button

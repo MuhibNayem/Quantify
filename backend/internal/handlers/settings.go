@@ -42,3 +42,12 @@ func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Setting updated"})
 }
+
+func (h *SettingsHandler) GetPublicConfigurations(c *gin.Context) {
+	settings, err := h.service.GetPublicSettings()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch configurations"})
+		return
+	}
+	c.JSON(http.StatusOK, settings)
+}

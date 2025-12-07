@@ -9,14 +9,16 @@ import (
 // Order represents a sales order.
 type Order struct {
 	gorm.Model
-	OrderNumber   string `gorm:"uniqueIndex;not null"`
-	UserID        uint   `gorm:"index"` // Customer ID, nullable if guest checkout supported (but here we enforce user)
-	User          User
-	TotalAmount   float64   `gorm:"not null"`
-	Status        string    `gorm:"default:'COMPLETED';index"` // PENDING, COMPLETED, CANCELLED, RETURNED
-	PaymentMethod string    `gorm:"not null"`
-	OrderDate     time.Time `gorm:"index"`
-	OrderItems    []OrderItem
+	OrderNumber    string `gorm:"uniqueIndex;not null"`
+	UserID         uint   `gorm:"index"` // Customer ID, nullable if guest checkout supported (but here we enforce user)
+	User           User
+	TotalAmount    float64   `gorm:"not null"`
+	Status         string    `gorm:"default:'COMPLETED';index"` // PENDING, COMPLETED, CANCELLED, RETURNED
+	PaymentMethod  string    `gorm:"not null"`
+	OrderDate      time.Time `gorm:"index"`
+	PointsRedeemed int       `gorm:"default:0"`
+	DiscountAmount float64   `gorm:"default:0"`
+	OrderItems     []OrderItem
 }
 
 // OrderItem represents an item within an order.

@@ -369,6 +369,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		settings := api.Group("/settings")
 		{
 			settings.GET("", middleware.RequirePermission(roleRepo, "settings.view"), settingsHandler.GetSettings)
+			settings.GET("/configurations", settingsHandler.GetPublicConfigurations) // Authenticated, no specific permission needed
 			settings.PUT("", middleware.RequirePermission(roleRepo, "settings.manage"), settingsHandler.UpdateSetting)
 		}
 

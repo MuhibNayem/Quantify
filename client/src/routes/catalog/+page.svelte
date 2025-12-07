@@ -8,26 +8,10 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card';
-	import {
-		Root,
-		Content,
-		Item,
-		PrevButton,
-		NextButton,
-		Ellipsis,
-		Link
-	} from '$lib/components/ui/pagination';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
+	import { TableCell } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Skeleton } from '$lib/components/ui/skeleton';
+
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import type {
@@ -69,6 +53,7 @@
 	} from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { formatCurrency, formatDateTime, formatPercent } from '$lib/utils';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
@@ -180,33 +165,6 @@
 	let useLegacyModalSlot = $state(true);
 
 	type StockSnapshot = Awaited<ReturnType<typeof productsApi.stock>>;
-
-	const currencyFormatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
-	const dateTimeFormatter = new Intl.DateTimeFormat('en-US', {
-		dateStyle: 'medium',
-		timeStyle: 'short'
-	});
-	const percentFormatter = new Intl.NumberFormat('en-US', {
-		style: 'percent',
-		maximumFractionDigits: 1
-	});
-
-	const formatCurrency = (value?: number | null) => {
-		if (value === null || value === undefined || Number.isNaN(value)) return '—';
-		return currencyFormatter.format(value);
-	};
-
-	const formatDateTime = (value?: string | null) => {
-		if (!value) return '—';
-		const date = new Date(value);
-		return Number.isNaN(date.getTime()) ? '—' : dateTimeFormatter.format(date);
-	};
-
-	const formatPercent = (value?: number | null) => {
-		if (value === null || value === undefined || Number.isNaN(value)) return '—';
-		const normalized = value > 1 ? value / 100 : value;
-		return percentFormatter.format(normalized);
-	};
 
 	const statusBadge = (status?: string) => {
 		if (!status) return undefined;

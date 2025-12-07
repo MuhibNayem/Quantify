@@ -28,7 +28,7 @@ type ProductUpdateRequest struct {
 	PurchasePrice float64 `json:"purchasePrice"`
 	SellingPrice  float64 `json:"sellingPrice"`
 	BarcodeUPC    string  `json:"barcodeUpc"`
-	ImageURLs     string  `json:json:"imageUrls"`
+	ImageURLs     string  `json:"imageUrls"` // Comma-separated or JSON array string
 	Status        string  `json:"status"`
 	LocationID    uint    `json:"locationId"`
 }

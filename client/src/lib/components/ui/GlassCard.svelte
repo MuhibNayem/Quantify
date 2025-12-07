@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { cn } from "$lib/utils";
+	import { cn } from '$lib/utils';
+	import { glassCard } from '$lib/styles/liquid-glass';
+	import type { Snippet } from 'svelte';
 
-  let { class: className, children, ...rest } = $props();
+	let {
+		children,
+		className = '',
+		...rest
+	}: { children: Snippet; className?: string; [key: string]: any } = $props();
 </script>
 
-<div
-  class={cn(
-    "rounded-xl border border-white/20 bg-white/10 p-6 shadow-xl backdrop-blur-lg backdrop-saturate-150 dark:border-white/10 dark:bg-black/20",
-    className
-  )}
-  {...rest}
->
-  {@render children()}
+<div class={cn(glassCard.base, className)} {...rest}>
+	{@render children()}
 </div>
