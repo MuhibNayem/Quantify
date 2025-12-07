@@ -499,7 +499,7 @@
 										{formatCurrency(order.TotalAmount)}
 									</p>
 									<Button
-										href="/orders/{order.ID}"
+										href="/orders/{order.OrderNumber}"
 										variant="ghost"
 										size="sm"
 										class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
