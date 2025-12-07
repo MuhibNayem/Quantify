@@ -322,14 +322,14 @@
 			<div class="flex flex-col gap-2">
 				<!-- Main Tabs -->
 				<div
-					class="flex items-center gap-3 self-start rounded-xl border border-white/60 bg-white/40 p-1.5 shadow-sm backdrop-blur-md md:self-auto"
+					class="liquid-panel flex items-center gap-3 self-start rounded-xl p-1.5 backdrop-blur-md md:self-auto"
 				>
 					<Button
 						variant="ghost"
 						class={cn(
 							'gap-2 rounded-lg font-semibold transition-all',
 							activeTab === 'sales'
-								? 'bg-white text-blue-600 shadow-sm ring-1 ring-black/5'
+								? 'bg-gradient-to-r from-blue-500/90 to-indigo-500/90 text-white shadow-lg'
 								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
 						)}
 						onclick={() => (activeTab = 'sales')}
@@ -341,7 +341,7 @@
 						class={cn(
 							'gap-2 rounded-lg font-semibold transition-all',
 							activeTab === 'purchases'
-								? 'bg-white text-purple-600 shadow-sm ring-1 ring-black/5'
+								? 'bg-gradient-to-r from-purple-500/90 to-fuchsia-500/90 text-white shadow-lg'
 								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
 						)}
 						onclick={() => (activeTab = 'purchases')}
@@ -405,7 +405,7 @@
 
 		<!-- Search & Actions -->
 		<div
-			class="flex items-center justify-between rounded-2xl border border-white/60 bg-white/60 p-4 shadow-sm backdrop-blur-sm"
+			class="liquid-panel flex items-center justify-between rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm"
 		>
 			<div class="relative max-w-md flex-1">
 				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -447,8 +447,8 @@
 				>
 					{#if activeTab === 'sales' && subTab === 'orders'}
 						{#each filteredSales as order (order.ID)}
-							<GlassCard
-								class="group relative flex flex-col overflow-hidden transition-all hover:shadow-lg"
+							<div
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
@@ -507,7 +507,7 @@
 										View Details <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
-							</GlassCard>
+							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
 								No sales orders found.
@@ -516,8 +516,8 @@
 					{:else if activeTab === 'sales' && subTab === 'returns'}
 						<!-- Customer Returns List -->
 						{#each filteredCustomerReturns as ret (ret.ID)}
-							<GlassCard
-								class="group relative flex flex-col overflow-hidden border-orange-100/50 transition-all hover:border-orange-200 hover:shadow-lg"
+							<div
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
@@ -569,7 +569,7 @@
 										View Details <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
-							</GlassCard>
+							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
 								No customer returns found.
@@ -577,8 +577,8 @@
 						{/each}
 					{:else if subTab === 'orders'}
 						{#each filteredPurchases as po (po.ID)}
-							<GlassCard
-								class="group relative flex flex-col overflow-hidden border-purple-100/50 transition-all hover:border-purple-200 hover:shadow-lg"
+							<div
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
@@ -636,7 +636,7 @@
 										Manage PO <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
-							</GlassCard>
+							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
 								No purchase orders found.
@@ -645,8 +645,8 @@
 					{:else}
 						<!-- Vendor Returns List -->
 						{#each filteredReturns as ret (ret.ID)}
-							<GlassCard
-								class="group relative flex flex-col overflow-hidden border-red-100/50 transition-all hover:border-red-200 hover:shadow-lg"
+							<div
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
@@ -688,7 +688,7 @@
 									<p class="text-lg font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</p>
 									<span class="text-xs font-semibold text-slate-400">Refund Value</span>
 								</div>
-							</GlassCard>
+							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
 								No vendor returns found.

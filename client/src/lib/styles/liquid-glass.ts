@@ -89,31 +89,16 @@ export const adaptiveText = {
 // Composite Glass Card Classes
 export const glassCard = {
     base: [
+        'liquid-panel', // Uses the advanced 3D CSS class
         'relative overflow-hidden',
         liquidGlass.radius.medium,
-        liquidGlass.border.medium,
-        liquidGlass.background.medium,
-        liquidGlass.blur.heavy,
-        liquidGlass.saturate,
-        liquidGlass.shadow.medium,
-        liquidGlass.innerGlow.medium, // 3D curved border effect
-        liquidGlass.transition,
-        liquidGlass.hover.shadow,
-        liquidGlass.hover.border,
-        liquidGlass.hover.reflection, // Light reflection on hover
-        liquidGlass.hover.shimmer, // Light bending shimmer
         'p-8',
     ].join(' '),
 
     modal: [
+        'liquid-panel', // Uses the advanced 3D CSS class
         'relative overflow-hidden',
         liquidGlass.radius.medium,
-        liquidGlass.border.heavy,
-        liquidGlass.background.heavy,
-        liquidGlass.blur.heavy,
-        liquidGlass.saturate,
-        liquidGlass.shadow.heavy,
-        liquidGlass.innerGlow.heavy, // 3D curved border effect
         'p-8',
     ].join(' '),
 } as const;

@@ -109,8 +109,12 @@
 </script>
 
 <div
-	class="relative min-h-screen overflow-hidden bg-[#F9FAFB] p-8 font-sans text-slate-800 lg:p-12"
+	class="relative min-h-screen overflow-hidden bg-slate-50/50 p-8 font-sans text-slate-800 lg:p-12"
 >
+	<!-- Background -->
+	<div
+		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/20 via-slate-50/20 to-white/20"
+	></div>
 	<!-- Organic Mesh Gradient Background (Apple-style) -->
 	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
 		<div
@@ -197,17 +201,26 @@
 					<!-- Order Items -->
 					<div class="space-y-6 lg:col-span-2">
 						<GlassCard
-							class="overflow-hidden border-white/60 bg-white/80 p-0 shadow-sm backdrop-blur-3xl transition-all hover:bg-white"
+							class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-0 shadow-[0_35px_90px_-60px_rgba(59,130,246,0.55)] transition-all hover:scale-[1.005]"
 						>
-							<div class="border-b border-slate-50 bg-white/50 px-6 py-4">
-								<h3 class="font-semibold text-slate-800">Order Items</h3>
+							<div class="border-b border-white/20 bg-white/5 px-6 py-4 backdrop-blur-md">
+								<h3 class="font-semibold text-slate-800 drop-shadow-sm">Order Items</h3>
 							</div>
-							<div class="divide-y divide-slate-50">
+							<div class="space-y-3 px-6 py-4">
 								{#each order.OrderItems as item}
 									<div
-										class="group flex items-center justify-between p-6 transition-colors hover:bg-slate-50/50"
+										class="liquid-hoverable group relative flex items-center justify-between rounded-xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all duration-200 hover:bg-white/60"
 									>
-										<div class="flex items-center gap-4">
+										<!-- Glass Highlight Top -->
+										<div
+											class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50"
+										></div>
+										<!-- Glass Sheen -->
+										<div
+											class="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
+										></div>
+
+										<div class="relative z-10 flex items-center gap-4">
 											<div
 												class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
 											>
@@ -222,8 +235,10 @@
 												</p>
 											</div>
 										</div>
-										<div class="text-right">
-											<div class="font-bold text-slate-900">{formatCurrency(item.TotalPrice)}</div>
+										<div class="relative z-10 text-right">
+											<div class="font-bold text-slate-900 drop-shadow-sm">
+												{formatCurrency(item.TotalPrice)}
+											</div>
 											{#if item.ReturnedQty > 0}
 												<div class="mt-1 flex justify-end">
 													<span
@@ -244,17 +259,17 @@
 					<div class="space-y-6">
 						<!-- Actions Card -->
 						<GlassCard
-							class="space-y-6 border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-3xl hover:bg-white"
+							class="liquid-panel space-y-6 rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(59,130,246,0.55)] hover:scale-[1.01]"
 						>
-							<h3 class="border-b border-slate-50 pb-2 font-semibold text-slate-800">Actions</h3>
+							<h3 class="border-b border-white/20 pb-2 font-semibold text-slate-800">Actions</h3>
 
 							{#if order.Status === 'COMPLETED'}
 								{#if isReturnEligible}
-									<div class="rounded-xl bg-emerald-50/30 p-4 ring-1 ring-emerald-100/50">
-										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-emerald-500">
+									<div class="rounded-xl bg-blue-50/30 p-4 ring-1 ring-blue-100/50">
+										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-500">
 											Return Window Open
 										</p>
-										<p class="text-sm text-emerald-600/70">
+										<p class="text-sm text-blue-700/80">
 											Until {returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}
 										</p>
 									</div>
@@ -275,22 +290,25 @@
 									</div>
 								{/if}
 							{:else}
-								<div class="rounded-xl bg-slate-50 p-4 text-center">
-									<p class="text-sm text-slate-400">Actions available when order is completed.</p>
+								<div class="rounded-xl bg-white/40 p-4 text-center ring-1 ring-white/60">
+									<p class="text-sm text-slate-500">Actions available when order is completed.</p>
 								</div>
 							{/if}
 						</GlassCard>
 
 						<!-- Order Info -->
 						<GlassCard
-							class="space-y-4 border-white/60 bg-white/80 p-6 shadow-sm backdrop-blur-3xl hover:bg-white"
+							class="liquid-panel space-y-4 rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(148,163,184,0.5)] hover:scale-[1.01]"
 						>
-							<h3 class="border-b border-slate-50 pb-2 font-semibold text-slate-800">
+							<h3 class="border-b border-white/20 pb-2 font-semibold text-slate-800">
 								Payment Info
 							</h3>
 							<div class="flex justify-between text-sm">
 								<span class="text-slate-500">Method</span>
-								<span class="font-medium text-slate-800">{order.PaymentMethod || 'N/A'}</span>
+								<span
+									class="rounded-md bg-white/40 px-2 py-0.5 font-medium text-slate-800 shadow-sm ring-1 ring-black/5"
+									>{order.PaymentMethod || 'N/A'}</span
+								>
 							</div>
 							<div class="flex justify-between text-sm">
 								<span class="text-slate-500">Status</span>
@@ -306,12 +324,14 @@
 	<!-- Return Modal -->
 	{#if showReturnModal && order}
 		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/5 p-4 backdrop-blur-md"
+			class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
 			transition:fade={{ duration: 200 }}
 		>
 			<div class="w-full max-w-lg" transition:fly={{ y: 20, duration: 300 }}>
 				<!-- Liquid Glass Modal -->
-				<div class={glassCard.modal}>
+				<div
+					class="liquid-panel relative rounded-[32px] bg-gradient-to-br from-white/80 via-blue-50/30 to-indigo-50/20 p-8 shadow-[0_45px_120px_-60px_rgba(0,0,0,0.3)] backdrop-blur-3xl"
+				>
 					<button
 						onclick={() => (showReturnModal = false)}
 						class="absolute right-4 top-4 rounded-full bg-slate-50 p-1.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
@@ -329,10 +349,10 @@
 							{@const remainingQty = item.Quantity - item.ReturnedQty}
 							{#if remainingQty > 0}
 								<div
-									class={`rounded-2xl border p-4 transition-all ${
+									class={`liquid-hoverable rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all ${
 										selectedItems[item.ID]
-											? 'border-blue-100 bg-blue-50/30'
-											: 'border-slate-50 bg-white hover:bg-slate-50/50'
+											? 'border-l-4 border-blue-400 bg-white/60'
+											: 'hover:bg-white/60'
 									}`}
 								>
 									<div class="flex items-center justify-between">
@@ -390,7 +410,7 @@
 							<label class="mb-2 block text-sm font-medium text-slate-700">Reason for Return</label>
 							<textarea
 								bind:value={returnReason}
-								class="w-full rounded-2xl border border-slate-100 bg-slate-50/30 p-3 text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-100 focus:bg-white focus:ring-4 focus:ring-blue-50"
+								class="liquid-textarea w-full px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400"
 								rows="3"
 								placeholder="Please tell us why you are returning these items..."
 							></textarea>
