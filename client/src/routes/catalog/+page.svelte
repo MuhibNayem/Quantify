@@ -68,12 +68,22 @@
 		Search
 	} from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
 	let activeTab = $state<TabKey>('products');
 	let loading = $state(false);
 	let search = $state({ term: '', key: 'name' });
+
+	$effect(() => {
+		if (!auth.hasPermission('products.read')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to view the catalog.'
+			});
+			goto('/');
+		}
+	});
 
 	let products = $state<Product[]>([]);
 	let categories = $state<Category[]>([]);

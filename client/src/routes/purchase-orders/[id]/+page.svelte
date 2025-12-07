@@ -18,17 +18,29 @@
 	} from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ArrowLeft, ShoppingCart } from 'lucide-svelte';
-	import type { PageData } from './$types';
 	import { cn } from '$lib/utils';
 
 	import { replenishmentApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
+	import { auth } from '$lib/stores/auth';
 
-	export let data: PageData;
+	// Types
+	import type { PageData } from './$types';
 
-	const { purchaseOrder } = data;
+	let { data }: { data: PageData } = $props();
+
+	let purchaseOrder = $derived(data.purchaseOrder);
+
+	$effect(() => {
+		if (!auth.hasPermission('replenishment.read')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to view purchase orders.'
+			});
+			goto('/');
+		}
+	});
 
 	let isCancelling = false;
 

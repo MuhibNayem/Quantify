@@ -58,6 +58,9 @@
 		lastError?: string;
 	};
 
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+
 	// --- State: Import Wizard ---
 	let file = $state<File | null>(null);
 	let importJob = $state<BulkImportJob | null>(null);
@@ -67,6 +70,15 @@
 		'idle' | 'uploading' | 'validating' | 'importing' | 'complete' | 'failed'
 	>('idle');
 	let isDragging = false;
+
+	$effect(() => {
+		if (!auth.hasPermission('bulk.import')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to perform bulk operations.'
+			});
+			goto('/');
+		}
+	});
 
 	// --- State: Export ---
 	const exportParams = $state({ format: 'csv', category: '', supplier: '' });

@@ -12,6 +12,8 @@
 	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import ReturnRequestModal from '$lib/components/returns/ReturnRequestModal.svelte';
+	import { ordersApi, returnsApi } from '$lib/api/resources';
+	import { goto } from '$app/navigation';
 	import AdminReturnList from '$lib/components/returns/AdminReturnList.svelte';
 
 	let activeTab = 'request';
@@ -24,7 +26,18 @@
 	let searchQuery = '';
 	let isSearching = false;
 
+	$effect(() => {
+		if (!auth.hasPermission('returns.manage') && !auth.hasPermission('returns.request')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to access returns.'
+			});
+			goto('/');
+		}
+	});
+
 	onMount(async () => {
+		if (!auth.hasPermission('returns.manage') && !auth.hasPermission('returns.request')) return;
+
 		loadOrders();
 		loadMyReturns();
 		if (auth.hasPermission('returns.manage')) {

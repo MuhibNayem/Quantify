@@ -23,10 +23,22 @@
 	import { ArrowLeft, Info, History } from 'lucide-svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import type { PageData } from './$types';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
-	export let data: PageData;
+	$effect(() => {
+		if (!auth.hasPermission('products.read')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to view this product.'
+			});
+			goto('/');
+		}
+	});
 
-	$: ({ product, stockHistory } = data);
+	let { data }: { data: PageData } = $props();
+
+	let product = $derived(data.product);
+	let stockHistory = $derived(data.stockHistory);
 
 	const statusBadge = (status?: string) => {
 		if (!status) return undefined;

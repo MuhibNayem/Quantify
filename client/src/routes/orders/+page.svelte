@@ -125,6 +125,9 @@
 	// But I will add the UI to LIST returns first.
 
 	import { notifications } from '$lib/stores/notifications';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
 
 	// ... imports ...
 
@@ -136,21 +139,49 @@
 
 	// Data Loading
 	async function loadData() {
-		// ... (Same loadData logic) ...
+		if (!auth.hasPermission('pos.view') && !auth.hasPermission('inventory.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to view orders.' });
+			goto('/');
+			return;
+		}
+
 		loading = true;
 		error = null;
 		try {
-			const [salesRes, purchasesRes, vendorReturnsRes, customerReturnsRes] = await Promise.all([
-				api.get('/sales/history').catch(() => ({ data: { orders: [] } })),
-				api.get('/replenishment/purchase-orders').catch(() => ({ data: { purchaseOrders: [] } })),
-				api.get('/replenishment/returns').catch(() => ({ data: { returns: [] } })),
-				api.get('/returns').catch(() => ({ data: { returns: [] } }))
-			]);
+			const promises = [];
+
+			// Load Sales only if allowed
+			if (auth.hasPermission('pos.view')) {
+				promises.push(api.get('/sales/history').catch(() => ({ data: { orders: [] } }))); // 0: sales
+				promises.push(api.get('/returns').catch(() => ({ data: { returns: [] } }))); // 1: customer returns
+			} else {
+				promises.push(Promise.resolve({ data: { orders: [] } }));
+				promises.push(Promise.resolve({ data: { returns: [] } }));
+			}
+
+			// Load Purchases only if allowed
+			if (auth.hasPermission('inventory.view')) {
+				promises.push(
+					api.get('/replenishment/purchase-orders').catch(() => ({ data: { purchaseOrders: [] } }))
+				); // 2: POs
+				promises.push(api.get('/replenishment/returns').catch(() => ({ data: { returns: [] } }))); // 3: vendor returns
+			} else {
+				promises.push(Promise.resolve({ data: { purchaseOrders: [] } }));
+				promises.push(Promise.resolve({ data: { returns: [] } }));
+			}
+
+			const [salesRes, customerReturnsRes, purchasesRes, vendorReturnsRes] =
+				await Promise.all(promises);
 
 			salesOrders = salesRes.data.orders || [];
+			customerReturns = customerReturnsRes.data.returns || [];
 			purchaseOrders = purchasesRes.data.purchaseOrders || [];
 			purchaseReturns = vendorReturnsRes.data.returns || [];
-			customerReturns = customerReturnsRes.data.returns || [];
+
+			// Set initial tab based on permission preference
+			if (!auth.hasPermission('pos.view') && auth.hasPermission('inventory.view')) {
+				activeTab = 'purchases';
+			}
 		} catch (err) {
 			console.error('Failed to load data', err);
 			error = 'Failed to load order history.';

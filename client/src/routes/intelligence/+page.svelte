@@ -24,6 +24,14 @@
 	import { BarChart3 } from 'lucide-svelte';
 	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+
+	$effect(() => {
+		if (!auth.hasPermission('reports.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to view reports.' });
+			goto('/');
+		}
+	});
 
 	const forecastForm = $state({ periodInDays: '30', productId: '', result: '' });
 	let suggestions = $state<ReorderSuggestion[]>([]);

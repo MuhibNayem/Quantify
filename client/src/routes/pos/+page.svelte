@@ -37,6 +37,15 @@
 	import { crmApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+
+	$effect(() => {
+		if (!auth.hasPermission('pos.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to access POS.' });
+			goto('/');
+		}
+	});
 
 	// Runes state
 	let products = $state<any[]>([]);

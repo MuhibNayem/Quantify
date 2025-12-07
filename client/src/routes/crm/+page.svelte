@@ -45,10 +45,20 @@
 	import { crmApi } from '$lib/api/resources';
 	import type { UserSummary } from '$lib/types';
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
 	let customers = $state<UserSummary[]>([]);
 	let filteredCustomers = $state<UserSummary[]>([]);
 	let selectedCustomer = $state<UserSummary | null>(null);
+
+	$effect(() => {
+		if (!auth.hasPermission('customers.read')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to view customers.'
+			});
+			goto('/');
+		}
+	});
 	let searchTerm = $state('');
 	let loading = $state(true);
 	let isModalOpen = $state(false);

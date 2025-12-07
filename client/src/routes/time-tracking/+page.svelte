@@ -4,6 +4,18 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Clock } from 'lucide-svelte';
 	import { onMount } from 'svelte';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+
+	$effect(() => {
+		if (!auth.hasPermission('users.view')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to access time tracking.'
+			});
+			goto('/');
+		}
+	});
 
 	let currentRole: 'Staff' | 'Manager' = 'Staff';
 

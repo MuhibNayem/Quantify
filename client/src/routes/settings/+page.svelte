@@ -30,6 +30,14 @@
 	import { cn } from '$lib/utils';
 
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+
+	$effect(() => {
+		if (!auth.hasPermission('settings.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to view settings.' });
+			goto('/');
+		}
+	});
 
 	let settings: any = {
 		business_name: '',
@@ -108,12 +116,14 @@
 		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
 	];
 
-	$: tabs = allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission));
+	let tabs = $derived(allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission)));
 
 	// Auto-select first available tab if current one becomes hidden
-	$: if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
-		activeTab = tabs[0].id;
-	}
+	$effect(() => {
+		if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
+			activeTab = tabs[0].id;
+		}
+	});
 </script>
 
 <div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
