@@ -10,7 +10,7 @@ import (
 // clients.
 type Hub struct {
 	// Registered clients.
-	clients map[*Client]bool
+	clients map[uint]map[*Client]bool
 
 	// Inbound messages from the clients.
 	broadcast chan []byte
@@ -27,7 +27,7 @@ func NewHub() *Hub {
 		broadcast:  make(chan []byte),
 		Register:   make(chan *Client),
 		unregister: make(chan *Client),
-		clients:    make(map[*Client]bool),
+		clients:    make(map[uint]map[*Client]bool),
 	}
 }
 
@@ -35,19 +35,29 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.Register:
-			h.clients[client] = true
+			if _, ok := h.clients[client.UserID]; !ok {
+				h.clients[client.UserID] = make(map[*Client]bool)
+			}
+			h.clients[client.UserID][client] = true
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				close(client.Send)
+			if userClients, ok := h.clients[client.UserID]; ok {
+				if _, ok := userClients[client]; ok {
+					delete(userClients, client)
+					close(client.Send)
+					if len(userClients) == 0 {
+						delete(h.clients, client.UserID)
+					}
+				}
 			}
 		case message := <-h.broadcast:
-			for client := range h.clients {
-				select {
-				case client.Send <- message:
-				default:
-					close(client.Send)
-					delete(h.clients, client)
+			for _, userClients := range h.clients {
+				for client := range userClients {
+					select {
+					case client.Send <- message:
+					default:
+						close(client.Send)
+						delete(userClients, client)
+					}
 				}
 			}
 		}
@@ -61,4 +71,23 @@ func (h *Hub) Broadcast(message interface{}) {
 		return
 	}
 	h.broadcast <- jsonMessage
+}
+
+func (h *Hub) SendToUser(userID uint, message interface{}) {
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		logrus.Errorf("Failed to marshal message to json: %v", err)
+		return
+	}
+
+	if userClients, ok := h.clients[userID]; ok {
+		for client := range userClients {
+			select {
+			case client.Send <- jsonMessage:
+			default:
+				close(client.Send)
+				delete(userClients, client)
+			}
+		}
+	}
 }

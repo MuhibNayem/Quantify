@@ -107,20 +107,26 @@ func GetProductStock(c *gin.Context) {
 		db = db.Where("location_id = ?", locationID)
 	}
 
-	if err := db.Find(&batches).Error; err != nil {
+	// Optimize total quantity calculation using DB aggregation
+	var totalQuantity int64
+	// Use a new session for aggregation to avoid polluting the base query or subsequent queries
+	if err := db.Session(&gorm.Session{}).Model(&domain.Batch{}).Select("COALESCE(SUM(quantity), 0)").Row().Scan(&totalQuantity); err != nil {
+		c.Error(appErrors.NewAppError("Failed to calculate total stock", http.StatusInternalServerError, err))
+		return
+	}
+
+	// Fetch batches with a limit to prevent large payloads
+	// Order by expiry date to show nearest expiry first (FEFO)
+	// Use a new session for fetching batches
+	if err := db.Session(&gorm.Session{}).Order("expiry_date asc").Limit(50).Find(&batches).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch batches", http.StatusInternalServerError, err))
 		return
 	}
 
-	totalQuantity := 0
-	for _, batch := range batches {
-		totalQuantity += batch.Quantity
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"productId":     product.ID,
+		"productId":       product.ID,
 		"currentQuantity": totalQuantity,
-		"batches":       batches,
+		"batches":         batches,
 	})
 }
 
@@ -144,6 +150,23 @@ func CreateStockAdjustment(c *gin.Context) {
 		return
 	}
 
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.Error(appErrors.NewAppError("Authenticated user not found in context", http.StatusUnauthorized, nil))
+		return
+	}
+	userID, ok := authUserID.(uint)
+	if !ok {
+		c.Error(appErrors.NewAppError("Invalid user ID type in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	var adjustedBy domain.User
+	if err := repository.DB.First(&adjustedBy, userID).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch authenticated user", http.StatusInternalServerError, err))
+		return
+	}
+
 	var req requests.StockAdjustmentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -160,20 +183,22 @@ func CreateStockAdjustment(c *gin.Context) {
 		return
 	}
 
+	var adjustment domain.StockAdjustment
+
 	// Start a database transaction
 	err = repository.DB.Transaction(func(tx *gorm.DB) error {
 		// Get current quantity before adjustment within the transaction
 		var currentQuantity int
 		tx.Model(&domain.Batch{}).Where("product_id = ?", productID).Select("sum(quantity)").Row().Scan(&currentQuantity)
 
-		adjustment := domain.StockAdjustment{
+		adjustment = domain.StockAdjustment{
 			ProductID:        uint(productID),
 			LocationID:       product.LocationID, // Inherit from product's default location
 			Type:             req.Type,
 			Quantity:         req.Quantity,
 			ReasonCode:       req.ReasonCode,
 			Notes:            req.Notes,
-			AdjustedBy:       1, // TODO: Replace with actual UserID from authentication context
+			AdjustedBy:       userID,
 			AdjustedAt:       time.Now(),
 			PreviousQuantity: currentQuantity,
 		}
@@ -183,7 +208,7 @@ func CreateStockAdjustment(c *gin.Context) {
 			// For simplicity, create a new batch for manual stock-in
 			batch := domain.Batch{
 				ProductID:   uint(productID),
-				LocationID:  product.LocationID, // Inherit from product's default location
+				LocationID:  product.LocationID,                              // Inherit from product's default location
 				BatchNumber: "MANUAL-" + time.Now().Format("20060102150405"), // Unique batch number
 				Quantity:    req.Quantity,
 				ExpiryDate:  nil, // Manual stock-in might not have expiry
@@ -243,11 +268,21 @@ func CreateStockAdjustment(c *gin.Context) {
 		Type:      req.Type,
 		Reason:    req.ReasonCode,
 	}
-	if err := message_broker.Publish("inventory", "stock.adjusted", payload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), "inventory", "stock.adjusted", payload); err != nil {
 		logrus.Errorf("Failed to publish stock adjusted event: %v", err)
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Stock adjustment successful"})
+	c.JSON(http.StatusCreated, gin.H{
+		"message":    "Stock adjustment successful",
+		"adjustment": adjustment,
+		"adjustedBy": gin.H{
+			"id":        adjustedBy.ID,
+			"username":  adjustedBy.Username,
+			"firstName": adjustedBy.FirstName,
+			"lastName":  adjustedBy.LastName,
+			"role":      adjustedBy.Role,
+		},
+	})
 }
 
 // ListStockHistory godoc

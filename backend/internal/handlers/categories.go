@@ -48,7 +48,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 		Name: req.Name,
 	}
 
-	if err := h.db.Create(&category).Error; err != nil {
+	if err := h.categoryRepo.CreateCategory(&category); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Category with this name already exists", http.StatusConflict, err))
 			return
@@ -155,11 +155,15 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 			c.Error(appErrors.NewAppError("Category not found", http.StatusNotFound, err))
 			return
 		}
-		c.Error(appErrors.NewAppError("Failed to fetch category", http.StatusInternalServerError, err))
+		c.Error(appErrors.NewAppError("Failed to fetch category for update", http.StatusInternalServerError, err))
 		return
 	}
 
-	if err := h.db.Model(&category).Update("Name", req.Name).Error; err != nil {
+	updates := map[string]interface{}{
+		"Name": req.Name,
+	}
+
+	if err := h.categoryRepo.UpdateCategory(&category, updates); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Category with this name already exists", http.StatusConflict, err))
 			return
@@ -211,7 +215,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	if err := h.db.Delete(&category).Error; err != nil {
+	if err := h.categoryRepo.DeleteCategory(&category); err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete category", http.StatusInternalServerError, err))
 		return
 	}

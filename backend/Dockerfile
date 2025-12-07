@@ -9,6 +9,8 @@ COPY go.* ./
 
 # Download dependencies
 RUN go mod download
+RUN go get github.com/lib/pq
+RUN go mod tidy
 
 # Copy the source code
 COPY . .

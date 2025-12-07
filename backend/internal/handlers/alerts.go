@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -17,11 +18,25 @@ import (
 	"inventory/backend/internal/requests"
 )
 
+var (
+	allowedAlertTypes = map[string]struct{}{
+		"LOW_STOCK":    {},
+		"OUT_OF_STOCK": {},
+		"OVERSTOCK":    {},
+		"EXPIRY_ALERT": {},
+	}
+	allowedAlertStatuses = map[string]struct{}{
+		"ACTIVE":   {},
+		"RESOLVED": {},
+	}
+)
+
 // AlertTriggeredPayload defines the payload for alert triggered events.
 type AlertTriggeredPayload struct {
 	ProductID uint   `json:"productId"`
 	Type      string `json:"type"`
 	Message   string `json:"message"`
+	Route     string `json:"route"`
 }
 
 // PutProductAlertSettings godoc
@@ -93,9 +108,17 @@ func ListAlerts(c *gin.Context) {
 	db := repository.DB.Preload("Product").Preload("Batch")
 
 	if alertType := c.Query("type"); alertType != "" {
+		if _, ok := allowedAlertTypes[alertType]; !ok {
+			c.Error(appErrors.NewAppError("Invalid alert type", http.StatusBadRequest, nil))
+			return
+		}
 		db = db.Where("type = ?", alertType)
 	}
 	if status := c.Query("status"); status != "" {
+		if _, ok := allowedAlertStatuses[status]; !ok {
+			c.Error(appErrors.NewAppError("Invalid alert status", http.StatusBadRequest, nil))
+			return
+		}
 		db = db.Where("status = ?", status)
 	} else {
 		db = db.Where("status = ?", "ACTIVE")
@@ -199,25 +222,14 @@ func PutUserNotificationSettings(c *gin.Context) {
 		return
 	}
 
-	// In a real app, you'd verify the user exists
-	// For now, we assume the user exists or create a placeholder
 	var user domain.User
 	if err := repository.DB.First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Create a dummy user if not found for demonstration
-			user = domain.User{
-				Username: fmt.Sprintf("user_%d", userID),
-				Password: "password", // Placeholder
-				Role:     "Staff",    // Placeholder
-			}
-			if err := repository.DB.Create(&user).Error; err != nil {
-				c.Error(appErrors.NewAppError("Failed to create dummy user", http.StatusInternalServerError, err))
-				return
-			}
-		} else {
-			c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
 		}
+		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
+		return
 	}
 
 	settings := domain.UserNotificationSettings{
@@ -246,43 +258,60 @@ func CheckAndTriggerAlerts() {
 	}
 
 	for _, s := range settings {
-		var product domain.Product
-		if err := repository.DB.First(&product, s.ProductID).Error; err != nil {
-			logrus.Errorf("Failed to fetch product %d for alert check: %v", s.ProductID, err)
-			continue
+		checkAndTriggerAlertsForSettings(&s)
+	}
+}
+
+// CheckAndTriggerAlertsForProduct evaluates alert thresholds for a single product.
+func CheckAndTriggerAlertsForProduct(productID uint) {
+	var settings domain.ProductAlertSettings
+	if err := repository.DB.Where("product_id = ?", productID).First(&settings).Error; err != nil {
+		if err != gorm.ErrRecordNotFound {
+			logrus.Errorf("Failed to fetch alert settings for product %d: %v", productID, err)
+		}
+		return
+	}
+
+	checkAndTriggerAlertsForSettings(&settings)
+}
+
+func checkAndTriggerAlertsForSettings(s *domain.ProductAlertSettings) {
+	var product domain.Product
+	if err := repository.DB.First(&product, s.ProductID).Error; err != nil {
+		logrus.Errorf("Failed to fetch product %d for alert check: %v", s.ProductID, err)
+		return
+	}
+
+	// Get current quantity
+	var currentQuantity int
+	repository.DB.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
+
+	// Low Stock Alert
+	if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
+		triggerAlert(s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
+	}
+
+	// Out of Stock Alert
+	if currentQuantity == 0 {
+		triggerAlert(s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
+	}
+
+	// Overstock Alert
+	if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
+		triggerAlert(s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
+	}
+
+	// Expiry Alert
+	if s.ExpiryAlertDays > 0 {
+		var expiringBatches []domain.Batch
+		expiryThreshold := time.Now().AddDate(0, 0, s.ExpiryAlertDays)
+		if err := repository.DB.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
+			logrus.Errorf("Failed to fetch expiring batches for product %d: %v", s.ProductID, err)
+			return
 		}
 
-		// Get current quantity
-		var currentQuantity int
-		repository.DB.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
-
-		// Low Stock Alert
-		if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
-			triggerAlert(s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
-		}
-
-		// Out of Stock Alert
-		if currentQuantity == 0 {
-			triggerAlert(s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
-		}
-
-		// Overstock Alert
-		if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
-			triggerAlert(s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
-		}
-
-		// Expiry Alert
-		if s.ExpiryAlertDays > 0 {
-			var expiringBatches []domain.Batch
-			expiryThreshold := time.Now().AddDate(0, 0, s.ExpiryAlertDays)
-			if err := repository.DB.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
-				logrus.Errorf("Failed to fetch expiring batches for product %d: %v", s.ProductID, err)
-				continue
-			}
-
-			for _, batch := range expiringBatches {
-				triggerAlert(s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
-			}
+		for _, batch := range expiringBatches {
+			triggerAlert(s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
 		}
 	}
 }
@@ -322,8 +351,9 @@ func triggerAlert(productID uint, alertType, message string, batchID *uint) {
 		ProductID: productID,
 		Type:      alertType,
 		Message:   message,
+		Route:     fmt.Sprintf("/products/%d", productID),
 	}
-	if err := message_broker.Publish("inventory", "alert.triggered", payload); err != nil {
+	if err := message_broker.Publish(context.Background(), "inventory", "alert.triggered", payload); err != nil {
 		logrus.Errorf("Failed to publish alert triggered event: %v", err)
 	}
 	logrus.Infof("Alert triggered and published: %s for product %d", alertType, productID)

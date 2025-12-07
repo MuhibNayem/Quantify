@@ -1,15 +1,29 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '$lib/components/ui/table';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
-	import { Download, TrendingUp, RotateCcw, Percent } from 'lucide-svelte';
+	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw } from 'lucide-svelte';
+	import { auth } from '$lib/stores/auth';
 
 	const forecastForm = $state({ periodInDays: '30', productId: '', result: '' });
 	let suggestions = $state<ReorderSuggestion[]>([]);
@@ -21,7 +35,11 @@
 	});
 	const reportKeys = ['sales', 'turnover', 'margin'] as const;
 	type ReportKey = (typeof reportKeys)[number];
-	const reportResults = $state<Record<ReportKey, unknown>>({ sales: null, turnover: null, margin: null });
+	const reportResults = $state<Record<ReportKey, unknown>>({
+		sales: null,
+		turnover: null,
+		margin: null
+	});
 	let reportsLoading = $state(false);
 
 	const exportJSON = (data: unknown, filename: string) => {
@@ -36,6 +54,26 @@
 
 	// Helper for safe number formatting
 	const fmt = (v: number | undefined) => (v ?? 0).toLocaleString();
+
+	const generateSparkline = (data: any[] | undefined) => {
+		if (!data || data.length === 0) return '0,40 100,40';
+
+		const values = data.map((d) => d.TotalSales);
+		const min = Math.min(...values);
+		const max = Math.max(...values);
+		const range = max - min || 1;
+
+		// Map to 100x40 coordinate system
+		// X: 0 to 100
+		// Y: 40 (bottom) to 0 (top)
+		const points = values.map((val, i) => {
+			const x = (i / (values.length - 1)) * 100;
+			const y = 40 - ((val - min) / range) * 35; // Leave 5px padding at top
+			return `${x},${y}`;
+		});
+
+		return points.join(' ');
+	};
 
 	const loadSuggestions = async () => {
 		suggestionsLoading = true;
@@ -79,7 +117,8 @@
 		reportsLoading = true;
 		const payload = {
 			startDate: new Date(reportRange.startDate).toISOString(),
-			endDate: new Date(reportRange.endDate).toISOString()
+			endDate: new Date(reportRange.endDate).toISOString(),
+			groupBy: 'daily'
 		};
 		try {
 			if (type === 'sales') {
@@ -112,47 +151,78 @@
 </script>
 
 <!-- HERO -->
-<section class="relative w-full overflow-hidden bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-100 animate-gradientShift py-20 px-6 text-center">
+<section
+	class="animate-gradientShift relative w-full overflow-hidden bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-100 px-6 py-20 text-center"
+>
 	<div class="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
 
-	<div class="relative z-10 max-w-3xl mx-auto flex flex-col items-center justify-center space-y-4 transform transition-transform duration-700 ease-out will-change-transform parallax-hero">
-		<div class="p-4 bg-gradient-to-br from-sky-400 to-blue-500 rounded-2xl shadow-lg animate-pulseGlow">
+	<div
+		class="parallax-hero relative z-10 mx-auto flex max-w-3xl transform flex-col items-center justify-center space-y-4 transition-transform duration-700 ease-out will-change-transform"
+	>
+		<div
+			class="animate-pulseGlow rounded-2xl bg-gradient-to-br from-sky-400 to-blue-500 p-4 shadow-lg"
+		>
 			<BarChart3 class="h-8 w-8 text-white" />
 		</div>
-		<h1 class="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-transparent animate-fadeUp">
+		<h1
+			class="animate-fadeUp bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl"
+		>
 			Forecasting, Reorder Suggestions & Business Reports
 		</h1>
-		<p class="text-slate-600 text-base animate-fadeUp delay-200">
+		<p class="animate-fadeUp text-base text-slate-600 delay-200">
 			Plan ahead, act on signals, and align analytics across one horizon.
 		</p>
 	</div>
 </section>
 
 <!-- MAIN -->
-<section class="max-w-7xl mx-auto py-14 px-6 bg-white space-y-10">
+<section class="mx-auto max-w-7xl space-y-10 bg-white px-6 py-14">
 	<!-- Forecast + Range -->
 	<div class="grid gap-8 lg:grid-cols-2">
 		<!-- Demand forecast -->
-		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-sky-50 to-blue-100">
-			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
+		<Card
+			class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+		>
+			<CardHeader
+				class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+			>
 				<CardTitle class="text-slate-800">Demand Forecast</CardTitle>
-				<CardDescription class="text-slate-600">Trigger rolling forecasts for targeted SKUs</CardDescription>
+				<CardDescription class="text-slate-600"
+					>Trigger rolling forecasts for targeted SKUs</CardDescription
+				>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
 				<div class="grid gap-3 sm:grid-cols-2">
-					<Input type="number" min="7" placeholder="Horizon (days)" bind:value={forecastForm.periodInDays} class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" />
-					<Input type="number" min="1" placeholder="Product ID (optional)" bind:value={forecastForm.productId} class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400" />
+					<Input
+						type="number"
+						min="7"
+						placeholder="Horizon (days)"
+						bind:value={forecastForm.periodInDays}
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+					/>
+					<Input
+						type="number"
+						min="1"
+						placeholder="Product ID (optional)"
+						bind:value={forecastForm.productId}
+						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+					/>
 				</div>
 
 				<!-- Responsive action row -->
-				<div class="flex flex-col sm:flex-row gap-3">
-					<Button class="flex-1 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg hover:scale-105 transition-all" onclick={triggerForecast}>
+				<div class="flex flex-col gap-3 sm:flex-row">
+					<Button
+						class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg"
+						onclick={triggerForecast}
+					>
 						Generate Forecast
 					</Button>
 				</div>
 
 				{#if forecastForm.result}
-					<p class="rounded-xl border border-sky-200 bg-white/70 backdrop-blur p-3 text-sm text-slate-700">
+					<p
+						class="rounded-xl border border-sky-200 bg-white/70 p-3 text-sm text-slate-700 backdrop-blur"
+					>
 						{forecastForm.result}
 					</p>
 				{/if}
@@ -160,26 +230,52 @@
 		</Card>
 
 		<!-- Report range -->
-		<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-br from-cyan-50 to-teal-100">
-			<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
+		<Card
+			class="rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+		>
+			<CardHeader
+				class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+			>
 				<CardTitle class="text-slate-800">Report Range</CardTitle>
-				<CardDescription class="text-slate-600">Align analytics across shared horizon</CardDescription>
+				<CardDescription class="text-slate-600"
+					>Align analytics across shared horizon</CardDescription
+				>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-					<Input type="date" bind:value={reportRange.startDate} class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400" />
-					<Input type="date" bind:value={reportRange.endDate} class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400" />
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<Input
+						type="date"
+						bind:value={reportRange.startDate}
+						class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400"
+					/>
+					<Input
+						type="date"
+						bind:value={reportRange.endDate}
+						class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400"
+					/>
 				</div>
 
 				<!-- Responsive 3-button group -->
-				<div class="flex flex-col sm:flex-row gap-3">
-					<Button class="flex-1 bg-white/80 border border-cyan-200 text-cyan-700 hover:bg-cyan-50 rounded-xl font-medium hover:scale-105 transition-all shadow-sm" variant="secondary" onclick={() => runReport('sales')}>
+				<div class="flex flex-col gap-3 sm:flex-row">
+					<Button
+						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						variant="secondary"
+						onclick={() => runReport('sales')}
+					>
 						Sales Trends
 					</Button>
-					<Button class="flex-1 bg-white/80 border border-cyan-200 text-cyan-700 hover:bg-cyan-50 rounded-xl font-medium hover:scale-105 transition-all shadow-sm" variant="secondary" onclick={() => runReport('turnover')}>
+					<Button
+						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						variant="secondary"
+						onclick={() => runReport('turnover')}
+					>
 						Inventory Turnover
 					</Button>
-					<Button class="flex-1 bg-white/80 border border-cyan-200 text-cyan-700 hover:bg-cyan-50 rounded-xl font-medium hover:scale-105 transition-all shadow-sm" variant="secondary" onclick={() => runReport('margin')}>
+					<Button
+						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						variant="secondary"
+						onclick={() => runReport('margin')}
+					>
 						Profit Margin
 					</Button>
 				</div>
@@ -188,13 +284,43 @@
 	</div>
 
 	<!-- Reorder suggestions -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-amber-50 to-orange-100">
-		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 px-6 py-5">
-			<CardTitle class="text-slate-800">Reorder Suggestions</CardTitle>
-			<CardDescription class="text-slate-600">Convert high-signal suggestions into purchase orders</CardDescription>
+	<Card
+		class="rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all duration-300 hover:shadow-xl"
+	>
+		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
+			<div class="flex items-center justify-between">
+				<div>
+					<CardTitle class="flex items-center gap-2 text-slate-800">
+						<ShoppingCart class="h-5 w-5 text-emerald-600" />
+						Reorder Suggestions
+					</CardTitle>
+					<CardDescription class="text-slate-600">AI-recommended purchase orders</CardDescription>
+				</div>
+				<Button
+					variant="outline"
+					size="sm"
+					class="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+					onclick={async () => {
+						suggestionsLoading = true;
+						try {
+							await replenishmentApi.generateSuggestions();
+							await loadSuggestions();
+							toast.success('Suggestions refreshed');
+						} catch (e) {
+							toast.error('Failed to refresh suggestions');
+						} finally {
+							suggestionsLoading = false;
+						}
+					}}
+					disabled={suggestionsLoading}
+				>
+					<RefreshCw class={suggestionsLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+					Refresh
+				</Button>
+			</div>
 		</CardHeader>
 		<CardContent class="p-0">
-			<Table class="border border-amber-200/60 rounded-2xl overflow-hidden">
+			<Table class="overflow-hidden rounded-2xl border border-amber-200/60">
 				<TableHeader class="bg-gradient-to-r from-amber-100 to-orange-100">
 					<TableRow>
 						<TableHead>Product</TableHead>
@@ -208,27 +334,40 @@
 					{#if suggestionsLoading}
 						{#each Array(4) as _, i}
 							<TableRow>
-								<TableCell colspan="5" class="p-3"><Skeleton class="h-6 w-full bg-white/70" /></TableCell>
+								<TableCell colspan="5" class="p-3"
+									><Skeleton class="h-6 w-full bg-white/70" /></TableCell
+								>
 							</TableRow>
 						{/each}
 					{:else if suggestions.length === 0}
 						<TableRow>
-							<TableCell colspan="5" class="text-center text-sm text-slate-500 py-6">No pending suggestions</TableCell>
+							<TableCell colspan="5" class="py-6 text-center text-sm text-slate-500"
+								>No pending suggestions</TableCell
+							>
 						</TableRow>
 					{:else}
 						{#each suggestions as suggestion}
-							<TableRow class="hover:bg-white/90 transition-colors">
-								<TableCell>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</TableCell>
+							<TableRow class="transition-colors hover:bg-white/90">
+								<TableCell
+									>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</TableCell
+								>
 								<TableCell>{suggestion.Supplier?.Name ?? suggestion.SupplierID}</TableCell>
 								<TableCell>{suggestion.SuggestedOrderQuantity}</TableCell>
 								<TableCell>
-									<span class="inline-flex items-center rounded-full bg-orange-200/60 text-orange-800 px-2 py-0.5 text-xs capitalize">
+									<span
+										class="inline-flex items-center rounded-full bg-orange-200/60 px-2 py-0.5 text-xs capitalize text-orange-800"
+									>
 										{suggestion.Status}
 									</span>
 								</TableCell>
 								<TableCell class="text-right">
 									<!-- Responsive action: single button stays compact -->
-									<Button size="sm" variant="ghost" class="text-amber-700 hover:bg-amber-50 rounded-md px-3 py-1.5" onclick={() => createPO(suggestion.ID)}>
+									<Button
+										size="sm"
+										variant="ghost"
+										class="rounded-md px-3 py-1.5 text-amber-700 hover:bg-amber-50"
+										onclick={() => createPO(suggestion.ID)}
+									>
 										Create PO
 									</Button>
 								</TableCell>
@@ -242,146 +381,182 @@
 
 	<!-- Reports payloads -->
 
-		
-		<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
-	<!-- SALES REPORT -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-sky-50 to-blue-100">
-		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
-			<div>
-				<CardTitle class="flex items-center gap-2 text-slate-800">
-					<TrendingUp class="h-5 w-5 text-sky-600" />
-					Sales Report
-				</CardTitle>
-				<CardDescription class="text-slate-600">Trend of total vs average sales</CardDescription>
-			</div>
-			<button class="rounded-full hover:bg-sky-100 p-2" onclick={() => exportJSON(reportResults.sales, 'sales-report')}>
-				<Download class="h-4 w-4 text-sky-700" />
-			</button>
-		</CardHeader>
-		<CardContent class="p-6 space-y-4">
-			<!-- Simple Line Chart (SVG sparkline) -->
-			<div class="h-24 w-full relative">
-				<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0">
-					<polyline
-						points="0,35 10,28 20,25 30,18 40,20 50,14 60,12 70,18 80,22 90,15 100,10"
-						fill="none"
-						stroke="url(#salesGrad)"
-						stroke-width="2.5"
-						stroke-linecap="round"
-					/>
-					<defs>
-						<linearGradient id="salesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-							<stop offset="0%" stop-color="#38bdf8" />
-							<stop offset="100%" stop-color="#2563eb" />
-						</linearGradient>
-					</defs>
-				</svg>
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Total Sales</p>
-				<p class="font-semibold text-sky-700">{fmt(reportResults.sales?.totalSales)}</p>
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Avg Daily Sales</p>
-				<p class="font-semibold text-blue-700">{fmt(reportResults.sales?.averageDailySales)}</p>
-			</div>
-			<p class="text-xs text-slate-500">Period: {reportResults.sales?.period ?? '—'}</p>
-		</CardContent>
-	</Card>
+	<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
+		<!-- SALES REPORT -->
+		{#if auth.hasPermission('reports.sales')}
+			<Card
+				class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+			>
+				<CardHeader
+					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+				>
+					<div>
+						<CardTitle class="flex items-center gap-2 text-slate-800">
+							<TrendingUp class="h-5 w-5 text-sky-600" />
+							Sales Report
+						</CardTitle>
+						<CardDescription class="text-slate-600">Trend of total vs average sales</CardDescription
+						>
+					</div>
+					<button
+						class="rounded-full p-2 hover:bg-sky-100"
+						onclick={() => exportJSON(reportResults.sales, 'sales-report')}
+					>
+						<Download class="h-4 w-4 text-sky-700" />
+					</button>
+				</CardHeader>
+				<CardContent class="space-y-4 p-6">
+					<!-- Simple Line Chart (SVG sparkline) -->
+					<div class="relative h-24 w-full">
+						<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0">
+							<polyline
+								points={generateSparkline(reportResults.sales?.salesTrends)}
+								fill="none"
+								stroke="url(#salesGrad)"
+								stroke-width="2.5"
+								stroke-linecap="round"
+							/>
+							<defs>
+								<linearGradient id="salesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+									<stop offset="0%" stop-color="#38bdf8" />
+									<stop offset="100%" stop-color="#2563eb" />
+								</linearGradient>
+							</defs>
+						</svg>
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Total Sales</p>
+						<p class="font-semibold text-sky-700">{fmt(reportResults.sales?.totalSales)}</p>
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Avg Daily Sales</p>
+						<p class="font-semibold text-blue-700">{fmt(reportResults.sales?.averageDailySales)}</p>
+					</div>
+					<p class="text-xs text-slate-500">Period: {reportResults.sales?.period ?? '—'}</p>
+				</CardContent>
+			</Card>
+		{/if}
 
-	<!-- TURNOVER REPORT -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-cyan-50 to-teal-100">
-		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
-			<div>
-				<CardTitle class="flex items-center gap-2 text-slate-800">
-					<RotateCcw class="h-5 w-5 text-teal-600" />
-					Turnover Report
-				</CardTitle>
-				<CardDescription class="text-slate-600">Inventory efficiency over time</CardDescription>
-			</div>
-			<button class="rounded-full hover:bg-teal-100 p-2" onclick={() => exportJSON(reportResults.turnover, 'turnover-report')}>
-				<Download class="h-4 w-4 text-teal-700" />
-			</button>
-		</CardHeader>
-		<CardContent class="p-6 space-y-4">
-			<!-- Bar Chart -->
-			<div class="h-24 w-full flex items-end gap-1">
-				{#each [40, 25, 30, 15, 35, 22, 28] as height}
-					<div
-						class="flex-1 bg-gradient-to-t from-teal-400 to-cyan-400 rounded-t-md transition-all duration-500 ease-in-out hover:scale-105"
-						style={`height: ${height}%;`}
-					></div>
-				{/each}
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Avg Inventory Value</p>
-				<p class="font-semibold text-teal-700">${fmt(reportResults.turnover?.averageInventoryValue)}</p>
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Turnover Rate</p>
-				<p class="font-semibold text-teal-700">{fmt(reportResults.turnover?.inventoryTurnoverRate)}</p>
-			</div>
-			<p class="text-xs text-slate-500">Period: {reportResults.turnover?.period ?? '—'}</p>
-		</CardContent>
-	</Card>
+		<!-- TURNOVER REPORT -->
+		{#if auth.hasPermission('reports.inventory')}
+			<Card
+				class="rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+			>
+				<CardHeader
+					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+				>
+					<div>
+						<CardTitle class="flex items-center gap-2 text-slate-800">
+							<RotateCcw class="h-5 w-5 text-teal-600" />
+							Turnover Report
+						</CardTitle>
+						<CardDescription class="text-slate-600">Inventory efficiency over time</CardDescription>
+					</div>
+					<button
+						class="rounded-full p-2 hover:bg-teal-100"
+						onclick={() => exportJSON(reportResults.turnover, 'turnover-report')}
+					>
+						<Download class="h-4 w-4 text-teal-700" />
+					</button>
+				</CardHeader>
+				<CardContent class="space-y-4 p-6">
+					<!-- Bar Chart -->
+					<div class="flex h-24 w-full items-end gap-1">
+						{#each [40, 25, 30, 15, 35, 22, 28] as height}
+							<div
+								class="flex-1 rounded-t-md bg-gradient-to-t from-teal-400 to-cyan-400 transition-all duration-500 ease-in-out hover:scale-105"
+								style={`height: ${height}%;`}
+							></div>
+						{/each}
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Avg Inventory Value</p>
+						<p class="font-semibold text-teal-700">
+							${fmt(reportResults.turnover?.averageInventoryValue)}
+						</p>
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Turnover Rate</p>
+						<p class="font-semibold text-teal-700">
+							{fmt(reportResults.turnover?.inventoryTurnoverRate)}
+						</p>
+					</div>
+					<p class="text-xs text-slate-500">Period: {reportResults.turnover?.period ?? '—'}</p>
+				</CardContent>
+			</Card>
+		{/if}
 
-	<!-- MARGIN REPORT -->
-	<Card class="rounded-2xl border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] bg-gradient-to-br from-pink-50 to-rose-100">
-		<CardHeader class="bg-white/80 backdrop-blur rounded-t-2xl border-b border-white/60 flex items-center justify-between px-6 py-5">
-			<div>
-				<CardTitle class="flex items-center gap-2 text-slate-800">
-					<Percent class="h-5 w-5 text-rose-600" />
-					Margin Report
-				</CardTitle>
-				<CardDescription class="text-slate-600">Profitability visualization</CardDescription>
-			</div>
-			<button class="rounded-full hover:bg-pink-100 p-2" onclick={() => exportJSON(reportResults.margin, 'margin-report')}>
-				<Download class="h-4 w-4 text-rose-700" />
-			</button>
-		</CardHeader>
-		<CardContent class="p-6 space-y-4">
-			<!-- Semi-donut Chart -->
-			<div class="relative flex items-center justify-center h-24">
-				<svg viewBox="0 0 36 18" class="w-24 h-12 rotate-180">
-					<path
-						d="M2 18 A16 16 0 0 1 34 18"
-						fill="none"
-						stroke="url(#marginGrad)"
-						stroke-width="4"
-						stroke-linecap="round"
-						stroke-dasharray="{(reportResults.margin?.grossProfitMargin ?? 0) * 0.5},100"
-					/>
-					<defs>
-						<linearGradient id="marginGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-							<stop offset="0%" stop-color="#fb7185" />
-							<stop offset="100%" stop-color="#e11d48" />
-						</linearGradient>
-					</defs>
-				</svg>
-				<span class="absolute text-lg font-semibold text-rose-700">
-					{fmt(reportResults.margin?.grossProfitMargin)}%
-				</span>
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Gross Profit</p>
-				<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.grossProfit)}</p>
-			</div>
-			<div class="flex justify-between text-sm text-slate-600">
-				<p>Total Revenue</p>
-				<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.totalRevenue)}</p>
-			</div>
-			<p class="text-xs text-slate-500">Period: {reportResults.margin?.period ?? '—'}</p>
-		</CardContent>
-	</Card>
-</div>
-
+		<!-- MARGIN REPORT -->
+		{#if auth.hasPermission('reports.financial')}
+			<Card
+				class="rounded-2xl border-0 bg-gradient-to-br from-pink-50 to-rose-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+			>
+				<CardHeader
+					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
+				>
+					<div>
+						<CardTitle class="flex items-center gap-2 text-slate-800">
+							<Percent class="h-5 w-5 text-rose-600" />
+							Margin Report
+						</CardTitle>
+						<CardDescription class="text-slate-600">Profitability visualization</CardDescription>
+					</div>
+					<button
+						class="rounded-full p-2 hover:bg-pink-100"
+						onclick={() => exportJSON(reportResults.margin, 'margin-report')}
+					>
+						<Download class="h-4 w-4 text-rose-700" />
+					</button>
+				</CardHeader>
+				<CardContent class="space-y-4 p-6">
+					<!-- Semi-donut Chart -->
+					<div class="relative flex h-24 items-center justify-center">
+						<svg viewBox="0 0 36 18" class="h-12 w-24 rotate-180">
+							<path
+								d="M2 18 A16 16 0 0 1 34 18"
+								fill="none"
+								stroke="url(#marginGrad)"
+								stroke-width="4"
+								stroke-linecap="round"
+								stroke-dasharray="{(reportResults.margin?.grossProfitMargin ?? 0) * 0.5},100"
+							/>
+							<defs>
+								<linearGradient id="marginGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+									<stop offset="0%" stop-color="#fb7185" />
+									<stop offset="100%" stop-color="#e11d48" />
+								</linearGradient>
+							</defs>
+						</svg>
+						<span class="absolute text-lg font-semibold text-rose-700">
+							{fmt(reportResults.margin?.grossProfitMargin)}%
+						</span>
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Gross Profit</p>
+						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.grossProfit)}</p>
+					</div>
+					<div class="flex justify-between text-sm text-slate-600">
+						<p>Total Revenue</p>
+						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.totalRevenue)}</p>
+					</div>
+					<p class="text-xs text-slate-500">Period: {reportResults.margin?.period ?? '—'}</p>
+				</CardContent>
+			</Card>
+		{/if}
+	</div>
 </section>
 
 <style lang="postcss">
 	@keyframes gradientShift {
-		0% { background-position: 0% 50%; }
-		50% { background-position: 100% 50%; }
-		100% { background-position: 0% 50%; }
+		0% {
+			background-position: 0% 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
+		100% {
+			background-position: 0% 50%;
+		}
 	}
 	.animate-gradientShift {
 		background-size: 200% 200%;
@@ -389,19 +564,38 @@
 	}
 
 	@keyframes pulseGlow {
-		0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
-		50% { transform: scale(1.08); box-shadow: 0 0 25px rgba(56, 189, 248, 0.5); }
+		0%,
+		100% {
+			transform: scale(1);
+			box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+		}
+		50% {
+			transform: scale(1.08);
+			box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
+		}
 	}
-	.animate-pulseGlow { animation: pulseGlow 8s ease-in-out infinite; }
+	.animate-pulseGlow {
+		animation: pulseGlow 8s ease-in-out infinite;
+	}
 
 	@keyframes fadeUp {
-		from { opacity: 0; transform: translateY(20px); }
-		to { opacity: 1; transform: translateY(0); }
+		from {
+			opacity: 0;
+			transform: translateY(20px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
 	}
-	.animate-fadeUp { animation: fadeUp 1.5s ease forwards; }
+	.animate-fadeUp {
+		animation: fadeUp 1.5s ease forwards;
+	}
 
 	* {
-		transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+		transition-property:
+			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
+			box-shadow, transform, filter, backdrop-filter;
 		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 		transition-duration: 300ms;
 	}

@@ -2,6 +2,12 @@
 
 This document provides a detailed description of the API endpoints, including their requests and responses.
 
+## Authorization & CSRF Overview
+
+Most `/api/v1` routes require authentication and specific roles (Admin, Manager, Staff). Refer to `docs/api_authorization_matrix.md` for the full mapping of endpoints to required roles. Public endpoints (health, metrics, WebSocket, payment callbacks, registration/login, and webhooks) remain unauthenticated by design.
+
+For all authenticated requests that mutate state (POST/PUT/PATCH/DELETE), clients must include the `X-CSRF-Token` header. The token is issued in both the login and refresh-token responses (`csrfToken` field) and is tied to the authenticated user. Tokens expire automatically and are invalidated on logout; obtain a new token by calling the refresh endpoint.
+
 ## Alerts
 
 ### PUT /products/{productId}/alert-settings
@@ -154,9 +160,68 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the user is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+### POST /alerts/subscriptions
+
+-   **Summary:** Create an alert role subscription
+-   **Description:** Creates a new subscription to link a role with an alert type. (Admin only)
+-   **Request:**
+    -   **Body:**
+        ```json
+        {
+            "alertType": "LOW_STOCK",
+            "role": "Manager"
+        }
+        ```
+-   **Response:**
+    -   **201 Created:**
+        ```json
+        {
+            "ID": 1,
+            "AlertType": "LOW_STOCK",
+            "Role": "Manager",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **409 Conflict:** If the subscription already exists.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /alerts/subscriptions
+
+-   **Summary:** List all alert role subscriptions
+-   **Description:** Retrieves a list of all current alert-role subscriptions. (Admin only)
+-   **Request:** None
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        [
+            {
+                "ID": 1,
+                "AlertType": "LOW_STOCK",
+                "Role": "Manager",
+                "CreatedAt": "2025-11-08T21:00:00Z",
+                "UpdatedAt": "2025-11-08T21:00:00Z"
+            }
+        ]
+        ```
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### DELETE /alerts/subscriptions/{id}
+
+-   **Summary:** Delete an alert role subscription
+-   **Description:** Deletes a subscription by its ID. (Admin only)
+-   **Request:**
+    -   **URL Params:**
+        -   `id` (integer, required): The ID of the subscription.
+-   **Response:**
+    -   **204 No Content:** If the subscription is deleted successfully.
+    -   **404 Not Found:** If the subscription is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## Barcode
 
-### GET /barcodes/generate
+### GET /barcode/generate
 
 -   **Summary:** Generate a barcode image for a product
 -   **Description:** Generates a barcode image (PNG) for a given product SKU or ID.
@@ -170,7 +235,7 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the product is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
-### GET /products/lookup
+### GET /barcode/lookup
 
 -   **Summary:** Lookup a product by barcode/UPC
 -   **Description:** Retrieves product details by scanning its barcode or UPC.
@@ -207,36 +272,97 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the product is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+## Search
+
+### GET /api/v1/search
+
+-   **Summary:** Perform a global search across all major entities.
+-   **Description:** Searches for a given query string across Products, Users, Suppliers, and Categories. The results are ranked by relevance and include the full entity object for easy display.
+-   **Request:**
+    -   **Query Params:**
+        -   `q` (string, required): The search term.
+-   **Response:**
+    -   **200 OK:** An array of search results. Each result has an `entity_type` and the full `entity` object.
+        ```json
+        [
+            {
+                "entity_type": "product",
+                "entity_id": 1,
+                "content": "Sample Product SKU123 This is a sample product. Sample Brand 123456789012",
+                "entity": {
+                    "ID": 1,
+                    "SKU": "SKU123",
+                    "Name": "Sample Product",
+                    "Description": "This is a sample product.",
+                    "CategoryID": 1,
+                    "SubCategoryID": 1,
+                    "SupplierID": 1,
+                    "Brand": "Sample Brand",
+                    "PurchasePrice": 10.50,
+                    "SellingPrice": 20.00,
+                    "BarcodeUPC": "123456789012",
+                    "ImageURLs": "",
+                    "Status": "Active",
+                    "LocationID": 1
+                }
+            },
+            {
+                "entity_type": "user",
+                "entity_id": 2,
+                "content": "sampleuser Sample User sample@example.com 555-1234",
+                "entity": {
+                    "ID": 2,
+                    "Username": "sampleuser",
+                    "Role": "Manager",
+                    "IsActive": true,
+                    "FirstName": "Sample",
+                    "LastName": "User",
+                    "Email": "sample@example.com",
+                    "PhoneNumber": "555-1234",
+                    "Address": ""
+                }
+            }
+        ]
+        ```
+    -   **400 Bad Request:** If the `q` query parameter is missing.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## Bulk Operations
+
+Bulk operations are now processed asynchronously. When you initiate a bulk import or export, a job is created and its status can be tracked using the job ID.
+
+**NOTE on Auto-Creation**: The product bulk import process now supports on-the-fly creation of related entities. If a `CategoryName`, `SubCategoryName`, or `SupplierName` is provided in the CSV that does not exist in the database, a new entity with that name will be created automatically.
 
 ### GET /bulk/products/template
 
 -   **Summary:** Download product import template
--   **Description:** Downloads a CSV/Excel template file with required headers for product creation.
+-   **Description:** Downloads a CSV template file with required headers for product creation.
 -   **Request:** None
 -   **Response:**
-    -   **200 OK:** Returns a CSV file with the following headers: `SKU,Name,Description,CategoryID,SubCategoryID,SupplierID,Brand,PurchasePrice,SellingPrice,BarcodeUPC,ImageURLs,Status`
+-   **200 OK:** Returns a CSV file with the following headers: `SKU,Name,Description,CategoryName,SubCategoryName,SupplierName,Brand,PurchasePrice,SellingPrice,LocationName,Status`
 
 ### POST /bulk/products/import
 
 -   **Summary:** Upload a file for bulk product import
--   **Description:** Uploads a CSV/Excel file for bulk product creation/update. Returns a job ID for status tracking.
+-   **Description:** Uploads a CSV/Excel file for bulk product creation/update. Returns a job ID for status tracking. The file is uploaded to MinIO, and a message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **Form Data:**
         -   `file` (file, required): The CSV/Excel file to upload.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "QUEUED",
-            "message": "Bulk import job queued for processing.",
-            "filePath": "...",
-            "totalRecords": 0,
-            "validRecords": 0,
-            "invalidRecords": 0,
-            "errors": [],
-            "preview": []
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "QUEUED",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": null,
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
         }
         ```
     -   **400 Bad Request:** If the file is not provided.
@@ -248,20 +374,22 @@ This document provides a detailed description of the API endpoints, including th
 -   **Description:** Retrieves the status and validation results of a bulk import job.
 -   **Request:**
     -   **URL Params:**
-        -   `jobId` (string, required): The ID of the bulk import job.
+        -   `jobId` (integer, required): The ID of the bulk import job.
 -   **Response:**
     -   **200 OK:**
         ```json
         {
-            "jobId": "...",
-            "status": "PENDING_CONFIRMATION",
-            "message": "Bulk import job validation complete.",
-            "filePath": "...",
-            "totalRecords": 100,
-            "validRecords": 98,
-            "invalidRecords": 2,
-            "errors": [ ... ],
-            "preview": [ ... ]
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "PENDING_CONFIRMATION",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "{ \"totalRecords\": 100, \"validRecords\": 98, \"invalidRecords\": 2, \"errors\": [\"error1\", \"error2\"], \"validProducts\": [...] }",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": "2025-11-08T21:00:00Z",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:05:00Z"
         }
         ```
     -   **404 Not Found:** If the job is not found.
@@ -269,17 +397,25 @@ This document provides a detailed description of the API endpoints, including th
 ### POST /bulk/products/import/{jobId}/confirm
 
 -   **Summary:** Confirm and execute bulk import
--   **Description:** Confirms and executes the bulk import after preview.
+-   **Description:** Confirms and executes the bulk import after preview. A message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **URL Params:**
-        -   `jobId` (string, required): The ID of the bulk import job.
+        -   `jobId` (integer, required): The ID of the bulk import job.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "PROCESSING",
-            "message": "Bulk import initiated"
+            "ID": 1,
+            "Type": "BULK_IMPORT",
+            "Status": "PROCESSING",
+            "Payload": "{ \"bucketName\": \"bulk-imports\", \"objectName\": \"<uuid>-<filename>\", \"userId\": 1 }",
+            "Result": "{ \"totalRecords\": 100, \"validRecords\": 98, \"invalidRecords\": 2, \"errors\": [\"error1\", \"error2\"], \"validProducts\": [...] }",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": "2025-11-08T21:00:00Z",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:05:00Z"
         }
         ```
     -   **400 Bad Request:** If the job is not in the `PENDING_CONFIRMATION` state.
@@ -289,19 +425,27 @@ This document provides a detailed description of the API endpoints, including th
 ### GET /bulk/products/export
 
 -   **Summary:** Export product catalog
--   **Description:** Exports the entire product catalog or a filtered list of products to a CSV/Excel file.
+-   **Description:** Exports the entire product catalog or a filtered list of products to a CSV/Excel file. A job is created and a message is sent to a message broker for asynchronous processing.
 -   **Request:**
     -   **Query Params:**
         -   `format` (string, optional): Export format (csv, excel). Defaults to `csv`.
         -   `category` (integer, optional): Filter by Category ID.
         -   `supplier` (integer, optional): Filter by Supplier ID.
 -   **Response:**
-    -   **200 OK:**
+    -   **202 Accepted:**
         ```json
         {
-            "jobId": "...",
-            "status": "QUEUED",
-            "message": "Bulk export job queued for processing."
+            "ID": 1,
+            "Type": "BULK_EXPORT",
+            "Status": "QUEUED",
+            "Payload": "{ \"format\": \"csv\", \"category\": \"\", \"supplier\": \"\", \"userId\": 1 }",
+            "Result": "",
+            "LastError": "",
+            "RetryCount": 0,
+            "MaxRetries": 3,
+            "LastAttemptAt": null,
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
         }
         ```
     -   **500 Internal Server Error:** If there is a server-side error.
@@ -546,6 +690,275 @@ This document provides a detailed description of the API endpoints, including th
     -   **204 No Content:** If the sub-category is deleted successfully.
     -   **404 Not Found:** If the sub-category is not found.
     -   **409 Conflict:** If the sub-category has associated products.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+## Notifications
+
+### GET /users/{userId}/notifications
+
+-   **Summary:** Get a list of notifications for a user
+-   **Description:** Retrieves a list of notifications for a specific user, with optional filtering by read status.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Query Params:**
+        -   `isRead` (boolean, optional): Filter by read status (true/false).
+        -   `limit` (integer, optional): Limit number of notifications (default 20).
+        -   `offset` (integer, optional): Offset for pagination (default 0).
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        [
+            {
+                "ID": 1,
+                "UserID": 1,
+                "Type": "ALERT",
+                "Title": "New Alert: LOW_STOCK",
+                "Message": "Product 'Sample Product' is running low.",
+                "Payload": "{ \"productId\": 1, \"type\": \"LOW_STOCK\", \"message\": \"Product 'Sample Product' is running low.\" }",
+                "IsRead": false,
+                "ReadAt": null,
+                "TriggeredAt": "2025-11-08T21:00:00Z",
+                "CreatedAt": "2025-11-08T21:00:00Z",
+                "UpdatedAt": "2025-11-08T21:00:00Z"
+            }
+        ]
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user or an Admin.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /users/{userId}/notifications/unread/count
+
+-   **Summary:** Get the count of unread notifications for a user
+-   **Description:** Retrieves the count of unread notifications for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "count": 5
+        }
+        ```
+    -   **403 Forbidden:** If the authenticated user is not the target user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### PATCH /users/{userId}/notifications/{notificationId}/read
+
+-   **Summary:** Mark a notification as read
+-   **Description:** Marks a specific notification as read for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+        -   `notificationId` (integer, required): The ID of the notification.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "Notification marked as read"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### PATCH /users/{userId}/notifications/read-all
+
+-   **Summary:** Mark all notifications as read
+-   **Description:** Marks all unread notifications as read for the authenticated user.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "All notifications marked as read"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **403 Forbidden:** If the authenticated user is not the target user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+## CRM
+
+### POST /crm/customers
+
+-   **Summary:** Create a new customer
+-   **Description:** Create a new customer with the provided details.
+-   **Request:**
+    -   **Body:**
+        ```json
+        {
+            "username": "newcustomer",
+            "password": "password123",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "john.doe@example.com",
+            "phoneNumber": "1234567890"
+        }
+        ```
+-   **Response:**
+    -   **201 Created:**
+        ```json
+        {
+            "ID": 1,
+            "Username": "newcustomer",
+            "Role": "Customer",
+            "IsActive": true,
+            "FirstName": "John",
+            "LastName": "Doe",
+            "Email": "john.doe@example.com",
+            "PhoneNumber": "1234567890",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /crm/customers/{identifier}
+
+-   **Summary:** Get a customer by ID, username, email, or phone
+-   **Description:** Get a single customer by their ID, username, email, or phone number.
+-   **Request:**
+    -   **URL Params:**
+        -   `identifier` (string, required): The ID, username, email, or phone number of the customer.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "Username": "newcustomer",
+            ...
+        }
+        ```
+    -   **404 Not Found:** If the customer is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### PUT /crm/customers/{userId}
+
+-   **Summary:** Update an existing customer
+-   **Description:** Update an existing customer with the provided details.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the customer.
+    -   **Body:**
+        ```json
+        {
+            "firstName": "Jane",
+            "lastName": "Doe"
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "FirstName": "Jane",
+            "LastName": "Doe",
+            ...
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **404 Not Found:** If the customer is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### DELETE /crm/customers/{userId}
+
+-   **Summary:** Delete a customer
+-   **Description:** Delete a customer by their ID.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the customer.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "Customer deleted successfully"
+        }
+        ```
+    -   **404 Not Found:** If the customer is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /crm/loyalty/{userId}
+
+-   **Summary:** Get a customer's loyalty account
+-   **Description:** Get a customer's loyalty account by their user ID.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "Points": 100,
+            "Tier": "Silver",
+            "CreatedAt": "2025-11-08T21:00:00Z",
+            "UpdatedAt": "2025-11-08T21:00:00Z"
+        }
+        ```
+    -   **404 Not Found:** If the loyalty account is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### POST /crm/loyalty/{userId}/points
+
+-   **Summary:** Add loyalty points to a customer's account
+-   **Description:** Add loyalty points to a customer's account.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Body:**
+        ```json
+        {
+            "points": 50
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "Points": 150,
+            "Tier": "Silver",
+            ...
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **404 Not Found:** If the loyalty account is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### POST /crm/loyalty/{userId}/redeem
+
+-   **Summary:** Redeem loyalty points from a customer's account
+-   **Description:** Redeem loyalty points from a customer's account.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Body:**
+        ```json
+        {
+            "points": 50
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "Points": 100,
+            "Tier": "Silver",
+            ...
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid or if the user has insufficient points.
+    -   **404 Not Found:** If the loyalty account is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
 ## Health
@@ -927,7 +1340,7 @@ This document provides a detailed description of the API endpoints, including th
     -   **200 OK:**
         ```json
         {
-            "message": "Demand forecast completed."
+            "message": "Demand forecast generation initiated."
         }
         ```
     -   **400 Bad Request:** If the request payload is invalid.
@@ -1157,7 +1570,8 @@ This document provides a detailed description of the API endpoints, including th
             "startDate": "2025-10-01T00:00:00Z",
             "endDate": "2025-10-31T23:59:59Z",
             "categoryID": 1,
-            "locationID": 1
+            "locationID": 1,
+            "groupBy": "day"
         }
         ```
 -   **Response:**
@@ -1172,6 +1586,66 @@ This document provides a detailed description of the API endpoints, including th
         }
         ```
     -   **400 Bad Request:** If the request payload is invalid.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### POST /reports/sales-trends/export
+
+-   **Summary:** Export sales trends report
+-   **Description:** Exports a sales trends report as a CSV, PDF, or Excel file.
+-   **Request:**
+    -   **Query Params:**
+        -   `format` (string, optional): Export format (csv, pdf, excel). Defaults to `csv`.
+    -   **Body:**
+        ```json
+        {
+            "startDate": "2025-10-01T00:00:00Z",
+            "endDate": "2025-10-31T23:59:59Z",
+            "categoryID": 1,
+            "locationID": 1,
+            "groupBy": "day"
+        }
+        ```
+-   **Response:**
+    -   **202 Accepted:**
+        ```json
+        {
+            "jobId": "..."
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /reports/jobs/{jobId}
+
+-   **Summary:** Get report job status
+-   **Description:** Get the status of a report generation job.
+-   **Request:**
+    -   **URL Params:**
+        -   `jobId` (string, required): The ID of the report generation job.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "jobId": "...",
+            "reportType": "sales_trends_csv",
+            "params": { ... },
+            "status": "COMPLETED",
+            "fileUrl": "/api/v1/reports/download/..."
+        }
+        ```
+    -   **404 Not Found:** If the job is not found.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /reports/download/{jobId}
+
+-   **Summary:** Download report file
+-   **Description:** Download a generated report file.
+-   **Request:**
+    -   **URL Params:**
+        -   `jobId` (string, required): The ID of the report generation job.
+-   **Response:**
+    -   **302 Found:** Redirects to the file URL in MinIO.
+    -   **404 Not Found:** If the job is not found or the report is not ready.
     -   **500 Internal Server Error:** If there is a server-side error.
 
 ### POST /reports/inventory-turnover
@@ -1491,6 +1965,104 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the supplier is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+## Time Tracking
+
+### POST /time-tracking/clock-in/{userId}
+
+-   **Summary:** Clock in an employee
+-   **Description:** Clock in an employee for a new time clock entry.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Body:**
+        ```json
+        {
+            "notes": "Starting my shift."
+        }
+        ```
+-   **Response:**
+    -   **201 Created:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "ClockIn": "2025-11-08T09:00:00Z",
+            "ClockOut": null,
+            "Notes": "Starting my shift."
+        }
+        ```
+    -   **400 Bad Request:** If the user is already clocked in.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### POST /time-tracking/clock-out/{userId}
+
+-   **Summary:** Clock out an employee
+-   **Description:** Clock out an employee, completing their time clock entry.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+    -   **Body:**
+        ```json
+        {
+            "notes": "Ending my shift."
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "ClockIn": "2025-11-08T09:00:00Z",
+            "ClockOut": "2025-11-08T17:00:00Z",
+            "Notes": "Ending my shift."
+        }
+        ```
+    -   **400 Bad Request:** If the user is not clocked in.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /time-tracking/last-entry/{userId}
+
+-   **Summary:** Get the last time clock entry for a user
+-   **Description:** Get the last time clock entry for a user by their user ID.
+-   **Request:**
+    -   **URL Params:**
+        -   `userId` (integer, required): The ID of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "ClockIn": "2025-11-08T09:00:00Z",
+            "ClockOut": "2025-11-08T17:00:00Z",
+            "Notes": "Ending my shift."
+        }
+        ```
+    -   **404 Not Found:** If no time clock entry is found for the user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /time-tracking/last-entry/username/{username}
+
+-   **Summary:** Get the last time clock entry for a user by username
+-   **Description:** Get the last time clock entry for a user by their username.
+-   **Request:**
+    -   **URL Params:**
+        -   `username` (string, required): The username of the user.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "ID": 1,
+            "UserID": 1,
+            "ClockIn": "2025-11-08T09:00:00Z",
+            "ClockOut": "2025-11-08T17:00:00Z",
+            "Notes": "Ending my shift."
+        }
+        ```
+    -   **404 Not Found:** If no time clock entry is found for the user.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## Users
 
 ### POST /users/register
@@ -1702,6 +2274,31 @@ This document provides a detailed description of the API endpoints, including th
     -   **404 Not Found:** If the user is not found.
     -   **500 Internal Server Error:** If there is a server-side error.
 
+## Webhooks
+
+### POST /webhooks
+
+-   **Summary:** Handle incoming webhooks
+-   **Description:** A generic endpoint to handle incoming webhooks from various third-party integrations.
+-   **Request:**
+    -   **Body:**
+        ```json
+        {
+            "source": "shopify",
+            "event": "order_created",
+            "data": { ... }
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "message": "Webhook received"
+        }
+        ```
+    -   **400 Bad Request:** If the webhook payload is invalid.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
 ## WebSocket
 
 ### GET /ws
@@ -1711,3 +2308,96 @@ This document provides a detailed description of the API endpoints, including th
 -   **Request:** None
 -   **Response:**
     -   **101 Switching Protocols:** If the WebSocket upgrade is successful.
+
+## Payments
+
+### POST /payment/create
+
+-   **Summary:** Create a new payment
+-   **Description:** Initiates a new payment with the specified payment method (bKash, card, or cash).
+-   **Request:**
+    -   **Body:**
+        ```json
+        {
+            "order_id": "ORDER123",
+            "amount": 100.50,
+            "payment_method": "bkash"
+        }
+        ```
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "redirect_url": "https://gateway.bkash.com/..."
+        }
+        ```
+    -   **400 Bad Request:** If the request payload is invalid.
+    -   **500 Internal Server Error:** If there is a server-side error.
+
+### GET /payment/bkash/callback
+
+-   **Summary:** bKash payment callback
+-   **Description:** The callback URL for bKash to redirect to after a payment attempt.
+-   **Request:**
+    -   **Query Params:**
+        -   `paymentID` (string, required): The payment ID from bKash.
+        -   `status` (string, required): The status of the payment attempt (e.g., "success", "failure", "cancelled").
+-   **Response:**
+    -   **302 Found:** Redirects to the success or failure URL.
+
+### POST /payment/success
+
+-   **Summary:** SSLCommerz success URL
+-   **Description:** The URL for SSLCommerz to redirect to after a successful payment.
+-   **Request:**
+    -   **Form Data:** Contains transaction details from SSLCommerz.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "status": "Payment successful"
+        }
+        ```
+
+### POST /payment/fail
+
+-   **Summary:** SSLCommerz fail URL
+-   **Description:** The URL for SSLCommerz to redirect to after a failed payment.
+-   **Request:**
+    -   **Form Data:** Contains transaction details from SSLCommerz.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "status": "Payment failed"
+        }
+        ```
+
+### POST /payment/cancel
+
+-   **Summary:** SSLCommerz cancel URL
+-   **Description:** The URL for SSLCommerz to redirect to after a cancelled payment.
+-   **Request:**
+    -   **Form Data:** Contains transaction details from SSLCommerz.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "status": "Payment cancelled"
+        }
+        ```
+
+### POST /payment/ipn
+
+-   **Summary:** SSLCommerz Instant Payment Notification (IPN) listener
+-   **Description:** The endpoint for SSLCommerz to send asynchronous payment status updates.
+-   **Request:**
+    -   **Form Data:** Contains transaction details from SSLCommerz.
+-   **Response:**
+    -   **200 OK:**
+        ```json
+        {
+            "status": "SSLCommerz IPN handled successfully"
+        }
+        ```
+    -   **400 Bad Request:** If the IPN data is invalid.

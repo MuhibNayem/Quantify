@@ -1,0 +1,13 @@
+integrations:
+  - name: shopify
+    enabled: true
+    settings:
+      api_key: "your-shopify-api-key"
+      api_secret: "your-shopify-api-secret"
+      webhook_url: "https://your-app.com/webhooks/shopify"
+  - name: quickbooks
+    enabled: false
+    settings:
+      client_id: "your-quickbooks-client-id"
+      client_secret: "your-quickbooks-client-secret"
+      redirect_uri: "https://your-app.com/oauth/quickbooks/callback"

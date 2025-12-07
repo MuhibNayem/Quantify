@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"inventory/backend/internal/consumers"
+	"inventory/backend/internal/migrations"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/robfig/cron/v3"
@@ -19,31 +24,23 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/router"
 	"inventory/backend/internal/services"
+	"inventory/backend/internal/storage"
 	"inventory/backend/internal/websocket"
 )
 
-// Payloads for events
-type BulkImportJobPayload struct {
-	JobID    string `json:"jobId"`
-	FilePath string `json:"filePath"`
-	UserID   uint   `json:"userId"`
-}
-
-type BulkExportJobPayload struct {
-	JobID    string `json:"jobId"`
-	Format   string `json:"format"`
-	Category string `json:"category"`
-	Supplier string `json:"supplier"`
-	UserID   uint   `json:"userId"`
-}
-
-type AlertTriggeredPayload struct {
-	ProductID uint   `json:"productId"`
-	Type      string `json:"type"`
-	Message   string `json:"message"`
+// App holds all application-wide dependencies.
+type App struct {
+	cfg              *config.Config
+	reportingService *services.ReportingService
+	hub              *websocket.Hub
+	jobRepo          *repository.JobRepository
+	notificationRepo repository.NotificationRepository
 }
 
 func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	// Initialize Logrus
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(os.Stdout)
@@ -56,12 +53,22 @@ func main() {
 	repository.InitDB(cfg)
 	defer repository.CloseDB()
 
+	// Check if search index migration should run
+	if os.Getenv("RUN_MIGRATIONS") == "true" {
+		logrus.Info("RUN_MIGRATIONS environment variable is true. Running search index population...")
+		if err := migrations.PopulateSearchIndex(repository.DB); err != nil {
+			logrus.Fatalf("Failed to run search index population on startup: %v", err)
+		}
+		logrus.Info("Search index population completed.")
+	}
+
 	// Initialize Redis client
 	repository.InitRedis(cfg)
 	defer repository.CloseRedis()
 
 	// Initialize RabbitMQ
 	message_broker.InitRabbitMQ(cfg.RabbitMQURL)
+	defer message_broker.Close()
 
 	// Initialize JWT
 	auth.InitializeJWT(cfg.JWTSecret, cfg.RefreshTokenSecret)
@@ -70,173 +77,71 @@ func main() {
 	hub := websocket.NewHub()
 	go hub.Run()
 
-	// Register event consumers
-	message_broker.Subscribe("inventory", "bulk-import", "bulk.import", hub, func(d amqp091.Delivery) {
-		var payload BulkImportJobPayload
-		if err := json.Unmarshal(d.Body, &payload); err != nil {
-			logrus.Errorf("Failed to unmarshal BulkImportJobPayload: %v", err)
-			return
-		}
+	// Initialize MinIO Uploader
+	minioUploader, err := storage.NewMinIOUploader(cfg)
+	if err != nil {
+		logrus.Fatalf("Failed to initialize MinIO uploader: %v", err)
+	}
 
-		job := handlers.GetBulkImportJob(payload.JobID)
-		if job == nil {
-			logrus.Errorf("Job %s not found", payload.JobID)
-			return
-		}
+	// Initialize Repositories
+	jobRepo := repository.NewJobRepository(repository.DB)
+	productRepo := repository.NewProductRepository(repository.DB)
+	reportsRepo := repository.NewReportsRepository(repository.DB)
+	notificationRepo := repository.NewNotificationRepository(repository.DB)
+	categoryRepo := repository.NewCategoryRepository(repository.DB)
+	supplierRepo := repository.NewSupplierRepository(repository.DB)
+	locationRepo := repository.NewLocationRepository(repository.DB)
 
-		if job["status"] == "QUEUED" {
-			logrus.Infof("Processing BulkImportJob: %s for file %s by user %d", payload.JobID, payload.FilePath, payload.UserID)
+	// Initialize Services
+	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo, locationRepo)
+	bulkExportSvc := services.NewBulkExportService()
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 
-			result, err := services.ProcessBulkImport(payload.FilePath)
-			if err != nil {
-				job["status"] = "FAILED"
-				job["message"] = err.Error()
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to process bulk import: %v", err)
+	app := &App{
+		cfg:              cfg,
+		reportingService: reportingService,
+		hub:              hub,
+		jobRepo:          jobRepo,
+		notificationRepo: notificationRepo,
+	}
+
+	// Initialize and start the BulkConsumer
+	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub)
+	workerCount := 1
+	if cfg.ConsumerConcurrency > 0 {
+		workerCount = cfg.ConsumerConcurrency
+	}
+	stopConsumers := bulkConsumer.Start(ctx, workerCount)
+	defer stopConsumers()
+
+	alertConsumer := consumers.NewAlertConsumer()
+	stopAlertConsumer := alertConsumer.Start(ctx)
+	defer stopAlertConsumer()
+
+	message_broker.Subscribe(ctx, "inventory", "alerts", "alert.triggered", func(ctx context.Context, deliveries <-chan amqp091.Delivery) {
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
-
-			// Store valid products in Redis with a TTL of 1 hour
-			validProductsJSON, err := json.Marshal(result.ValidProducts)
-			if err != nil {
-				job["status"] = "FAILED"
-				job["message"] = "Failed to serialize valid products"
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to serialize valid products: %v", err)
-				return
-			}
-			err = repository.SetCache("bulk_import:"+payload.JobID, string(validProductsJSON), 3600)
-			if err != nil {
-				job["status"] = "FAILED"
-				job["message"] = "Failed to store valid products in cache"
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to store valid products in cache: %v", err)
-				return
-			}
-
-			job["status"] = "PENDING_CONFIRMATION"
-			job["totalRecords"] = result.TotalRecords
-			job["validRecords"] = result.ValidRecords
-			job["invalidRecords"] = result.InvalidRecords
-			job["errors"] = result.Errors
-			handlers.SetBulkImportJob(payload.JobID, job)
-			logrus.Infof("BulkImportJob %s validation complete. Status: %s", payload.JobID, job["status"])
-		} else if job["status"] == "PROCESSING" {
-			logrus.Infof("Confirming BulkImportJob: %s for file %s by user %d", payload.JobID, payload.FilePath, payload.UserID)
-
-			// Retrieve valid products from Redis
-			validProductsJSON, err := repository.GetCache("bulk_import:" + payload.JobID)
-			if err != nil {
-				job["status"] = "FAILED"
-				job["message"] = "Failed to retrieve valid products from cache"
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to retrieve valid products from cache: %v", err)
-				return
-			}
-			if validProductsJSON == "" {
-				job["status"] = "FAILED"
-				job["message"] = "No valid products found in cache"
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("No valid products found in cache for job %s", payload.JobID)
-				return
-			}
-
-			var validProducts []domain.Product
-			if err := json.Unmarshal([]byte(validProductsJSON), &validProducts); err != nil {
-				job["status"] = "FAILED"
-				job["message"] = "Failed to deserialize valid products"
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to deserialize valid products: %v", err)
-				return
-			}
-
-			if err := repository.DB.CreateInBatches(validProducts, 100).Error; err != nil {
-				job["status"] = "FAILED"
-				job["message"] = err.Error()
-				handlers.SetBulkImportJob(payload.JobID, job)
-				logrus.Errorf("Failed to insert products into database: %v", err)
-				return
-			}
-
-			job["status"] = "COMPLETED"
-			job["message"] = "Bulk import completed successfully."
-			handlers.SetBulkImportJob(payload.JobID, job)
-			logrus.Infof("BulkImportJob %s completed.", payload.JobID)
-
-			// Delete the cached data
-			err = repository.DeleteCache("bulk_import:" + payload.JobID)
-			if err != nil {
-				logrus.Errorf("Failed to delete cached bulk import data for job %s: %v", payload.JobID, err)
-			}
-		}
-	})
-
-	message_broker.Subscribe("inventory", "bulk-export", "bulk.export", hub, func(d amqp091.Delivery) {
-		var payload BulkExportJobPayload
-		if err := json.Unmarshal(d.Body, &payload); err != nil {
-			logrus.Errorf("Failed to unmarshal BulkExportJobPayload: %v", err)
-			return
-		}
-		logrus.Infof("Processing BulkExportJob: %s for format %s by user %d", payload.JobID, payload.Format, payload.UserID)
-
-		var products []domain.Product
-		db := repository.DB.Preload("Category").Preload("SubCategory").Preload("Supplier")
-
-		if payload.Category != "" {
-			db = db.Where("category_id = ?", payload.Category)
-		}
-		if payload.Supplier != "" {
-			db = db.Where("supplier_id = ?", payload.Supplier)
-		}
-
-		if err := db.Find(&products).Error; err != nil {
-			logrus.Errorf("Failed to fetch products for export: %v", err)
-			return
-		}
-
-		buffer, err := services.GenerateProductExport(products, payload.Format)
-		if err != nil {
-			logrus.Errorf("Failed to generate product export: %v", err)
-			return
-		}
-
-		// In a real app, you would save this file to a cloud storage (e.g., S3)
-		// and notify the user with a download link.
-		// For now, we'll just log that it's done.
-		fileName := fmt.Sprintf("export-%s.%s", payload.JobID, payload.Format)
-		os.WriteFile(fileName, buffer.Bytes(), 0644)
-
-		logrus.Infof("BulkExportJob %s completed. Format: %s. File saved to %s", payload.JobID, payload.Format, fileName)
-	})
-
-	message_broker.Subscribe("inventory", "alerts", "alert.triggered", hub, func(d amqp091.Delivery) {
-		var payload AlertTriggeredPayload
-		if err := json.Unmarshal(d.Body, &payload); err != nil {
-			logrus.Errorf("Failed to unmarshal AlertTriggeredPayload: %v", err)
-			return
-		}
-		logrus.Infof("Processing AlertTriggeredEvent: %s for product %v. Message: %s", payload.Type, payload.ProductID, payload.Message)
-
-		// Notify all admin users
-		var adminUsers []domain.User
-		if err := repository.DB.Where("role = ?", "Admin").Find(&adminUsers).Error; err != nil {
-			logrus.Errorf("Failed to fetch admin users: %v", err)
-			return
-		}
-
-		for _, user := range adminUsers {
-			var userNotificationSettings domain.UserNotificationSettings
-			if err := repository.DB.Where("user_id = ?", user.ID).First(&userNotificationSettings).Error; err != nil {
-				logrus.Errorf("Failed to fetch notification settings for user %d: %v", user.ID, err)
-				continue
-			}
-
-			if userNotificationSettings.EmailNotificationsEnabled {
-				subject := fmt.Sprintf("Inventory Alert: %s", payload.Type)
-				body := fmt.Sprintf("An alert has been triggered for product ID %d: %s", payload.ProductID, payload.Message)
-				if err := notifications.SendEmail(cfg, userNotificationSettings.EmailAddress, subject, body); err != nil {
-					logrus.Errorf("Failed to send email notification to user %d: %v", user.ID, err)
+			case d, ok := <-deliveries:
+				if !ok {
+					return
 				}
+				app.handleAlertDelivery(d)
+			}
+		}
+	})
+
+	message_broker.Subscribe(ctx, "inventory", "reporting", "report.generate", func(ctx context.Context, deliveries <-chan amqp091.Delivery) {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case d, ok := <-deliveries:
+				if !ok {
+					return
+				}
+				app.handleReportingDelivery(d)
 			}
 		}
 	})
@@ -247,18 +152,137 @@ func main() {
 		logrus.Info("Running alert check...")
 		handlers.CheckAndTriggerAlerts()
 	})
+
 	c.AddFunc("@daily", func() {
 		logrus.Info("Running daily sales summary generation...")
-		handlers.GenerateDailySalesSummary()
+		reportingService.GenerateDailySalesSummary()
 	})
 	go c.Start()
 	defer c.Stop()
 
 	// Setup router
-	r := router.SetupRouter(hub)
-	// Start HTTP server
-	logrus.Infof("Server starting on port %s", cfg.ServerPort)
-	if err := http.ListenAndServe(":"+cfg.ServerPort, r); err != nil {
-		logrus.Fatalf("Server failed to start: %v", err)
+	r := router.SetupRouter(cfg, hub, jobRepo, minioUploader)
+
+	server := &http.Server{
+		Addr:    ":" + cfg.ServerPort,
+		Handler: r,
 	}
+
+	go func() {
+		logrus.Infof("Server starting on port %s", cfg.ServerPort)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.Fatalf("Server failed to start: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	logrus.Info("Shutdown signal received, shutting down gracefully...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		logrus.Errorf("Server forced to shutdown: %v", err)
+	}
+
+	logrus.Info("Server exited gracefully")
+}
+
+func (app *App) handleAlertDelivery(d amqp091.Delivery) {
+	var payload handlers.AlertTriggeredPayload
+	if err := json.Unmarshal(d.Body, &payload); err != nil {
+		logrus.Errorf("Failed to unmarshal alert payload: %v", err)
+		d.Nack(false, false)
+		return
+	}
+
+	logrus.Infof("Handling alert delivery for alert type %s", payload.Type)
+
+	// 1. Find roles subscribed to this alert type
+	var subscriptions []domain.AlertRoleSubscription
+	if err := repository.DB.Where("alert_type = ?", payload.Type).Find(&subscriptions).Error; err != nil {
+		logrus.Errorf("Failed to fetch alert subscriptions: %v", err)
+		d.Nack(true, true) // Nack and requeue
+		return
+	}
+
+	if len(subscriptions) == 0 {
+		logrus.Infof("No subscriptions found for alert type %s", payload.Type)
+		d.Ack(false) // No one is subscribed, so we're done.
+		return
+	}
+
+	var roles []string
+	for _, sub := range subscriptions {
+		roles = append(roles, sub.Role)
+	}
+
+	// 2. Find users with those roles
+	var users []domain.User
+	if err := repository.DB.Where("role IN (?)", roles).Find(&users).Error; err != nil {
+		logrus.Errorf("Failed to fetch users for roles %v: %v", roles, err)
+		d.Nack(true, true)
+		return
+	}
+
+	// 3. Send notifications to the targeted users
+	for _, user := range users {
+		var settings domain.UserNotificationSettings
+		if err := repository.DB.Where("user_id = ?", user.ID).First(&settings).Error; err != nil {
+			// If settings don't exist, we can't send notifications, so we skip.
+			continue
+		}
+
+		// Send email if enabled
+		if settings.EmailNotificationsEnabled && settings.EmailAddress != "" {
+			subject := "Inventory Alert: " + payload.Type
+			body := payload.Message
+			if err := notifications.SendEmail(app.cfg, settings.EmailAddress, subject, body); err != nil {
+				logrus.Errorf("Failed to send email to %s: %v", settings.EmailAddress, err)
+			}
+		}
+
+		// Create and persist in-app notification
+		notificationPayload, _ := json.Marshal(payload)
+		notification := domain.Notification{
+			UserID:      user.ID,
+			Type:        "ALERT",
+			Title:       "New Alert: " + payload.Type,
+			Message:     payload.Message,
+			Payload:     string(notificationPayload),
+			TriggeredAt: time.Now(),
+		}
+		if err := app.notificationRepo.CreateNotification(&notification); err != nil {
+			logrus.Errorf("Failed to create in-app notification for user %d: %v", user.ID, err)
+		} else {
+			// Send user-specific WebSocket message
+			app.hub.SendToUser(user.ID, notification)
+		}
+	}
+
+	d.Ack(false)
+}
+
+func (app *App) handleReportingDelivery(d amqp091.Delivery) {
+	var job domain.Job
+	if err := json.Unmarshal(d.Body, &job); err != nil {
+		logrus.Errorf("Failed to unmarshal job payload: %v", err)
+		d.Nack(false, false) // Negative acknowledgement, don't requeue
+		return
+	}
+
+	logrus.Infof("Handling reporting delivery for job %d: %s", job.ID, job.Type)
+
+	if err := app.reportingService.GenerateReport(&job); err != nil {
+		logrus.Errorf("Failed to generate report for job %d: %v", job.ID, err)
+		job.Status = "FAILED"
+		job.LastError = err.Error()
+		if err := app.jobRepo.UpdateJob(&job); err != nil {
+			logrus.Errorf("Failed to update job status for job %d: %v", job.ID, err)
+		}
+		d.Nack(false, false) // Nack and don't requeue
+		return
+	}
+
+	d.Ack(false) // Acknowledge the message
 }

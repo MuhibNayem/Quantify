@@ -52,7 +52,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 		Address:       req.Address,
 	}
 
-	if err := h.db.Create(&supplier).Error; err != nil {
+	if err := h.supplierRepo.CreateSupplier(&supplier); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Supplier with this name already exists", http.StatusConflict, err))
 			return
@@ -159,17 +159,19 @@ func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 			c.Error(appErrors.NewAppError("Supplier not found", http.StatusNotFound, err))
 			return
 		}
-		c.Error(appErrors.NewAppError("Failed to fetch supplier", http.StatusInternalServerError, err))
+		c.Error(appErrors.NewAppError("Failed to fetch supplier for update", http.StatusInternalServerError, err))
 		return
 	}
 
-	if err := h.db.Model(&supplier).Updates(domain.Supplier{
-		Name:          req.Name,
-		ContactPerson: req.ContactPerson,
-		Email:         req.Email,
-		Phone:         req.Phone,
-		Address:       req.Address,
-	}).Error; err != nil {
+	updates := map[string]interface{}{
+		"Name":          req.Name,
+		"ContactPerson": req.ContactPerson,
+		"Email":         req.Email,
+		"Phone":         req.Phone,
+		"Address":       req.Address,
+	}
+
+	if err := h.supplierRepo.UpdateSupplier(&supplier, updates); err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Supplier with this name already exists", http.StatusConflict, err))
 			return
@@ -213,7 +215,7 @@ func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 		return
 	}
 
-	if err := h.db.Delete(&supplier).Error; err != nil {
+	if err := h.supplierRepo.DeleteSupplier(&supplier); err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete supplier", http.StatusInternalServerError, err))
 		return
 	}

@@ -16,3 +16,13 @@ type StockAdjustmentRequest struct {
 	ReasonCode string `json:"reasonCode" binding:"required"`
 	Notes      string `json:"notes"`
 }
+type CheckoutItem struct {
+	ProductID uint `json:"productId" binding:"required"`
+	Quantity  int  `json:"quantity" binding:"required,min=1"`
+}
+
+type CheckoutRequest struct {
+	Items         []CheckoutItem `json:"items" binding:"required,dive"`
+	CustomerID    *uint          `json:"customerId"`
+	PaymentMethod string         `json:"paymentMethod" binding:"required"`
+}

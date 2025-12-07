@@ -73,6 +73,7 @@ export interface Alert extends BaseEntity {
 	TriggeredAt: string;
 	Status: string;
 	BatchID?: number;
+	Batch?: Batch;
 	Product?: Product;
 }
 
@@ -117,6 +118,19 @@ export interface StockTransfer extends BaseEntity {
 	Status?: string;
 }
 
+export interface StockAdjustment extends BaseEntity {
+	ProductID: number;
+	LocationID: number;
+	Type: string;
+	Quantity: number;
+	ReasonCode: string;
+	Notes: string;
+	AdjustedBy: number;
+	AdjustedAt: string;
+	PreviousQuantity: number;
+	NewQuantity: number;
+}
+
 export interface DemandForecast extends BaseEntity {
 	ProductID: number;
 	ForecastPeriod: string;
@@ -125,20 +139,110 @@ export interface DemandForecast extends BaseEntity {
 	Product?: Product;
 }
 
-export interface BulkImportJob {
-	jobId: string;
+export interface BulkImportValidationResult {
+	totalRecords: number;
+	validRecords: number;
+	invalidRecords: number;
+	errors: string[];
+	validProducts: Array<Record<string, unknown>>;
+	newEntities: {
+		categories: Record<string, boolean>;
+		suppliers: Record<string, boolean>;
+		locations: Record<string, boolean>;
+	};
+}
+
+export interface BulkExportResult {
+	downloadUrl: string;
+}
+
+export interface BulkImportJob extends BaseEntity {
+	type: string;
 	status: string;
+	payload?: string;
+	result?: string | BulkImportValidationResult;
+	lastError?: string;
+	retryCount?: number;
+	maxRetries?: number;
 	message?: string;
-	totalRecords?: number;
-	validRecords?: number;
-	invalidRecords?: number;
-	errors?: Array<Record<string, unknown>>;
-	preview?: Array<Record<string, unknown>>;
-	filePath?: string;
+}
+
+export interface LoyaltyAccount extends BaseEntity {
+	UserID: number;
+	Points: number;
+	Tier: string;
+}
+
+export interface Role {
+	ID: number;
+	Name: string;
+	Description: string;
+	IsSystem: boolean;
+	Permissions?: any[];
 }
 
 export interface UserSummary extends BaseEntity {
 	Username: string;
-	Role: string;
+	Role: Role; // Updated from string
 	IsActive: boolean;
+	FirstName?: string;
+	LastName?: string;
+	Email?: string;
+	PhoneNumber?: string;
+	Address?: string;
+	loyalty?: LoyaltyAccount;
+	Permissions?: string[];
+}
+
+export interface PaginatedUsers {
+	currentPage: number;
+	itemsPerPage: number;
+	totalItems: number;
+	totalPages: number;
+	users: UserSummary[];
+}
+
+export interface SupplierPerformance {
+	supplierId: number;
+	supplierName: string;
+	averageLeadTimeDays: number;
+	onTimeDeliveryRate: number;
+}
+
+export interface Notification extends BaseEntity {
+	UserID: number;
+	Type: string;
+	Title: string;
+	Message: string;
+	Payload?: string | null;
+	IsRead: boolean;
+	ReadAt?: string | null;
+	TriggeredAt: string;
+}
+
+export interface DashboardSummary {
+	stats: {
+		products: number;
+		categories: number;
+		suppliers: number;
+		alerts: number;
+	};
+	recentProducts: Product[];
+	recentAlerts: Alert[];
+	suggestions: ReorderSuggestion[];
+	chartData: number[];
+	trend: {
+		direction: 'up' | 'down' | 'neutral';
+		percentage: number;
+	};
+}
+
+export interface TimeClock extends BaseEntity {
+	UserID: number;
+	ClockIn: string;
+	ClockOut?: string | null;
+	BreakStart?: string | null;
+	BreakEnd?: string | null;
+	Status: string;
+	Notes?: string;
 }

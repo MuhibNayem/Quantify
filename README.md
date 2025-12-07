@@ -41,7 +41,9 @@ To get started with the Quantify backend, you will need to have Go, Docker, and 
 2. **Set up the environment:**
    - Navigate to the `backend` directory.
    - Copy the `.env.example` file to a new file named `.env`.
-   - Update the `.env` file with your local configuration for the database, Redis, and other services.
+   - Update the `.env` file with your local configuration for the database, Redis, MinIO, cache TTLs, and other services.
+     - **MinIO:** configure `MINIO_ENDPOINT`, credentials, bucket name, and `MINIO_USE_TLS` (set to `true` when pointing at an HTTPS endpoint).
+     - **Reporting cache TTLs:** adjust `SALES_TRENDS_CACHE_TTL`, `INVENTORY_TURNOVER_CACHE_TTL`, and `PROFIT_MARGIN_CACHE_TTL` using Go duration strings (`30m`, `2h`, etc.) to control how long each report response is cached.
 3. **Run the application:**
    - Use Docker Compose to build and run the services:
      ```bash
@@ -52,3 +54,7 @@ To get started with the Quantify backend, you will need to have Go, Docker, and 
 ## Running the Backend
 
 Once the application is running, you can interact with the API using a tool like Postman or by running the frontend application. The API endpoints are available under the `/api/v1` path.
+
+## CSRF Protection
+
+All authenticated requests that modify state (`POST`, `PUT`, `PATCH`, `DELETE`) require an `X-CSRF-Token` header. The token is returned alongside the access/refresh tokens during login and refresh workflows. Clients must store it securely and include it on every subsequent unsafe request; tokens can be rotated by calling the refresh endpoint and are invalidated on logout.

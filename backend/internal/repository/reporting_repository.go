@@ -2,9 +2,20 @@ package repository
 
 import (
 	"database/sql"
+	"fmt"
 	"inventory/backend/internal/domain"
 	"time"
+
+	"gorm.io/gorm"
 )
+
+type ReportsRepository struct {
+	DB *gorm.DB
+}
+
+func NewReportsRepository(db *gorm.DB) *ReportsRepository {
+	return &ReportsRepository{DB: db}
+}
 
 type SalesTrend struct {
 	Date       time.Time
@@ -17,13 +28,21 @@ type TopSellingProduct struct {
 	TotalSold float64
 }
 
-func GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint) ([]SalesTrend, []TopSellingProduct, error) {
+func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) ([]SalesTrend, []TopSellingProduct, error) {
 	var salesTrends []SalesTrend
 	var topSellingProducts []TopSellingProduct
 
 	// Sales Trends
-	query := DB.Model(&domain.StockAdjustment{}).
-		Select("DATE(adjusted_at) as date, SUM(quantity) as total_sales").
+	dateTrunc := "DATE"
+	switch groupBy {
+	case "week":
+		dateTrunc = "WEEK"
+	case "month":
+		dateTrunc = "MONTH"
+	}
+
+	query := r.DB.Model(&domain.StockAdjustment{}).
+		Select(fmt.Sprintf("%s(adjusted_at) as date, SUM(quantity) as total_sales", dateTrunc)).
 		Where("type = ?", "STOCK_OUT").
 		Where("reason_code = ?", "SALE").
 		Where("adjusted_at BETWEEN ? AND ?", startDate, endDate)
@@ -36,13 +55,13 @@ func GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint) 
 		query = query.Where("location_id = ?", *locationID)
 	}
 
-	err := query.Group("DATE(adjusted_at)").Order("DATE(adjusted_at)").Scan(&salesTrends).Error
+	err := query.Group(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Order(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Scan(&salesTrends).Error
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Top Selling Products
-	query = DB.Model(&domain.StockAdjustment{}).
+	query = r.DB.Model(&domain.StockAdjustment{}).
 		Select("products.id as product_id, products.name, SUM(stock_adjustments.quantity) as total_sold").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
 		Where("stock_adjustments.type = ?", "STOCK_OUT").
@@ -64,11 +83,11 @@ func GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint) 
 	return salesTrends, topSellingProducts, nil
 }
 
-func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
+func (r *ReportsRepository) GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
 	var costOfGoodsSold sql.NullFloat64
 
 	// Calculate Cost of Goods Sold (COGS)
-	query := DB.Model(&domain.StockAdjustment{}).
+	query := r.DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(stock_adjustments.quantity * products.purchase_price)").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
 		Where("stock_adjustments.type = ?", "STOCK_OUT").
@@ -93,66 +112,55 @@ func GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *
 	}
 
 	// Calculate Average Inventory Value
-	var endInventoryValue sql.NullFloat64
-
-	// This is a simplified calculation. A real implementation would need to reconstruct the inventory at a specific point in time.
-	// For simplicity, we'll use the current inventory as a proxy for the end inventory and calculate the start inventory based on adjustments.
-
-	// End Inventory Value
-	query = DB.Model(&domain.Product{}).
-		Select("SUM(products.selling_price * batches.quantity)").
-		Joins("JOIN batches ON batches.product_id = products.id")
-	if categoryID != nil {
-		query = query.Where("products.category_id = ?", *categoryID)
-	}
-	if locationID != nil {
-		query = query.Where("batches.location_id = ?", *locationID)
-	}
-	err = query.Scan(&endInventoryValue).Error
+	startInvValue, err := r.getInventoryValueAt(startDate, categoryID, locationID)
 	if err != nil {
 		return 0, 0, err
 	}
-
-	endInvValue := 0.0
-	if endInventoryValue.Valid {
-		endInvValue = endInventoryValue.Float64
-	}
-
-	// Start Inventory Value (End Inventory Value - changes during the period)
-	var netChangeInValue sql.NullFloat64
-	query = DB.Model(&domain.StockAdjustment{}).
-		Select("SUM(CASE WHEN stock_adjustments.type = 'STOCK_IN' THEN stock_adjustments.quantity * products.purchase_price ELSE -stock_adjustments.quantity * products.purchase_price END)").
-		Joins("JOIN products ON products.id = stock_adjustments.product_id").
-		Where("stock_adjustments.adjusted_at BETWEEN ? AND ?", startDate, endDate)
-	if categoryID != nil {
-		query = query.Where("products.category_id = ?", *categoryID)
-	}
-	if locationID != nil {
-		query = query.Where("stock_adjustments.location_id = ?", *locationID)
-	}
-	err = query.Scan(&netChangeInValue).Error
+	endInvValue, err := r.getInventoryValueAt(endDate, categoryID, locationID)
 	if err != nil {
 		return 0, 0, err
 	}
-
-	netChangeValue := 0.0
-	if netChangeInValue.Valid {
-		netChangeValue = netChangeInValue.Float64
-	}
-
-	startInvValue := endInvValue - netChangeValue
 
 	averageInventoryValue := (startInvValue + endInvValue) / 2
 
 	return cogsValue, averageInventoryValue, nil
 }
 
-func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
+func (r *ReportsRepository) getInventoryValueAt(date time.Time, categoryID, locationID *uint) (float64, error) {
+	var totalValue sql.NullFloat64
+
+	// Get total stock value up to the given date
+	query := r.DB.Model(&domain.StockAdjustment{}).
+		Select("SUM(CASE WHEN type = 'STOCK_IN' THEN quantity * products.purchase_price ELSE -quantity * products.purchase_price END)").
+		Joins("JOIN products ON products.id = stock_adjustments.product_id").
+		Where("adjusted_at <= ?", date)
+
+	if categoryID != nil {
+		query = query.Where("products.category_id = ?", *categoryID)
+	}
+	if locationID != nil {
+		query = query.Where("location_id = ?", *locationID)
+	}
+
+	err := query.Scan(&totalValue).Error
+	if err != nil {
+		return 0, err
+	}
+
+	value := 0.0
+	if totalValue.Valid {
+		value = totalValue.Float64
+	}
+
+	return value, nil
+}
+
+func (r *ReportsRepository) GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
 	var totalRevenue sql.NullFloat64
 	var totalCost sql.NullFloat64
 
 	// Calculate Total Revenue
-	query := DB.Model(&domain.StockAdjustment{}).
+	query := r.DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(stock_adjustments.quantity * products.selling_price)").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
 		Where("stock_adjustments.type = ?", "STOCK_OUT").
@@ -177,7 +185,7 @@ func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint)
 	}
 
 	// Calculate Total Cost (COGS)
-	query = DB.Model(&domain.StockAdjustment{}).
+	query = r.DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(stock_adjustments.quantity * products.purchase_price)").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
 		Where("stock_adjustments.type = ?", "STOCK_OUT").
@@ -204,10 +212,10 @@ func GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint)
 	return revenueValue, costValue, nil
 }
 
-func GetDailySalesSummary(date time.Time) (float64, error) {
+func (r *ReportsRepository) GetDailySalesSummary(date time.Time) (float64, error) {
 	var totalSales sql.NullFloat64
 
-	query := DB.Model(&domain.StockAdjustment{}).
+	query := r.DB.Model(&domain.StockAdjustment{}).
 		Select("SUM(stock_adjustments.quantity * products.selling_price)").
 		Joins("JOIN products ON products.id = stock_adjustments.product_id").
 		Where("stock_adjustments.type = ?", "STOCK_OUT").

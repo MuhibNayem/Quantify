@@ -24,57 +24,57 @@ Here is a detailed action plan with tasks and sub-tasks.
 
 #### Task 1: Implement Payment Processing
 
-*   [ ] **Sub-task 1.1:** Choose a payment gateway (e.g., Stripe).
-*   [ ] **Sub-task 1.2:** Create a new `payment` service and handler.
-*   [ ] **Sub-task 1.3:** Integrate the payment gateway's Go SDK.
-*   [ ] **Sub-task 1.4:** Create a `Transaction` model to store payment data.
-*   [ ] **Sub-task 1.5:** Implement API endpoints for processing payments.
-*   [ ] **Sub-task 1.6:** Write unit and integration tests for payment processing.
+*   [x] **Sub-task 1.1:** Choose a payment gateway (SSLCommerz for cards, bKash for mobile wallet).
+*   [x] **Sub-task 1.2:** Create a new `payment` service and handler.
+*   [x] **Sub-task 1.3:** Integrate the payment gateway's API (direct HTTP integration).
+*   [x] **Sub-task 1.4:** Create a `Transaction` model to store payment data.
+*   [x] **Sub-task 1.5:** Implement API endpoints for processing payments.
+*   [ ] **Sub-task 1.6:** Write unit and integration tests for payment processing (pending).
 
 #### Task 2: Enhance Inventory Management
 
-*   [ ] **Sub-task 2.1:** Implement demand forecasting.
-    *   [ ] **Sub-task 2.1.1:** Create a `forecasting` service.
-    *   [ ] **Sub-task 2.1.2:** Implement a simple forecasting algorithm (e.g., moving average).
-    *   [ ] **Sub-task 2.1.3:** Create a `Forecast` model to store forecast data.
-*   [ ] **Sub-task 2.2:** Add support for barcode generation and scanning.
-    *   [ ] **Sub-task 2.2.1:** Integrate a barcode generation library.
-    *   [ ] **Sub-task 2.2.2:** Enhance the `Product` model with barcode data.
+*   [x] **Sub-task 2.1:** Implement demand forecasting.
+    *   [x] **Sub-task 2.1.1:** Create a `forecasting` service.
+    *   [x] **Sub-task 2.1.2:** Implement a simple forecasting algorithm (e.g., moving average).
+    *   [x] **Sub-task 2.1.3:** Create a `Forecast` model to store forecast data.
+*   [x] **Sub-task 2.2:** Add support for barcode generation and scanning.
+    *   [x] **Sub-task 2.2.1:** Integrate a barcode generation library.
+    *   [x] **Sub-task 2.2.2:** Enhance the `Product` model with barcode data.
 
 ### Phase 2: CRM and Employee Management
 
 #### Task 3: Build CRM Features
 
-*   [ ] **Sub-task 3.1:** Extend the `User` model for customer profiles.
-*   [ ] **Sub-task 3.2:** Create a `LoyaltyAccount` model.
-*   [ ] **Sub-task 3.3:** Implement logic for loyalty points.
-*   [ ] **Sub-task 3.4:** Develop API endpoints for CRM.
+*   [x] **Sub-task 3.1:** Extend the `User` model for customer profiles.
+*   [x] **Sub-task 3.2:** Create a `LoyaltyAccount` model.
+*   [x] **Sub-task 3.3:** Implement logic for loyalty points.
+*   [x] **Sub-task 3.4:** Develop API endpoints for CRM.
 
 #### Task 4: Implement Employee Management
 
-*   [ ] **Sub-task 4.1:** Implement Role-Based Access Control (RBAC).
-    *   [ ] **Sub-task 4.1.1:** Enhance the authentication middleware to check roles.
-    *   [ ] **Sub-task 4.1.2:** Define roles (`Admin`, `Manager`, `Staff`) in the system.
-*   [ ] **Sub-task 4.2:** Implement time tracking.
-    *   [ ] **Sub-task 4.2.1:** Create a `TimeClock` model.
-    *   [ ] **Sub-task 4.2.2:** Develop API endpoints for clock-in/out.
+*   [x] **Sub-task 4.1:** Implement Role-Based Access Control (RBAC).
+    *   [x] **Sub-task 4.1.1:** Enhance the authentication middleware to check roles.
+    *   [x] **Sub-task 4.1.2:** Define roles (`Admin`, `Manager`, `Staff`) in the system.
+*   [x] **Sub-task 4.2:** Implement time tracking.
+    *   [x] **Sub-task 4.2.1:** Create a `TimeClock` model.
+    *   [x] **Sub-task 4.2.2:** Develop API endpoints for clock-in/out.
 
 ### Phase 3: Integrations and Reporting
 
 #### Task 5: Develop Third-Party Integrations
 
-*   [ ] **Sub-task 5.1:** E-commerce integration (e.g., Shopify).
-    *   [ ] **Sub-task 5.1.1:** Create a `shopify` service.
-    *   [ ] **Sub-task 5.1.2:** Implement webhook handlers for real-time updates.
-*   [ ] **Sub-task 5.2:** Accounting software integration (e.g., QuickBooks).
-    *   [ ] **Sub-task 5.2.1:** Create a `quickbooks` service.
-    *   [ ] **Sub-task 5.2.2:** Develop services to sync financial data.
+*   [x] **Sub-task 5.1:** E-commerce integration (e.g., Shopify).
+    *   [x] **Sub-task 5.1.1:** Create a `shopify` service.
+    *   [x] **Sub-task 5.1.2:** Implement webhook handlers for real-time updates.
+*   [x] **Sub-task 5.2:** Accounting software integration (e.g., QuickBooks).
+    *   [x] **Sub-task 5.2.1:** Create a `quickbooks` service.
+    *   [x] **Sub-task 5.2.2:** Develop services to sync financial data.
 
 #### Task 6: Enhance Reporting and Analytics
 
-*   [ ] **Sub-task 6.1:** Create a `reporting` service.
-*   [ ] **Sub-task 6.2:** Develop new API endpoints for various reports (sales, inventory, etc.).
-*   [ ] **Sub-task 6.3:** Implement logic for generating and exporting reports.
+*   [x] **Sub-task 6.1:** Create a `reporting` service.
+*   [x] **Sub-task 6.2:** Develop new API endpoints for various reports (sales, inventory, etc.).
+*   [x] **Sub-task 6.3:** Implement logic for generating and exporting reports.
 
 ### Phase 4: Security and Finalization
 

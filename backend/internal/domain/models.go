@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,22 +11,37 @@ import (
 type Product struct {
 	gorm.Model
 	SKU           string `gorm:"uniqueIndex;not null"`
-	Name          string `gorm:"not null"`
+	Name          string `gorm:"not null;index"` // Index for name searches
 	Description   string
-	CategoryID    uint
+	CategoryID    uint `gorm:"index"` // Index for category filters
 	Category      Category
-	SubCategoryID uint
+	SubCategoryID uint `gorm:"index"` // Index for subcategory filters
 	SubCategory   SubCategory
-	SupplierID    uint
+	SupplierID    uint `gorm:"index"` // Index for supplier filters
 	Supplier      Supplier
-	Brand         string
+	Brand         string `gorm:"index"` // Index for brand filters
 	PurchasePrice float64
 	SellingPrice  float64
-	BarcodeUPC    string `gorm:"uniqueIndex"`
+	BarcodeUPC    string `gorm:"index"` // Index for barcode lookups
 	ImageURLs     string // Storing as comma-separated string or JSON string for simplicity
-	Status        string `gorm:"default:'Active'"` // Active, Archived, Discontinued
-	LocationID    uint
+	Status        string `gorm:"default:'Active';index"` // Index for status filters (Active, Archived, Discontinued)
+	LocationID    uint   `gorm:"index"`                  // Index for location filters
 	Location      Location
+}
+
+// GetID implements the Searchable interface for Product.
+func (p *Product) GetID() uint {
+	return p.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Product.
+func (p *Product) GetSearchableContent() string {
+	return strings.Join([]string{p.Name, p.SKU, p.Description, p.Brand, p.BarcodeUPC}, " ")
+}
+
+// GetEntityType implements the Searchable interface for Product.
+func (p *Product) GetEntityType() string {
+	return "product"
 }
 
 // Category represents a product category.
@@ -35,22 +51,52 @@ type Category struct {
 	SubCategories []SubCategory
 }
 
+// GetID implements the Searchable interface for Category.
+func (c *Category) GetID() uint {
+	return c.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Category.
+func (c *Category) GetSearchableContent() string {
+	return c.Name
+}
+
+// GetEntityType implements the Searchable interface for Category.
+func (c *Category) GetEntityType() string {
+	return "category"
+}
+
 // SubCategory represents a product sub-category.
 type SubCategory struct {
 	gorm.Model
-	Name       string `gorm:"not null"`
-	CategoryID uint   `gorm:"not null"`
+	Name       string `gorm:"not null;index"`
+	CategoryID uint   `gorm:"not null;index"` // Index for category lookups
 	Category   Category
 }
 
 // Supplier represents a product supplier.
 type Supplier struct {
 	gorm.Model
-	Name          string `gorm:"not null"`
+	Name          string `gorm:"not null;index"` // Index for name searches
 	ContactPerson string
-	Email         string
-	Phone         string
+	Email         string `gorm:"index"` // Index for email lookups
+	Phone         string `gorm:"index"` // Index for phone lookups
 	Address       string
+}
+
+// GetID implements the Searchable interface for Supplier.
+func (s *Supplier) GetID() uint {
+	return s.ID
+}
+
+// GetSearchableContent implements the Searchable interface for Supplier.
+func (s *Supplier) GetSearchableContent() string {
+	return strings.Join([]string{s.Name, s.ContactPerson, s.Email, s.Phone}, " ")
+}
+
+// GetEntityType implements the Searchable interface for Supplier.
+func (s *Supplier) GetEntityType() string {
+	return "supplier"
 }
 
 // Location represents a physical inventory location (e.g., warehouse, store).
@@ -63,9 +109,9 @@ type Location struct {
 // Batch represents a batch of stock for a product.
 type Batch struct {
 	gorm.Model
-	ProductID   uint `gorm:"not null"`
+	ProductID   uint `gorm:"not null;index:idx_product_location"`
 	Product     Product
-	LocationID  uint
+	LocationID  uint `gorm:"index:idx_product_location"`
 	Location    Location
 	BatchNumber string     `gorm:"not null"`
 	Quantity    int        `gorm:"not null"`
@@ -75,7 +121,7 @@ type Batch struct {
 // StockAdjustment represents a manual adjustment to stock levels.
 type StockAdjustment struct {
 	gorm.Model
-	ProductID        uint `gorm:"not null"`
+	ProductID        uint `gorm:"not null;index"`
 	Product          Product
 	LocationID       uint
 	Location         Location
@@ -83,22 +129,22 @@ type StockAdjustment struct {
 	Quantity         int    `gorm:"not null"`
 	ReasonCode       string `gorm:"not null"` // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
 	Notes            string
-	AdjustedBy       uint // UserID of the person who made the adjustment
-	AdjustedAt       time.Time
-	PreviousQuantity int // Snapshot of quantity before adjustment
-	NewQuantity      int // Snapshot of quantity after adjustment
+	AdjustedBy       uint      // UserID of the person who made the adjustment
+	AdjustedAt       time.Time `gorm:"index"`
+	PreviousQuantity int       // Snapshot of quantity before adjustment
+	NewQuantity      int       // Snapshot of quantity after adjustment
 }
 
 // Alert represents a stock-related alert.
 type Alert struct {
 	gorm.Model
-	ProductID   uint `gorm:"not null"`
+	ProductID   uint `gorm:"not null;index:idx_alert_product_status"` // Composite index for product + status queries
 	Product     Product
-	Type        string `gorm:"not null"` // e.g., "LOW_STOCK", "OUT_OF_STOCK", "OVERSTOCK", "EXPIRY_ALERT"
-	Message     string `gorm:"not null"`
-	TriggeredAt time.Time
-	Status      string `gorm:"default:'ACTIVE'"` // ACTIVE, RESOLVED
-	BatchID     *uint  // Optional, for expiry alerts
+	Type        string    `gorm:"not null;index"` // Index for filtering by alert type
+	Message     string    `gorm:"not null"`
+	TriggeredAt time.Time `gorm:"index"`                                           // Index for date range queries
+	Status      string    `gorm:"default:'ACTIVE';index:idx_alert_product_status"` // ACTIVE, RESOLVED
+	BatchID     *uint     // Optional, for expiry alerts
 	Batch       *Batch
 }
 
@@ -107,8 +153,32 @@ type User struct {
 	gorm.Model
 	Username string `gorm:"uniqueIndex;not null"`
 	Password string `gorm:"not null"`
-	Role     string `gorm:"not null"` // e.g., "Admin", "Manager", "Staff"
-	IsActive bool   `gorm:"default:false"`
+	// Role           string `gorm:"not null"` // Deprecated in favor of RoleID
+	LegacyRole     string `gorm:"column:role"`  // Map to old column for migration
+	RoleID         uint   `gorm:"default:null"` // Allow null during migration or for basic users
+	Role           Role
+	IsActive       bool `gorm:"default:false"`
+	FirstName      string
+	LastName       string
+	Email          string `gorm:"uniqueIndex"`
+	PhoneNumber    string `gorm:"uniqueIndex"`
+	Address        string
+	LoyaltyAccount *LoyaltyAccount `json:"loyalty,omitempty"`
+}
+
+// GetID implements the Searchable interface for User.
+func (u *User) GetID() uint {
+	return u.ID
+}
+
+// GetSearchableContent implements the Searchable interface for User.
+func (u *User) GetSearchableContent() string {
+	return strings.Join([]string{u.Username, u.FirstName, u.LastName, u.Email, u.PhoneNumber}, " ")
+}
+
+// GetEntityType implements the Searchable interface for User.
+func (u *User) GetEntityType() string {
+	return "user"
 }
 
 // ProductAlertSettings stores alert thresholds per product.
@@ -204,4 +274,70 @@ type PurchaseOrderItem struct {
 	OrderedQuantity  int     `gorm:"not null"`
 	ReceivedQuantity int     `gorm:"default:0"` // Quantity actually received
 	UnitPrice        float64 `gorm:"not null"`
+}
+
+// Transaction represents a payment transaction.
+type Transaction struct {
+	gorm.Model
+	OrderID              string `gorm:"not null"`
+	Amount               int64  `gorm:"not null"` // Amount in smallest currency unit (e.g., cents)
+	Currency             string `gorm:"not null"`
+	PaymentMethod        string `gorm:"not null"` // e.g., "card", "bkash"
+	Status               string `gorm:"not null"` // e.g., "pending", "succeeded", "failed"
+	GatewayTransactionID string `gorm:"uniqueIndex;not null"`
+}
+
+// LoyaltyAccount represents a customer's loyalty account.
+type LoyaltyAccount struct {
+	gorm.Model
+	UserID uint `gorm:"uniqueIndex;not null"`
+	User   User
+	Points int    `gorm:"default:0"`
+	Tier   string `gorm:"default:'Bronze'"` // e.g., Bronze, Silver, Gold
+}
+
+type Job struct {
+	gorm.Model
+	Type          string     `json:"type"`
+	Status        string     `json:"status"`
+	Payload       string     `json:"payload"`
+	Result        string     `json:"result"`
+	LastError     string     `json:"lastError"`
+	RetryCount    int        `json:"retryCount"`
+	MaxRetries    int        `json:"maxRetries"`
+	LastAttemptAt *time.Time `json:"lastAttemptAt"`
+}
+
+// Notification represents an in-app notification for a user.
+type Notification struct {
+	gorm.Model
+	UserID      uint `gorm:"not null;index:idx_user_read"` // Composite index for user + read status
+	User        User
+	Type        string `gorm:"not null;index"` // Index for filtering by type
+	Title       string `gorm:"not null"`
+	Message     string `gorm:"not null"`
+	Payload     string // JSON string for additional data (e.g., productID, orderID)
+	IsRead      bool   `gorm:"default:false;index:idx_user_read"` // Part of composite index
+	ReadAt      *time.Time
+	TriggeredAt time.Time `gorm:"index"` // Index for date sorting
+}
+
+// AlertRoleSubscription links an alert type to a user role.
+type AlertRoleSubscription struct {
+	gorm.Model
+	AlertType string `gorm:"not null;uniqueIndex:idx_alert_role"`
+	Role      string `gorm:"not null;uniqueIndex:idx_alert_role"`
+}
+
+// TimeClock represents an employee's time clock entry.
+type TimeClock struct {
+	gorm.Model
+	UserID     uint `gorm:"not null"`
+	User       User
+	ClockIn    time.Time
+	ClockOut   *time.Time
+	BreakStart *time.Time
+	BreakEnd   *time.Time
+	Status     string `gorm:"default:'CLOCKED_IN'"` // CLOCKED_IN, ON_BREAK, CLOCKED_OUT
+	Notes      string
 }
