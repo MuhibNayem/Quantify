@@ -9,6 +9,7 @@ import (
 type SettingsRepository interface {
 	GetSettingsByGroup(group string) ([]domain.SystemSetting, error)
 	GetAllSettings() ([]domain.SystemSetting, error)
+	GetSettingByKey(key string) (*domain.SystemSetting, error)
 	UpdateSetting(key, value string) error
 }
 
@@ -35,4 +36,10 @@ func (r *settingsRepository) GetAllSettings() ([]domain.SystemSetting, error) {
 
 func (r *settingsRepository) UpdateSetting(key, value string) error {
 	return r.db.Model(&domain.SystemSetting{}).Where("key = ?", key).Update("value", value).Error
+}
+
+func (r *settingsRepository) GetSettingByKey(key string) (*domain.SystemSetting, error) {
+	var setting domain.SystemSetting
+	err := r.db.Where("key = ?", key).First(&setting).Error
+	return &setting, err
 }

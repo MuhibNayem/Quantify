@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
@@ -144,43 +145,61 @@ func (h *ReplenishmentHandler) ListReorderSuggestions(c *gin.Context) {
 // @Router /replenishment/suggestions/{suggestionId}/create-po [post]
 func CreatePOFromSuggestion(c *gin.Context) {
 	suggestionID := c.Param("suggestionId")
-	var suggestion domain.ReorderSuggestion
-	if err := repository.DB.Preload("Product").Preload("Supplier").First(&suggestion, suggestionID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.Error(appErrors.NewAppError("Reorder suggestion not found", http.StatusNotFound, err))
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	authUserID, ok := userIDVal.(uint)
+	if !ok {
+		c.Error(appErrors.NewAppError("Invalid user ID type in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	var po domain.PurchaseOrder
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		var suggestion domain.ReorderSuggestion
+		if err := tx.Preload("Product").Preload("Supplier").Clauses(clause.Locking{Strength: "UPDATE"}).First(&suggestion, suggestionID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return appErrors.NewAppError("Reorder suggestion not found", http.StatusNotFound, err)
+			}
+			return appErrors.NewAppError("Failed to fetch suggestion", http.StatusInternalServerError, err)
+		}
+
+		if suggestion.Status != "PENDING" {
+			return appErrors.NewAppError("Suggestion is not in PENDING state", http.StatusBadRequest, nil)
+		}
+
+		po = domain.PurchaseOrder{
+			SupplierID: suggestion.SupplierID,
+			Status:     "DRAFT",
+			OrderDate:  time.Now(),
+			CreatedBy:  authUserID,
+			PurchaseOrderItems: []domain.PurchaseOrderItem{
+				{
+					ProductID:       suggestion.ProductID,
+					OrderedQuantity: suggestion.SuggestedOrderQuantity,
+					UnitPrice:       suggestion.Product.PurchasePrice,
+				},
+			},
+		}
+
+		if err := tx.Create(&po).Error; err != nil {
+			return appErrors.NewAppError("Failed to create purchase order", http.StatusInternalServerError, err)
+		}
+
+		if err := tx.Model(&suggestion).Update("Status", "PO_CREATED").Error; err != nil {
+			return appErrors.NewAppError("Failed to update suggestion status", http.StatusInternalServerError, err)
+		}
+		return nil
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
 			return
 		}
-		c.Error(appErrors.NewAppError("Failed to fetch suggestion", http.StatusInternalServerError, err))
-		return
-	}
-
-	if suggestion.Status != "PENDING" {
-		c.Error(appErrors.NewAppError("Suggestion is not in PENDING state", http.StatusBadRequest, nil))
-		return
-	}
-
-	po := domain.PurchaseOrder{
-		SupplierID: suggestion.SupplierID,
-		Status:     "DRAFT",
-		OrderDate:  time.Now(),
-		CreatedBy:  1, // TODO: Replace with actual UserID
-		PurchaseOrderItems: []domain.PurchaseOrderItem{
-			{
-				ProductID:       suggestion.ProductID,
-				OrderedQuantity: suggestion.SuggestedOrderQuantity,
-				UnitPrice:       suggestion.Product.PurchasePrice,
-			},
-		},
-	}
-
-	if err := repository.DB.Create(&po).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to create purchase order", http.StatusInternalServerError, err))
-		return
-	}
-
-	// Update suggestion status
-	if err := repository.DB.Model(&suggestion).Update("Status", "PO_CREATED").Error; err != nil {
-		c.Error(appErrors.NewAppError("Failed to update suggestion status", http.StatusInternalServerError, err))
 		return
 	}
 
@@ -238,26 +257,42 @@ func SendPurchaseOrder(c *gin.Context) {
 // @Router /purchase-orders/{poId}/approve [post]
 func ApprovePurchaseOrder(c *gin.Context) {
 	poID := c.Param("poId")
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	authUserID, ok := userIDVal.(uint)
+	if !ok {
+		c.Error(appErrors.NewAppError("Invalid user ID type in context", http.StatusInternalServerError, nil))
+		return
+	}
+
 	var po domain.PurchaseOrder
-	if err := repository.DB.First(&po, poID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.Error(appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err))
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&po, poID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err)
+			}
+			return appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err)
+		}
+
+		if po.Status != "DRAFT" {
+			return appErrors.NewAppError("Purchase Order is not in DRAFT state", http.StatusBadRequest, nil)
+		}
+
+		return tx.Model(&po).Updates(map[string]interface{}{
+			"Status":     "APPROVED",
+			"ApprovedBy": authUserID,
+			"ApprovedAt": time.Now(),
+		}).Error
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
 			return
 		}
-		c.Error(appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err))
-		return
-	}
-
-	if po.Status != "DRAFT" {
-		c.Error(appErrors.NewAppError("Purchase Order is not in DRAFT state", http.StatusBadRequest, nil))
-		return
-	}
-
-	if err := repository.DB.Model(&po).Updates(map[string]interface{}{
-		"Status":     "APPROVED",
-		"ApprovedBy": 1, // TODO: Replace with actual UserID
-		"ApprovedAt": time.Now(),
-	}).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to approve purchase order", http.StatusInternalServerError, err))
 		return
 	}
@@ -398,23 +433,18 @@ func ReceivePurchaseOrder(c *gin.Context) {
 	}
 
 	var po domain.PurchaseOrder
-	if err := repository.DB.Preload("PurchaseOrderItems").First(&po, poID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.Error(appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err))
-			return
-		}
-		c.Error(appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err))
-		return
-	}
-
-	// Only allow receiving if PO is in APPROVED or SENT status
-	if po.Status != "APPROVED" && po.Status != "SENT" {
-		c.Error(appErrors.NewAppError(fmt.Sprintf("Cannot receive goods for Purchase Order in %s status", po.Status), http.StatusConflict, nil))
-		return
-	}
-
-	// Use a transaction for receiving goods to ensure atomicity
 	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("PurchaseOrderItems").First(&po, poID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err)
+			}
+			return appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err)
+		}
+
+		if po.Status != "APPROVED" && po.Status != "SENT" {
+			return appErrors.NewAppError(fmt.Sprintf("Cannot receive goods for Purchase Order in %s status", po.Status), http.StatusConflict, nil)
+		}
+
 		for _, receivedItem := range req.Items {
 			var poItem domain.PurchaseOrderItem
 			if err := tx.First(&poItem, receivedItem.PurchaseOrderItemID).Error; err != nil {
@@ -425,18 +455,15 @@ func ReceivePurchaseOrder(c *gin.Context) {
 				return appErrors.NewAppError("Purchase Order Item does not belong to this Purchase Order", http.StatusBadRequest, nil)
 			}
 
-			// Check if received quantity exceeds ordered quantity
 			if receivedItem.ReceivedQuantity > (poItem.OrderedQuantity - poItem.ReceivedQuantity) {
 				return appErrors.NewAppError(fmt.Sprintf("Received quantity %d for item %d exceeds remaining ordered quantity %d", receivedItem.ReceivedQuantity, poItem.ID, (poItem.OrderedQuantity-poItem.ReceivedQuantity)), http.StatusBadRequest, nil)
 			}
 
-			// Update received quantity for PO item
 			poItem.ReceivedQuantity += receivedItem.ReceivedQuantity
 			if err := tx.Save(&poItem).Error; err != nil {
 				return appErrors.NewAppError(fmt.Sprintf("Failed to update received quantity for PO item %d", poItem.ID), http.StatusInternalServerError, err)
 			}
 
-			// Create new batch and update stock
 			batch := domain.Batch{
 				ProductID:   poItem.ProductID,
 				BatchNumber: receivedItem.BatchNumber,
@@ -448,9 +475,13 @@ func ReceivePurchaseOrder(c *gin.Context) {
 			}
 		}
 
-		// Check if all items are fully received to update PO status to RECEIVED
+		var refreshedItems []domain.PurchaseOrderItem
+		if err := tx.Where("purchase_order_id = ?", po.ID).Find(&refreshedItems).Error; err != nil {
+			return appErrors.NewAppError("Failed to reload purchase order items", http.StatusInternalServerError, err)
+		}
+
 		allReceived := true
-		for _, item := range po.PurchaseOrderItems {
+		for _, item := range refreshedItems {
 			if item.OrderedQuantity != item.ReceivedQuantity {
 				allReceived = false
 				break
@@ -458,15 +489,10 @@ func ReceivePurchaseOrder(c *gin.Context) {
 		}
 
 		if allReceived {
-			if err := tx.Model(&po).Updates(map[string]interface{}{"Status": "RECEIVED", "ActualDeliveryDate": time.Now()}).Error; err != nil {
-				return appErrors.NewAppError("Failed to update PO status to RECEIVED", http.StatusInternalServerError, err)
-			}
-		} else {
-			if err := tx.Model(&po).Update("Status", "PARTIALLY_RECEIVED").Error; err != nil {
-				return appErrors.NewAppError("Failed to update PO status to PARTIALLY_RECEIVED", http.StatusInternalServerError, err)
-			}
+			return tx.Model(&po).Updates(map[string]interface{}{"Status": "RECEIVED", "ActualDeliveryDate": time.Now()}).Error
 		}
-		return nil
+
+		return tx.Model(&po).Update("Status", "PARTIALLY_RECEIVED").Error
 	})
 
 	if err != nil {

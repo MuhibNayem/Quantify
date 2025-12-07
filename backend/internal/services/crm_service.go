@@ -6,6 +6,8 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 
+	"strconv"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -26,14 +28,16 @@ type CRMService interface {
 }
 
 type crmService struct {
-	repo repository.CRMRepository
-	db   *gorm.DB
+	repo     repository.CRMRepository
+	db       *gorm.DB
+	settings SettingsService
 }
 
-func NewCRMService(repo repository.CRMRepository, db *gorm.DB) CRMService {
+func NewCRMService(repo repository.CRMRepository, db *gorm.DB, settings SettingsService) CRMService {
 	return &crmService{
-		repo: repo,
-		db:   db,
+		repo:     repo,
+		db:       db,
+		settings: settings,
 	}
 }
 
@@ -124,12 +128,32 @@ func (s *crmService) CreateLoyaltyAccount(userID uint) (*domain.LoyaltyAccount, 
 }
 
 // calculateTier determines the loyalty tier based on points (bidirectional)
-func calculateTier(points int) string {
-	if points >= 10000 {
+func (s *crmService) calculateTier(points int) string {
+	silverThreshold := 500
+	goldThreshold := 2500
+	platinumThreshold := 10000
+
+	if val, err := s.settings.GetSetting("loyalty_tier_silver"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			silverThreshold = v
+		}
+	}
+	if val, err := s.settings.GetSetting("loyalty_tier_gold"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			goldThreshold = v
+		}
+	}
+	if val, err := s.settings.GetSetting("loyalty_tier_platinum"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			platinumThreshold = v
+		}
+	}
+
+	if points >= platinumThreshold {
 		return "Platinum"
-	} else if points >= 5000 {
+	} else if points >= goldThreshold {
 		return "Gold"
-	} else if points >= 1000 {
+	} else if points >= silverThreshold {
 		return "Silver"
 	}
 	return "Bronze"
@@ -148,7 +172,7 @@ func (s *crmService) AddLoyaltyPoints(userID uint, points int) (*domain.LoyaltyA
 	}
 
 	// Update tier based on new balance
-	newTier := calculateTier(account.Points)
+	newTier := s.calculateTier(account.Points)
 	if account.Tier != newTier {
 		account.Tier = newTier
 		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
@@ -182,7 +206,7 @@ func (s *crmService) RedeemLoyaltyPoints(userID uint, points int) (*domain.Loyal
 	}
 
 	// Update tier based on new balance (supports downgrades)
-	newTier := calculateTier(account.Points)
+	newTier := s.calculateTier(account.Points)
 	if account.Tier != newTier {
 		account.Tier = newTier
 		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {

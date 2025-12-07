@@ -471,9 +471,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	// Get the role of the authenticated user from the context
-	authUserRole, exists := c.Get("role")
+	authUserRoleVal, exists := c.Get("role")
 	if !exists {
 		c.Error(appErrors.NewAppError("User role not found in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	authUserRole, _ := authUserRoleVal.(string)
+
+	if !canAccessUser(c, user.ID) && authUserRole != "Admin" {
+		c.Error(appErrors.NewAppError("Forbidden: cannot update this user", http.StatusForbidden, nil))
 		return
 	}
 

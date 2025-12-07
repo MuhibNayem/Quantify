@@ -7,6 +7,7 @@ import (
 
 type SettingsService interface {
 	GetAllSettings() (map[string][]domain.SystemSetting, error)
+	GetSetting(key string) (string, error)
 	UpdateSetting(key, value string) error
 }
 
@@ -33,4 +34,12 @@ func (s *settingsService) GetAllSettings() (map[string][]domain.SystemSetting, e
 
 func (s *settingsService) UpdateSetting(key, value string) error {
 	return s.repo.UpdateSetting(key, value)
+}
+
+func (s *settingsService) GetSetting(key string) (string, error) {
+	setting, err := s.repo.GetSettingByKey(key)
+	if err != nil {
+		return "", err
+	}
+	return setting.Value, nil
 }

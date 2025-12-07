@@ -21,7 +21,9 @@
 		Lock,
 		LayoutTemplate,
 		ShieldCheck,
-		Sparkles
+		Sparkles,
+		Coins,
+		Percent
 	} from 'lucide-svelte';
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -34,7 +36,13 @@
 		currency_symbol: '$',
 		timezone: 'UTC',
 		privacy_policy: '',
-		terms_of_service: ''
+		terms_of_service: '',
+		loyalty_points_earning_rate: '1',
+		loyalty_points_redemption_rate: '0.01',
+		loyalty_tier_silver: '500',
+		loyalty_tier_gold: '2500',
+		loyalty_tier_platinum: '10000',
+		tax_rate_percentage: '0'
 	};
 	let activeTab = 'general';
 
@@ -94,6 +102,7 @@
 
 	const allTabs = [
 		{ id: 'general', label: 'General', icon: Settings, permission: 'settings.view' },
+		{ id: 'business', label: 'Business Rules', icon: Coins, permission: 'settings.view' },
 		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck, permission: 'roles.view' },
 		{ id: 'policies', label: 'Policies', icon: FileText, permission: 'settings.view' },
 		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
@@ -260,6 +269,188 @@
 				</div>
 			</Tabs.Content>
 
+			<!-- Business Rules -->
+			<Tabs.Content value="business" class="space-y-6 pt-2 outline-none">
+				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
+					<!-- Loyalty Program -->
+					<div
+						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-amber-600 shadow-sm"
+							>
+								<Sparkles size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">Loyalty Program</h3>
+								<p class="text-slate-500">
+									Configure how customers earn and redeem points, and set tier thresholds.
+								</p>
+							</div>
+						</div>
+
+						<div class="grid gap-8 md:grid-cols-2">
+							<!-- Earning & Redemption -->
+							<div class="space-y-6">
+								<h4 class="font-semibold text-slate-700">Points Configuration</h4>
+								<div class="space-y-3">
+									<Label class="ml-1 font-medium text-slate-600">Earning Rate (Points per $1)</Label
+									>
+									<div class="flex gap-3">
+										<Input
+											type="number"
+											step="0.1"
+											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											bind:value={settings['loyalty_points_earning_rate']}
+										/>
+										<Button
+											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											onclick={() =>
+												saveSetting(
+													'loyalty_points_earning_rate',
+													settings['loyalty_points_earning_rate']
+												)}
+										>
+											<Save size={20} />
+										</Button>
+									</div>
+									<p class="text-xs text-slate-400">
+										How many points a customer earns for every unit of currency spent.
+									</p>
+								</div>
+
+								<div class="space-y-3">
+									<Label class="ml-1 font-medium text-slate-600"
+										>Redemption Value ($ per Point)</Label
+									>
+									<div class="flex gap-3">
+										<Input
+											type="number"
+											step="0.01"
+											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											bind:value={settings['loyalty_points_redemption_rate']}
+										/>
+										<Button
+											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											onclick={() =>
+												saveSetting(
+													'loyalty_points_redemption_rate',
+													settings['loyalty_points_redemption_rate']
+												)}
+										>
+											<Save size={20} />
+										</Button>
+									</div>
+									<p class="text-xs text-slate-400">
+										The monetary value of a single loyalty point when redeeming.
+									</p>
+								</div>
+							</div>
+
+							<!-- Tiers -->
+							<div class="space-y-6">
+								<h4 class="font-semibold text-slate-700">Tier Thresholds</h4>
+								<div class="space-y-4">
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Silver Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_silver']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-slate-400 text-white shadow-lg hover:bg-slate-500"
+												onclick={() =>
+													saveSetting('loyalty_tier_silver', settings['loyalty_tier_silver'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Gold Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_gold']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-yellow-500 text-white shadow-lg hover:bg-yellow-600"
+												onclick={() =>
+													saveSetting('loyalty_tier_gold', settings['loyalty_tier_gold'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Platinum Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_platinum']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-slate-800 text-white shadow-lg hover:bg-slate-900"
+												onclick={() =>
+													saveSetting('loyalty_tier_platinum', settings['loyalty_tier_platinum'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Tax Settings -->
+					<div
+						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-emerald-50 to-teal-50 p-4 text-emerald-600 shadow-sm"
+							>
+								<Percent size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">Financial Settings</h3>
+								<p class="text-slate-500">Manage tax rates and other financial parameters.</p>
+							</div>
+						</div>
+
+						<div class="max-w-xl space-y-6">
+							<div class="space-y-3">
+								<Label class="ml-1 font-medium text-slate-600">Default Tax Rate (%)</Label>
+								<div class="flex gap-3">
+									<Input
+										type="number"
+										step="0.01"
+										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										bind:value={settings['tax_rate_percentage']}
+									/>
+									<Button
+										class="h-12 rounded-xl bg-emerald-600 text-white shadow-lg hover:bg-emerald-700"
+										onclick={() =>
+											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
+									>
+										<Save size={20} class="mr-2" /> Save
+									</Button>
+								</div>
+								<p class="text-xs text-slate-400">
+									This tax rate will be applied to all applicable sales.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</Tabs.Content>
+
 			<!-- Security / RBAC -->
 			<Tabs.Content value="security" class="pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-3xl shadow-2xl">
@@ -315,6 +506,38 @@
 							>
 								<Save size={18} class="mr-2" /> Save Terms
 							</Button>
+						</div>
+					</div>
+
+					<!-- Return Policy Settings -->
+					<div
+						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+					>
+						<div class="mb-6 flex items-center gap-4">
+							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">
+								<Clock size={24} />
+							</div>
+							<h3 class="text-lg font-bold text-slate-800">Return Policy</h3>
+						</div>
+						<div class="max-w-xl space-y-3">
+							<Label class="ml-1 font-medium text-slate-600">Return Window (Days)</Label>
+							<div class="flex gap-3">
+								<Input
+									type="number"
+									class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+									bind:value={settings['return_window_days']}
+									placeholder="e.g. 30"
+								/>
+								<Button
+									class="h-12 rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95"
+									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
+								>
+									<Save size={20} class="mr-2" /> Save
+								</Button>
+							</div>
+							<p class="text-xs text-slate-400">
+								Number of days after purchase that a customer can request a return.
+							</p>
 						</div>
 					</div>
 				</div>

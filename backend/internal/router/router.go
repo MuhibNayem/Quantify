@@ -60,13 +60,13 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
 	forecastingService := services.NewForecastingService(forecastingRepo)
 	barcodeService := services.NewBarcodeService(barcodeRepo)
-	crmService := services.NewCRMService(crmRepo, db)
+	settingsService := services.NewSettingsService(settingsRepo)
+	crmService := services.NewCRMService(crmRepo, db, settingsService)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo, userRepo)
 	integrationService := services.NewIntegrationService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
 	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
 	replenishmentService := services.NewReplenishmentService(replenishmentRepo)
-	settingsService := services.NewSettingsService(settingsRepo)
 	roleService := services.NewRoleService(roleRepo)
 
 	// Initialize handlers
@@ -87,6 +87,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	roleHandler := handlers.NewRoleHandler(roleService)
+	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -226,8 +227,17 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		// Sales
 		sales := api.Group("/sales")
 		{
-			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db).Checkout)
-			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db).ListProducts)
+			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).Checkout)
+			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).ListProducts)
+			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService).ListOrders)
+		}
+
+		// Returns
+		returns := api.Group("/returns")
+		{
+			returns.POST("/request", middleware.RequirePermission(roleRepo, "returns.request"), returnHandler.RequestReturn)
+			returns.POST("/:id/process", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ProcessReturn)
+			returns.GET("", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ListReturns)
 		}
 
 		// Reports

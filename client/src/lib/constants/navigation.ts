@@ -10,7 +10,8 @@ import {
 	Sparkles,
 	Clock,
 	Users,
-	Settings
+	Settings,
+	Undo2
 } from 'lucide-svelte';
 
 export type NavItem = {

@@ -103,6 +103,10 @@ func AutoMigrate() {
 		&domain.SystemSetting{},
 		&domain.Permission{},
 		&domain.RolePermission{},
+		&domain.Order{},
+		&domain.OrderItem{},
+		&domain.Return{},
+		&domain.ReturnItem{},
 	)
 
 	if err != nil {
@@ -132,7 +136,13 @@ func fixRolePermissionsSchema() {
 }
 
 func seedData() {
-	// Seed Permissions
+	permMap := seedPermissions()
+	seedRoles(permMap)
+	seedSettings()
+	logrus.Info("System Data (Roles, Permissions, Settings) seeded")
+}
+
+func seedPermissions() map[string]domain.Permission {
 	permissions := []domain.Permission{
 		// Inventory - Products
 		{Name: "products.read", Group: "Product Management", Description: "View products"},
@@ -159,6 +169,9 @@ func seedData() {
 		{Name: "loyalty.write", Group: "CRM", Description: "Manage loyalty points"},
 		// POS / Sales
 		{Name: "pos.access", Group: "POS", Description: "Access Point of Sale terminal"},
+		// Returns
+		{Name: "returns.request", Group: "POS", Description: "Request a return"},
+		{Name: "returns.manage", Group: "POS", Description: "Approve/Reject returns"},
 		// Reports
 		{Name: "reports.sales", Group: "Reports", Description: "View sales reports"},
 		{Name: "reports.inventory", Group: "Reports", Description: "View inventory reports"},
@@ -194,8 +207,10 @@ func seedData() {
 		DB.FirstOrCreate(&p, domain.Permission{Name: p.Name})
 		permMap[p.Name] = p
 	}
+	return permMap
+}
 
-	// Seed Roles
+func seedRoles(permMap map[string]domain.Permission) {
 	roles := []domain.Role{
 		{Name: "Admin", Description: "Full system access", IsSystem: true},
 		{Name: "Manager", Description: "Store management access", IsSystem: true},
@@ -219,8 +234,6 @@ func seedData() {
 				permsToAssign = append(permsToAssign, p)
 			}
 		case "Manager":
-			// Manager gets almost everything except maybe system-level destructive role management?
-			// Giving Manager broad access for now as per previous logic
 			permsToAssign = append(permsToAssign,
 				permMap["products.read"], permMap["products.write"], permMap["products.delete"],
 				permMap["categories.read"], permMap["categories.write"],
@@ -231,6 +244,7 @@ func seedData() {
 				permMap["customers.read"], permMap["customers.write"],
 				permMap["loyalty.read"], permMap["loyalty.write"],
 				permMap["pos.access"],
+				permMap["returns.request"], permMap["returns.manage"],
 				permMap["reports.sales"], permMap["reports.inventory"], permMap["reports.financial"],
 				permMap["alerts.view"], permMap["alerts.manage"],
 				permMap["bulk.import"], permMap["bulk.export"],
@@ -248,6 +262,7 @@ func seedData() {
 				permMap["barcode.read"],
 				permMap["customers.read"],
 				permMap["pos.access"],
+				permMap["returns.request"],
 				permMap["alerts.view"],
 				permMap["dashboard.view"],
 				permMap["inventory.view"], permMap["crm.view"], permMap["pos.view"],
@@ -260,19 +275,36 @@ func seedData() {
 			}
 		}
 	}
+}
 
-	// Seed Settings
+func seedSettings() {
 	settings := []domain.SystemSetting{
 		{Key: "business_name", Value: "Quantify Business", Group: "General", Type: "string"},
 		{Key: "currency_symbol", Value: "$", Group: "General", Type: "string"},
 		{Key: "timezone", Value: "UTC", Group: "General", Type: "string"},
+		{Key: "return_window_days", Value: "30", Group: "Policy", Type: "number", Description: "Number of days allowing returns after purchase"},
+		{Key: "sales_trends_cache_ttl", Value: "5m", Group: "System", Type: "string", Description: "Cache TTL for sales trends report"},
+		// Loyalty Settings
+		{Key: "loyalty_points_earning_rate", Value: "1", Group: "Loyalty", Type: "number", Description: "Points earned per currency unit spent"},
+		{Key: "loyalty_points_redemption_rate", Value: "0.01", Group: "Loyalty", Type: "number", Description: "Currency value of 1 point"},
+		{Key: "loyalty_tier_silver", Value: "500", Group: "Loyalty", Type: "number", Description: "Points required for Silver tier"},
+		{Key: "loyalty_tier_gold", Value: "2500", Group: "Loyalty", Type: "number", Description: "Points required for Gold tier"},
+		{Key: "loyalty_tier_platinum", Value: "10000", Group: "Loyalty", Type: "number", Description: "Points required for Platinum tier"},
+		// Tax Settings
+		{Key: "tax_rate_percentage", Value: "0", Group: "Financial", Type: "number", Description: "Default tax rate percentage"},
 	}
 
 	for _, s := range settings {
-		DB.FirstOrCreate(&s, domain.SystemSetting{Key: s.Key})
+		var count int64
+		DB.Model(&domain.SystemSetting{}).Where("key = ?", s.Key).Count(&count)
+		if count == 0 {
+			if err := DB.Create(&s).Error; err != nil {
+				logrus.Errorf("Failed to seed setting %s: %v", s.Key, err)
+			} else {
+				logrus.Infof("Seeded setting: %s", s.Key)
+			}
+		}
 	}
-
-	logrus.Info("System Data (Roles, Permissions, Settings) seeded")
 }
 
 func ensureDefaultAlertSubscriptions() {
