@@ -297,6 +297,15 @@ def daily_morning_check():
         briefing = response.choices[0].message.content
         print(f"Morning Briefing:\n{briefing}")
         
+        # Broadcast the briefing as a notification
+        backend_client.broadcast_notification(
+            title="Daily Morning Briefing",
+            message=briefing,
+            type="INFO",
+            permission="dashboard.view"
+        )
+        print("Morning Briefing broadcasted to dashboard users.")
+        
     except Exception as e:
         print(f"Error in Daily Morning Check: {e}")
 

@@ -337,6 +337,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			}
 		}
 
+		// Notifications (System/Broadcast)
+		notifications := api.Group("/notifications")
+		{
+			notifications.POST("/broadcast", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.BroadcastNotification)
+		}
+
 		// CRM
 		crm := api.Group("/crm")
 		{

@@ -102,3 +102,17 @@ class BackendClient:
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
+
+    def broadcast_notification(self, title: str, message: str, type: str = "INFO", permission: str = "dashboard.view") -> Dict[str, Any]:
+        """Broadcast a notification to users with a specific permission."""
+        self._login()
+        url = f"{self.base_url}/notifications/broadcast"
+        payload = {
+            "title": title,
+            "message": message,
+            "type": type,
+            "permission": permission
+        }
+        response = requests.post(url, json=payload, headers=self._get_headers())
+        response.raise_for_status()
+        return response.json()

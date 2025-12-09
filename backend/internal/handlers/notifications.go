@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/repository"
 	"net/http"
@@ -176,4 +177,46 @@ func (h *NotificationHandler) MarkAllNotificationsAsRead(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "All notifications marked as read"})
+}
+
+// BroadcastNotificationRequest defines the payload for broadcasting a notification.
+type BroadcastNotificationRequest struct {
+	Permission string `json:"permission" binding:"required"`
+	Title      string `json:"title" binding:"required"`
+	Message    string `json:"message" binding:"required"`
+	Type       string `json:"type" binding:"required"`
+	Payload    string `json:"payload"`
+}
+
+// BroadcastNotification godoc
+// @Summary Broadcast a notification to users with a specific permission
+// @Description Sends a notification to all users who have the specified permission.
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param request body BroadcastNotificationRequest true "Broadcast request"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /notifications/broadcast [post]
+func (h *NotificationHandler) BroadcastNotification(c *gin.Context) {
+	var req BroadcastNotificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	notification := domain.Notification{
+		Type:    req.Type,
+		Title:   req.Title,
+		Message: req.Message,
+		Payload: req.Payload,
+	}
+
+	if err := h.repo.CreateNotificationsForPermission(req.Permission, notification); err != nil {
+		c.Error(appErrors.NewAppError("Failed to broadcast notification", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Notification broadcasted successfully"})
 }
