@@ -223,6 +223,98 @@ def run_agent(request: AgentRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# Scheduler Implementation
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import requests
+
+scheduler = BackgroundScheduler()
+
+def get_system_setting(key: str, default: str) -> str:
+    """Fetch a system setting from the backend."""
+    try:
+        # We need to authenticate. For now, we'll use the backend_client's token if available,
+        # or just assume internal network trust for settings if public.
+        # Actually, settings/configurations is public.
+        response = requests.get(f"http://localhost:8080/api/v1/settings/configurations")
+        if response.status_code == 200:
+            configs = response.json()
+            return configs.get(key, default)
+    except Exception as e:
+        print(f"Failed to fetch setting {key}: {e}")
+    return default
+
+def daily_morning_check():
+    """
+    Proactive Routine:
+    1. Trigger backend alert check (uses existing ProductAlertSettings).
+    2. Fetch active alerts.
+    3. Generate a briefing and draft POs for critical alerts.
+    """
+    print("Running Daily Morning Check...")
+    try:
+        # 1. Trigger Alert Check
+        backend_client.trigger_alert_check()
+        
+        # 2. Fetch Active Alerts
+        alerts = backend_client.get_active_alerts()
+        
+        # 3. Fetch Yesterday's Sales
+        from datetime import datetime, timedelta
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        sales_report = backend_client.get_sales_report(yesterday, yesterday)
+        
+        if not alerts and not sales_report:
+            print("No active alerts and no sales data. Inventory is healthy.")
+            return
+
+        # 4. Analyze with AI
+        prompt = f"""
+        You are the Proactive AI Agent. It is the Daily Morning Check.
+        
+        Yesterday's Sales ({yesterday}):
+        {json.dumps(sales_report, indent=2)}
+        
+        Active Alerts:
+        {json.dumps(alerts, indent=2)}
+        
+        Task:
+        1. Provide a quick summary of yesterday's sales performance.
+        2. Summarize any critical inventory alerts.
+        3. Recommend actions (e.g., "Draft PO for Product X").
+        
+        Output a concise morning briefing.
+        """
+        
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[
+                {"role": "system", "content": "You are a proactive retail assistant."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        briefing = response.choices[0].message.content
+        print(f"Morning Briefing:\n{briefing}")
+        
+    except Exception as e:
+        print(f"Error in Daily Morning Check: {e}")
+
+@app.on_event("startup")
+def start_scheduler():
+    # Fetch wake up time from settings, default to 07:00
+    wake_up_time = get_system_setting("ai_wake_up_time", "07:00")
+    hour, minute = wake_up_time.split(":")
+    
+    trigger = CronTrigger(hour=hour, minute=minute)
+    scheduler.add_job(daily_morning_check, trigger, id="daily_morning_check", replace_existing=True)
+    scheduler.start()
+    print(f"Scheduler started. Daily Morning Check set for {wake_up_time}")
+
+@app.on_event("shutdown")
+def stop_scheduler():
+    scheduler.shutdown()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -75,9 +75,30 @@ class BackendClient:
         return response.json()
 
     def get_sales_report(self, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Fetch sales report."""
-        url = f"{self.base_url}/api/v1/reports/sales-trends" # Correct endpoint
-        payload = {"startDate": start_date, "endDate": end_date, "interval": "daily"}
+        """Get sales report for a specific date range."""
+        self._login()
+        url = f"{self.base_url}/reports/sales-trends"
+        payload = {
+            "startDate": f"{start_date}T00:00:00Z",
+            "endDate": f"{end_date}T23:59:59Z",
+            "groupBy": "day"
+        }
         response = requests.post(url, json=payload, headers=self._get_headers())
+        response.raise_for_status()
+        return response.json()
+
+    def trigger_alert_check(self) -> Dict[str, Any]:
+        """Trigger the backend to check for alerts."""
+        self._login()
+        url = f"{self.base_url}/alerts/check"
+        response = requests.post(url, headers=self._get_headers())
+        response.raise_for_status()
+        return response.json()
+
+    def get_active_alerts(self) -> Dict[str, Any]:
+        """Get all active alerts."""
+        self._login()
+        url = f"{self.base_url}/alerts?status=ACTIVE"
+        response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
