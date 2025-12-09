@@ -246,3 +246,112 @@ export interface TimeClock extends BaseEntity {
 	Status: string;
 	Notes?: string;
 }
+
+// New Report Interfaces
+export interface StockAgingItem {
+	ProductID: number;
+	ProductName: string;
+	SKU: string;
+	Quantity: number;
+	DaysInStock: number;
+	Value: number;
+}
+
+export interface DeadStockItem {
+	ProductID: number;
+	ProductName: string;
+	SKU: string;
+	Quantity: number;
+	LastSaleDate: string;
+	Value: number;
+	DaysSinceLastSale: number;
+}
+
+export interface HourlySalesHeatmap {
+	DayOfWeek: string;
+	HourOfDay: number;
+	TotalSales: number;
+	TransactionCount: number;
+}
+
+export interface BasketAnalysisRule {
+	Antecedents: string[];
+	Consequents: string[];
+	Confidence: number;
+	Lift: number;
+	Support: number;
+}
+
+export interface EmployeeSalesPerformance {
+	EmployeeID: number;
+	EmployeeName: string;
+	TotalSales: number;
+	TransactionCount: number;
+	AverageTicketSize: number;
+}
+
+export interface CategoryPerformance {
+	CategoryID: number;
+	CategoryName: string;
+	TotalSales: number;
+	TotalUnits: number;
+	GrossMargin: number;
+}
+
+export interface GMROIReport {
+	ProductID: number;
+	ProductName: string;
+	COGS: number;
+	Revenue: number;
+	GrossMargin: number;
+	AverageInventoryValue: number;
+	GMROI: number;
+}
+
+export interface VoidAuditLog {
+	TransactionID: number;
+	CashierName: string;
+	VoidedAmount: number;
+	Reason: string;
+	Timestamp: string;
+}
+
+export interface TaxLiabilityReport {
+	TaxRate: number;
+	TaxableSales: number;
+	TaxCollected: number;
+}
+
+export interface CashReconciliation {
+	SessionID: number;
+	CashierName: string;
+	OpeningBalance: number;
+	ClosingBalance: number;
+	SystemCalculated: number;
+	Discrepancy: number;
+}
+
+export interface CustomerInsight {
+	CustomerID: number;
+	CustomerName: string;
+	TotalSpend: number;
+	VisitCount: number;
+	LastVisitDate: string;
+	Segment: string; // e.g., "VIP", "At-Risk"
+}
+
+export interface ShrinkageReport {
+	ProductID: number;
+	ProductName: string;
+	LostQuantity: number;
+	LostValue: number;
+	Reason: string;
+}
+
+export interface ReturnsAnalysis {
+	ProductID: number;
+	ProductName: string;
+	ReturnCount: number;
+	ReturnRate: number;
+	Reason: string;
+}

@@ -12,7 +12,6 @@
 	import { cn } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import ReturnRequestModal from '$lib/components/returns/ReturnRequestModal.svelte';
-	import { ordersApi, returnsApi } from '$lib/api/resources';
 	import { goto } from '$app/navigation';
 	import AdminReturnList from '$lib/components/returns/AdminReturnList.svelte';
 

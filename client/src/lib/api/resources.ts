@@ -117,6 +117,21 @@ export const reportsApi = {
 	profitMargin: async (payload: Record<string, unknown>) => (
 		await api.post('/reports/profit-margin', payload)
 	).data,
+	// New Real-Time Reports
+	stockAging: async () => (await api.get('/reports/stock-aging')).data,
+	deadStock: async () => (await api.get('/reports/dead-stock')).data,
+	supplierPerformance: async () => (await api.get('/reports/supplier-performance')).data,
+	hourlyHeatmap: async () => (await api.get('/reports/heatmap')).data,
+	salesByEmployee: async () => (await api.get('/reports/employee-sales')).data,
+	categoryDrilldown: async () => (await api.get('/reports/category-drilldown')).data,
+	gmroi: async () => (await api.get('/reports/gmroi')).data,
+	voidAudit: async () => (await api.get('/reports/audit/voids')).data,
+	taxLiability: async () => (await api.get('/reports/tax-liability')).data,
+	cashReconciliation: async () => (await api.get('/reports/cash-reconciliation')).data,
+	customerInsights: async () => (await api.get('/reports/customer-insights')).data,
+	shrinkage: async () => (await api.get('/reports/shrinkage')).data,
+	returnsAnalysis: async () => (await api.get('/reports/returns-analysis')).data,
+	basketAnalysis: async () => (await api.get('/reports/basket-analysis')).data,
 };
 
 export const alertsApi = {

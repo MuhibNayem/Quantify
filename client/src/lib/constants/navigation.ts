@@ -91,6 +91,13 @@ export const navSections: NavSection[] = [
 		title: 'Business',
 		items: [
 			{
+				label: 'Reports',
+				description: 'Advanced analytics & insights',
+				href: '/reports',
+				icon: ActivitySquare,
+				permission: 'reports.view',
+			},
+			{
 				label: 'CRM',
 				description: 'Customers & loyalty',
 				href: '/crm',

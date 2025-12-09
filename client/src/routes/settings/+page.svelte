@@ -23,7 +23,8 @@
 		ShieldCheck,
 		Sparkles,
 		Coins,
-		Percent
+		Percent,
+		Zap
 	} from 'lucide-svelte';
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -93,6 +94,7 @@
 				// Ensure defaults if missing
 				if (!settings['currency_symbol']) settings['currency_symbol'] = '$';
 				if (!settings['timezone']) settings['timezone'] = 'UTC';
+				if (!settings['ai_wake_up_time']) settings['ai_wake_up_time'] = '07:00';
 			}
 		} catch (e) {
 			console.error('Error loading settings', e);
@@ -112,6 +114,7 @@
 	const allTabs = [
 		{ id: 'general', label: 'General', icon: Settings, permission: 'settings.view' },
 		{ id: 'business', label: 'Business Rules', icon: Coins, permission: 'settings.view' },
+		{ id: 'system', label: 'System & AI', icon: Zap, permission: 'settings.view' },
 		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck, permission: 'roles.view' },
 		{ id: 'policies', label: 'Policies', icon: FileText, permission: 'settings.view' },
 		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
@@ -633,6 +636,60 @@
 							<p class="text-xs text-slate-400">
 								Number of days after purchase that a customer can request a return.
 							</p>
+						</div>
+					</div>
+				</div>
+			</Tabs.Content>
+
+			<!-- System & AI -->
+			<Tabs.Content value="system" class="space-y-6 pt-2 outline-none">
+				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
+					<div
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-sky-50 to-blue-50 p-4 text-sky-600 shadow-sm"
+							>
+								<Zap size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">AI & System</h3>
+								<p class="text-slate-500">
+									Configure autonomous agent behavior and system-wide parameters.
+								</p>
+							</div>
+						</div>
+
+						<div class="max-w-xl space-y-6">
+							<div class="space-y-3">
+								<Label class="ml-1 font-medium text-slate-600">AI Wake Up Time</Label>
+								<div class="flex gap-3">
+									<Input
+										type="time"
+										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										bind:value={settings['ai_wake_up_time']}
+									/>
+									<Button
+										class="h-12 rounded-xl bg-sky-600 text-white shadow-lg hover:bg-sky-700"
+										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
+									>
+										<Save size={20} class="mr-2" /> Save
+									</Button>
+								</div>
+								<p class="text-xs text-slate-400">
+									The AI will run the "Daily Morning Check" at this time every day.
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>

@@ -3,7 +3,6 @@
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
 	import { formatDate, formatCurrency } from '$lib/utils';
 	import { fade } from 'svelte/transition';
-	import { adminApi } from '$lib/api/admin';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
