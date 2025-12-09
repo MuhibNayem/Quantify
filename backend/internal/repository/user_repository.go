@@ -29,7 +29,7 @@ func (r *UserRepository) UpdateUser(user *domain.User) error {
 			return err
 		}
 		// Reload the user to get all fields for indexing
-		if err := tx.First(user, user.ID).Error; err != nil {
+		if err := tx.Preload("Role").First(user, user.ID).Error; err != nil {
 			return err
 		}
 		return UpdateSearchIndex(tx, user)

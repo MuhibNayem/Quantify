@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { usersApi } from '$lib/api/resources';
-	import type { UserSummary } from '$lib/types';
+	import { rolesApi } from '$lib/api/roles';
+	import type { Role, UserSummary } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import {
 		Card,
@@ -15,7 +16,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
-	import { UserCheck, Shield, ClipboardList, CheckCircle2 } from 'lucide-svelte';
+	import { UserCheck, Shield, ClipboardList, CheckCircle2, Pencil } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 
@@ -53,6 +54,7 @@
 	let detailModalOpen = $state(false);
 	let detailResourceId = $state<number | null>(null);
 	let detailModalSubtitle = $state<string | null>(null);
+	let roles = $state<Role[]>([]);
 
 	const userStatusBadge = (isActive: boolean) =>
 		isActive
@@ -124,7 +126,7 @@
 		}
 		form.username = user.Username;
 		form.password = '';
-		form.role = user.Role.Name;
+		form.role = user.Role?.Name ?? '';
 		form.firstName = user.FirstName || '';
 		form.lastName = user.LastName || '';
 		form.email = user.Email || '';
@@ -157,9 +159,28 @@
 		}
 	};
 
+	// Load users when activeTab changes
+	let initialLoadDone = false;
+	
+	onMount(async () => {
+		try {
+			await Promise.all([
+				loadUsers(),
+				rolesApi.list().then(data => roles = data).catch(err => {
+					console.error('Failed to load roles:', err);
+					toast.error('Failed to load roles');
+				})
+			]);
+		} finally {
+			initialLoadDone = true;
+		}
+	});
+
 	$effect(() => {
-		activeTab;
-		loadUsers();
+		if (initialLoadDone) {
+			activeTab;
+			loadUsers();
+		}
 	});
 
 	const handleSearch = () => {
@@ -169,6 +190,15 @@
 	const selectUser = (user: UserSummary) => {
 		selectedUser = user;
 		applyFormFromUser(user);
+	};
+
+	const editUser = (user: UserSummary) => {
+		selectUser(user);
+		// Scroll to form
+		const formElement = document.getElementById('user-edit-form');
+		if (formElement) {
+			formElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
 	};
 
 	const openUserDetails = (user: UserSummary) => {
@@ -405,6 +435,18 @@
 										<Button
 											size="sm"
 											variant="ghost"
+											class="rounded-lg px-3 py-1.5 text-indigo-700 hover:bg-indigo-100"
+											onclick={(event: MouseEvent) => {
+												event.stopPropagation();
+												editUser(item);
+											}}
+										>
+											<Pencil class="mr-1 h-3.5 w-3.5" />
+											Edit
+										</Button>
+										<Button
+											size="sm"
+											variant="ghost"
 											class="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-rose-100"
 											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
@@ -425,6 +467,7 @@
 
 	<!-- User Details -->
 	<Card
+		id="user-edit-form"
 		class="rounded-2xl border-0 bg-gradient-to-br from-teal-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
 	>
 		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
@@ -461,9 +504,10 @@
 						class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
 						bind:value={form.role}
 					>
-						<option value="Admin">Admin</option>
-						<option value="Manager">Manager</option>
-						<option value="Staff">Staff</option>
+						<option value="" disabled>Select a role</option>
+						{#each roles as role}
+							<option value={role.Name}>{role.Name}</option>
+						{/each}
 					</select>
 				</div>
 
