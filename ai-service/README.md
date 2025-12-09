@@ -4,7 +4,7 @@ This service provides AI-powered insights and forecasting analysis for the Quant
 
 ## Prerequisites
 
-- Python 3.9+
+- Python 3.12+
 - Poetry
 
 ## Installation

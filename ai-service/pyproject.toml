@@ -4,17 +4,17 @@ version = "0.1.0"
 description = "AI Service for Quantify using Z.AI"
 authors = ["Admin <admin@quantify.com>"]
 readme = "README.md"
-packages = [{include = "ai_service"}]
+
 
 [tool.poetry.dependencies]
-python = "^3.9"
-openai = "^1.0.0"
-fastapi = "^0.109.0"
-uvicorn = "^0.27.0"
-pydantic = "^2.0.0"
-python-dotenv = "^1.0.0"
-apscheduler = "^3.10.4"
-requests = "^2.31.0"
+python = "^3.12"
+openai = "^2.9.0"
+fastapi = "^0.124.0"
+uvicorn = "^0.38.0"
+pydantic = "^2.12.5"
+python-dotenv = "^1.2.0"
+apscheduler = "^3.11.1"
+requests = "^2.32.5"
 
 [build-system]
 requires = ["poetry-core"]

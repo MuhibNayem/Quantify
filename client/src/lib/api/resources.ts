@@ -9,6 +9,7 @@ import type {
 	Location,
 	Product,
 	PurchaseOrder,
+	Promotion,
 	ReorderSuggestion,
 	StockAdjustment,
 	Supplier,
@@ -39,6 +40,25 @@ export const productsApi = {
 	createBatch: async (id: number, payload: Record<string, unknown>) => (await api.post<Batch>(`/products/${id}/stock/batches`, payload)).data,
 	adjustStock: async (id: number, payload: Record<string, unknown>) =>
 		(await api.post(`/products/${id}/stock/adjustments`, payload)).data,
+};
+
+export const promotionsApi = {
+	list: async (active?: boolean) => {
+		const params = active ? { active: true } : {};
+		const response = await api.get<{ promotions: Promotion[] }>('/promotions', { params });
+		return response.data.promotions;
+	},
+	create: async (data: any) => {
+		const response = await api.post<Promotion>('/promotions', data);
+		return response.data;
+	},
+	update: async (id: number, data: any) => {
+		const response = await api.put<Promotion>(`/promotions/${id}`, data);
+		return response.data;
+	},
+	delete: async (id: number) => {
+		await api.delete(`/promotions/${id}`);
+	}
 };
 
 export const categoriesApi = {
@@ -120,18 +140,30 @@ export const reportsApi = {
 	// New Real-Time Reports
 	stockAging: async () => (await api.get('/reports/stock-aging')).data,
 	deadStock: async () => (await api.get('/reports/dead-stock')).data,
-	supplierPerformance: async () => (await api.get('/reports/supplier-performance')).data,
-	hourlyHeatmap: async () => (await api.get('/reports/heatmap')).data,
-	salesByEmployee: async () => (await api.get('/reports/employee-sales')).data,
-	categoryDrilldown: async () => (await api.get('/reports/category-drilldown')).data,
-	gmroi: async () => (await api.get('/reports/gmroi')).data,
-	voidAudit: async () => (await api.get('/reports/audit/voids')).data,
-	taxLiability: async () => (await api.get('/reports/tax-liability')).data,
-	cashReconciliation: async () => (await api.get('/reports/cash-reconciliation')).data,
-	customerInsights: async () => (await api.get('/reports/customer-insights')).data,
-	shrinkage: async () => (await api.get('/reports/shrinkage')).data,
-	returnsAnalysis: async () => (await api.get('/reports/returns-analysis')).data,
-	basketAnalysis: async () => (await api.get('/reports/basket-analysis')).data,
+	supplierPerformance: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/supplier-performance', { params })).data,
+	hourlyHeatmap: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/heatmap', { params })).data,
+	salesByEmployee: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/employee-sales', { params })).data,
+	categoryDrilldown: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/category-drilldown', { params })).data,
+	gmroi: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/gmroi', { params })).data,
+	voidAudit: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/audit/voids', { params })).data,
+	taxLiability: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/tax-liability', { params })).data,
+	cashReconciliation: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/cash-reconciliation', { params })).data,
+	customerInsights: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/customer-insights', { params })).data,
+	shrinkage: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/shrinkage', { params })).data,
+	returnsAnalysis: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/returns-analysis', { params })).data,
+	basketAnalysis: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/basket-analysis', { params })).data,
 };
 
 export const alertsApi = {

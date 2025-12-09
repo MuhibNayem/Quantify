@@ -167,6 +167,13 @@
 		}
 	};
 
+	const getAvailableStock = (product: any) => {
+		const cartItem = cart.find((item) => item.id === product.ID);
+		const cartQty = cartItem ? cartItem.quantity : 0;
+		const currentStock = product.stock ? product.stock.currentQuantity : 0;
+		return Math.max(0, currentStock - cartQty);
+	};
+
 	const addToCart = (product: any) => {
 		const existingItem = cart.find((item) => item.id === product.ID);
 		if (existingItem) {
@@ -453,13 +460,12 @@
 												</div>
 												<div class="flex items-center gap-1 text-[0.7rem] text-slate-500">
 													<span
-														class="h-1.5 w-1.5 rounded-full {product.stock &&
-														product.stock.currentQuantity > 0
+														class="h-1.5 w-1.5 rounded-full {getAvailableStock(product) > 0
 															? 'bg-emerald-500'
 															: 'bg-rose-400'}"
 													/>
 													<span>
-														{product.stock ? product.stock.currentQuantity : 'N/A'} in stock
+														{getAvailableStock(product)} in stock
 													</span>
 												</div>
 											</div>

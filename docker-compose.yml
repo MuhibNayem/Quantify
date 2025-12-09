@@ -194,8 +194,25 @@ services:
         limits:
           cpus: "0.5"
           memory: "512M"
+    environment:
+      - AI_SERVICE_URL=http://ai-service:8000
     networks:
       - my_network
+
+  ai-service:
+    build:
+      context: ./ai-service
+    ports:
+      - "8001:8000"
+    depends_on:
+      - backend
+    env_file:
+      - ./ai-service/.env
+    environment:
+      - BACKEND_URL=http://backend:8080
+    networks:
+      - my_network
+
 
   prometheus:
     image: prom/prometheus:v2.37.0

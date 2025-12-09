@@ -486,13 +486,16 @@ func (s *ReportingService) GetCashDrawerReconciliationReport(startDate, endDate 
 	return s.repo.GetCashDrawerReconciliationReport(startDate, endDate)
 }
 
-func (s *ReportingService) GetBasketAnalysisReport(startDate, endDate time.Time) ([]repository.BasketAnalysisItem, error) {
+func (s *ReportingService) GetBasketAnalysisReport(startDate, endDate time.Time, bypassCache bool) ([]repository.BasketAnalysisItem, error) {
 	// Basket Analysis is heavy, cache for 24 hours
 	cacheKey := fmt.Sprintf("basket_analysis:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
-	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
-		var items []repository.BasketAnalysisItem
-		if err := json.Unmarshal([]byte(cached), &items); err == nil {
-			return items, nil
+
+	if !bypassCache {
+		if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+			var items []repository.BasketAnalysisItem
+			if err := json.Unmarshal([]byte(cached), &items); err == nil {
+				return items, nil
+			}
 		}
 	}
 

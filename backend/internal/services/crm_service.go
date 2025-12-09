@@ -263,7 +263,7 @@ func (s *crmService) GetChurnRisk(customerID uint) (*domain.ChurnRisk, error) {
 		Discount float64 `json:"discount"`
 	}
 	var orders []domain.Order
-	if err := s.db.Where("customer_id = ?", customerID).Order("created_at desc").Limit(5).Find(&orders).Error; err != nil {
+	if err := s.db.Where("user_id = ?", customerID).Order("created_at desc").Limit(5).Find(&orders).Error; err != nil {
 		return nil, fmt.Errorf("failed to fetch orders: %w", err)
 	}
 

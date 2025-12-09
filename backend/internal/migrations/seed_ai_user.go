@@ -28,7 +28,7 @@ func SeedAIUser(db *gorm.DB) error {
 	}
 
 	// Create AI Agent user
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("ai-agent-secret-123"), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("rZQ$4Rs!6{QHaR{5Sra{]z_%n"), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}

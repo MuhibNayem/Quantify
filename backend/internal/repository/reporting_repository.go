@@ -323,7 +323,7 @@ func (r *ReportsRepository) GetDeadStockReport(daysThreshold int) ([]DeadStockIt
 		LEFT JOIN stock_adjustments sa ON sa.product_id = p.id AND sa.type = 'STOCK_OUT' AND sa.reason_code = 'SALE'
 		WHERE p.deleted_at IS NULL
 		GROUP BY p.id
-		HAVING current_stock > 0 AND (last_sale_date < ? OR last_sale_date IS NULL)
+		HAVING COALESCE(SUM(b.quantity), 0) > 0 AND (MAX(sa.adjusted_at) < ? OR MAX(sa.adjusted_at) IS NULL)
 	`
 
 	rows, err := r.DB.Raw(query, thresholdDate).Rows()
@@ -384,7 +384,7 @@ func (r *ReportsRepository) GetSupplierPerformanceReport(startDate, endDate time
 			COUNT(DISTINCT po.id) as total_pos,
 			AVG(EXTRACT(EPOCH FROM (po.updated_at - po.order_date))/86400) as avg_lead_time,
 			SUM(poi.received_quantity) as total_received,
-			SUM(poi.quantity) as total_ordered
+			SUM(poi.ordered_quantity) as total_ordered
 		FROM suppliers s
 		JOIN purchase_orders po ON po.supplier_id = s.id
 		JOIN purchase_order_items poi ON poi.purchase_order_id = po.id
@@ -696,9 +696,11 @@ func (r *ReportsRepository) GetCashDrawerReconciliationReport(startDate, endDate
 }
 
 type BasketAnalysisItem struct {
-	ProductA  uint
-	ProductB  uint
-	Frequency int
+	ProductA     uint
+	ProductAName string
+	ProductB     uint
+	ProductBName string
+	Frequency    int
 }
 
 // GetBasketAnalysisReport finds frequently bought together items.
@@ -710,17 +712,26 @@ func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time
 	query := `
 		SELECT 
 			oi1.product_id as product_a,
+			p1.name as product_a_name,
 			oi2.product_id as product_b,
+			p2.name as product_b_name,
 			COUNT(*) as frequency
 		FROM order_items oi1
 		JOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
+		JOIN products p1 ON p1.id = oi1.product_id
+		JOIN products p2 ON p2.id = oi2.product_id
 		JOIN orders o ON o.id = oi1.order_id
 		WHERE o.order_date BETWEEN ? AND ?
-		GROUP BY oi1.product_id, oi2.product_id
+		AND p1.deleted_at IS NULL
+		AND p2.deleted_at IS NULL
+		AND p1.name != ''
+		AND p2.name != ''
+		GROUP BY oi1.product_id, p1.name, oi2.product_id, p2.name
 		ORDER BY frequency DESC
 		LIMIT 20
 	`
 
+	fmt.Println("DEBUG: GetBasketAnalysisReport Executing - Checking for Name != ''")
 	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
@@ -729,7 +740,7 @@ func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time
 
 	for rows.Next() {
 		var item BasketAnalysisItem
-		if err := rows.Scan(&item.ProductA, &item.ProductB, &item.Frequency); err != nil {
+		if err := rows.Scan(&item.ProductA, &item.ProductAName, &item.ProductB, &item.ProductBName, &item.Frequency); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

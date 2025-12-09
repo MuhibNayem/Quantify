@@ -380,3 +380,24 @@ type ChurnRisk struct {
 	RetentionStrategy string   `json:"retention_strategy"`
 	SuggestedDiscount int      `json:"suggested_discount"`
 }
+
+// Promotion represents a discount rule.
+type Promotion struct {
+	gorm.Model
+	Name          string `gorm:"not null"`
+	Description   string
+	DiscountType  string    `gorm:"not null"` // "PERCENTAGE" or "FIXED_AMOUNT"
+	DiscountValue float64   `gorm:"not null"`
+	StartDate     time.Time `gorm:"not null"`
+	EndDate       time.Time `gorm:"not null"`
+	IsActive      bool      `gorm:"default:true"`
+	Priority      int       `gorm:"default:0"` // Higher number = higher priority
+
+	// Targets (Nullable, only one should be set ideally, or hierarchical)
+	ProductID     *uint `gorm:"index"`
+	Product       *Product
+	CategoryID    *uint `gorm:"index"`
+	Category      *Category
+	SubCategoryID *uint `gorm:"index"`
+	SubCategory   *SubCategory
+}

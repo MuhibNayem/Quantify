@@ -23,6 +23,9 @@ client = OpenAI(
     base_url=ZAI_BASE_URL
 )
 
+from backend_client import BackendClient
+backend_client = BackendClient()
+
 MODEL_NAME = "glm-4.5-flash"
 
 class InsightRequest(BaseModel):
@@ -98,44 +101,20 @@ from forecasting import generate_demand_forecast
 
 class ForecastRequest(BaseModel):
     product_id: int
-    days: int = 30
+    period_days: int = 30
 
 @app.post("/forecast")
-async def generate_forecast(request: Request):
-    data = await request.json()
-    product_id = data.get("product_id")
-    period_days = data.get("period_days", 30)
-    
-    # Fetch sales history from backend
-    # For now, we'll mock or fetch if we had the client set up for it
-    # In a real scenario, we'd fetch sales history here
-    
-    # Mock sales history for now to test the flow
-    sales_history = [
-        {"date": "2023-01-01", "quantity": 10},
-        {"date": "2023-01-02", "quantity": 12},
-        {"date": "2023-01-03", "quantity": 15},
-        # ... more data
-    ]
-    
-    forecaster = DemandForecaster()
-    result = forecaster.generate_forecast(sales_history, period_days)
-    return result
+async def generate_forecast(request: ForecastRequest):
+    return generate_demand_forecast(request.product_id, request.period_days)
 
-# Agent Implementation
-from backend_client import BackendClient
-from churn_prediction import ChurnPredictor
-
-backend_client = BackendClient()
+class ChurnAnalysisRequest(BaseModel):
+    customer_data: dict
+    purchase_history: list[dict]
 
 @app.post("/predict-churn")
-async def predict_churn(request: Request):
-    data = await request.json()
-    customer_data = data.get("customer_data")
-    purchase_history = data.get("purchase_history")
-    
+async def predict_churn(request: ChurnAnalysisRequest):
     predictor = ChurnPredictor()
-    result = predictor.analyze_churn_risk(customer_data, purchase_history)
+    result = predictor.analyze_churn_risk(request.customer_data, request.purchase_history)
     return result
 
 tools = [
@@ -325,17 +304,8 @@ scheduler = BackgroundScheduler()
 
 def get_system_setting(key: str, default: str) -> str:
     """Fetch a system setting from the backend."""
-    try:
-        # We need to authenticate. For now, we'll use the backend_client's token if available,
-        # or just assume internal network trust for settings if public.
-        # Actually, settings/configurations is public.
-        response = requests.get(f"http://localhost:8080/api/v1/settings/configurations")
-        if response.status_code == 200:
-            configs = response.json()
-            return configs.get(key, default)
-    except Exception as e:
-        print(f"Failed to fetch setting {key}: {e}")
-    return default
+    configs = backend_client.get_system_settings()
+    return configs.get(key, default)
 
 def daily_morning_check():
     """

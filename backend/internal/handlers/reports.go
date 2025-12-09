@@ -581,6 +581,7 @@ func (h *ReportHandler) GetCustomerReturnAnalysisReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Param refresh query boolean false "Force refresh cache"
 // @Success 200 {array} repository.BasketAnalysisItem
 // @Router /reports/basket-analysis [get]
 func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
@@ -590,7 +591,9 @@ func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
 		return
 	}
 
-	report, err := h.reportingService.GetBasketAnalysisReport(start, end)
+	refresh := c.Query("refresh") == "true"
+
+	report, err := h.reportingService.GetBasketAnalysisReport(start, end, refresh)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to get basket analysis", http.StatusInternalServerError, err))
 		return
@@ -615,6 +618,11 @@ func parseDateRange(c *gin.Context) (time.Time, time.Time, error) {
 	end, err := time.Parse(time.RFC3339, endStr)
 	if err != nil {
 		return time.Time{}, time.Time{}, appErrors.NewAppError("Invalid endDate format (use RFC3339)", http.StatusBadRequest, err)
+	}
+
+	// If endDate is at midnight (00:00:00), set it to end of day (23:59:59)
+	if end.Hour() == 0 && end.Minute() == 0 && end.Second() == 0 && end.Nanosecond() == 0 {
+		end = end.Add(24 * time.Hour).Add(-1 * time.Nanosecond)
 	}
 
 	if end.Before(start) {

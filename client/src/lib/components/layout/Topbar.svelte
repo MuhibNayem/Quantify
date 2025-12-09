@@ -24,17 +24,7 @@
 	class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/40 bg-gradient-to-r from-white/80 via-indigo-50/70 to-sky-50/80 px-3 backdrop-blur-2xl transition-all duration-500 sm:px-6"
 >
 	<!-- Left section -->
-	<div class="flex items-center gap-4">
-		<Button
-			variant="ghost"
-			size="icon"
-			class="h-9 w-9 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-purple-500/30 transition hover:scale-105 lg:hidden"
-			onclick={() => dispatch('toggleSidebar')}
-			aria-label="Open navigation"
-		>
-			<Menu class="h-5 w-5" />
-		</Button>
-
+	<div class="lg:ml-16">
 		<!-- Search bar -->
 		<div class="group relative hidden sm:block">
 			<Input

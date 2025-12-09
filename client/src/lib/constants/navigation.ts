@@ -12,7 +12,8 @@ import {
 	Users,
 	Settings,
 	Undo2,
-	ShoppingBag
+	ShoppingBag,
+	Tag
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -20,7 +21,7 @@ export type NavItem = {
 	description?: string;
 	href: string;
 	icon: ComponentType;
-	permission?: string; // Optional: if present, requires this permission
+	permission?: string;
 };
 
 export type NavSection = {
@@ -37,7 +38,6 @@ export const navSections: NavSection[] = [
 				description: 'Live metrics and health',
 				href: '/',
 				icon: LayoutDashboard,
-				// No permission needed (Public/Auth)
 			},
 		],
 	},
@@ -104,6 +104,13 @@ export const navSections: NavSection[] = [
 				icon: Users,
 				permission: 'crm.view',
 			},
+			{
+				label: 'Promotions',
+				description: 'Discounts & Deals',
+				href: '/promotions',
+				icon: Tag,
+				permission: 'products.write',
+			},
 		],
 	},
 	{
@@ -121,7 +128,7 @@ export const navSections: NavSection[] = [
 				description: 'Imports, exports, automation',
 				href: '/bulk',
 				icon: UploadCloud,
-				permission: 'bulk.import', // Or bulk.export, checking import as primary
+				permission: 'bulk.import',
 			},
 			{
 				label: 'User Access',

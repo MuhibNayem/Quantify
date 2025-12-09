@@ -2,36 +2,26 @@
 	import { onMount } from 'svelte';
 	import { reportsApi } from '$lib/api/resources';
 	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
-	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
+		Tabs,
+		TabsContent,
+		TabsList,
+		TabsTrigger
+	} from '$lib/components/ui/tabs';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { toast } from 'svelte-sonner';
 	import {
-		BarChart3,
-		TrendingUp,
-		DollarSign,
-		Package,
-		Users,
-		AlertTriangle,
 		Clock,
+		Users,
 		PieChart,
+		TrendingUp,
+		AlertTriangle,
+		Package,
 		ShoppingCart,
-		Undo2,
-		FileWarning,
-		Scale
+		DollarSign,
+		Sparkles,
+		ArrowUpRight,
+		ArrowDownRight,
+		CalendarRange
 	} from 'lucide-svelte';
 	import type {
 		HourlySalesHeatmap,
@@ -49,623 +39,561 @@
 		ReturnsAnalysis,
 		BasketAnalysisRule
 	} from '$lib/types';
-	import { formatCurrency, formatPercent } from '$lib/utils';
+	import { formatCurrency, formatPercent, cn } from '$lib/utils';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { fly, fade } from 'svelte/transition';
 
-	let loading = true;
-	// Sales & Staff
-	let heatmap: HourlySalesHeatmap[] = [];
-	let employeeSales: EmployeeSalesPerformance[] = [];
-	let categoryPerformance: CategoryPerformance[] = [];
-	let customerInsights: CustomerInsight[] = [];
-	let basketAnalysis: BasketAnalysisRule[] = [];
+	let loading = $state(true);
+	
+	// Data State
+	let heatmapGrid: { day: number; hour: number; sales: number; intensity: number }[] = $state([]);
+	let employeeSales: any[] = $state([]); // Transformed
+	let categoryPerformance: CategoryPerformance[] = $state([]);
+	let customerInsights: CustomerInsight[] = $state([]);
+	let basketAnalysis: BasketAnalysisRule[] = $state([]);
+	let stockAgingFlat: any[] = $state([]); // Transformed
+	let deadStock: DeadStockItem[] = $state([]);
+	let supplierPerf: SupplierPerformance[] = $state([]);
+	let shrinkage: ShrinkageReport[] = $state([]);
+	let returnsAnalysis: ReturnsAnalysis[] = $state([]);
+	let gmroiStats: any = $state(null); // Transformed to object
+	let voidAudit: VoidAuditLog[] = $state([]);
+	let taxLiability: TaxLiabilityReport | null = $state(null);
+	let cashReconciliation: CashReconciliation[] = $state([]);
 
-	// Inventory Health
-	let stockAging: StockAgingItem[] = [];
-	let deadStock: DeadStockItem[] = [];
-	let supplierPerf: SupplierPerformance[] = []; // Note: API returns array? Type says single obj but list usually returns array. Assuming array for report.
-	let shrinkage: ShrinkageReport[] = [];
-	let returnsAnalysis: ReturnsAnalysis[] = [];
-
-	// Financials
-	let gmroiData: GMROIReport[] = [];
-	let voidAudit: VoidAuditLog[] = [];
-	let taxLiability: TaxLiabilityReport | null = null;
-	let cashReconciliation: CashReconciliation[] = [];
+	// Date State
+	let dateRange = $state({
+		start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().slice(0, 10),
+		end: new Date().toISOString().slice(0, 10)
+	});
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
-			toast.error('Access Denied', {
-				description: 'You do not have permission to view reports.'
-			});
 			goto('/');
 		}
 	});
 
-	const loadReports = async () => {
+	async function loadReports(forceRefresh = false) {
 		if (!auth.hasPermission('reports.view')) return;
-		
 		loading = true;
+		
 		try {
-			const [
-				heatmapData,
-				agingData,
-				employeeData,
-				gmroiRes,
-				deadStockData,
-				supplierData,
-				categoryData,
-				voidData,
-				taxData,
-				cashData,
-				customerData,
-				shrinkageData,
-				returnsData,
-				basketData
-			] = await Promise.all([
-				reportsApi.hourlyHeatmap(),
+			const dateParams = {
+				startDate: new Date(dateRange.start).toISOString(),
+				endDate: new Date(dateRange.end).toISOString(),
+				refresh: forceRefresh
+			};
+
+			const results = await Promise.allSettled([
+				reportsApi.hourlyHeatmap(dateParams),
 				reportsApi.stockAging(),
-				reportsApi.salesByEmployee(),
-				reportsApi.gmroi(),
+				reportsApi.salesByEmployee(dateParams),
+				reportsApi.gmroi(dateParams),
 				reportsApi.deadStock(),
-				reportsApi.supplierPerformance(),
-				reportsApi.categoryDrilldown(),
-				reportsApi.voidAudit(),
-				reportsApi.taxLiability(),
-				reportsApi.cashReconciliation(),
-				reportsApi.customerInsights(),
-				reportsApi.shrinkage(),
-				reportsApi.returnsAnalysis(),
-				reportsApi.basketAnalysis()
+				reportsApi.supplierPerformance(dateParams),
+				reportsApi.categoryDrilldown(dateParams),
+				reportsApi.voidAudit(dateParams),
+				reportsApi.taxLiability(dateParams),
+				reportsApi.cashReconciliation(dateParams),
+				reportsApi.customerInsights(dateParams),
+				reportsApi.shrinkage(dateParams),
+				reportsApi.returnsAnalysis(dateParams),
+				reportsApi.basketAnalysis(dateParams)
 			]);
 
-			heatmap = heatmapData;
-			stockAging = agingData;
-			employeeSales = employeeData;
-			gmroiData = gmroiRes;
-			deadStock = deadStockData;
-			// @ts-ignore - API might return array or single object, handling as array for list
-			supplierPerf = Array.isArray(supplierData) ? supplierData : [supplierData]; 
-			categoryPerformance = categoryData;
-			voidAudit = voidData;
+            // Helper to extract data or return default
+            const getResult = (index: number, defaultVal: any) => {
+                const res = results[index];
+                if (res.status === 'fulfilled') return res.value;
+                console.error(`Report ${index} failed:`, res.reason);
+                return defaultVal;
+            };
+
+            const heatmapData = getResult(0, []);
+            const agingData = getResult(1, {});
+            const employeeData = getResult(2, []);
+            const gmroiRes = getResult(3, null);
+            const deadStockData = getResult(4, []);
+            const supplierData = getResult(5, []);
+            const categoryData = getResult(6, []);
+            const voidData = getResult(7, []);
+            const taxData = getResult(8, null);
+            const cashData = getResult(9, []);
+            const customerData = getResult(10, []);
+            const shrinkageData = getResult(11, []);
+            const returnsData = getResult(12, []);
+            const basketData = getResult(13, []);
+
+			// 1. Transform Heatmap (Sparse -> Full Grid)
+			const grid = [];
+			const salesValues = (heatmapData as any[]).map(h => h.TotalSales || 0);
+			const maxSale = Math.max(...salesValues, 1);
+			const logMax = Math.log(maxSale + 1);
+
+			for (let d = 0; d < 7; d++) {
+				for (let h = 0; h < 24; h++) {
+					const found = (heatmapData as any[]).find(i => i.DayOfWeek === d && i.HourOfDay === h);
+					const sales = found ? found.TotalSales : 0;
+					
+					// Logarithmic scale: log(value) / log(max)
+					// This boosts visibility of smaller values relative to massive outliers
+					const intensity = sales > 0 
+						? Math.max(Math.log(sales + 1) / logMax, 0.15) // Min 15% opacity for visibility
+						: 0;
+
+					grid.push({
+						day: d,
+						hour: h,
+						sales,
+						intensity
+					});
+				}
+			}
+			heatmapGrid = grid;
+
+			// 2. Transform Stock Aging (Object -> Flat Array)
+			const agingArray = [];
+			const agingObj = agingData as any;
+			if (agingObj) {
+				for (const [range, items] of Object.entries(agingObj)) {
+					if (Array.isArray(items)) {
+						items.forEach((item: any) => {
+							agingArray.push({ ...item, Range: range });
+						});
+					}
+				}
+			}
+			stockAgingFlat = agingArray.sort((a, b) => b.DaysInStock - a.DaysInStock);
+
+			// 3. Transform Employee Data (Safe Map)
+			employeeSales = Array.isArray(employeeData) ? (employeeData as any[]).map(e => ({
+				name: e.Username || e.EmployeeName || 'Unknown',
+				sales: e.TotalSales || 0,
+				count: e.TotalOrders || e.TransactionCount || 0
+			})).sort((a, b) => b.sales - a.sales) : [];
+
+	// 4. Transform GMROI (Single Object)
+			gmroiStats = gmroiRes;
+
+			// Others
+			deadStock = Array.isArray(deadStockData) ? deadStockData : [];
+			// @ts-ignore
+			supplierPerf = Array.isArray(supplierData) ? supplierData : [supplierData].filter(Boolean);
+			categoryPerformance = Array.isArray(categoryData) ? categoryData : [];
+			voidAudit = Array.isArray(voidData) ? voidData : [];
 			taxLiability = taxData;
-			cashReconciliation = cashData;
-			customerInsights = customerData;
-			shrinkage = shrinkageData;
-			returnsAnalysis = returnsData;
-			basketAnalysis = basketData;
+			cashReconciliation = Array.isArray(cashData) ? cashData : [];
+			customerInsights = Array.isArray(customerData) ? customerData : [];
+			shrinkage = Array.isArray(shrinkageData) ? shrinkageData : [];
+			returnsAnalysis = Array.isArray(returnsData) ? returnsData : [];
+			basketAnalysis = Array.isArray(basketData) ? basketData : [];
 
 		} catch (error) {
-			console.error(error);
+			console.error("Critical Report Load Error:", error);
 			toast.error('Failed to load reports');
 		} finally {
 			loading = false;
 		}
-	};
+	}
 
-	onMount(loadReports);
+	onMount(() => loadReports(false));
+
+	const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const hours = [0,4,8,12,16,20];
 </script>
 
-<div class="container mx-auto py-8">
-	<div class="mb-8 flex items-center justify-between">
-		<div>
-			<h1 class="text-3xl font-bold tracking-tight text-slate-900">Advanced Reporting Suite</h1>
-			<p class="text-slate-500">Real-time insights into your business performance</p>
+<div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10 font-sans selection:bg-blue-100 selection:text-blue-900">
+	<!-- Dynamic Background Mesh -->
+	<div class="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(120,119,198,0.1),transparent_50%),radial-gradient(circle_at_0%_0%,_rgba(59,130,246,0.1),transparent_50%),radial-gradient(circle_at_100%_0%,_rgba(37,99,235,0.1),transparent_50%)]"></div>
+	<div class="fixed inset-0 -z-10 bg-[url('/noise.png')] opacity-[0.015] mix-blend-overlay pointer-events-none"></div>
+
+	<div class="mx-auto max-w-7xl space-y-8 pb-12">
+		<!-- Header -->
+		<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+			<div class="space-y-1">
+				<h1 class="text-4xl font-bold tracking-tight text-slate-900 drop-shadow-sm">
+					Intelligence Suite
+				</h1>
+				<p class="text-slate-500 font-medium text-lg">Deep insights into operational efficiency and sales performance.</p>
+			</div>
+			
+			<div class="flex items-center gap-3 bg-white/60 p-2 rounded-[1.5rem] border border-white/40 shadow-lg shadow-slate-200/20 backdrop-blur-2xl transition-all hover:bg-white/70 hover:shadow-xl hover:scale-[1.01]">
+				<div class="flex items-center gap-3 px-4 py-2 bg-gradient-to-b from-white/80 to-white/40 rounded-[1.2rem] shadow-sm border border-white/60">
+					<CalendarRange class="h-4 w-4 text-blue-600" />
+					<input 
+						type="date" 
+						bind:value={dateRange.start}
+						class="text-xs font-bold text-slate-700 bg-transparent border-none focus:ring-0 p-0 cursor-pointer font-mono tracking-wide"
+					/>
+					<span class="text-slate-300 font-light">|</span>
+					<input 
+						type="date" 
+						bind:value={dateRange.end}
+						class="text-xs font-bold text-slate-700 bg-transparent border-none focus:ring-0 p-0 cursor-pointer font-mono tracking-wide"
+					/>
+				</div>
+				<button 
+					onclick={() => loadReports(true)}
+					class="p-2.5 rounded-[1.2rem] bg-gradient-to-br from-blue-600 to-blue-700 text-white hover:from-blue-500 hover:to-blue-600 transition-all shadow-lg shadow-blue-500/25 active:scale-95 group"
+					title="Refresh Data"
+				>
+					<Sparkles class="h-4 w-4 group-active:skew-12 transition-transform" />
+				</button>
+			</div>
 		</div>
-	</div>
 
-	<Tabs value="sales" class="space-y-6">
-		<TabsList class="grid w-full grid-cols-3 lg:w-[400px]">
-			<TabsTrigger value="sales">Sales & Staff</TabsTrigger>
-			<TabsTrigger value="inventory">Inventory Health</TabsTrigger>
-			<TabsTrigger value="financial">Financials</TabsTrigger>
-		</TabsList>
+		<Tabs value="sales" class="space-y-8">
+			<TabsList class="w-full md:w-auto h-auto justify-start gap-2 rounded-[2rem] bg-white/30 p-2 backdrop-blur-2xl border border-white/40 shadow-xl shadow-slate-200/20">
+				<TabsTrigger value="sales" class="rounded-[1.5rem] px-8 py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-lg data-[state=active]:shadow-blue-900/5 transition-all duration-300 hover:bg-white/40">
+					Sales & Staff
+				</TabsTrigger>
+				<TabsTrigger value="inventory" class="rounded-[1.5rem] px-8 py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-lg data-[state=active]:shadow-orange-900/5 transition-all duration-300 hover:bg-white/40">
+					Inventory Health
+				</TabsTrigger>
+				<TabsTrigger value="financial" class="rounded-[1.5rem] px-8 py-3 text-sm font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-lg data-[state=active]:shadow-emerald-900/5 transition-all duration-300 hover:bg-white/40">
+					Financials
+				</TabsTrigger>
+			</TabsList>
 
-		<!-- SALES TAB -->
-		<TabsContent value="sales" class="space-y-6">
-			<div class="grid gap-6 md:grid-cols-2">
-				<!-- Hourly Heatmap -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Clock class="h-5 w-5 text-blue-500" />
-							Hourly Sales Heatmap
-						</CardTitle>
-						<CardDescription>Peak sales hours by day of week</CardDescription>
-					</CardHeader>
-					<CardContent>
-						{#if loading}
-							<Skeleton class="h-[300px] w-full" />
-						{:else}
-							<div class="grid grid-cols-7 gap-1 text-center text-xs">
-								{#each ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as day}
-									<div class="font-semibold text-slate-500">{day}</div>
-								{/each}
-								{#each heatmap as cell}
-									<div
-										class="aspect-square rounded-sm transition-all hover:scale-110"
-										style="background-color: rgba(59, 130, 246, {Math.min(
-											cell.TotalSales / 1000,
-											1
-										)});"
-										title={`${cell.DayOfWeek} ${cell.HourOfDay}:00 - $${cell.TotalSales}`}
-									></div>
-								{/each}
+			<!-- SALES CONTENT -->
+			<TabsContent value="sales" class="space-y-6 outline-none">
+				<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+					
+					<!-- Heatmap Card -->
+					<div class="col-span-2 lg:col-span-2 relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-blue-900/5 backdrop-blur-3xl transition-all hover:bg-white/50 duration-500 group">
+						<div class="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent pointer-events-none"></div>
+						<div class="relative z-10">
+							<div class="flex items-center justify-between mb-8">
+								<div class="flex items-center gap-4">
+									<div class="h-12 w-12 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50/50 rounded-2xl text-blue-600 shadow-inner border border-white/60">
+										<Clock class="h-6 w-6" />
+									</div>
+									<div>
+										<h3 class="text-xl font-bold text-slate-800 tracking-tight">Peak Hours</h3>
+										<p class="text-sm text-slate-500 font-medium">Sales intensity analysis</p>
+									</div>
+								</div>
 							</div>
-						{/if}
-					</CardContent>
-				</Card>
 
-				<!-- Employee Performance -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Users class="h-5 w-5 text-purple-500" />
-							Staff Performance
-						</CardTitle>
-						<CardDescription>Top performing employees</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Name</TableHead>
-									<TableHead class="text-right">Sales</TableHead>
-									<TableHead class="text-right">Txns</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each employeeSales as emp}
-										<TableRow>
-											<TableCell class="font-medium">{emp.EmployeeName}</TableCell>
-											<TableCell class="text-right">{formatCurrency(emp.TotalSales)}</TableCell>
-											<TableCell class="text-right">{emp.TransactionCount}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
+							{#if loading}
+								<Skeleton class="h-[300px] w-full rounded-[2rem] bg-white/50" />
+							{:else}
+								<div class="relative">
+									<!-- X-Axis Labels -->
+									<div class="flex justify-between pl-10 mb-3">
+										{#each hours as h}
+											<div class="text-[10px] font-bold text-slate-400 w-full text-left border-l border-white/20 pl-2">{h}:00</div>
+										{/each}
+									</div>
+									
+									<div class="space-y-1.5">
+										{#each days as day, i}
+											<div class="flex items-center gap-3">
+												<span class="text-[11px] font-bold text-slate-400 w-8 text-right tracking-wide">{day.toUpperCase()}</span>
+												<div class="flex-1 grid grid-cols-24 gap-[2px] p-1 bg-white/20 rounded-xl border border-white/20">
+													{#each heatmapGrid.filter(c => c.day === i) as cell}
+														<div 
+															class="h-8 rounded-[4px] transition-all duration-300 hover:scale-[1.3] hover:shadow-lg hover:z-20 relative group/cell cursor-help"
+															style="background-color: rgba(37, 99, 235, {Math.max(cell.intensity, 0.05)})"
+														>
+															<!-- Tooltip -->
+															<div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/cell:block z-50 pointer-events-none">
+																<div class="bg-slate-900/90 text-white text-[10px] font-bold py-1.5 px-3 rounded-xl whitespace-nowrap shadow-xl backdrop-blur-md">
+																	{formatCurrency(cell.sales)}
+																</div>
+															</div>
+														</div>
+													{/each}
+												</div>
+											</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+						</div>
+					</div>
 
-				<!-- Category Performance -->
-				<Card class="col-span-2">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<PieChart class="h-5 w-5 text-indigo-500" />
-							Category Performance
-						</CardTitle>
-						<CardDescription>Sales breakdown by category</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Category</TableHead>
-									<TableHead class="text-right">Total Sales</TableHead>
-									<TableHead class="text-right">Units Sold</TableHead>
-									<TableHead class="text-right">Gross Margin</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="4"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each categoryPerformance as cat}
-										<TableRow>
-											<TableCell class="font-medium">{cat.CategoryName}</TableCell>
-											<TableCell class="text-right">{formatCurrency(cat.TotalSales)}</TableCell>
-											<TableCell class="text-right">{cat.TotalUnits}</TableCell>
-											<TableCell class="text-right">{formatCurrency(cat.GrossMargin)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Customer Insights -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Users class="h-5 w-5 text-teal-500" />
-							Customer Insights
-						</CardTitle>
-						<CardDescription>Top customers and segments</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Customer</TableHead>
-									<TableHead>Segment</TableHead>
-									<TableHead class="text-right">Spend</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each customerInsights as cust}
-										<TableRow>
-											<TableCell class="font-medium">{cust.CustomerName}</TableCell>
-											<TableCell>
-												<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-													{cust.Segment}
-												</span>
-											</TableCell>
-											<TableCell class="text-right">{formatCurrency(cust.TotalSpend)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Basket Analysis -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<ShoppingCart class="h-5 w-5 text-pink-500" />
-							Market Basket Analysis
-						</CardTitle>
-						<CardDescription>Commonly bought together items</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>If bought...</TableHead>
-									<TableHead>Also buys...</TableHead>
-									<TableHead class="text-right">Conf.</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each basketAnalysis as rule}
-										<TableRow>
-											<TableCell class="text-xs">{rule.Antecedents.join(', ')}</TableCell>
-											<TableCell class="text-xs">{rule.Consequents.join(', ')}</TableCell>
-											<TableCell class="text-right text-xs">{formatPercent(rule.Confidence)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-			</div>
-		</TabsContent>
-
-		<!-- INVENTORY TAB -->
-		<TabsContent value="inventory" class="space-y-6">
-			<div class="grid gap-6 md:grid-cols-2">
-				<!-- Stock Aging -->
-				<Card class="col-span-2">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Package class="h-5 w-5 text-orange-500" />
-							Stock Aging Report
-						</CardTitle>
-						<CardDescription>Items in stock for > 90 days</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Product</TableHead>
-									<TableHead>SKU</TableHead>
-									<TableHead class="text-right">Qty</TableHead>
-									<TableHead class="text-right">Days</TableHead>
-									<TableHead class="text-right">Value</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="5"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each stockAging as item}
-										<TableRow>
-											<TableCell class="font-medium">{item.ProductName}</TableCell>
-											<TableCell>{item.SKU}</TableCell>
-											<TableCell class="text-right">{item.Quantity}</TableCell>
-											<TableCell class="text-right text-orange-600">{item.DaysInStock}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.Value)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Dead Stock -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<FileWarning class="h-5 w-5 text-red-500" />
-							Dead Stock
-						</CardTitle>
-						<CardDescription>No sales in 180+ days</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Product</TableHead>
-									<TableHead class="text-right">Days Idle</TableHead>
-									<TableHead class="text-right">Value</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each deadStock as item}
-										<TableRow>
-											<TableCell class="font-medium text-xs">{item.ProductName}</TableCell>
-											<TableCell class="text-right text-red-600">{item.DaysSinceLastSale}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.Value)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Supplier Performance -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Package class="h-5 w-5 text-blue-500" />
-							Supplier Performance
-						</CardTitle>
-						<CardDescription>Delivery times and reliability</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Supplier</TableHead>
-									<TableHead class="text-right">Lead Time</TableHead>
-									<TableHead class="text-right">On-Time %</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each supplierPerf as sup}
-										<TableRow>
-											<TableCell class="font-medium">{sup.supplierName}</TableCell>
-											<TableCell class="text-right">{sup.averageLeadTimeDays}d</TableCell>
-											<TableCell class="text-right">{formatPercent(sup.onTimeDeliveryRate)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Shrinkage -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<AlertTriangle class="h-5 w-5 text-amber-500" />
-							Shrinkage Report
-						</CardTitle>
-						<CardDescription>Lost inventory analysis</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Product</TableHead>
-									<TableHead class="text-right">Lost Qty</TableHead>
-									<TableHead class="text-right">Value</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each shrinkage as item}
-										<TableRow>
-											<TableCell class="font-medium text-xs">{item.ProductName}</TableCell>
-											<TableCell class="text-right text-red-600">{item.LostQuantity}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.LostValue)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Returns Analysis -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Undo2 class="h-5 w-5 text-purple-500" />
-							Returns Analysis
-						</CardTitle>
-						<CardDescription>Most returned products</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Product</TableHead>
-									<TableHead class="text-right">Count</TableHead>
-									<TableHead class="text-right">Rate</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each returnsAnalysis as item}
-										<TableRow>
-											<TableCell class="font-medium text-xs">{item.ProductName}</TableCell>
-											<TableCell class="text-right">{item.ReturnCount}</TableCell>
-											<TableCell class="text-right text-red-500">{formatPercent(item.ReturnRate)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-			</div>
-		</TabsContent>
-
-		<!-- FINANCIAL TAB -->
-		<TabsContent value="financial" class="space-y-6">
-			<div class="grid gap-6 md:grid-cols-2">
-				<!-- GMROI -->
-				<Card class="col-span-2">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<TrendingUp class="h-5 w-5 text-green-500" />
-							GMROI Analysis
-						</CardTitle>
-						<CardDescription>Gross Margin Return on Investment</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Product</TableHead>
-									<TableHead class="text-right">Revenue</TableHead>
-									<TableHead class="text-right">Margin</TableHead>
-									<TableHead class="text-right">GMROI</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="4"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each gmroiData as item}
-										<TableRow>
-											<TableCell class="font-medium">{item.ProductName}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.Revenue)}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.GrossMargin)}</TableCell>
-											<TableCell class="text-right font-bold text-green-600"
-												>{item.GMROI.toFixed(2)}x</TableCell
-											>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Void Audit -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<AlertTriangle class="h-5 w-5 text-red-500" />
-							Void Audit Log
-						</CardTitle>
-						<CardDescription>Suspicious void transactions</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Cashier</TableHead>
-									<TableHead>Reason</TableHead>
-									<TableHead class="text-right">Amount</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each voidAudit as item}
-										<TableRow>
-											<TableCell class="font-medium">{item.CashierName}</TableCell>
-											<TableCell class="text-xs text-slate-500">{item.Reason}</TableCell>
-											<TableCell class="text-right text-red-600">{formatCurrency(item.VoidedAmount)}</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Cash Reconciliation -->
-				<Card class="col-span-2 md:col-span-1">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<DollarSign class="h-5 w-5 text-emerald-500" />
-							Cash Reconciliation
-						</CardTitle>
-						<CardDescription>Register discrepancies</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Cashier</TableHead>
-									<TableHead class="text-right">System</TableHead>
-									<TableHead class="text-right">Diff</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{#if loading}
-									<TableRow><TableCell colspan="3"><Skeleton class="h-8 w-full" /></TableCell></TableRow>
-								{:else}
-									{#each cashReconciliation as item}
-										<TableRow>
-											<TableCell class="font-medium">{item.CashierName}</TableCell>
-											<TableCell class="text-right">{formatCurrency(item.SystemCalculated)}</TableCell>
-											<TableCell class="text-right font-bold {item.Discrepancy < 0 ? 'text-red-500' : 'text-green-500'}">
-												{formatCurrency(item.Discrepancy)}
-											</TableCell>
-										</TableRow>
-									{/each}
-								{/if}
-							</TableBody>
-						</Table>
-					</CardContent>
-				</Card>
-
-				<!-- Tax Liability -->
-				<Card class="col-span-2">
-					<CardHeader>
-						<CardTitle class="flex items-center gap-2">
-							<Scale class="h-5 w-5 text-slate-500" />
-							Tax Liability Estimate
-						</CardTitle>
-						<CardDescription>Estimated tax collected for current period</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+					<!-- Staff Performance -->
+					<div class="col-span-2 lg:col-span-1 relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-purple-900/5 backdrop-blur-3xl transition-all hover:bg-white/50 duration-500">
+						<div class="flex items-center gap-4 mb-8">
+							<div class="h-12 w-12 flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50/50 rounded-2xl text-purple-600 shadow-inner border border-white/60">
+								<Users class="h-6 w-6" />
+							</div>
 							<div>
-								<p class="text-sm font-medium text-slate-500">Taxable Sales</p>
-								<p class="text-2xl font-bold text-slate-900">{formatCurrency(taxLiability?.TaxableSales || 0)}</p>
-							</div>
-							<div class="text-right">
-								<p class="text-sm font-medium text-slate-500">Tax Collected</p>
-								<p class="text-2xl font-bold text-blue-600">{formatCurrency(taxLiability?.TaxCollected || 0)}</p>
+								<h3 class="text-xl font-bold text-slate-800 tracking-tight">Top Staff</h3>
+								<p class="text-sm text-slate-500 font-medium">Revenue generators</p>
 							</div>
 						</div>
-					</CardContent>
-				</Card>
-			</div>
-		</TabsContent>
-	</Tabs>
+
+						<div class="space-y-3 relative z-10">
+							{#each employeeSales.slice(0, 5) as emp, i}
+								<div class="group flex items-center justify-between p-4 rounded-[1.5rem] bg-white/40 border border-white/40 hover:bg-white/80 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 cursor-default">
+									<div class="flex items-center gap-4">
+										<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 font-bold text-slate-600 shadow-inner border border-white">
+											{emp.name.charAt(0)}
+										</div>
+										<div>
+											<p class="text-sm font-bold text-slate-700 group-hover:text-blue-900 transition-colors">{emp.name}</p>
+											<p class="text-[11px] font-medium text-slate-400 group-hover:text-slate-500">{emp.count} transactions</p>
+										</div>
+									</div>
+									<span class="font-bold text-purple-600 text-sm bg-purple-50/50 px-3 py-1 rounded-full border border-purple-100/50">{formatCurrency(emp.sales)}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Category & Insights Grid -->
+					<div class="col-span-full grid md:grid-cols-2 gap-6">
+						<!-- Category Breakdown - Fixed Visibility -->
+						<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-indigo-900/5">
+							<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+								<PieChart class="h-5 w-5 text-indigo-500" /> Category Breakdown
+							</h3>
+							
+							<div class="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+								{#each categoryPerformance as cat}
+									<!-- Added specific bg-white/60 for visibility as requested -->
+									<div class="p-4 rounded-[1.5rem] bg-white/60 backdrop-blur-md border border-white/50 hover:bg-white/90 transition-all hover:scale-[1.01] hover:shadow-md space-y-3 group">
+										<div class="flex justify-between items-center">
+											<span class="text-base font-bold text-slate-700 group-hover:text-indigo-900 transition-colors">{cat.CategoryName}</span>
+											<span class="text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 shadow-sm">
+												{cat.ItemCount || cat.TotalUnits || 0} items
+											</span>
+										</div>
+										<div class="grid grid-cols-2 gap-4">
+											<div class="bg-white/50 rounded-2xl p-3 border border-white/40">
+												<div class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Sales</div>
+												<div class="text-sm font-bold text-slate-800">{formatCurrency(cat.TotalSales)}</div>
+											</div>
+											<div class="bg-white/50 rounded-2xl p-3 border border-white/40">
+												<div class="text-[10px] text-slate-400 uppercase tracking-wider font-bold mb-1">Margin</div>
+												<div class="flex flex-col items-start">
+													<div class="text-sm font-bold text-emerald-600">{formatCurrency(cat.GrossMargin)}</div>
+													<div class="text-[10px] font-bold text-emerald-600/70 bg-emerald-50 px-1.5 rounded-md mt-0.5">
+														{formatPercent(cat.MarginPercent / 100)}
+													</div>
+												</div>
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+
+						<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-pink-900/5">
+							<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+								<ShoppingCart class="h-5 w-5 text-pink-500" /> Frequency Analysis
+							</h3>
+							<div class="space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+								{#each basketAnalysis.slice(0, 10) as rule}
+									<div class="p-4 rounded-[1.5rem] bg-pink-50/40 backdrop-blur-sm border border-pink-100/50 hover:bg-pink-50/80 transition-all hover:shadow-md hover:scale-[1.01] group">
+										<div class="flex items-center justify-center gap-3 text-xs text-slate-500 mb-4 bg-white/40 p-2 rounded-xl border border-white/40">
+											<span class="font-bold text-slate-700 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">{rule.ProductAName || 'Unknown'}</span>
+											<span class="text-pink-400 font-bold text-lg">+</span>
+											<span class="font-bold text-slate-700 bg-white px-3 py-1 rounded-full shadow-sm border border-slate-100">{rule.ProductBName || 'Unknown'}</span>
+										</div>
+										<div class="flex items-center justify-between px-1">
+											<span class="text-[10px] font-mono font-medium text-pink-400/80">ID: {rule.ProductA}-{rule.ProductB}</span>
+											<div class="flex items-center gap-1.5">
+												<span class="h-1.5 w-1.5 rounded-full bg-pink-500 animate-pulse"></span>
+												<span class="text-xs font-bold text-pink-700">
+													{rule.Frequency} Orders
+												</span>
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						</div>
+					</div>
+				</div>
+			</TabsContent>
+
+			<!-- INVENTORY CONTENT -->
+			<TabsContent value="inventory" class="space-y-6 outline-none">
+				<div class="grid gap-6 md:grid-cols-2">
+					<!-- Stock Aging Table -->
+					<div class="col-span-2 relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-0 shadow-2xl shadow-orange-900/5 backdrop-blur-3xl">
+						<div class="p-8 border-b border-white/30 bg-gradient-to-r from-orange-50/40 to-transparent">
+							<div class="flex items-center gap-4">
+								<div class="h-12 w-12 flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50/50 rounded-2xl text-orange-600 shadow-inner border border-white/60">
+									<Package class="h-6 w-6" />
+								</div>
+								<div>
+									<h3 class="text-xl font-bold text-slate-800 tracking-tight">Stock Aging</h3>
+									<p class="text-sm text-slate-500 font-medium">Slow moving inventory > 30 days</p>
+								</div>
+							</div>
+						</div>
+						
+						<div class="max-h-[500px] overflow-y-auto custom-scrollbar">
+							<table class="w-full text-left text-sm border-collapse">
+								<thead class="bg-white/40 text-slate-500 font-bold sticky top-0 backdrop-blur-xl border-b border-white/30 z-10">
+									<tr>
+										<th class="p-5 pl-8">Product / SKU</th>
+										<th class="p-5 text-right">Age (Days)</th>
+										<th class="p-5 text-right">Qty</th>
+										<th class="p-5 text-right pr-8">Value</th>
+									</tr>
+								</thead>
+								<tbody class="divide-y divide-white/20">
+									{#each stockAgingFlat as item}
+										<tr class="hover:bg-orange-50/30 transition-colors group">
+											<td class="p-5 pl-8">
+												<div class="font-bold text-slate-700 group-hover:text-orange-900 transition-colors">{item.ProductName}</div>
+												<div class="text-[11px] text-slate-400 font-mono bg-white/60 inline-block px-1.5 rounded border border-white/40 mt-1">{item.SKU}</div>
+											</td>
+											<td class="p-5 text-right">
+												<span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-orange-100/80 text-orange-800 text-xs font-bold border border-orange-200/50 shadow-sm">
+													{item.AgeDays}d
+												</span>
+											</td>
+											<td class="p-5 text-right font-medium text-slate-600">{item.Quantity}</td>
+											<td class="p-5 text-right pr-8 font-bold text-slate-800">{formatCurrency(item.Value)}</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+					<!-- Dead Stock -->
+					<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-red-900/5">
+						<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+							<AlertTriangle class="h-5 w-5 text-red-500" /> Dead Stock (180+ Days)
+						</h3>
+						<div class="space-y-3">
+							{#each deadStock.slice(0,5) as item}
+								<div class="flex justify-between items-center p-4 rounded-[1.5rem] bg-red-50/40 border border-red-100/50 hover:bg-red-50/70 transition-all hover:scale-[1.01]">
+									<div class="text-sm font-bold text-slate-700 truncate max-w-[200px]">{item.ProductName}</div>
+									<div class="text-right">
+										<div class="font-bold text-red-600 text-sm">{formatCurrency(item.Value)}</div>
+										<div class="text-[10px] font-bold text-red-400 bg-red-100/50 px-2 py-0.5 rounded-full inline-block mt-1">{item.DaysSinceLastSale} days idle</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Supplier Performance -->
+					<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-emerald-900/5">
+						<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+							<DollarSign class="h-5 w-5 text-emerald-500" /> Supplier Reliability
+						</h3>
+						<div class="space-y-3">
+							{#each supplierPerf as sup}
+								<div class="flex justify-between items-center p-4 rounded-[1.5rem] bg-white/60 border border-white/40 hover:bg-white/80 transition-all">
+									<span class="text-sm font-bold text-slate-700">{sup.supplierName}</span>
+									<div class="flex items-center gap-4">
+										<div class="text-right bg-slate-50/50 rounded-xl p-2 min-w-[60px]">
+											<div class="text-[9px] text-slate-400 uppercase tracking-wider font-bold">Time</div>
+											<div class="font-medium text-slate-800">{sup.averageLeadTimeDays}d</div>
+										</div>
+										<div class="text-right bg-emerald-50/50 rounded-xl p-2 min-w-[60px]">
+											<div class="text-[9px] text-emerald-600/60 uppercase tracking-wider font-bold">Rate</div>
+											<div class="font-bold text-emerald-600">{formatPercent(sup.onTimeDeliveryRate)}</div>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+			</TabsContent>
+
+			<!-- FINANCIAL CONTENT -->
+			<TabsContent value="financial" class="space-y-6 outline-none">
+				
+				<!-- GMROI Cards -->
+				<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+					{#if gmroiStats}
+						<div class="rounded-[2rem] bg-white/40 backdrop-blur-xl p-6 border border-white/50 shadow-lg shadow-emerald-900/5 hover:scale-[1.02] transition-transform">
+							<p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-2 bg-emerald-50 inline-block px-2 py-1 rounded-lg">Revenue</p>
+							<p class="text-2xl font-bold text-slate-800">{formatCurrency(gmroiStats.TotalRevenue)}</p>
+						</div>
+						<div class="rounded-[2rem] bg-white/40 backdrop-blur-xl p-6 border border-white/50 shadow-lg shadow-slate-900/5 hover:scale-[1.02] transition-transform">
+							<p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 bg-slate-50 inline-block px-2 py-1 rounded-lg">COGS</p>
+							<p class="text-2xl font-bold text-slate-800">{formatCurrency(gmroiStats.COGS)}</p>
+						</div>
+						<div class="rounded-[2rem] bg-white/40 backdrop-blur-xl p-6 border border-white/50 shadow-lg shadow-indigo-900/5 hover:scale-[1.02] transition-transform">
+							<p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-2 bg-indigo-50 inline-block px-2 py-1 rounded-lg">Margin</p>
+							<p class="text-2xl font-bold text-slate-800">{formatCurrency(gmroiStats.GrossMargin)}</p>
+						</div>
+						<div class="rounded-[2rem] bg-gradient-to-br from-emerald-500 to-teal-600 p-6 shadow-xl shadow-emerald-500/30 text-white relative overflow-hidden group hover:scale-[1.02] transition-transform">
+							<div class="relative z-10">
+								<p class="text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-2 bg-white/20 inline-block px-2 py-1 rounded-lg backdrop-blur-md">GMROI Index</p>
+								<p class="text-3xl font-bold">{gmroiStats.GMROI.toFixed(2)}x</p>
+								<p class="text-[10px] text-emerald-100 mt-2 font-medium">Return on Inventory</p>
+							</div>
+							<TrendingUp class="absolute -right-4 -bottom-4 h-24 w-24 text-white/10 group-hover:scale-110 transition-transform duration-500" />
+						</div>
+					{/if}
+				</div>
+
+				<div class="grid gap-6 md:grid-cols-2">
+					<!-- Void Audit -->
+					<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-red-900/5">
+						<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+							<AlertTriangle class="h-5 w-5 text-red-500" /> Void Audit
+						</h3>
+						<div class="space-y-3">
+							{#each voidAudit.slice(0, 5) as item}
+								<div class="flex justify-between items-center p-4 rounded-[1.5rem] bg-red-50/40 border border-red-100/50 backdrop-blur-sm hover:bg-red-50/70 transition-all">
+									<div class="flex items-center gap-4">
+										<div class="h-10 w-10 rounded-2xl bg-red-100 flex items-center justify-center text-red-600 font-bold text-sm shadow-inner">!</div>
+										<div>
+											<div class="text-sm font-bold text-slate-700">{item.CashierName}</div>
+											<div class="text-[10px] font-medium text-slate-500 max-w-[150px] truncate bg-white/50 px-2 py-0.5 rounded-md mt-1 border border-white/50">{item.Reason}</div>
+										</div>
+									</div>
+									<div class="font-bold text-red-600 bg-white/50 px-3 py-1 rounded-xl border border-red-100/50">{formatCurrency(item.VoidedAmount)}</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Cash Recon -->
+					<div class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 backdrop-blur-3xl shadow-2xl shadow-emerald-900/5">
+						<h3 class="font-bold text-slate-700 mb-6 flex items-center gap-3 text-lg">
+							<DollarSign class="h-5 w-5 text-emerald-500" /> Cash Reconciliation
+						</h3>
+						<div class="space-y-3">
+							{#each cashReconciliation as item}
+								<div class="flex justify-between items-center p-4 rounded-[1.5rem] bg-white/60 border border-white/50 hover:bg-white/80 transition-all">
+									<span class="text-sm font-bold text-slate-700 pl-2">{item.CashierName}</span>
+									<div class="text-right">
+										<div class="text-[9px] text-slate-400 uppercase font-bold tracking-wide mb-0.5">Discrepancy</div>
+										<div class="font-bold px-3 py-1 rounded-xl bg-white/50 border border-slate-100 {item.Discrepancy < 0 ? 'text-red-500' : 'text-emerald-600'}">
+											{formatCurrency(item.Discrepancy)}
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					</div>
+				</div>
+			</TabsContent>
+		</Tabs>
+	</div>
 </div>
+
+<style>
+	.grid-cols-24 {
+		grid-template-columns: repeat(24, minmax(0, 1fr));
+	}
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 4px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: rgba(255, 255, 255, 0.1);
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: rgba(203, 213, 225, 0.4);
+		border-radius: 10px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: rgba(148, 163, 184, 0.6);
+	}
+</style>

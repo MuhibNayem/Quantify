@@ -1,36 +1,44 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import requests
 from typing import Optional, Dict, Any
 
 class BackendClient:
-    def __init__(self, base_url: str = "http://localhost:8080"):
-        self.base_url = base_url
-        self.email = os.getenv("AI_USER_EMAIL", "admin@quantify.com")
-        self.password = os.getenv("AI_USER_PASSWORD", "admin123")
+    def __init__(self, base_url: Optional[str] = None):
+        self.base_url = base_url or os.getenv("BACKEND_URL", "http://localhost:8080")
+        self.username = os.getenv("AI_USER_USERNAME", "ai-agent")
+        self.email = os.getenv("AI_USER_EMAIL", "ai-agent@quantify.com")
+        self.password = os.getenv("AI_USER_PASSWORD", "rZQ$4Rs!6{QHaR{5Sra{]z_%n")
         self.token = None
+        self.csrf_token = None
         self._login()
 
     def _login(self):
         """Authenticate and retrieve a new token."""
         url = f"{self.base_url}/api/v1/users/login"
         try:
-            response = requests.post(url, json={"email": self.email, "password": self.password})
+            response = requests.post(url, json={"username": self.username, "password": self.password})
             response.raise_for_status()
             data = response.json()
             self.token = data.get("token") # Adjust based on actual login response structure
-            if not self.token:
-                 # Fallback if token is nested or named differently
-                 self.token = data.get("accessToken")
+            self.token = data.get("accessToken")
+            self.csrf_token = data.get("csrfToken")
             print(f"AI Agent authenticated as {self.email}")
         except Exception as e:
             print(f"Failed to authenticate AI Agent: {e}")
             # Fallback to manual token if login fails (e.g. dev mode)
             self.token = os.getenv("BACKEND_API_TOKEN")
+            self.csrf_token = None
 
     def _get_headers(self) -> Dict[str, str]:
         headers = {"Content-Type": "application/json"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
+        if self.csrf_token:
+            headers["X-CSRF-Token"] = self.csrf_token
         return headers
 
     def get_inventory_status(self, product_id: Optional[int] = None) -> Dict[str, Any]:
@@ -77,11 +85,11 @@ class BackendClient:
     def get_sales_report(self, start_date: str, end_date: str, product_id: Optional[int] = None) -> Dict[str, Any]:
         """Get sales report for a specific date range."""
         self._login()
-        url = f"{self.base_url}/reports/sales-trends"
+        url = f"{self.base_url}/api/v1/reports/sales-trends"
         payload = {
             "startDate": f"{start_date}T00:00:00Z",
             "endDate": f"{end_date}T23:59:59Z",
-            "groupBy": "day"
+            "groupBy": "daily"
         }
         if product_id:
             payload["productId"] = product_id
@@ -93,7 +101,7 @@ class BackendClient:
     def trigger_alert_check(self) -> Dict[str, Any]:
         """Trigger the backend to check for alerts."""
         self._login()
-        url = f"{self.base_url}/alerts/check"
+        url = f"{self.base_url}/api/v1/alerts/check"
         response = requests.post(url, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
@@ -101,7 +109,7 @@ class BackendClient:
     def get_active_alerts(self) -> Dict[str, Any]:
         """Get all active alerts."""
         self._login()
-        url = f"{self.base_url}/alerts?status=ACTIVE"
+        url = f"{self.base_url}/api/v1/alerts?status=ACTIVE"
         response = requests.get(url, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
@@ -109,7 +117,7 @@ class BackendClient:
     def broadcast_notification(self, title: str, message: str, type: str = "INFO", permission: str = "dashboard.view") -> Dict[str, Any]:
         """Broadcast a notification to users with a specific permission."""
         self._login()
-        url = f"{self.base_url}/notifications/broadcast"
+        url = f"{self.base_url}/api/v1/notifications/broadcast"
         payload = {
             "title": title,
             "message": message,
@@ -123,7 +131,7 @@ class BackendClient:
     def get_product_performance(self, start_date: str, end_date: str, supplier_name: Optional[str] = None, min_stock: Optional[int] = None) -> list[Dict[str, Any]]:
         """Get product performance analytics."""
         self._login()
-        url = f"{self.base_url}/reports/product-performance"
+        url = f"{self.base_url}/api/v1/reports/product-performance"
         params = {
             "startDate": f"{start_date}T00:00:00Z",
             "endDate": f"{end_date}T23:59:59Z"
@@ -150,3 +158,16 @@ class BackendClient:
             return {"error": "Supplier not found"}
         response.raise_for_status()
         return response.json()
+
+    def get_system_settings(self) -> Dict[str, str]:
+        """Fetch public system settings."""
+        # This endpoint is public, so auth might not be strictly required,
+        # but using _get_headers() won't hurt.
+        url = f"{self.base_url}/api/v1/settings/configurations"
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Failed to fetch settings: {e}")
+            return {}

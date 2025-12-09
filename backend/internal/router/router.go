@@ -89,6 +89,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo, reportingService)
+	promotionHandler := handlers.NewPromotionHandler(db)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
@@ -158,6 +159,15 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			products.POST("/:productId/stock/batches", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateBatch)
 			products.POST("/:productId/stock/adjustments", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateStockAdjustment)
 			products.GET("/:productId/history", middleware.RequirePermission(roleRepo, "products.read"), handlers.ListStockHistory)
+		}
+
+		// Promotions
+		promotions := api.Group("/promotions")
+		{
+			promotions.POST("", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.CreatePromotion)
+			promotions.GET("", middleware.RequirePermission(roleRepo, "products.read"), promotionHandler.ListPromotions)
+			promotions.PUT("/:id", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.UpdatePromotion)
+			promotions.DELETE("/:id", middleware.RequirePermission(roleRepo, "products.delete"), promotionHandler.DeletePromotion)
 		}
 
 		// Categories
@@ -355,12 +365,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			crm.GET("/customers/username/:username", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByUsername)
 			crm.GET("/customers/email/:email", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByEmail)
 			crm.GET("/customers/phone/:phone", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByPhone)
-			crm.PUT("/customers/:userId", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.UpdateCustomer)
-			crm.DELETE("/customers/:userId", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.DeleteCustomer)
+			crm.PUT("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.UpdateCustomer)
+			crm.DELETE("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.DeleteCustomer)
 			crm.GET("/loyalty/:userId", middleware.RequirePermission(roleRepo, "loyalty.read"), crmHandler.GetLoyaltyAccount)
 			crm.POST("/loyalty/:userId/points", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.AddLoyaltyPoints)
 			crm.POST("/loyalty/:userId/redeem", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.RedeemLoyaltyPoints)
-			crm.GET("/customers/:userId/churn-risk", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetChurnRisk)
+			crm.GET("/customers/:identifier/churn-risk", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetChurnRisk)
 		}
 
 		// Time Tracking (Basic access for all staff)

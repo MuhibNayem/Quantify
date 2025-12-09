@@ -100,6 +100,17 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		var orderItems []domain.OrderItem
 		var stockAdjustments []domain.StockAdjustment
 
+		// Fetch active promotions
+		var activePromotions []domain.Promotion
+		now := time.Now()
+		if err := tx.Preload("Product").Preload("Category").Preload("SubCategory").
+			Where("is_active = ? AND start_date <= ? AND end_date >= ?", true, now, now).
+			Find(&activePromotions).Error; err != nil {
+			return fmt.Errorf("failed to fetch promotions: %w", err)
+		}
+
+		var totalDiscountFromPromotions float64
+
 		// 3. Process Items
 		for _, item := range req.Items {
 			product, ok := productMap[item.ProductID]
@@ -157,15 +168,61 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 				NewQuantity:      availableStock - item.Quantity,
 			})
 
+			// Calculate Discount
+			// Priority: Product > SubCategory > Category. Then Priority field.
+			var bestPromo *domain.Promotion
+			bestScore := -1 // 0=Cat, 1=SubCat, 2=Product
+
+			for i := range activePromotions {
+				p := &activePromotions[i]
+				score := -1
+
+				// Check matches
+				if p.ProductID != nil && *p.ProductID == product.ID {
+					score = 2
+				} else if p.SubCategoryID != nil && product.SubCategoryID > 0 && *p.SubCategoryID == product.SubCategoryID {
+					score = 1
+				} else if p.CategoryID != nil && product.CategoryID > 0 && *p.CategoryID == product.CategoryID {
+					score = 0
+				}
+
+				if score > -1 {
+					// Check if this is better than current best
+					if score > bestScore {
+						bestScore = score
+						bestPromo = p
+					} else if score == bestScore {
+						// Tie breaker: Priority
+						if bestPromo != nil && p.Priority > bestPromo.Priority {
+							bestPromo = p
+						}
+					}
+				}
+			}
+
+			unitPrice := product.SellingPrice
+			if bestPromo != nil {
+				if bestPromo.DiscountType == "PERCENTAGE" {
+					discount := unitPrice * (bestPromo.DiscountValue / 100.0)
+					unitPrice -= discount
+				} else if bestPromo.DiscountType == "FIXED_AMOUNT" {
+					unitPrice -= bestPromo.DiscountValue
+				}
+				if unitPrice < 0 {
+					unitPrice = 0
+				}
+				totalDiscountFromPromotions += (product.SellingPrice - unitPrice) * float64(item.Quantity)
+			}
+
 			// Accumulate total
-			totalAmount += product.SellingPrice * float64(item.Quantity)
+			totalAmount += unitPrice * float64(item.Quantity)
 
 			// Prepare Order Item (for later creation)
 			orderItems = append(orderItems, domain.OrderItem{
 				ProductID:  item.ProductID,
 				Quantity:   item.Quantity,
-				UnitPrice:  product.SellingPrice,
-				TotalPrice: product.SellingPrice * float64(item.Quantity),
+				UnitPrice:  unitPrice,
+				TotalPrice: unitPrice * float64(item.Quantity),
 			})
 		}
 
@@ -225,7 +282,7 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 
 				discountAmount = float64(req.PointsToRedeem) * redemptionRate
 				if discountAmount > totalAmount {
-					return fmt.Errorf("discount amount (%.2f) exceeds order total (%.2f)", discountAmount, totalAmount)
+					return fmt.Errorf("loyalty discount amount (%.2f) exceeds order total (%.2f)", discountAmount, totalAmount)
 				}
 
 				loyalty.Points -= req.PointsToRedeem
@@ -286,16 +343,22 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		}
 
 		// 5. Create Order and Order Items
-		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
+		// Determine correct UserID for the order (Customer > Staff)
+		orderUserID := userID
+		if req.CustomerID != nil && *req.CustomerID > 0 {
+			orderUserID = *req.CustomerID
+		}
+
+		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), orderUserID)
 		order := domain.Order{
 			OrderNumber:    orderNumber,
-			UserID:         userID,
+			UserID:         orderUserID,
 			TotalAmount:    totalAmount - discountAmount, // Store net amount or total? Usually total paid.
 			Status:         "COMPLETED",
 			PaymentMethod:  req.PaymentMethod,
 			OrderDate:      time.Now(),
 			PointsRedeemed: pointsRedeemed,
-			DiscountAmount: discountAmount,
+			DiscountAmount: discountAmount + totalDiscountFromPromotions,
 		}
 
 		if err := tx.Create(&order).Error; err != nil {

@@ -28,6 +28,26 @@ export interface Location extends BaseEntity {
 	Address?: string;
 }
 
+export interface Promotion {
+	ID: number;
+	Name: string;
+	Description?: string;
+	DiscountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+	DiscountValue: number;
+	StartDate: string;
+	EndDate: string;
+	IsActive: boolean;
+	Priority: number;
+	ProductID?: number;
+	CategoryID?: number;
+	SubCategoryID?: number;
+	Product?: Product;
+	Category?: Category;
+	SubCategory?: SubCategory;
+	CreatedAt: string;
+	UpdatedAt: string;
+}
+
 // Your existing Product type
 export interface Product extends BaseEntity {
 	SKU: string;
@@ -284,12 +304,12 @@ export interface HourlySalesHeatmap {
 	TransactionCount: number;
 }
 
-export interface BasketAnalysisRule {
-	Antecedents: string[];
-	Consequents: string[];
-	Confidence: number;
-	Lift: number;
-	Support: number;
+export interface BasketAnalysisItem {
+	ProductA: number;
+	ProductAName: string;
+	ProductB: number;
+	ProductBName: string;
+	Frequency: number;
 }
 
 export interface EmployeeSalesPerformance {
@@ -304,8 +324,11 @@ export interface CategoryPerformance {
 	CategoryID: number;
 	CategoryName: string;
 	TotalSales: number;
-	TotalUnits: number;
+	TotalUnits?: number; // Kept for backward compatibility if needed
+	ItemCount: number;
+	TotalCost: number;
 	GrossMargin: number;
+	MarginPercent: number;
 }
 
 export interface GMROIReport {

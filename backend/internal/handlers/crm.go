@@ -139,7 +139,7 @@ func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 }
 
 func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
 		return
@@ -161,7 +161,7 @@ func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 }
 
 func (h *CRMHandler) DeleteCustomer(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
 		return
@@ -237,7 +237,7 @@ func (h *CRMHandler) RedeemLoyaltyPoints(c *gin.Context) {
 }
 
 func (h *CRMHandler) GetChurnRisk(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
+	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
 		return
