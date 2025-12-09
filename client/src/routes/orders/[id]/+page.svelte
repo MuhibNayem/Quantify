@@ -28,6 +28,13 @@
 		order ? new Date(new Date(order.OrderDate).getTime() + returnWindowDays * 86400000) : null
 	);
 	const isReturnEligible = $derived(returnDeadline ? new Date() <= returnDeadline : false);
+	const estimatedRefund = $derived(
+		Object.entries(selectedItems).reduce((total, [itemIdStr, qty]) => {
+			const item = order?.OrderItems?.find((i: any) => i.ID === parseInt(itemIdStr));
+			if (!item) return total;
+			return total + (item.UnitPrice * qty);
+		}, 0) * (1 + ($settings.tax_rate_percentage || 0) / 100)
+	);
 
 	onMount(async () => {
 		if (!$auth.isAuthenticated) {
@@ -191,9 +198,20 @@
 
 					<div class="flex flex-col items-end">
 						<span class="text-sm font-medium text-slate-500">Total Amount</span>
-						<span class="text-3xl font-bold tracking-tight text-slate-900">
-							{formatCurrency(order.TotalAmount)}
-						</span>
+						<div class="flex flex-col items-end">
+							{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
+								<span class="text-3xl font-bold tracking-tight text-slate-900">
+									{formatCurrency(order.AdjustedTotal)}
+								</span>
+								<span class="text-sm font-medium text-slate-400 line-through decoration-slate-400">
+									{formatCurrency(order.TotalAmount)}
+								</span>
+							{:else}
+								<span class="text-3xl font-bold tracking-tight text-slate-900">
+									{formatCurrency(order.TotalAmount)}
+								</span>
+							{/if}
+						</div>
 					</div>
 				</div>
 
@@ -222,15 +240,21 @@
 
 										<div class="relative z-10 flex items-center gap-4">
 											<div
-												class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
+												class="flex h-12 min-w-[3rem] px-3 items-center justify-center rounded-2xl bg-white font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
 											>
 												{item.Quantity}x
+												{#if item.ReturnedQty > 0}
+													<span class="text-xs text-amber-500 ml-1">(-{item.ReturnedQty})</span>
+												{/if}
 											</div>
 											<div>
 												<p class="font-semibold text-slate-900">
 													{item.Product?.Name || `Product #${item.ProductID}`}
 												</p>
 												<p class="text-sm text-slate-400">
+													{#if item.ReturnedQty > 0}
+														<span class="text-amber-600 font-medium">Net Qty: {item.Quantity - item.ReturnedQty}</span> • 
+													{/if}
 													{formatCurrency(item.UnitPrice)} / unit
 												</p>
 											</div>
@@ -429,6 +453,16 @@
 							></textarea>
 						</div>
 					</div>
+
+					{#if Object.keys(selectedItems).length > 0}
+						<div class="mt-4 flex items-center justify-between rounded-xl bg-blue-50 p-4">
+							<span class="text-sm font-medium text-blue-700">Estimated Refund</span>
+							<span class="text-lg font-bold text-blue-800">{formatCurrency(estimatedRefund)}</span>
+						</div>
+						<p class="mt-2 text-xs text-slate-400 text-right">
+							Includes {($settings.tax_rate_percentage || 0)}% tax adjustment
+						</p>
+					{/if}
 
 					<div class="mt-8 flex gap-3 border-t border-slate-50 pt-6">
 						<button

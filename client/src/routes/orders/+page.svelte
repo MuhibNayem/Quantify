@@ -51,6 +51,10 @@
 			FirstName: string;
 			LastName: string;
 		};
+		Customer?: {
+			FirstName: string;
+			LastName: string;
+		};
 		HasPendingReturn?: boolean;
 		AdjustedTotal?: number;
 	}
@@ -479,9 +483,9 @@
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">Customer</span>
 										<span class="font-medium text-slate-700">
-											{order.User
-												? `${order.User.FirstName} ${order.User.LastName}`
-												: 'Guest / System'}
+											{order.Customer
+												? `${order.Customer.FirstName} ${order.Customer.LastName}`
+												: 'Guest'}
 										</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
@@ -505,7 +509,7 @@
 
 								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
 									<div>
-										{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount && (order.Returns || []).some((r) => r.Status === 'APPROVED' || r.Status === 'COMPLETED')}
+										{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
 											<p class="text-lg font-bold text-emerald-600">
 												{formatCurrency(order.AdjustedTotal)}
 											</p>

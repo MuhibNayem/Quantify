@@ -34,7 +34,7 @@
 		Check
 	} from 'lucide-svelte';
 	import api from '$lib/api';
-	import { crmApi } from '$lib/api/resources';
+	import { crmApi, promotionsApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
@@ -42,6 +42,7 @@
 	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 	import { formatCurrency } from '$lib/utils';
+    import { Badge } from '$lib/components/ui/badge';
 
 	$effect(() => {
 		if (!auth.hasPermission('pos.view')) {
@@ -52,6 +53,7 @@
 
 	// Runes state
 	let products = $state<any[]>([]);
+    let promotions = $state<any[]>([]);
 	let cart = $state<any[]>([]);
 	let searchTerm = $state('');
 	let customerSearchTerm = $state('');
@@ -69,6 +71,14 @@
 
 	let pointsToRedeem = $state(0);
 
+    const fetchPromotions = async () => {
+        try {
+            promotions = await promotionsApi.list(true);
+        } catch (error) {
+            console.error('Error fetching promotions:', error);
+        }
+    };
+
 	const fetchProducts = async (search = '') => {
 		try {
 			// Efficiently fetch products with stock in one go
@@ -76,9 +86,6 @@
 			let productsData = response.data.products;
 
 			// Client-side filtering for search (since the optimized endpoint returns all active products for POS cache)
-			// For a large catalog, we should add server-side search to the sales/products endpoint.
-			// Assuming simpler POS requirement for now, or we can filter if the endpoint supports it.
-			// The current implementations of ListProducts doesn't accept search query, so we filter here.
 			if (search) {
 				const lowerSearch = search.toLowerCase();
 				productsData = productsData.filter(
@@ -90,19 +97,17 @@
 			}
 
 			// Map to expected structure (or update usage in template)
-			// Flattening structure for easier access
 			products = productsData.map((p: any) => ({
 				...p,
 				stock: { currentQuantity: p.StockQuantity } // Adapter for existing template usage
 			}));
 		} catch (error) {
-			console.error('Error fetching products:', error);
-			// toast.error('Failed to load product catalog');
+            console.error('Error fetching products:', error);
 		}
 	};
 
 	onMount(() => {
-		fetchProducts();
+        Promise.all([fetchProducts(), fetchPromotions()]);
 
 		// Parallax hero motion
 		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
@@ -133,6 +138,48 @@
 	const handleSearch = async () => {
 		await fetchProducts(searchTerm.trim());
 	};
+
+    function getProductPrice(product: any): { price: number, originalPrice: number, discountName?: string } {
+        const originalPrice = product.SellingPrice;
+        let bestPrice = originalPrice;
+        let bestPromo = null;
+        let bestScore = -1;
+
+        for (const p of promotions) {
+            let score = -1;
+            
+            if (p.ProductID === product.ID) {
+                score = 2;
+            } else if (p.SubCategoryID && p.SubCategoryID === product.SubCategoryID) {
+                score = 1;
+            } else if (p.CategoryID && p.CategoryID === product.CategoryID) {
+                score = 0;
+            }
+
+            if (score > -1) {
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestPromo = p;
+                } else if (score === bestScore) {
+                    if (bestPromo && p.Priority > bestPromo.Priority) {
+                        bestPromo = p;
+                    }
+                }
+            }
+        }
+
+        if (bestPromo) {
+            if (bestPromo.DiscountType === 'PERCENTAGE') {
+                bestPrice = originalPrice * (1 - bestPromo.DiscountValue / 100);
+            } else {
+                bestPrice = originalPrice - bestPromo.DiscountValue;
+            }
+            if (bestPrice < 0) bestPrice = 0;
+            return { price: bestPrice, originalPrice, discountName: bestPromo.Name };
+        }
+
+        return { price: originalPrice, originalPrice };
+    }
 
 	const handleCustomerSearch = async () => {
 		if (!customerSearchTerm) {
@@ -209,7 +256,10 @@
 	};
 
 	const subtotal = $derived(
-		cart.reduce((acc, item) => acc + (item.SellingPrice || 0) * item.quantity, 0)
+		cart.reduce((acc, item) => {
+            const { price } = getProductPrice(item);
+            return acc + price * item.quantity;
+        }, 0)
 	);
 	// Tax Calculation
 	const taxRate = $derived(($settings.tax_rate_percentage || 0) / 100);
@@ -445,6 +495,7 @@
 						{:else}
 							<div class="grid grid-cols-2 gap-3 xl:grid-cols-3">
 								{#each products as product}
+                                    {@const { price, originalPrice, discountName } = getProductPrice(product)}
 									<button
 										type="button"
 										onclick={() => addToCart(product)}
@@ -454,10 +505,28 @@
 											<div class="line-clamp-2 text-[0.8rem] font-medium text-slate-900">
 												{product.Name}
 											</div>
-											<div class="mt-0.5 flex items-center justify-between">
-												<div class="text-[0.8rem] font-semibold text-indigo-600">
-													{formatCurrency(product.SellingPrice)}
-												</div>
+											<div class="mt-0.5 flex flex-col gap-1">
+                                                <div class="flex items-center gap-2">
+                                                    {#if price < originalPrice}
+                                                        <span class="text-[0.65rem] text-slate-400 line-through">
+                                                            {formatCurrency(originalPrice)}
+                                                        </span>
+                                                        <span class="text-[0.8rem] font-bold text-rose-600">
+                                                            {formatCurrency(price)}
+                                                        </span>
+                                                    {:else}
+                                                        <span class="text-[0.8rem] font-semibold text-indigo-600">
+                                                            {formatCurrency(price)}
+                                                        </span>
+                                                    {/if}
+                                                </div>
+                                                
+                                                {#if discountName}
+                                                     <Badge variant="outline" class="w-fit text-[0.6rem] px-1 py-0 border-rose-200 bg-rose-50 text-rose-600">
+                                                        {discountName}
+                                                     </Badge>
+                                                {/if}
+
 												<div class="flex items-center gap-1 text-[0.7rem] text-slate-500">
 													<span
 														class="h-1.5 w-1.5 rounded-full {getAvailableStock(product) > 0
@@ -542,6 +611,7 @@
 
 								<TableBody>
 									{#each cart as item}
+                                        {@const { price, originalPrice, discountName } = getProductPrice(item)}
 										<TableRow class="border-slate-100 hover:bg-slate-50/60">
 											<TableCell class="min-w-0 whitespace-normal align-top">
 												<div
@@ -563,11 +633,21 @@
 
 												<div class="mt-0.5 break-words text-[0.7rem] text-slate-400">
 													#{item.id}
+                                                    {#if discountName}
+                                                        <span class="ml-1 text-rose-500 font-medium text-[0.65rem]">({discountName})</span>
+                                                    {/if}
 												</div>
 											</TableCell>
 
 											<TableCell class="align-top text-[0.8rem] text-slate-800">
-												{formatCurrency(item.SellingPrice)}
+                                                {#if price < originalPrice}
+                                                    <div class="flex flex-col">
+    												    <span class="line-through text-slate-400 text-[0.65rem]">{formatCurrency(originalPrice)}</span>
+                                                        <span class="font-bold text-rose-600">{formatCurrency(price)}</span>
+                                                    </div>
+                                                {:else}
+												    {formatCurrency(price)}
+                                                {/if}
 											</TableCell>
 
 											<!-- Quantity input -->
@@ -584,7 +664,7 @@
 											<TableCell
 												class="text-right align-top text-[0.8rem] font-semibold text-slate-900"
 											>
-												{formatCurrency((item.SellingPrice || 0) * item.quantity)}
+												{formatCurrency(price * item.quantity)}
 											</TableCell>
 
 											<TableCell class="text-right align-top">

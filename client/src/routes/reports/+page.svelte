@@ -200,7 +200,7 @@
 	onMount(() => loadReports(false));
 
 	const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-	const hours = [0,4,8,12,16,20];
+	const hours = [0,4,8,12,16,20, 23];
 </script>
 
 <div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -326,8 +326,8 @@
 							</div>
 						</div>
 
-						<div class="space-y-3 relative z-10">
-							{#each employeeSales.slice(0, 5) as emp, i}
+						<div class="space-y-3 relative z-10 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+							{#each employeeSales.slice(0, 50) as emp, i}
 								<div class="group flex items-center justify-between p-4 rounded-[1.5rem] bg-white/40 border border-white/40 hover:bg-white/80 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 cursor-default">
 									<div class="flex items-center gap-4">
 										<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-slate-100 to-slate-200 font-bold text-slate-600 shadow-inner border border-white">
@@ -339,6 +339,41 @@
 										</div>
 									</div>
 									<span class="font-bold text-purple-600 text-sm bg-purple-50/50 px-3 py-1 rounded-full border border-purple-100/50">{formatCurrency(emp.sales)}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+
+					<!-- Top Customers (New) -->
+					<div class="col-span-2 lg:col-span-1 relative overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-sky-900/5 backdrop-blur-3xl transition-all hover:bg-white/50 duration-500">
+						<div class="flex items-center gap-4 mb-8">
+							<div class="h-12 w-12 flex items-center justify-center bg-gradient-to-br from-sky-50 to-cyan-50/50 rounded-2xl text-sky-600 shadow-inner border border-white/60">
+								<Users class="h-6 w-6" />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800 tracking-tight">Top Customers</h3>
+								<p class="text-sm text-slate-500 font-medium">Most valuable clients</p>
+							</div>
+						</div>
+
+						<div class="space-y-3 relative z-10 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
+							{#each customerInsights.slice(0, 50) as cust}
+								<div class="group flex items-center justify-between p-4 rounded-[1.5rem] bg-white/40 border border-white/40 hover:bg-white/80 hover:scale-[1.02] hover:shadow-lg transition-all duration-300 cursor-default">
+									<div class="flex items-center gap-4">
+										<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-sky-200 font-bold text-sky-700 shadow-inner border border-white">
+											{(cust.FullName || cust.Username || '?').charAt(0)}
+										</div>
+										<div>
+											<p class="text-sm font-bold text-slate-700 group-hover:text-sky-900 transition-colors">{cust.FullName || cust.Username}</p>
+											<div class="flex items-center gap-2">
+												<p class="text-[11px] font-medium text-slate-400 group-hover:text-slate-500">{cust.OrderCount} orders</p>
+												{#if cust.DaysSinceLastOrder > 90}
+													<span class="text-[9px] font-bold text-white bg-rose-400 px-1.5 rounded-full">At Risk</span>
+												{/if}
+											</div>
+										</div>
+									</div>
+									<span class="font-bold text-sky-600 text-sm bg-sky-50/50 px-3 py-1 rounded-full border border-sky-100/50">{formatCurrency(cust.TotalSpent)}</span>
 								</div>
 							{/each}
 						</div>

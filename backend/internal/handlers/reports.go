@@ -518,7 +518,8 @@ func (h *ReportHandler) GetCustomerInsightsReport(c *gin.Context) {
 		return
 	}
 
-	report, err := h.reportingService.GetCustomerInsightsReport(start, end)
+	refresh := c.Query("refresh") == "true"
+	report, err := h.reportingService.GetCustomerInsightsReport(start, end, refresh)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to get customer insights", http.StatusInternalServerError, err))
 		return

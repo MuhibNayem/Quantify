@@ -123,6 +123,14 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 		var totalRefundAmount float64
 		var returnItems []domain.ReturnItem
 
+		// Get Tax Rate
+		taxRate := 0.0
+		if val, err := h.Settings.GetSetting("tax_rate_percentage"); err == nil {
+			if v, err := strconv.ParseFloat(val, 64); err == nil {
+				taxRate = v
+			}
+		}
+
 		// 3. Process Items
 		for _, item := range req.Items {
 			orderItem, ok := orderItemMap[item.OrderItemID]
@@ -145,8 +153,9 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 				Reason:      item.Reason,
 			})
 
-			// Calculate refund amount for this item
-			totalRefundAmount += orderItem.UnitPrice * float64(item.Quantity)
+			// Calculate refund amount for this item (including tax)
+			itemTotal := orderItem.UnitPrice * float64(item.Quantity)
+			totalRefundAmount += itemTotal * (1 + taxRate/100.0)
 		}
 
 		// Bulk Create Return Items

@@ -76,7 +76,7 @@ func (s *ReportingService) NotifyReportUpdate(reportType string) {
 		data, err = s.GetCategoryDrillDownReport(time.Now().AddDate(0, 0, -30), time.Now())
 	case "CUSTOMER_INSIGHTS":
 		// Fetch for last 90 days
-		data, err = s.GetCustomerInsightsReport(time.Now().AddDate(0, 0, -90), time.Now())
+		data, err = s.GetCustomerInsightsReport(time.Now().AddDate(0, 0, -90), time.Now(), true)
 	case "SHRINKAGE":
 		// Fetch for last 30 days
 		data, err = s.GetShrinkageReport(time.Now().AddDate(0, 0, -30), time.Now())
@@ -514,13 +514,16 @@ func (s *ReportingService) GetPOAnalysisReport(startDate, endDate time.Time) ([]
 	return s.repo.GetPOAnalysisReport(startDate, endDate)
 }
 
-func (s *ReportingService) GetCustomerInsightsReport(startDate, endDate time.Time) ([]repository.CustomerInsight, error) {
+func (s *ReportingService) GetCustomerInsightsReport(startDate, endDate time.Time, bypassCache bool) ([]repository.CustomerInsight, error) {
 	// Customer Insights can be cached for 6 hours
 	cacheKey := fmt.Sprintf("customer_insights:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
-	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
-		var insights []repository.CustomerInsight
-		if err := json.Unmarshal([]byte(cached), &insights); err == nil {
-			return insights, nil
+
+	if !bypassCache {
+		if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+			var insights []repository.CustomerInsight
+			if err := json.Unmarshal([]byte(cached), &insights); err == nil {
+				return insights, nil
+			}
 		}
 	}
 

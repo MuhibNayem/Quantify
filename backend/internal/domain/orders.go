@@ -10,8 +10,10 @@ import (
 type Order struct {
 	gorm.Model
 	OrderNumber      string `gorm:"uniqueIndex;not null"`
-	UserID           uint   `gorm:"index"` // Customer ID, nullable if guest checkout supported (but here we enforce user)
+	UserID           uint   `gorm:"index"` // Staff ID (logged in user)
 	User             User
+	CustomerID       *uint     `gorm:"index"` // Customer ID (nullable)
+	Customer         *User     `gorm:"foreignKey:CustomerID"`
 	TotalAmount      float64   `gorm:"not null"`
 	Status           string    `gorm:"default:'COMPLETED';index"` // PENDING, COMPLETED, CANCELLED, RETURNED
 	PaymentMethod    string    `gorm:"not null"`

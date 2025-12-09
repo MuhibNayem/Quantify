@@ -343,17 +343,15 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		}
 
 		// 5. Create Order and Order Items
-		// Determine correct UserID for the order (Customer > Staff)
-		orderUserID := userID
-		if req.CustomerID != nil && *req.CustomerID > 0 {
-			orderUserID = *req.CustomerID
-		}
+		// UserID corresponds to the Staff (Authenticated User)
+		// CustomerID corresponds to the Customer (if provided)
 
-		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), orderUserID)
+		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
 		order := domain.Order{
 			OrderNumber:    orderNumber,
-			UserID:         orderUserID,
-			TotalAmount:    totalAmount - discountAmount, // Store net amount or total? Usually total paid.
+			UserID:         userID,         // Staff
+			CustomerID:     req.CustomerID, // Customer
+			TotalAmount:    totalAmount - discountAmount,
 			Status:         "COMPLETED",
 			PaymentMethod:  req.PaymentMethod,
 			OrderDate:      time.Now(),
@@ -428,6 +426,8 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		SKU           string  `json:"SKU"`
 		SellingPrice  float64 `json:"SellingPrice"`
 		StockQuantity int     `json:"StockQuantity"`
+		CategoryID    uint    `json:"CategoryID"`
+		SubCategoryID uint    `json:"SubCategoryID"`
 	}
 
 	var results []ProductWithStock
@@ -435,10 +435,10 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 	// Optimized query: Get products and sum their batch quantities
 	// Using LEFT JOIN to ensure products with 0 stock are also returned (with NULL sum -> 0)
 	query := h.DB.Table("products").
-		Select("products.id, products.name, products.sku, products.selling_price, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
+		Select("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
 		Joins("LEFT JOIN batches ON batches.product_id = products.id").
 		Where("products.deleted_at IS NULL"). // Respect soft delete
-		Group("products.id, products.name, products.sku, products.selling_price")
+		Group("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id")
 
 	if err := query.Scan(&results).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch products", http.StatusInternalServerError, err))
@@ -503,15 +503,121 @@ func (h *SalesHandler) ListOrders(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /sales/history [get]
+// OrderResponseDTO reduces payload size and includes computed fields
+type OrderResponseDTO struct {
+	ID               uint            `json:"ID"`
+	OrderNumber      string          `json:"OrderNumber"`
+	OrderDate        time.Time       `json:"OrderDate"`
+	TotalAmount      float64         `json:"TotalAmount"`
+	Status           string          `json:"Status"`
+	PaymentMethod    string          `json:"PaymentMethod"`
+	User             UserSummaryDTO  `json:"User"`     // Staff
+	Customer         *UserSummaryDTO `json:"Customer"` // Actual Customer
+	OrderItems       []OrderItemDTO  `json:"OrderItems"`
+	HasPendingReturn bool            `json:"HasPendingReturn"`
+	AdjustedTotal    float64         `json:"AdjustedTotal"`
+}
+
+type UserSummaryDTO struct {
+	ID        uint   `json:"ID"`
+	Username  string `json:"Username"`
+	FirstName string `json:"FirstName"`
+	LastName  string `json:"LastName"`
+}
+
+type OrderItemDTO struct {
+	ID         uint           `json:"ID"`
+	ProductID  uint           `json:"ProductID"`
+	Product    ProductSummary `json:"Product"`
+	Quantity   int            `json:"Quantity"`
+	UnitPrice  float64        `json:"UnitPrice"`
+	TotalPrice float64        `json:"TotalPrice"`
+}
+
+type ProductSummary struct {
+	ID   uint   `json:"ID"`
+	Name string `json:"Name"`
+	SKU  string `json:"SKU"`
+}
+
+// @Router /sales/history [get]
 func (h *SalesHandler) ListAllOrders(c *gin.Context) {
 	var orders []domain.Order
-	// Preload items and their products
-	if err := h.DB.Preload("OrderItems.Product").Preload("User").Order("created_at desc").Find(&orders).Error; err != nil {
+	// Preload necessary associations.
+	// Note: We preload Returns to calculate AdjustedTotal and Pending status. Preload Customer for display.
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Preload("Customer").Preload("Returns").Order("created_at desc").Find(&orders).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch all orders", http.StatusInternalServerError, err))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"orders": orders})
+	response := make([]OrderResponseDTO, 0, len(orders))
+
+	for _, order := range orders {
+		// Calculate Computed Fields
+		adjustedTotal := order.TotalAmount
+		hasPending := false
+
+		for _, r := range order.Returns {
+			if r.Status == "PENDING" {
+				hasPending = true
+			}
+			if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+				adjustedTotal -= r.RefundAmount
+			}
+		}
+
+		// Map OrderItems
+		items := make([]OrderItemDTO, 0, len(order.OrderItems))
+		for _, item := range order.OrderItems {
+			items = append(items, OrderItemDTO{
+				ID:        item.ID,
+				ProductID: item.ProductID,
+				Product: ProductSummary{
+					ID:   item.Product.ID,
+					Name: item.Product.Name,
+					SKU:  item.Product.SKU,
+				},
+				Quantity:   item.Quantity,
+				UnitPrice:  item.UnitPrice,
+				TotalPrice: item.TotalPrice,
+			})
+		}
+
+		// Map User (Staff)
+		userSummary := UserSummaryDTO{
+			ID:        order.User.ID,
+			Username:  order.User.Username,
+			FirstName: order.User.FirstName,
+			LastName:  order.User.LastName,
+		}
+
+		// Map Customer
+		var customerSummary *UserSummaryDTO
+		if order.Customer != nil {
+			customerSummary = &UserSummaryDTO{
+				ID:        order.Customer.ID,
+				Username:  order.Customer.Username,
+				FirstName: order.Customer.FirstName,
+				LastName:  order.Customer.LastName,
+			}
+		}
+
+		response = append(response, OrderResponseDTO{
+			ID:               order.ID,
+			OrderNumber:      order.OrderNumber,
+			OrderDate:        order.OrderDate,
+			TotalAmount:      order.TotalAmount,
+			Status:           order.Status,
+			PaymentMethod:    order.PaymentMethod,
+			User:             userSummary,
+			Customer:         customerSummary,
+			OrderItems:       items,
+			HasPendingReturn: hasPending,
+			AdjustedTotal:    adjustedTotal,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": response})
 }
 
 // GetOrderByNumber godoc

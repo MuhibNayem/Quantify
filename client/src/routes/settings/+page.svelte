@@ -41,7 +41,7 @@
 		}
 	});
 
-	let settings: any = {
+	let settings: any = $state({
 		business_name: '',
 		currency_symbol: '$',
 		timezone: 'UTC',
@@ -53,8 +53,8 @@
 		loyalty_tier_gold: '2500',
 		loyalty_tier_platinum: '10000',
 		tax_rate_percentage: '0'
-	};
-	let activeTab = 'general';
+	});
+	let activeTab = $state('general');
 
 	const currencyOptions = [
 		{ value: '$', label: 'USD - United States Dollar' },

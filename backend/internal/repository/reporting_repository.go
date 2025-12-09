@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"inventory/backend/internal/domain"
+	"log"
 	"time"
 
 	"gorm.io/gorm"
@@ -479,6 +480,7 @@ func (r *ReportsRepository) GetSalesByEmployeeReport(startDate, endDate time.Tim
 	var stats []EmployeeSalesStats
 
 	// We use the 'orders' table which links to 'users'
+	// Filter out users with the 'Customer' role to show only staff performance
 	query := `
 		SELECT 
 			u.id, 
@@ -487,7 +489,9 @@ func (r *ReportsRepository) GetSalesByEmployeeReport(startDate, endDate time.Tim
 			SUM(o.total_amount) as total_sales
 		FROM orders o
 		JOIN users u ON u.id = o.user_id
+		LEFT JOIN roles r ON r.id = u.role_id
 		WHERE o.status = 'COMPLETED'
+		AND (r.name != 'Customer' OR r.name IS NULL)
 		AND o.order_date BETWEEN ? AND ?
 		GROUP BY u.id, u.username
 		ORDER BY total_sales DESC
@@ -773,9 +777,10 @@ type CustomerInsight struct {
 
 // GetCustomerInsightsReport identifies top spenders and churn risk.
 func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Time) ([]CustomerInsight, error) {
+	log.Printf("DEBUG: Executing GetCustomerInsightsReport (New Logic) for range %v to %v", startDate, endDate)
 	var insights []CustomerInsight
 
-	// We join users and orders
+	// We join users and orders using customer_id to identify customers
 	query := `
 		SELECT 
 			u.id, 
@@ -785,7 +790,7 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 			COUNT(o.id) as order_count,
 			MAX(o.order_date) as last_order_date
 		FROM users u
-		JOIN orders o ON o.user_id = u.id
+		JOIN orders o ON o.customer_id = u.id
 		WHERE o.status = 'COMPLETED'
 		AND o.order_date BETWEEN ? AND ?
 		GROUP BY u.id, u.username, full_name
