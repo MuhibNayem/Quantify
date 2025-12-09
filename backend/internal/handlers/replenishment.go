@@ -22,14 +22,16 @@ type ReplenishmentHandler struct {
 	ReplenishmentService services.ReplenishmentService
 	Hub                  *websocket.Hub
 	NotificationRepo     repository.NotificationRepository
+	EmailService         services.EmailService
 }
 
-func NewReplenishmentHandler(forecastingService services.ForecastingService, replenishmentService services.ReplenishmentService, hub *websocket.Hub, notificationRepo repository.NotificationRepository) *ReplenishmentHandler {
+func NewReplenishmentHandler(forecastingService services.ForecastingService, replenishmentService services.ReplenishmentService, hub *websocket.Hub, notificationRepo repository.NotificationRepository, emailService services.EmailService) *ReplenishmentHandler {
 	return &ReplenishmentHandler{
 		ForecastingService:   forecastingService,
 		ReplenishmentService: replenishmentService,
 		Hub:                  hub,
 		NotificationRepo:     notificationRepo,
+		EmailService:         emailService,
 	}
 }
 
@@ -244,7 +246,7 @@ func CreatePOFromSuggestion(c *gin.Context) {
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /purchase-orders/{poId}/send [post]
-func SendPurchaseOrder(c *gin.Context) {
+func (h *ReplenishmentHandler) SendPurchaseOrder(c *gin.Context) {
 	poID := c.Param("poId")
 	var po domain.PurchaseOrder
 	if err := repository.DB.First(&po, poID).Error; err != nil {
@@ -265,6 +267,17 @@ func SendPurchaseOrder(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Failed to mark purchase order as sent", http.StatusInternalServerError, err))
 		return
 	}
+
+	// Send Email
+	// Reload PO with Supplier and Items to ensure we have all data for email
+	repository.DB.Preload("Supplier").Preload("PurchaseOrderItems.Product").First(&po, poID)
+
+	go func() {
+		if err := h.EmailService.SendPurchaseOrderEmail(po); err != nil {
+			// Log error but don't fail request
+			fmt.Printf("Failed to send PO email: %v\n", err)
+		}
+	}()
 
 	c.JSON(http.StatusOK, po)
 }
