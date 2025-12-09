@@ -209,6 +209,8 @@ type DemandForecast struct {
 	Product         Product
 	ForecastPeriod  string `gorm:"not null"` // e.g., "30_DAYS", "90_DAYS"
 	PredictedDemand int    `gorm:"not null"`
+	ConfidenceScore float64
+	Reasoning       string
 	GeneratedAt     time.Time
 }
 

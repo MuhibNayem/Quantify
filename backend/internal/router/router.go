@@ -58,7 +58,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
-	forecastingService := services.NewForecastingService(forecastingRepo)
+	forecastingService := services.NewForecastingService(forecastingRepo, cfg)
 	barcodeService := services.NewBarcodeService(barcodeRepo)
 	settingsService := services.NewSettingsService(settingsRepo)
 	crmService := services.NewCRMService(crmRepo, db, settingsService)

@@ -55,12 +55,16 @@ func (h *ReplenishmentHandler) GenerateDemandForecast(c *gin.Context) {
 		return
 	}
 
-	if err := h.ForecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays); err != nil {
-		c.Error(appErrors.NewAppError("Failed to generate demand forecast", http.StatusInternalServerError, err))
+	forecast, err := h.ForecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Demand forecast generation initiated."})
+	c.JSON(http.StatusOK, gin.H{
+		"message":  "Demand forecast generated successfully.",
+		"forecast": forecast,
+	})
 }
 
 // GetDemandForecast godoc

@@ -93,6 +93,19 @@ Data:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from forecasting import generate_demand_forecast
+
+class ForecastRequest(BaseModel):
+    product_id: int
+    days: int = 30
+
+@app.post("/forecast")
+def get_forecast(request: ForecastRequest):
+    result = generate_demand_forecast(request.product_id, request.days)
+    if "error" in result:
+        raise HTTPException(status_code=500, detail=result["error"])
+    return result
+
 # Agent Implementation
 from backend_client import BackendClient
 backend_client = BackendClient()

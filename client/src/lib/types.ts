@@ -135,6 +135,8 @@ export interface DemandForecast extends BaseEntity {
 	ProductID: number;
 	ForecastPeriod: string;
 	PredictedDemand: number;
+	ConfidenceScore?: number;
+	Reasoning?: string;
 	GeneratedAt: string;
 	Product?: Product;
 }

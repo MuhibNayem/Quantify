@@ -111,7 +111,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "csv"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -120,8 +120,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReport(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReport(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -129,7 +133,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "pdf"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -138,8 +142,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReportPDF(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReportPDF(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -147,7 +155,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "xlsx"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -156,8 +164,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReportExcel(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReportExcel(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -178,8 +190,8 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 	return s.jobRepo.UpdateJob(job)
 }
 
-func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) (map[string]interface{}, error) {
-	cacheKey := fmt.Sprintf("sales_trends:%s:%s:%v:%v:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID, groupBy)
+func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) (map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("sales_trends:%s:%s:%v:%v:%v:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID, productID, groupBy)
 	cachedReport, err := repository.GetCache(cacheKey)
 	if err == nil && cachedReport != "" {
 		var reportData map[string]interface{}
@@ -189,7 +201,7 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 		}
 	}
 
-	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, groupBy)
+	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +239,8 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 	return reportData, nil
 }
 
-func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}
@@ -250,8 +262,8 @@ func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, 
 	return nil
 }
 
-func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}
@@ -282,8 +294,8 @@ func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDat
 	return pdf.Output(writer)
 }
 
-func (s *ReportingService) ExportSalesTrendsReportExcel(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReportExcel(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}

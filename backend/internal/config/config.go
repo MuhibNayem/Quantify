@@ -48,6 +48,7 @@ type Config struct {
 	InventoryTurnoverCacheTTL time.Duration
 	ProfitMarginCacheTTL      time.Duration
 	ConsumerConcurrency       int
+	AIServiceURL              string
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -126,6 +127,7 @@ func LoadConfig() *Config {
 		InventoryTurnoverCacheTTL: inventoryTurnoverCacheTTL,
 		ProfitMarginCacheTTL:      profitMarginCacheTTL,
 		ConsumerConcurrency:       consumerConcurrency,
+		AIServiceURL:              getEnv("AI_SERVICE_URL", "http://localhost:8001"),
 	}
 
 	validateCriticalConfig(cfg)

@@ -28,7 +28,7 @@ type TopSellingProduct struct {
 	TotalSold float64
 }
 
-func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) ([]SalesTrend, []TopSellingProduct, error) {
+func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) ([]SalesTrend, []TopSellingProduct, error) {
 	var salesTrends []SalesTrend
 	var topSellingProducts []TopSellingProduct
 
@@ -54,6 +54,9 @@ func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categor
 	if locationID != nil {
 		query = query.Where("location_id = ?", *locationID)
 	}
+	if productID != nil {
+		query = query.Where("stock_adjustments.product_id = ?", *productID)
+	}
 
 	err := query.Group(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Order(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Scan(&salesTrends).Error
 	if err != nil {
@@ -73,6 +76,9 @@ func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categor
 	}
 	if locationID != nil {
 		query = query.Where("stock_adjustments.location_id = ?", *locationID)
+	}
+	if productID != nil {
+		query = query.Where("stock_adjustments.product_id = ?", *productID)
 	}
 
 	err = query.Group("products.id, products.name").Order("total_sold DESC").Limit(10).Scan(&topSellingProducts).Error

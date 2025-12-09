@@ -25,6 +25,7 @@
 	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+    import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
@@ -33,7 +34,27 @@
 		}
 	});
 
-	const forecastForm = $state({ periodInDays: '30', productId: '', result: '' });
+
+    
+    // Define report types
+    interface SalesReport {
+        salesTrends: any[];
+        totalSales: number;
+        averageDailySales: number;
+        period: string;
+    }
+    interface TurnoverReport {
+        averageInventoryValue: number;
+        inventoryTurnoverRate: number;
+        period: string;
+    }
+    interface MarginReport {
+        grossProfitMargin: number;
+        grossProfit: number;
+        totalRevenue: number;
+        period: string;
+    }
+
 	let suggestions = $state<ReorderSuggestion[]>([]);
 	let suggestionsLoading = $state(false);
 
@@ -43,7 +64,12 @@
 	});
 	const reportKeys = ['sales', 'turnover', 'margin'] as const;
 	type ReportKey = (typeof reportKeys)[number];
-	const reportResults = $state<Record<ReportKey, unknown>>({
+	
+    const reportResults = $state<{
+        sales: SalesReport | null;
+        turnover: TurnoverReport | null;
+        margin: MarginReport | null;
+    }>({
 		sales: null,
 		turnover: null,
 		margin: null
@@ -87,7 +113,7 @@
 		suggestionsLoading = true;
 		try {
 			suggestions = await replenishmentApi.listSuggestions();
-		} catch (error) {
+		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to load suggestions';
 			toast.error('Failed to Load Suggestions', { description: errorMessage });
 		} finally {
@@ -96,26 +122,14 @@
 	};
 	onMount(loadSuggestions);
 
-	const triggerForecast = async () => {
-		try {
-			const payload: Record<string, unknown> = { periodInDays: Number(forecastForm.periodInDays) };
-			if (forecastForm.productId) payload.productId = Number(forecastForm.productId);
-			const response = await replenishmentApi.generateForecast(payload);
-			forecastForm.result = response.message ?? 'Forecast generated';
-			toast.success('Forecast completed');
-			await loadSuggestions();
-		} catch (error) {
-			const errorMessage = error.response?.data?.error || 'Unable to run forecast';
-			toast.error('Failed to Run Forecast', { description: errorMessage });
-		}
-	};
+
 
 	const createPO = async (suggestionId: number) => {
 		try {
 			const po = await replenishmentApi.createPOFromSuggestion(suggestionId);
 			toast.success(`PO ${po.ID ?? 'created'}`);
 			await loadSuggestions();
-		} catch (error) {
+		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to create PO';
 			toast.error('Failed to Create PO', { description: errorMessage });
 		}
@@ -130,14 +144,14 @@
 		};
 		try {
 			if (type === 'sales') {
-				reportResults.sales = await reportsApi.salesTrends(payload);
+				reportResults.sales = await reportsApi.salesTrends(payload) as SalesReport;
 			} else if (type === 'turnover') {
-				reportResults.turnover = await reportsApi.inventoryTurnover(payload);
+				reportResults.turnover = await reportsApi.inventoryTurnover(payload) as TurnoverReport;
 			} else {
-				reportResults.margin = await reportsApi.profitMargin(payload);
+				reportResults.margin = await reportsApi.profitMargin(payload) as MarginReport;
 			}
 			toast.success('Report ready');
-		} catch (error) {
+		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to run report';
 			toast.error('Failed to Run Report', { description: errorMessage });
 		} finally {
@@ -188,54 +202,9 @@
 	<!-- Forecast + Range -->
 	<div class="grid gap-8 lg:grid-cols-2">
 		<!-- Demand forecast -->
-		<Card
-			class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-		>
-			<CardHeader
-				class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-			>
-				<CardTitle class="text-slate-800">Demand Forecast</CardTitle>
-				<CardDescription class="text-slate-600"
-					>Trigger rolling forecasts for targeted SKUs</CardDescription
-				>
-			</CardHeader>
-			<CardContent class="space-y-4 p-6">
-				<div class="grid gap-3 sm:grid-cols-2">
-					<Input
-						type="number"
-						min="7"
-						placeholder="Horizon (days)"
-						bind:value={forecastForm.periodInDays}
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
-					/>
-					<Input
-						type="number"
-						min="1"
-						placeholder="Product ID (optional)"
-						bind:value={forecastForm.productId}
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
-					/>
-				</div>
-
-				<!-- Responsive action row -->
-				<div class="flex flex-col gap-3 sm:flex-row">
-					<Button
-						class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-lg"
-						onclick={triggerForecast}
-					>
-						Generate Forecast
-					</Button>
-				</div>
-
-				{#if forecastForm.result}
-					<p
-						class="rounded-xl border border-sky-200 bg-white/70 p-3 text-sm text-slate-700 backdrop-blur"
-					>
-						{forecastForm.result}
-					</p>
-				{/if}
-			</CardContent>
-		</Card>
+        <div class="h-full">
+            <DemandForecastWidget />
+        </div>
 
 		<!-- Report range -->
 		<Card
@@ -359,7 +328,7 @@
 								<TableCell
 									>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</TableCell
 								>
-								<TableCell>{suggestion.Supplier?.Name ?? suggestion.SupplierID}</TableCell>
+								<TableCell>{suggestion.Supplier?.Name ?? String(suggestion.SupplierID)}</TableCell>
 								<TableCell>{suggestion.SuggestedOrderQuantity}</TableCell>
 								<TableCell>
 									<span

@@ -49,9 +49,9 @@ func (h *ReportHandler) GetSalesTrendsReport(c *gin.Context) {
 		return
 	}
 
-	logrus.Infof("Generating sales trends report for period %v to %v, category %v, location %v", req.StartDate, req.EndDate, req.CategoryID, req.LocationID)
+	logrus.Infof("Generating sales trends report for period %v to %v, category %v, location %v, product %v", req.StartDate, req.EndDate, req.CategoryID, req.LocationID, req.ProductID)
 
-	reportData, err := h.reportingService.GetSalesTrendsReport(req.StartDate, req.EndDate, req.CategoryID, req.LocationID, req.GroupBy)
+	reportData, err := h.reportingService.GetSalesTrendsReport(req.StartDate, req.EndDate, req.CategoryID, req.LocationID, req.ProductID, req.GroupBy)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to get sales trends", http.StatusInternalServerError, err))
 		return

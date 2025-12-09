@@ -74,7 +74,7 @@ class BackendClient:
         response.raise_for_status()
         return response.json()
 
-    def get_sales_report(self, start_date: str, end_date: str) -> Dict[str, Any]:
+    def get_sales_report(self, start_date: str, end_date: str, product_id: Optional[int] = None) -> Dict[str, Any]:
         """Get sales report for a specific date range."""
         self._login()
         url = f"{self.base_url}/reports/sales-trends"
@@ -83,6 +83,9 @@ class BackendClient:
             "endDate": f"{end_date}T23:59:59Z",
             "groupBy": "day"
         }
+        if product_id:
+            payload["productId"] = product_id
+            
         response = requests.post(url, json=payload, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
