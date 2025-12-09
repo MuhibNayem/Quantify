@@ -539,3 +539,7 @@ func (s *ReportingService) GetShrinkageReport(startDate, endDate time.Time) ([]r
 func (s *ReportingService) GetCustomerReturnAnalysisReport(startDate, endDate time.Time) ([]repository.ReturnAnalysisItem, error) {
 	return s.repo.GetCustomerReturnAnalysisReport(startDate, endDate)
 }
+
+func (s *ReportingService) GetProductPerformanceAnalytics(startDate, endDate time.Time, supplierName string, minStock int) ([]repository.ProductPerformanceAnalytics, error) {
+	return s.repo.GetProductPerformanceAnalytics(startDate, endDate, supplierName, minStock)
+}

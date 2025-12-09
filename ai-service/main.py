@@ -1,6 +1,6 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from pydantic import BaseModel
 from openai import OpenAI
 from dotenv import load_dotenv
@@ -94,7 +94,7 @@ Data:
         raise HTTPException(status_code=500, detail=str(e))
 
 from forecasting import generate_demand_forecast
-from forecasting import generate_demand_forecast, DemandForecaster
+from forecasting import generate_demand_forecast
 
 class ForecastRequest(BaseModel):
     product_id: int
@@ -125,6 +125,8 @@ async def generate_forecast(request: Request):
 # Agent Implementation
 from backend_client import BackendClient
 from churn_prediction import ChurnPredictor
+
+backend_client = BackendClient()
 
 @app.post("/predict-churn")
 async def predict_churn(request: Request):
@@ -199,6 +201,52 @@ tools = [
                 "required": ["start_date", "end_date"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_product_performance",
+            "description": "Get product performance analytics (profit, revenue, stock coverage). Useful for finding top products or low stock items.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "start_date": {
+                        "type": "string",
+                        "description": "Start date in YYYY-MM-DD format."
+                    },
+                    "end_date": {
+                        "type": "string",
+                        "description": "End date in YYYY-MM-DD format."
+                    },
+                    "supplier_name": {
+                        "type": "string",
+                        "description": "Filter by supplier name (optional)."
+                    },
+                    "min_stock": {
+                        "type": "integer",
+                        "description": "Filter by minimum stock level (optional)."
+                    }
+                },
+                "required": ["start_date", "end_date"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_supplier_by_name",
+            "description": "Get supplier details by name. Useful for finding supplier ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Name of the supplier."
+                    }
+                },
+                "required": ["name"]
+            }
+        }
     }
 ]
 
@@ -208,25 +256,33 @@ class AgentRequest(BaseModel):
 @app.post("/agent/run")
 def run_agent(request: AgentRequest):
     messages = [
-        {"role": "system", "content": "You are an autonomous agent managing a retail inventory system. Use the available tools to fulfill the user's request."},
+        {"role": "system", "content": "You are an autonomous agent managing a retail inventory system. Use the available tools to fulfill the user's request. You can chain multiple tools to achieve complex goals. Always verify you have the necessary IDs (like supplier_id) before creating orders."},
         {"role": "user", "content": request.instruction}
     ]
 
+    max_iterations = 5
+    
     try:
-        # First call to LLM
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto"
-        )
+        for i in range(max_iterations):
+            # Call LLM
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto"
+            )
 
-        response_message = response.choices[0].message
-        tool_calls = response_message.tool_calls
-
-        if tool_calls:
-            messages.append(response_message)
+            response_message = response.choices[0].message
+            tool_calls = response_message.tool_calls
             
+            # Append assistant's response (thought/tool call)
+            messages.append(response_message)
+
+            if not tool_calls:
+                # No more tools to call, we are done
+                return {"result": response_message.content}
+            
+            # Execute tools
             for tool_call in tool_calls:
                 function_name = tool_call.function.name
                 function_args = json.loads(tool_call.function.arguments)
@@ -239,6 +295,10 @@ def run_agent(request: AgentRequest):
                         tool_output = backend_client.create_purchase_order(**function_args)
                     elif function_name == "get_sales_report":
                         tool_output = backend_client.get_sales_report(**function_args)
+                    elif function_name == "get_product_performance":
+                        tool_output = backend_client.get_product_performance(**function_args)
+                    elif function_name == "get_supplier_by_name":
+                        tool_output = backend_client.get_supplier_by_name(**function_args)
                     else:
                         tool_output = {"error": "Unknown function"}
                 except Exception as e:
@@ -250,15 +310,9 @@ def run_agent(request: AgentRequest):
                     "name": function_name,
                     "content": json.dumps(tool_output)
                 })
-                
-            # Second call to LLM to summarize
-            final_response = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=messages
-            )
-            return {"result": final_response.choices[0].message.content}
         
-        return {"result": response_message.content}
+        return {"result": "Agent reached maximum iteration limit without final answer."}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

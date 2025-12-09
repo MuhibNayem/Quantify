@@ -119,3 +119,34 @@ class BackendClient:
         response = requests.post(url, json=payload, headers=self._get_headers())
         response.raise_for_status()
         return response.json()
+
+    def get_product_performance(self, start_date: str, end_date: str, supplier_name: Optional[str] = None, min_stock: Optional[int] = None) -> list[Dict[str, Any]]:
+        """Get product performance analytics."""
+        self._login()
+        url = f"{self.base_url}/reports/product-performance"
+        params = {
+            "startDate": f"{start_date}T00:00:00Z",
+            "endDate": f"{end_date}T23:59:59Z"
+        }
+        if supplier_name:
+            params["supplierName"] = supplier_name
+        if min_stock is not None:
+            params["minStock"] = min_stock
+            
+        response = requests.get(url, params=params, headers=self._get_headers())
+        response.raise_for_status()
+        return response.json()
+
+    def get_supplier_by_name(self, name: str) -> Dict[str, Any]:
+        """Get supplier details by name."""
+        self._login()
+        # URL encode the name
+        import urllib.parse
+        encoded_name = urllib.parse.quote(name)
+        url = f"{self.base_url}/api/v1/suppliers/name/{encoded_name}"
+        
+        response = requests.get(url, headers=self._get_headers())
+        if response.status_code == 404:
+            return {"error": "Supplier not found"}
+        response.raise_for_status()
+        return response.json()

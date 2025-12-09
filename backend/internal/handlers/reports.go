@@ -623,3 +623,36 @@ func parseDateRange(c *gin.Context) (time.Time, time.Time, error) {
 
 	return start, end, nil
 }
+
+// GetProductPerformanceAnalytics godoc
+// @Summary Get product performance analytics
+// @Description Detailed metrics for agent reasoning (profit, stock, days of coverage).
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Param supplierName query string false "Filter by Supplier Name"
+// @Param minStock query int false "Filter by Min Stock"
+// @Success 200 {array} repository.ProductPerformanceAnalytics
+// @Router /reports/product-performance [get]
+func (h *ReportHandler) GetProductPerformanceAnalytics(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	supplierName := c.Query("supplierName")
+	minStockStr := c.Query("minStock")
+	minStock := 0
+	if minStockStr != "" {
+		minStock, _ = strconv.Atoi(minStockStr)
+	}
+
+	report, err := h.reportingService.GetProductPerformanceAnalytics(start, end, supplierName, minStock)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get product analytics", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}

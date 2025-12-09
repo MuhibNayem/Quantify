@@ -274,6 +274,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			reports.GET("/shrinkage", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetShrinkageReport)
 			reports.GET("/returns-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerReturnAnalysisReport)
 			reports.GET("/basket-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetBasketAnalysisReport)
+			reports.GET("/product-performance", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetProductPerformanceAnalytics)
 		}
 
 		// Alerts
