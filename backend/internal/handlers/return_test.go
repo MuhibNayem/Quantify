@@ -52,7 +52,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	settingsRepo := repository.NewSettingsRepository(db)
 	settingsService := services.NewSettingsService(settingsRepo)
 
-	salesHandler := handlers.NewSalesHandler(db, settingsService)
+	salesHandler := handlers.NewSalesHandler(db, settingsService, nil)
 
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -60,7 +60,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	cfg := &config.Config{}
 	// Create handler
 	notificationRepo := repository.NewNotificationRepository(db)
-	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo)
+	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo, nil)
 
 	// Setup Router
 	r := gin.Default()

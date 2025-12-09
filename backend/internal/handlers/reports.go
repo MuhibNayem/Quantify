@@ -273,3 +273,353 @@ func (h *ReportHandler) GetProfitMarginReport(c *gin.Context) {
 
 	c.JSON(http.StatusOK, reportData)
 }
+
+// GetStockAgingReport godoc
+// @Summary Get stock aging report
+// @Description Groups inventory by age buckets.
+// @Tags reports
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /reports/stock-aging [get]
+func (h *ReportHandler) GetStockAgingReport(c *gin.Context) {
+	report, err := h.reportingService.GetStockAgingReport()
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get stock aging report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetDeadStockReport godoc
+// @Summary Get dead stock report
+// @Description Identifies products with no sales in X days.
+// @Tags reports
+// @Produce json
+// @Param days query int false "Days threshold (default 90)"
+// @Success 200 {array} repository.DeadStockItem
+// @Router /reports/dead-stock [get]
+func (h *ReportHandler) GetDeadStockReport(c *gin.Context) {
+	daysStr := c.DefaultQuery("days", "90")
+	days, _ := strconv.Atoi(daysStr)
+
+	report, err := h.reportingService.GetDeadStockReport(days)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get dead stock report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetSupplierPerformanceReport godoc
+// @Summary Get supplier performance scorecard
+// @Description Metrics for suppliers.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.SupplierScorecard
+// @Router /reports/supplier-performance [get]
+func (h *ReportHandler) GetSupplierPerformanceReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetSupplierPerformanceReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get supplier performance report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetHourlySalesHeatmap godoc
+// @Summary Get hourly sales heatmap
+// @Description Sales by hour and day of week.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.HeatmapPoint
+// @Router /reports/heatmap [get]
+func (h *ReportHandler) GetHourlySalesHeatmap(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetHourlySalesHeatmap(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get heatmap", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetSalesByEmployeeReport godoc
+// @Summary Get sales by employee
+// @Description Sales totals by user.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.EmployeeSalesStats
+// @Router /reports/employee-sales [get]
+func (h *ReportHandler) GetSalesByEmployeeReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetSalesByEmployeeReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get employee sales report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetCategoryDrillDownReport godoc
+// @Summary Get category drill-down
+// @Description Sales and margin by category.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.CategoryPerformance
+// @Router /reports/category-drilldown [get]
+func (h *ReportHandler) GetCategoryDrillDownReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetCategoryDrillDownReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get category report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetCOGSAndGMROIReport godoc
+// @Summary Get COGS and GMROI
+// @Description GMROI analysis.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {object} repository.GMROIStats
+// @Router /reports/gmroi [get]
+func (h *ReportHandler) GetCOGSAndGMROIReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetCOGSAndGMROIReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get GMROI report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetVoidDiscountAuditReport godoc
+// @Summary Get void/discount audit log
+// @Description Audit log for sensitive POS actions.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} domain.AuditLog
+// @Router /reports/audit/voids [get]
+func (h *ReportHandler) GetVoidDiscountAuditReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetVoidDiscountAuditReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get audit report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetTaxLiabilityReport godoc
+// @Summary Get tax liability report
+// @Description Tax collected.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.TaxLiabilityStats
+// @Router /reports/tax-liability [get]
+func (h *ReportHandler) GetTaxLiabilityReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetTaxLiabilityReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get tax report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetCashDrawerReconciliationReport godoc
+// @Summary Get cash drawer reconciliation
+// @Description Cash drawer sessions.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} domain.CashDrawerSession
+// @Router /reports/cash-reconciliation [get]
+func (h *ReportHandler) GetCashDrawerReconciliationReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetCashDrawerReconciliationReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get cash reconciliation report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetCustomerInsightsReport godoc
+// @Summary Get customer insights
+// @Description Top spenders and churn risk.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.CustomerInsight
+// @Router /reports/customer-insights [get]
+func (h *ReportHandler) GetCustomerInsightsReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetCustomerInsightsReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get customer insights", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetShrinkageReport godoc
+// @Summary Get shrinkage report
+// @Description Inventory loss analysis.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.ShrinkageItem
+// @Router /reports/shrinkage [get]
+func (h *ReportHandler) GetShrinkageReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetShrinkageReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get shrinkage report", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetCustomerReturnAnalysisReport godoc
+// @Summary Get returns analysis
+// @Description Analysis of customer returns.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.ReturnAnalysisItem
+// @Router /reports/returns-analysis [get]
+func (h *ReportHandler) GetCustomerReturnAnalysisReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetCustomerReturnAnalysisReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get returns analysis", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// GetBasketAnalysisReport godoc
+// @Summary Get basket analysis (frequently bought together)
+// @Description Identifies product pairs often bought in the same order.
+// @Tags reports
+// @Produce json
+// @Param startDate query string true "Start Date (RFC3339)"
+// @Param endDate query string true "End Date (RFC3339)"
+// @Success 200 {array} repository.BasketAnalysisItem
+// @Router /reports/basket-analysis [get]
+func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
+	start, end, err := parseDateRange(c)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
+	report, err := h.reportingService.GetBasketAnalysisReport(start, end)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get basket analysis", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, report)
+}
+
+// Helper to parse start/end date query params
+func parseDateRange(c *gin.Context) (time.Time, time.Time, error) {
+	startStr := c.Query("startDate")
+	endStr := c.Query("endDate")
+
+	if startStr == "" || endStr == "" {
+		return time.Time{}, time.Time{}, appErrors.NewAppError("startDate and endDate are required", http.StatusBadRequest, nil)
+	}
+
+	start, err := time.Parse(time.RFC3339, startStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, appErrors.NewAppError("Invalid startDate format (use RFC3339)", http.StatusBadRequest, err)
+	}
+
+	end, err := time.Parse(time.RFC3339, endStr)
+	if err != nil {
+		return time.Time{}, time.Time{}, appErrors.NewAppError("Invalid endDate format (use RFC3339)", http.StatusBadRequest, err)
+	}
+
+	if end.Before(start) {
+		return time.Time{}, time.Time{}, appErrors.NewAppError("End date must be after start date", http.StatusBadRequest, nil)
+	}
+
+	return start, end, nil
+}

@@ -12,6 +12,7 @@ import (
 
 type ForecastingService interface {
 	GenerateDemandForecast(productID *uint, periodInDays int) error
+	GetForecastDashboard() (map[string]interface{}, error)
 }
 
 type forecastingService struct {
@@ -123,4 +124,21 @@ func (s *forecastingService) processForecastForProducts(products []domain.Produc
 	}
 
 	return nil
+}
+
+func (s *forecastingService) GetForecastDashboard() (map[string]interface{}, error) {
+	topForecasts, err := s.repo.GetTopForecasts(10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top forecasts: %w", err)
+	}
+
+	lowStock, err := s.repo.GetLowStockPredictions(10)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get low stock predictions: %w", err)
+	}
+
+	return map[string]interface{}{
+		"topForecasts": topForecasts,
+		"lowStock":     lowStock,
+	}, nil
 }

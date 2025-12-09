@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -112,4 +113,16 @@ func (h *Hub) BroadcastToPermission(permission string, message interface{}) {
 			}
 		}
 	}
+}
+
+// BroadcastReportUpdate sends a report update signal to all clients with report viewing permissions.
+func (h *Hub) BroadcastReportUpdate(reportType string, data interface{}) {
+	message := map[string]interface{}{
+		"type":       "REPORT_UPDATE",
+		"reportType": reportType,
+		"data":       data,
+		"timestamp":  time.Now(),
+	}
+	// Broadcast to anyone with 'reports.view' permission
+	h.BroadcastToPermission("reports.view", message)
 }

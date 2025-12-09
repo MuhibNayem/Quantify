@@ -17,12 +17,13 @@ import (
 )
 
 type SalesHandler struct {
-	DB       *gorm.DB
-	Settings services.SettingsService
+	DB               *gorm.DB
+	Settings         services.SettingsService
+	ReportingService *services.ReportingService
 }
 
-func NewSalesHandler(db *gorm.DB, settings services.SettingsService) *SalesHandler {
-	return &SalesHandler{DB: db, Settings: settings}
+func NewSalesHandler(db *gorm.DB, settings services.SettingsService, reportingService *services.ReportingService) *SalesHandler {
+	return &SalesHandler{DB: db, Settings: settings, ReportingService: reportingService}
 }
 
 // Checkout godoc
@@ -330,6 +331,18 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		c.Error(appErrors.NewAppError(err.Error(), http.StatusBadRequest, err))
 		return
 	}
+
+	// Trigger Real-Time Report Updates (Async)
+	go func() {
+		if h.ReportingService != nil {
+			h.ReportingService.NotifyReportUpdate("HOURLY_HEATMAP")
+			h.ReportingService.NotifyReportUpdate("SALES_BY_EMPLOYEE")
+			h.ReportingService.NotifyReportUpdate("COGS_GMROI")
+			h.ReportingService.NotifyReportUpdate("TAX_LIABILITY")
+			h.ReportingService.NotifyReportUpdate("CATEGORY_DRILLDOWN")
+			h.ReportingService.NotifyReportUpdate("CUSTOMER_INSIGHTS")
+		}
+	}()
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Checkout successful",

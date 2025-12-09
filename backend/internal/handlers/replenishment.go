@@ -89,6 +89,23 @@ func GetDemandForecast(c *gin.Context) {
 	c.JSON(http.StatusOK, forecast)
 }
 
+// GetForecastDashboard godoc
+// @Summary Get forecasting dashboard data
+// @Description Retrieves aggregated forecasting data including top predicted demand and low stock warnings.
+// @Tags replenishment
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/dashboard [get]
+func (h *ReplenishmentHandler) GetForecastDashboard(c *gin.Context) {
+	dashboard, err := h.ForecastingService.GetForecastDashboard()
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to get forecast dashboard", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, dashboard)
+}
+
 // GenerateReorderSuggestions godoc
 // @Summary Generate reorder suggestions
 // @Description Triggers the generation of reorder suggestions based on current stock levels
@@ -551,6 +568,78 @@ func CancelPurchaseOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, po)
+}
+
+// CreatePurchaseOrder godoc
+// @Summary Create a new Purchase Order
+// @Description Creates a new Purchase Order manually
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param request body requests.CreatePORequest true "Create PO request"
+// @Success 201 {object} domain.PurchaseOrder
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /replenishment/purchase-orders [post]
+func (h *ReplenishmentHandler) CreatePurchaseOrder(c *gin.Context) {
+	var req requests.CreatePORequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	userIDVal, ok := c.Get("user_id")
+	if !ok {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	authUserID, ok := userIDVal.(uint)
+	if !ok {
+		c.Error(appErrors.NewAppError("Invalid user ID type in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	var po domain.PurchaseOrder
+	err := repository.DB.Transaction(func(tx *gorm.DB) error {
+		po = domain.PurchaseOrder{
+			SupplierID:           req.SupplierID,
+			Status:               "DRAFT",
+			OrderDate:            req.OrderDate,
+			ExpectedDeliveryDate: req.ExpectedDeliveryDate,
+			CreatedBy:            authUserID,
+		}
+
+		if err := tx.Create(&po).Error; err != nil {
+			return appErrors.NewAppError("Failed to create purchase order", http.StatusInternalServerError, err)
+		}
+
+		for _, itemReq := range req.PurchaseOrderItems {
+			poItem := domain.PurchaseOrderItem{
+				PurchaseOrderID: po.ID,
+				ProductID:       itemReq.ProductID,
+				OrderedQuantity: itemReq.OrderedQuantity,
+				UnitPrice:       itemReq.UnitPrice,
+			}
+			if err := tx.Create(&poItem).Error; err != nil {
+				return appErrors.NewAppError("Failed to create PO item", http.StatusInternalServerError, err)
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+			return
+		}
+		c.Error(appErrors.NewAppError("Failed to create purchase order", http.StatusInternalServerError, err))
+		return
+	}
+
+	// Reload PO with items
+	repository.DB.Preload("Supplier").Preload("PurchaseOrderItems.Product").First(&po, po.ID)
+	c.JSON(http.StatusCreated, po)
 }
 
 // ListPurchaseOrders godoc

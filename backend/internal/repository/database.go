@@ -107,6 +107,9 @@ func AutoMigrate() {
 		&domain.OrderItem{},
 		&domain.Return{},
 		&domain.ReturnItem{},
+		&domain.AuditLog{},
+		&domain.CashDrawerSession{},
+		&domain.CashDrop{},
 	)
 
 	if err != nil {

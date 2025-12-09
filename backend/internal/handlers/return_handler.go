@@ -24,10 +24,11 @@ type ReturnHandler struct {
 	Settings         services.SettingsService
 	Hub              *websocket.Hub
 	NotificationRepo repository.NotificationRepository
+	ReportingService *services.ReportingService
 }
 
-func NewReturnHandler(db *gorm.DB, cfg *config.Config, settings services.SettingsService, hub *websocket.Hub, notificationRepo repository.NotificationRepository) *ReturnHandler {
-	return &ReturnHandler{DB: db, Cfg: cfg, Settings: settings, Hub: hub, NotificationRepo: notificationRepo}
+func NewReturnHandler(db *gorm.DB, cfg *config.Config, settings services.SettingsService, hub *websocket.Hub, notificationRepo repository.NotificationRepository, reportingService *services.ReportingService) *ReturnHandler {
+	return &ReturnHandler{DB: db, Cfg: cfg, Settings: settings, Hub: hub, NotificationRepo: notificationRepo, ReportingService: reportingService}
 }
 
 type ReturnRequest struct {
@@ -419,6 +420,17 @@ func (h *ReturnHandler) ProcessReturn(c *gin.Context) {
 		TriggeredAt: time.Now(),
 	}
 	h.NotificationRepo.CreateNotificationsForPermission("pos.view", salesNotif)
+
+	// Trigger Real-Time Report Updates (Async)
+	go func() {
+		if h.ReportingService != nil {
+			h.ReportingService.NotifyReportUpdate("RETURNS_ANALYSIS")
+			// If we had logic for damaged returns (shrinkage), we'd trigger that too.
+			// For now, let's trigger it just in case logic evolves or if "REJECTED" implies loss in some flows.
+			h.ReportingService.NotifyReportUpdate("SHRINKAGE")
+			h.ReportingService.NotifyReportUpdate("COGS_GMROI") // Returns affect margin
+		}
+	}()
 
 	c.JSON(http.StatusOK, gin.H{"message": "Return processed successfully", "return": updatedReturn})
 }
