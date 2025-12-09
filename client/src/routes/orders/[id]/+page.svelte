@@ -264,7 +264,20 @@
 							<h3 class="border-b border-white/20 pb-2 font-semibold text-slate-800">Actions</h3>
 
 							{#if order.Status === 'COMPLETED'}
-								{#if isReturnEligible}
+								{#if order.HasPendingReturn}
+									<div class="rounded-xl bg-amber-50/30 p-4 ring-1 ring-amber-100/50">
+										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-500">
+											Return Pending
+										</p>
+										<p class="text-sm text-amber-700/80">A request is currently being processed.</p>
+									</div>
+									<button
+										disabled
+										class="w-full cursor-not-allowed rounded-xl bg-slate-100 py-3.5 font-medium text-slate-400"
+									>
+										Return Requested
+									</button>
+								{:else if isReturnEligible}
 									<div class="rounded-xl bg-blue-50/30 p-4 ring-1 ring-blue-100/50">
 										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-500">
 											Return Window Open
@@ -330,7 +343,7 @@
 			<div class="w-full max-w-lg" transition:fly={{ y: 20, duration: 300 }}>
 				<!-- Liquid Glass Modal -->
 				<div
-					class="liquid-panel relative rounded-[32px] bg-gradient-to-br from-white/80 via-blue-50/30 to-indigo-50/20 p-8 shadow-[0_45px_120px_-60px_rgba(0,0,0,0.3)] backdrop-blur-3xl"
+					class="liquid-panel relative rounded-[32px] bg-gradient-to-br from-white/95 via-blue-50/90 to-indigo-50/80 p-8 shadow-[0_45px_120px_-60px_rgba(0,0,0,0.3)] backdrop-blur-3xl"
 				>
 					<button
 						onclick={() => (showReturnModal = false)}

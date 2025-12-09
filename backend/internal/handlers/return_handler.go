@@ -77,6 +77,15 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 			return fmt.Errorf("order not found or does not belong to user")
 		}
 
+		// Check for existing pending return
+		var count int64
+		if err := tx.Model(&domain.Return{}).Where("order_id = ? AND status = ?", order.ID, "PENDING").Count(&count).Error; err != nil {
+			return fmt.Errorf("failed to check for existing returns: %w", err)
+		}
+		if count > 0 {
+			return fmt.Errorf("a return request is already pending for this order")
+		}
+
 		// Check return window
 		// ... (logic remains same for validation)
 		// ...
@@ -460,4 +469,32 @@ func (h *ReturnHandler) ListReturns(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"returns": returns})
+}
+
+// GetReturn godoc
+// @Summary Get return details
+// @Description Fetch details of a specific return request
+// @Tags returns
+// @Accept json
+// @Produce json
+// @Param id path int true "Return ID"
+// @Success 200 {object} map[string]interface{} "Return details"
+// @Failure 404 {object} map[string]interface{} "Return not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /returns/{id} [get]
+func (h *ReturnHandler) GetReturn(c *gin.Context) {
+	id := c.Param("id")
+	var returnRecord domain.Return
+
+	// Fetch return with Preload for related data (Items, Product, Order, User)
+	if err := h.DB.Preload("ReturnItems.Product").Preload("Order").Preload("User").First(&returnRecord, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("Return request not found", http.StatusNotFound, err))
+		} else {
+			c.Error(appErrors.NewAppError("Failed to fetch return details", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"return": returnRecord})
 }

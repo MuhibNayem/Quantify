@@ -51,6 +51,8 @@
 			FirstName: string;
 			LastName: string;
 		};
+		HasPendingReturn?: boolean;
+		AdjustedTotal?: number;
 	}
 
 	// Purchase Order (Restock)
@@ -450,6 +452,13 @@
 							<div
 								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
 							>
+								{#if order.HasPendingReturn}
+									<div
+										class="absolute right-0 top-0 rounded-bl-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-600 shadow-sm"
+									>
+										RETURN PENDING
+									</div>
+								{/if}
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
 										<h3 class="font-mono text-sm font-bold text-slate-800">{order.OrderNumber}</h3>
@@ -495,9 +504,20 @@
 								</div>
 
 								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
-									<p class="text-lg font-bold text-slate-800">
-										{formatCurrency(order.TotalAmount)}
-									</p>
+									<div>
+										{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount && (order.Returns || []).some((r) => r.Status === 'APPROVED' || r.Status === 'COMPLETED')}
+											<p class="text-lg font-bold text-emerald-600">
+												{formatCurrency(order.AdjustedTotal)}
+											</p>
+											<p class="text-xs text-slate-400 line-through">
+												{formatCurrency(order.TotalAmount)}
+											</p>
+										{:else}
+											<p class="text-lg font-bold text-slate-800">
+												{formatCurrency(order.TotalAmount)}
+											</p>
+										{/if}
+									</div>
 									<Button
 										href="/orders/{order.OrderNumber}"
 										variant="ghost"
@@ -562,6 +582,7 @@
 
 								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
 									<Button
+										href={`/admin/returns/${ret.ID}`}
 										variant="ghost"
 										size="sm"
 										class="w-full text-orange-600 hover:bg-orange-50 hover:text-orange-700"

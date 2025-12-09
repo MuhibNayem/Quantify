@@ -405,10 +405,26 @@ func (h *SalesHandler) ListOrders(c *gin.Context) {
 	userID := authUserID.(uint)
 
 	var orders []domain.Order
-	// Preload items and their products
-	if err := h.DB.Preload("OrderItems.Product").Where("user_id = ?", userID).Order("created_at desc").Find(&orders).Error; err != nil {
+	// Preload items and their products, AND Returns
+	if err := h.DB.Preload("OrderItems.Product").Preload("Returns").Where("user_id = ?", userID).Order("created_at desc").Find(&orders).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch orders", http.StatusInternalServerError, err))
 		return
+	}
+
+	// Compute transient fields
+	for i := range orders {
+		orders[i].AdjustedTotal = orders[i].TotalAmount
+		for _, r := range orders[i].Returns {
+			if r.Status == "PENDING" {
+				orders[i].HasPendingReturn = true
+			}
+			if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+				orders[i].AdjustedTotal -= r.RefundAmount
+			}
+		}
+		if orders[i].AdjustedTotal < 0 {
+			orders[i].AdjustedTotal = 0
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"orders": orders})
@@ -450,14 +466,25 @@ func (h *SalesHandler) GetOrderByNumber(c *gin.Context) {
 	orderNumber := c.Param("orderNumber")
 
 	var order domain.Order
-	// Preload items, product details, and the user who placed the order
-	if err := h.DB.Preload("OrderItems.Product").Preload("User").Where("order_number = ?", orderNumber).First(&order).Error; err != nil {
+	// Preload items, product details, user, AND Returns
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Preload("Returns").Where("order_number = ?", orderNumber).First(&order).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Order not found", http.StatusNotFound, err))
 		} else {
 			c.Error(appErrors.NewAppError("Failed to fetch order", http.StatusInternalServerError, err))
 		}
 		return
+	}
+
+	// Compute transient fields
+	order.AdjustedTotal = order.TotalAmount
+	for _, r := range order.Returns {
+		if r.Status == "PENDING" {
+			order.HasPendingReturn = true
+		}
+		if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+			order.AdjustedTotal -= r.RefundAmount
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"order": order})
