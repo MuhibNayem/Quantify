@@ -187,8 +187,9 @@ export const crmApi = {
 	getLoyalty: async (id: number) => (await api.get<LoyaltyAccount>(`/crm/loyalty/${id}`)).data,
 	addPoints: async (id: number, points: number) =>
 		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/points`, { points })).data,
-	redeemPoints: async (id: number, points: number) =>
-		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/redeem`, { points })).data,
+	redeemPoints: async (userId: number, points: number) =>
+		(await api.post<LoyaltyAccount>(`crm/loyalty/${userId}/redeem`, { points })).data,
+	getChurnRisk: async (userId: number) => (await api.get(`crm/customers/${userId}/churn-risk`)).data,
 };
 
 export const timeTrackingApi = {

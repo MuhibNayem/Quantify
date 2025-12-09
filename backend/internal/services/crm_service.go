@@ -1,10 +1,14 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+	"net/http"
 
 	"strconv"
 
@@ -25,19 +29,22 @@ type CRMService interface {
 	UpdateCustomer(userID uint, req *requests.UpdateCustomerRequest) (*domain.User, error)
 	DeleteCustomer(userID uint) error
 	ListCustomers(page, limit int, search string) ([]domain.User, int64, error)
+	GetChurnRisk(customerID uint) (*domain.ChurnRisk, error)
 }
 
 type crmService struct {
 	repo     repository.CRMRepository
 	db       *gorm.DB
 	settings SettingsService
+	cfg      *config.Config
 }
 
-func NewCRMService(repo repository.CRMRepository, db *gorm.DB, settings SettingsService) CRMService {
+func NewCRMService(repo repository.CRMRepository, db *gorm.DB, settings SettingsService, cfg *config.Config) CRMService {
 	return &crmService{
 		repo:     repo,
 		db:       db,
 		settings: settings,
+		cfg:      cfg,
 	}
 }
 
@@ -239,4 +246,78 @@ func (s *crmService) GetCustomerByPhone(phone string) (*domain.User, error) {
 
 func (s *crmService) ListCustomers(page, limit int, search string) ([]domain.User, int64, error) {
 	return s.repo.ListCustomers(page, limit, search)
+}
+
+func (s *crmService) GetChurnRisk(customerID uint) (*domain.ChurnRisk, error) {
+	// 1. Fetch Customer Data
+	customer, err := s.repo.GetUserByID(customerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch customer: %w", err)
+	}
+
+	// 2. Fetch Purchase History (Last 5 orders)
+	type OrderHistory struct {
+		Date     string  `json:"date"`
+		Total    float64 `json:"total"`
+		Items    int     `json:"items"`
+		Discount float64 `json:"discount"`
+	}
+	var orders []domain.Order
+	if err := s.db.Where("customer_id = ?", customerID).Order("created_at desc").Limit(5).Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch orders: %w", err)
+	}
+
+	var purchaseHistory []OrderHistory
+	for _, order := range orders {
+		purchaseHistory = append(purchaseHistory, OrderHistory{
+			Date:     order.CreatedAt.Format("2006-01-02"),
+			Total:    order.TotalAmount,
+			Items:    len(order.OrderItems), // Fixed field name
+			Discount: order.DiscountAmount,  // Fixed field name
+		})
+	}
+
+	// 3. Prepare Payload
+	payload := map[string]interface{}{
+		"customer_data": map[string]interface{}{
+			"id":         customer.ID,
+			"name":       customer.FirstName + " " + customer.LastName,
+			"email":      customer.Email,
+			"created_at": customer.CreatedAt.Format("2006-01-02"),
+		},
+		"purchase_history": purchaseHistory,
+	}
+
+	// 4. Call AI Service
+	if s.cfg.AIServiceURL == "" {
+		// Fallback if AI service is not configured
+		return &domain.ChurnRisk{
+			ChurnRiskScore:    0.0,
+			RiskLevel:         "Unknown",
+			PrimaryFactors:    []string{"AI Service not configured"},
+			RetentionStrategy: "N/A",
+		}, nil
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	resp, err := http.Post(s.cfg.AIServiceURL+"/predict-churn", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AI service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ai service returned status: %d", resp.StatusCode)
+	}
+
+	var result domain.ChurnRisk
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode AI response: %w", err)
+	}
+
+	return &result, nil
 }

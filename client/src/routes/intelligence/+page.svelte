@@ -26,6 +26,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
     import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
+    import ChurnRiskWidget from '$lib/components/dashboard/ChurnRiskWidget.svelte';
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
@@ -199,14 +200,20 @@
 
 <!-- MAIN -->
 <section class="mx-auto max-w-7xl space-y-10 bg-white px-6 py-14">
-	<!-- Forecast + Range -->
+	<!-- Forecast + Churn Risk -->
 	<div class="grid gap-8 lg:grid-cols-2">
 		<!-- Demand forecast -->
         <div class="h-full">
             <DemandForecastWidget />
         </div>
+        <!-- Churn Risk -->
+        <div class="h-full">
+            <ChurnRiskWidget />
+        </div>
+	</div>
 
-		<!-- Report range -->
+    <!-- Report range -->
+    <div class="mx-auto max-w-4xl">
 		<Card
 			class="rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
 		>
@@ -258,7 +265,7 @@
 				</div>
 			</CardContent>
 		</Card>
-	</div>
+    </div>
 
 	<!-- Reorder suggestions -->
 	<Card
@@ -311,14 +318,14 @@
 					{#if suggestionsLoading}
 						{#each Array(4) as _, i}
 							<TableRow>
-								<TableCell colspan="5" class="p-3"
+								<TableCell colspan={5} class="p-3"
 									><Skeleton class="h-6 w-full bg-white/70" /></TableCell
 								>
 							</TableRow>
 						{/each}
 					{:else if suggestions.length === 0}
 						<TableRow>
-							<TableCell colspan="5" class="py-6 text-center text-sm text-slate-500"
+							<TableCell colspan={5} class="py-6 text-center text-sm text-slate-500"
 								>No pending suggestions</TableCell
 							>
 						</TableRow>

@@ -1,7 +1,7 @@
 export interface BaseEntity {
 	ID: number;
-	CreatedAt?: string;
-	UpdatedAt?: string;
+	Reasoning?: string;
+	GeneratedAt: string;
 }
 
 export interface Category extends BaseEntity {
@@ -139,6 +139,14 @@ export interface DemandForecast extends BaseEntity {
 	Reasoning?: string;
 	GeneratedAt: string;
 	Product?: Product;
+}
+
+export interface ChurnRisk {
+	churn_risk_score: number;
+	risk_level: string;
+	primary_factors: string[];
+	retention_strategy: string;
+	suggested_discount: number;
 }
 
 export interface BulkImportValidationResult {

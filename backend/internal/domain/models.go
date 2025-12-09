@@ -371,3 +371,12 @@ type PurchaseReturnItem struct {
 	BatchID          *uint  // Specific batch being returned (critical for stock deduction)
 	Batch            *Batch
 }
+
+// ChurnRisk represents the AI-generated churn risk analysis for a customer.
+type ChurnRisk struct {
+	ChurnRiskScore    float64  `json:"churn_risk_score"`
+	RiskLevel         string   `json:"risk_level"`
+	PrimaryFactors    []string `json:"primary_factors"`
+	RetentionStrategy string   `json:"retention_strategy"`
+	SuggestedDiscount int      `json:"suggested_discount"`
+}

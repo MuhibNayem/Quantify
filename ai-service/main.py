@@ -94,21 +94,47 @@ Data:
         raise HTTPException(status_code=500, detail=str(e))
 
 from forecasting import generate_demand_forecast
+from forecasting import generate_demand_forecast, DemandForecaster
 
 class ForecastRequest(BaseModel):
     product_id: int
     days: int = 30
 
 @app.post("/forecast")
-def get_forecast(request: ForecastRequest):
-    result = generate_demand_forecast(request.product_id, request.days)
-    if "error" in result:
-        raise HTTPException(status_code=500, detail=result["error"])
+async def generate_forecast(request: Request):
+    data = await request.json()
+    product_id = data.get("product_id")
+    period_days = data.get("period_days", 30)
+    
+    # Fetch sales history from backend
+    # For now, we'll mock or fetch if we had the client set up for it
+    # In a real scenario, we'd fetch sales history here
+    
+    # Mock sales history for now to test the flow
+    sales_history = [
+        {"date": "2023-01-01", "quantity": 10},
+        {"date": "2023-01-02", "quantity": 12},
+        {"date": "2023-01-03", "quantity": 15},
+        # ... more data
+    ]
+    
+    forecaster = DemandForecaster()
+    result = forecaster.generate_forecast(sales_history, period_days)
     return result
 
 # Agent Implementation
 from backend_client import BackendClient
-backend_client = BackendClient()
+from churn_prediction import ChurnPredictor
+
+@app.post("/predict-churn")
+async def predict_churn(request: Request):
+    data = await request.json()
+    customer_data = data.get("customer_data")
+    purchase_history = data.get("purchase_history")
+    
+    predictor = ChurnPredictor()
+    result = predictor.analyze_churn_risk(customer_data, purchase_history)
+    return result
 
 tools = [
     {

@@ -61,7 +61,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	forecastingService := services.NewForecastingService(forecastingRepo, cfg)
 	barcodeService := services.NewBarcodeService(barcodeRepo)
 	settingsService := services.NewSettingsService(settingsRepo)
-	crmService := services.NewCRMService(crmRepo, db, settingsService)
+	crmService := services.NewCRMService(crmRepo, db, settingsService, cfg)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo, userRepo)
 	integrationService := services.NewIntegrationService()
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
@@ -357,6 +357,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			crm.GET("/loyalty/:userId", middleware.RequirePermission(roleRepo, "loyalty.read"), crmHandler.GetLoyaltyAccount)
 			crm.POST("/loyalty/:userId/points", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.AddLoyaltyPoints)
 			crm.POST("/loyalty/:userId/redeem", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.RedeemLoyaltyPoints)
+			crm.GET("/customers/:userId/churn-risk", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetChurnRisk)
 		}
 
 		// Time Tracking (Basic access for all staff)
