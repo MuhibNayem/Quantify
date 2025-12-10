@@ -41,7 +41,7 @@ export function formatCurrency(amount: number): string {
 	return new Intl.NumberFormat(globalConfig.locale, {
 		style: 'currency',
 		currency: globalConfig.currency_code || 'USD',
-	}).format(amount).replace(globalConfig.currency_code === 'USD' ? '$' : '', globalConfig.currency_symbol);
+	}).format(amount);
 }
 
 export function formatDateTime(dateString: string): string {

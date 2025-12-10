@@ -340,6 +340,44 @@
 								</Button>
 							</div>
 						</div>
+
+						<div
+							class={cn(
+								liquidGlass.radius.medium,
+								liquidGlass.border.medium,
+								liquidGlass.background.medium,
+								liquidGlass.blur.heavy,
+								liquidGlass.saturate,
+								liquidGlass.shadow.medium,
+								liquidGlass.innerGlow.medium,
+								liquidGlass.transition,
+								liquidGlass.hover.shadow,
+								'group p-8'
+							)}
+						>
+							<div class="mb-6 flex items-center gap-4">
+								<div class="rounded-xl bg-purple-50 p-3 text-purple-600 ring-1 ring-purple-100">
+									<Globe size={24} />
+								</div>
+								<h3 class="text-lg font-bold text-slate-800">Locale / Language</h3>
+							</div>
+							<div class="flex items-end gap-3">
+								<div class="flex-1">
+									<Select
+										options={localeOptions}
+										bind:value={settings['locale']}
+										placeholder="Select Locale"
+										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
+									/>
+								</div>
+								<Button
+									class="h-12 w-12 rounded-xl bg-purple-600 text-white shadow-lg transition-all hover:bg-purple-700 active:scale-95"
+									onclick={() => saveSetting('locale', settings['locale'])}
+								>
+									<Save size={20} />
+								</Button>
+							</div>
+						</div>
 					</div>
 				</div>
 			</Tabs.Content>
