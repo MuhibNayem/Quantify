@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -90,4 +91,38 @@ func (h *Hub) SendToUser(userID uint, message interface{}) {
 			}
 		}
 	}
+}
+
+// BroadcastToPermission sends a message to all clients that have the specific permission.
+func (h *Hub) BroadcastToPermission(permission string, message interface{}) {
+	jsonMessage, err := json.Marshal(message)
+	if err != nil {
+		logrus.Errorf("Failed to marshal message to json: %v", err)
+		return
+	}
+
+	for _, userClients := range h.clients {
+		for client := range userClients {
+			if hasPerm, ok := client.Permissions[permission]; ok && hasPerm {
+				select {
+				case client.Send <- jsonMessage:
+				default:
+					close(client.Send)
+					delete(userClients, client)
+				}
+			}
+		}
+	}
+}
+
+// BroadcastReportUpdate sends a report update signal to all clients with report viewing permissions.
+func (h *Hub) BroadcastReportUpdate(reportType string, data interface{}) {
+	message := map[string]interface{}{
+		"type":       "REPORT_UPDATE",
+		"reportType": reportType,
+		"data":       data,
+		"timestamp":  time.Now(),
+	}
+	// Broadcast to anyone with 'reports.view' permission
+	h.BroadcastToPermission("reports.view", message)
 }

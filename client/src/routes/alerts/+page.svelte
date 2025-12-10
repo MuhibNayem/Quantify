@@ -32,11 +32,19 @@
 	// Icon
 	import { Bell, Activity, CalendarClock, Package, AlertTriangle } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
 	// --- State ---
 	const filters = $state({ type: '', status: 'ACTIVE' });
 	let alerts = $state<Alert[]>([]);
 	let loading = $state(false);
+
+	$effect(() => {
+		if (!auth.hasPermission('alerts.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to view alerts.' });
+			goto('/');
+		}
+	});
 
 	const productSettingsForm = $state({
 		productId: '',

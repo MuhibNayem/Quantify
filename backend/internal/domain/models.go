@@ -209,6 +209,8 @@ type DemandForecast struct {
 	Product         Product
 	ForecastPeriod  string `gorm:"not null"` // e.g., "30_DAYS", "90_DAYS"
 	PredictedDemand int    `gorm:"not null"`
+	ConfidenceScore float64
+	Reasoning       string
 	GeneratedAt     time.Time
 }
 
@@ -340,4 +342,62 @@ type TimeClock struct {
 	BreakEnd   *time.Time
 	Status     string `gorm:"default:'CLOCKED_IN'"` // CLOCKED_IN, ON_BREAK, CLOCKED_OUT
 	Notes      string
+}
+
+// PurchaseReturn represents a return of goods to a supplier.
+type PurchaseReturn struct {
+	gorm.Model
+	PurchaseOrderID     uint `gorm:"index"` // Optional link to original PO
+	PurchaseOrder       PurchaseOrder
+	SupplierID          uint `gorm:"not null;index"`
+	Supplier            Supplier
+	Status              string `gorm:"default:'PENDING'"` // PENDING, APPROVED, COMPLETED
+	Reason              string
+	RefundAmount        float64 // Estimated refund value
+	ReturnedBy          uint    // UserID
+	ReturnedAt          time.Time
+	PurchaseReturnItems []PurchaseReturnItem
+}
+
+// PurchaseReturnItem represents an item within a purchase return.
+type PurchaseReturnItem struct {
+	gorm.Model
+	PurchaseReturnID uint `gorm:"not null;index"`
+	PurchaseReturn   PurchaseReturn
+	ProductID        uint `gorm:"not null"`
+	Product          Product
+	Quantity         int    `gorm:"not null"`
+	Reason           string `gorm:"not null"`
+	BatchID          *uint  // Specific batch being returned (critical for stock deduction)
+	Batch            *Batch
+}
+
+// ChurnRisk represents the AI-generated churn risk analysis for a customer.
+type ChurnRisk struct {
+	ChurnRiskScore    float64  `json:"churn_risk_score"`
+	RiskLevel         string   `json:"risk_level"`
+	PrimaryFactors    []string `json:"primary_factors"`
+	RetentionStrategy string   `json:"retention_strategy"`
+	SuggestedDiscount int      `json:"suggested_discount"`
+}
+
+// Promotion represents a discount rule.
+type Promotion struct {
+	gorm.Model
+	Name          string `gorm:"not null"`
+	Description   string
+	DiscountType  string    `gorm:"not null"` // "PERCENTAGE" or "FIXED_AMOUNT"
+	DiscountValue float64   `gorm:"not null"`
+	StartDate     time.Time `gorm:"not null"`
+	EndDate       time.Time `gorm:"not null"`
+	IsActive      bool      `gorm:"default:true"`
+	Priority      int       `gorm:"default:0"` // Higher number = higher priority
+
+	// Targets (Nullable, only one should be set ideally, or hierarchical)
+	ProductID     *uint `gorm:"index"`
+	Product       *Product
+	CategoryID    *uint `gorm:"index"`
+	Category      *Category
+	SubCategoryID *uint `gorm:"index"`
+	SubCategory   *SubCategory
 }

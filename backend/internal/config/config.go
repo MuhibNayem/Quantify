@@ -48,6 +48,7 @@ type Config struct {
 	InventoryTurnoverCacheTTL time.Duration
 	ProfitMarginCacheTTL      time.Duration
 	ConsumerConcurrency       int
+	AIServiceURL              string
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -88,7 +89,7 @@ func LoadConfig() *Config {
 		log.Fatalf("CONSUMER_CONCURRENCY must be an integer: %v", err)
 	}
 
-	return &Config{
+	cfg := &Config{
 		DBHost:                    getEnv("DB_HOST", "localhost"),
 		DBUser:                    getEnv("DB_USER", "user"),
 		DBPassword:                getEnv("DB_PASSWORD", "password"),
@@ -126,7 +127,11 @@ func LoadConfig() *Config {
 		InventoryTurnoverCacheTTL: inventoryTurnoverCacheTTL,
 		ProfitMarginCacheTTL:      profitMarginCacheTTL,
 		ConsumerConcurrency:       consumerConcurrency,
+		AIServiceURL:              getEnv("AI_SERVICE_URL", "http://localhost:8001"),
 	}
+
+	validateCriticalConfig(cfg)
+	return cfg
 }
 
 // getEnv gets an environment variable or returns a default value.
@@ -135,4 +140,36 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func validateCriticalConfig(cfg *Config) {
+	failIfUnset := map[string]string{
+		"RABBITMQ_URL":            cfg.RabbitMQURL,
+		"JWT_SECRET":              cfg.JWTSecret,
+		"REFRESH_TOKEN_SECRET":    cfg.RefreshTokenSecret,
+		"MINIO_ACCESS_KEY_ID":     cfg.MinioAccessKeyID,
+		"MINIO_SECRET_ACCESS_KEY": cfg.MinioSecretAccessKey,
+	}
+
+	for key, val := range failIfUnset {
+		if strings.TrimSpace(val) == "" {
+			log.Fatalf("%s must be provided and non-empty", key)
+		}
+	}
+
+	disallowed := map[string][]string{
+		"JWT_SECRET":              {"my_secret_key", "secret", "changeme"},
+		"REFRESH_TOKEN_SECRET":    {"my_refresh_secret_key", "secret", "changeme"},
+		"MINIO_ACCESS_KEY_ID":     {"minioadmin"},
+		"MINIO_SECRET_ACCESS_KEY": {"minioadmin"},
+	}
+
+	for key, badVals := range disallowed {
+		current := failIfUnset[key]
+		for _, bad := range badVals {
+			if current == bad {
+				log.Fatalf("%s must not use the default/weak value %q", key, bad)
+			}
+		}
+	}
 }

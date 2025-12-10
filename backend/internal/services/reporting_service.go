@@ -17,26 +17,84 @@ import (
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/storage"
+	"inventory/backend/internal/websocket"
 )
 
 type ReportingService struct {
 	repo                 *repository.ReportsRepository
 	uploader             storage.Uploader
 	jobRepo              *repository.JobRepository
+	hub                  *websocket.Hub
 	salesTrendsTTL       time.Duration
 	inventoryTurnoverTTL time.Duration
 	profitMarginTTL      time.Duration
 }
 
-func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, cfg *config.Config) *ReportingService {
+func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, hub *websocket.Hub, cfg *config.Config) *ReportingService {
 	return &ReportingService{
 		repo:                 repo,
 		uploader:             uploader,
 		jobRepo:              jobRepo,
+		hub:                  hub,
 		salesTrendsTTL:       cfg.SalesTrendsCacheTTL,
 		inventoryTurnoverTTL: cfg.InventoryTurnoverCacheTTL,
 		profitMarginTTL:      cfg.ProfitMarginCacheTTL,
 	}
+}
+
+// NotifyReportUpdate triggers a real-time update for a specific report type.
+// It broadcasts a message to all connected clients with permission to view reports.
+// NotifyReportUpdate triggers a real-time update for a specific report type.
+// It fetches the latest data for that report and broadcasts it to all connected clients.
+func (s *ReportingService) NotifyReportUpdate(reportType string) {
+	// In a production environment, we might want to debounce this to avoid flooding clients
+	// if many updates happen in a short burst. For now, we broadcast immediately.
+
+	var data interface{}
+	var err error
+
+	// Fetch the latest data based on report type
+	// Note: We are fetching "default" views here (e.g., today's data, or standard view).
+	// Clients with custom filters might still need to re-fetch manually, but this covers the dashboard/monitoring use case.
+	switch reportType {
+	case "HOURLY_HEATMAP":
+		// Fetch heatmap for the last 7 days by default
+		data, err = s.GetHourlySalesHeatmap(time.Now().AddDate(0, 0, -7), time.Now())
+	case "SALES_BY_EMPLOYEE":
+		// Fetch for today
+		data, err = s.GetSalesByEmployeeReport(time.Now().Truncate(24*time.Hour), time.Now())
+	case "COGS_GMROI":
+		// Fetch for last 30 days
+		data, err = s.GetCOGSAndGMROIReport(time.Now().AddDate(0, 0, -30), time.Now())
+	case "TAX_LIABILITY":
+		// Fetch for current month
+		now := time.Now()
+		startOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		data, err = s.GetTaxLiabilityReport(startOfMonth, now)
+	case "CATEGORY_DRILLDOWN":
+		// Fetch for last 30 days
+		data, err = s.GetCategoryDrillDownReport(time.Now().AddDate(0, 0, -30), time.Now())
+	case "CUSTOMER_INSIGHTS":
+		// Fetch for last 90 days
+		data, err = s.GetCustomerInsightsReport(time.Now().AddDate(0, 0, -90), time.Now(), true)
+	case "SHRINKAGE":
+		// Fetch for last 30 days
+		data, err = s.GetShrinkageReport(time.Now().AddDate(0, 0, -30), time.Now())
+	case "RETURNS_ANALYSIS":
+		// Fetch for last 30 days
+		data, err = s.GetCustomerReturnAnalysisReport(time.Now().AddDate(0, 0, -30), time.Now())
+	default:
+		// For unknown or complex reports, we just signal a refetch
+		data = map[string]string{"status": "refetch_needed"}
+	}
+
+	if err != nil {
+		// Log error but don't crash
+		// logrus.Errorf("Failed to fetch real-time data for report %s: %v", reportType, err)
+		return
+	}
+
+	s.hub.BroadcastReportUpdate(reportType, data)
 }
 
 func (s *ReportingService) GenerateReport(job *domain.Job) error {
@@ -53,7 +111,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "csv"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -62,8 +120,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReport(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReport(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -71,7 +133,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "pdf"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -80,8 +142,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReportPDF(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReportPDF(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -89,7 +155,7 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 		fileType = "xlsx"
 		startDate, _ := time.Parse(time.RFC3339, params["startDate"].(string))
 		endDate, _ := time.Parse(time.RFC3339, params["endDate"].(string))
-		var categoryID, locationID *uint
+		var categoryID, locationID, productID *uint
 		if catID, ok := params["categoryId"]; ok && catID != nil {
 			val := uint(catID.(float64))
 			categoryID = &val
@@ -98,8 +164,12 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 			val := uint(locID.(float64))
 			locationID = &val
 		}
+		if prodID, ok := params["productId"]; ok && prodID != nil {
+			val := uint(prodID.(float64))
+			productID = &val
+		}
 		groupBy := params["groupBy"].(string)
-		err := s.ExportSalesTrendsReportExcel(&buffer, startDate, endDate, categoryID, locationID, groupBy)
+		err := s.ExportSalesTrendsReportExcel(&buffer, startDate, endDate, categoryID, locationID, productID, groupBy)
 		if err != nil {
 			return err
 		}
@@ -120,8 +190,8 @@ func (s *ReportingService) GenerateReport(job *domain.Job) error {
 	return s.jobRepo.UpdateJob(job)
 }
 
-func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) (map[string]interface{}, error) {
-	cacheKey := fmt.Sprintf("sales_trends:%s:%s:%v:%v:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID, groupBy)
+func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) (map[string]interface{}, error) {
+	cacheKey := fmt.Sprintf("sales_trends:%s:%s:%v:%v:%v:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), categoryID, locationID, productID, groupBy)
 	cachedReport, err := repository.GetCache(cacheKey)
 	if err == nil && cachedReport != "" {
 		var reportData map[string]interface{}
@@ -131,7 +201,7 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 		}
 	}
 
-	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, groupBy)
+	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return nil, err
 	}
@@ -169,8 +239,8 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 	return reportData, nil
 }
 
-func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}
@@ -192,8 +262,8 @@ func (s *ReportingService) ExportSalesTrendsReport(writer io.Writer, startDate, 
 	return nil
 }
 
-func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}
@@ -224,8 +294,8 @@ func (s *ReportingService) ExportSalesTrendsReportPDF(writer io.Writer, startDat
 	return pdf.Output(writer)
 }
 
-func (s *ReportingService) ExportSalesTrendsReportExcel(writer io.Writer, startDate, endDate time.Time, categoryID, locationID *uint, groupBy string) error {
-	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, groupBy)
+func (s *ReportingService) ExportSalesTrendsReportExcel(writer io.Writer, startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) error {
+	reportData, err := s.GetSalesTrendsReport(startDate, endDate, categoryID, locationID, productID, groupBy)
 	if err != nil {
 		return err
 	}
@@ -339,4 +409,143 @@ func (s *ReportingService) GenerateDailySalesSummary() {
 	}
 
 	logrus.Infof("Daily sales summary generated for %s: Total Sales = $%.2f", yesterday.Format("2006-01-02"), totalSales)
+}
+
+// New Report Wrappers
+
+func (s *ReportingService) GetStockAgingReport() (map[string][]repository.StockAgingItem, error) {
+	// Stock aging changes daily, cache for 24h
+	cacheKey := "stock_aging_report"
+	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+		var reportData map[string][]repository.StockAgingItem
+		if err := json.Unmarshal([]byte(cached), &reportData); err == nil {
+			return reportData, nil
+		}
+	}
+
+	data, err := s.repo.GetStockAgingReport()
+	if err != nil {
+		return nil, err
+	}
+
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		repository.SetCache(cacheKey, string(jsonBytes), 24*time.Hour)
+	}
+	return data, nil
+}
+
+func (s *ReportingService) GetDeadStockReport(daysThreshold int) ([]repository.DeadStockItem, error) {
+	return s.repo.GetDeadStockReport(daysThreshold)
+}
+
+func (s *ReportingService) GetSupplierPerformanceReport(startDate, endDate time.Time) ([]repository.SupplierScorecard, error) {
+	return s.repo.GetSupplierPerformanceReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetHourlySalesHeatmap(startDate, endDate time.Time) ([]repository.HeatmapPoint, error) {
+	cacheKey := fmt.Sprintf("heatmap:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+		var points []repository.HeatmapPoint
+		if err := json.Unmarshal([]byte(cached), &points); err == nil {
+			return points, nil
+		}
+	}
+
+	data, err := s.repo.GetHourlySalesHeatmap(startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		repository.SetCache(cacheKey, string(jsonBytes), 1*time.Hour) // Cache for 1 hour
+	}
+	return data, nil
+}
+
+func (s *ReportingService) GetSalesByEmployeeReport(startDate, endDate time.Time) ([]repository.EmployeeSalesStats, error) {
+	return s.repo.GetSalesByEmployeeReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetCategoryDrillDownReport(startDate, endDate time.Time) ([]repository.CategoryPerformance, error) {
+	return s.repo.GetCategoryDrillDownReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetCOGSAndGMROIReport(startDate, endDate time.Time) (repository.GMROIStats, error) {
+	return s.repo.GetCOGSAndGMROIReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetVoidDiscountAuditReport(startDate, endDate time.Time) ([]domain.AuditLog, error) {
+	return s.repo.GetVoidDiscountAuditReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetTaxLiabilityReport(startDate, endDate time.Time) ([]repository.TaxLiabilityStats, error) {
+	return s.repo.GetTaxLiabilityReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetCashDrawerReconciliationReport(startDate, endDate time.Time) ([]domain.CashDrawerSession, error) {
+	return s.repo.GetCashDrawerReconciliationReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetBasketAnalysisReport(startDate, endDate time.Time, bypassCache bool) ([]repository.BasketAnalysisItem, error) {
+	// Basket Analysis is heavy, cache for 24 hours
+	cacheKey := fmt.Sprintf("basket_analysis:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+
+	if !bypassCache {
+		if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+			var items []repository.BasketAnalysisItem
+			if err := json.Unmarshal([]byte(cached), &items); err == nil {
+				return items, nil
+			}
+		}
+	}
+
+	data, err := s.repo.GetBasketAnalysisReport(startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		repository.SetCache(cacheKey, string(jsonBytes), 24*time.Hour)
+	}
+	return data, nil
+}
+
+func (s *ReportingService) GetPOAnalysisReport(startDate, endDate time.Time) ([]domain.PurchaseOrder, error) {
+	return s.repo.GetPOAnalysisReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetCustomerInsightsReport(startDate, endDate time.Time, bypassCache bool) ([]repository.CustomerInsight, error) {
+	// Customer Insights can be cached for 6 hours
+	cacheKey := fmt.Sprintf("customer_insights:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+
+	if !bypassCache {
+		if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
+			var insights []repository.CustomerInsight
+			if err := json.Unmarshal([]byte(cached), &insights); err == nil {
+				return insights, nil
+			}
+		}
+	}
+
+	data, err := s.repo.GetCustomerInsightsReport(startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	if jsonBytes, err := json.Marshal(data); err == nil {
+		repository.SetCache(cacheKey, string(jsonBytes), 6*time.Hour)
+	}
+	return data, nil
+}
+
+func (s *ReportingService) GetShrinkageReport(startDate, endDate time.Time) ([]repository.ShrinkageItem, error) {
+	return s.repo.GetShrinkageReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetCustomerReturnAnalysisReport(startDate, endDate time.Time) ([]repository.ReturnAnalysisItem, error) {
+	return s.repo.GetCustomerReturnAnalysisReport(startDate, endDate)
+}
+
+func (s *ReportingService) GetProductPerformanceAnalytics(startDate, endDate time.Time, supplierName string, minStock int) ([]repository.ProductPerformanceAnalytics, error) {
+	return s.repo.GetProductPerformanceAnalytics(startDate, endDate, supplierName, minStock)
 }

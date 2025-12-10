@@ -1,10 +1,16 @@
 package services
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+	"net/http"
+
+	"strconv"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -23,17 +29,22 @@ type CRMService interface {
 	UpdateCustomer(userID uint, req *requests.UpdateCustomerRequest) (*domain.User, error)
 	DeleteCustomer(userID uint) error
 	ListCustomers(page, limit int, search string) ([]domain.User, int64, error)
+	GetChurnRisk(customerID uint) (*domain.ChurnRisk, error)
 }
 
 type crmService struct {
-	repo repository.CRMRepository
-	db   *gorm.DB
+	repo     repository.CRMRepository
+	db       *gorm.DB
+	settings SettingsService
+	cfg      *config.Config
 }
 
-func NewCRMService(repo repository.CRMRepository, db *gorm.DB) CRMService {
+func NewCRMService(repo repository.CRMRepository, db *gorm.DB, settings SettingsService, cfg *config.Config) CRMService {
 	return &crmService{
-		repo: repo,
-		db:   db,
+		repo:     repo,
+		db:       db,
+		settings: settings,
+		cfg:      cfg,
 	}
 }
 
@@ -124,12 +135,32 @@ func (s *crmService) CreateLoyaltyAccount(userID uint) (*domain.LoyaltyAccount, 
 }
 
 // calculateTier determines the loyalty tier based on points (bidirectional)
-func calculateTier(points int) string {
-	if points >= 10000 {
+func (s *crmService) calculateTier(points int) string {
+	silverThreshold := 500
+	goldThreshold := 2500
+	platinumThreshold := 10000
+
+	if val, err := s.settings.GetSetting("loyalty_tier_silver"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			silverThreshold = v
+		}
+	}
+	if val, err := s.settings.GetSetting("loyalty_tier_gold"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			goldThreshold = v
+		}
+	}
+	if val, err := s.settings.GetSetting("loyalty_tier_platinum"); err == nil {
+		if v, err := strconv.Atoi(val); err == nil {
+			platinumThreshold = v
+		}
+	}
+
+	if points >= platinumThreshold {
 		return "Platinum"
-	} else if points >= 5000 {
+	} else if points >= goldThreshold {
 		return "Gold"
-	} else if points >= 1000 {
+	} else if points >= silverThreshold {
 		return "Silver"
 	}
 	return "Bronze"
@@ -148,7 +179,7 @@ func (s *crmService) AddLoyaltyPoints(userID uint, points int) (*domain.LoyaltyA
 	}
 
 	// Update tier based on new balance
-	newTier := calculateTier(account.Points)
+	newTier := s.calculateTier(account.Points)
 	if account.Tier != newTier {
 		account.Tier = newTier
 		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
@@ -182,7 +213,7 @@ func (s *crmService) RedeemLoyaltyPoints(userID uint, points int) (*domain.Loyal
 	}
 
 	// Update tier based on new balance (supports downgrades)
-	newTier := calculateTier(account.Points)
+	newTier := s.calculateTier(account.Points)
 	if account.Tier != newTier {
 		account.Tier = newTier
 		if err := s.repo.UpdateLoyaltyAccount(account); err != nil {
@@ -215,4 +246,78 @@ func (s *crmService) GetCustomerByPhone(phone string) (*domain.User, error) {
 
 func (s *crmService) ListCustomers(page, limit int, search string) ([]domain.User, int64, error) {
 	return s.repo.ListCustomers(page, limit, search)
+}
+
+func (s *crmService) GetChurnRisk(customerID uint) (*domain.ChurnRisk, error) {
+	// 1. Fetch Customer Data
+	customer, err := s.repo.GetUserByID(customerID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch customer: %w", err)
+	}
+
+	// 2. Fetch Purchase History (Last 5 orders)
+	type OrderHistory struct {
+		Date     string  `json:"date"`
+		Total    float64 `json:"total"`
+		Items    int     `json:"items"`
+		Discount float64 `json:"discount"`
+	}
+	var orders []domain.Order
+	if err := s.db.Where("user_id = ?", customerID).Order("created_at desc").Limit(5).Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("failed to fetch orders: %w", err)
+	}
+
+	var purchaseHistory []OrderHistory
+	for _, order := range orders {
+		purchaseHistory = append(purchaseHistory, OrderHistory{
+			Date:     order.CreatedAt.Format("2006-01-02"),
+			Total:    order.TotalAmount,
+			Items:    len(order.OrderItems), // Fixed field name
+			Discount: order.DiscountAmount,  // Fixed field name
+		})
+	}
+
+	// 3. Prepare Payload
+	payload := map[string]interface{}{
+		"customer_data": map[string]interface{}{
+			"id":         customer.ID,
+			"name":       customer.FirstName + " " + customer.LastName,
+			"email":      customer.Email,
+			"created_at": customer.CreatedAt.Format("2006-01-02"),
+		},
+		"purchase_history": purchaseHistory,
+	}
+
+	// 4. Call AI Service
+	if s.cfg.AIServiceURL == "" {
+		// Fallback if AI service is not configured
+		return &domain.ChurnRisk{
+			ChurnRiskScore:    0.0,
+			RiskLevel:         "Unknown",
+			PrimaryFactors:    []string{"AI Service not configured"},
+			RetentionStrategy: "N/A",
+		}, nil
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
+	resp, err := http.Post(s.cfg.AIServiceURL+"/predict-churn", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call AI service: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("ai service returned status: %d", resp.StatusCode)
+	}
+
+	var result domain.ChurnRisk
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("failed to decode AI response: %w", err)
+	}
+
+	return &result, nil
 }

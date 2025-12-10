@@ -24,6 +24,16 @@
 	import type { Batch, Product } from '$lib/types';
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+
+	$effect(() => {
+		if (!auth.hasPermission('inventory.view')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to access operations.'
+			});
+			goto('/');
+		}
+	});
 
 	const stockQuery = $state({ productId: '', locationId: '' });
 	let stockLoading = $state(false);

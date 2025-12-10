@@ -4,7 +4,7 @@ package requests
 type UserRegisterRequest struct {
 	Username    string `json:"username" binding:"required,min=3,max=50"`
 	Password    string `json:"password" binding:"required,min=6"`
-	Role        string `json:"role" binding:"required,oneof=Admin Manager Staff"`
+	Role        string `json:"role" binding:"required"`
 	FirstName   string `json:"firstName,omitempty"`
 	LastName    string `json:"lastName,omitempty"`
 	Email       string `json:"email,omitempty" binding:"omitempty,email"`
@@ -27,7 +27,7 @@ type RefreshTokenRequest struct {
 type UserUpdateRequest struct {
 	Username    string `json:"username,omitempty" binding:"omitempty,min=3,max=50"`
 	Password    string `json:"password,omitempty" binding:"omitempty,min=6"`
-	Role        string `json:"role,omitempty" binding:"omitempty,oneof=Admin Manager Staff"`
+	Role        string `json:"role,omitempty" binding:"omitempty"`
 	FirstName   string `json:"firstName,omitempty"`
 	LastName    string `json:"lastName,omitempty"`
 	Email       string `json:"email,omitempty" binding:"omitempty,email"`

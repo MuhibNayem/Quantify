@@ -110,7 +110,7 @@ function createNotificationStore() {
 	const connectSocket = () => {
 		if (!browser || !currentUserId || !token) return;
 		const wsUrl = buildWsUrl();
-		console.log({wsUrl})
+		console.log({ wsUrl })
 		if (!wsUrl) return;
 
 		cleanupSocket();
@@ -138,6 +138,16 @@ function createNotificationStore() {
 					window.dispatchEvent(new CustomEvent('bulk-job-status', { detail: payload }));
 					return;
 				}
+				// Handle Return Updates (Real-time sync)
+				if (browser && (payload?.event === 'RETURN_UPDATED' || payload?.event === 'RETURN_REQUESTED')) {
+					window.dispatchEvent(new CustomEvent('return-updated', { detail: payload }));
+					// We might also want to notify the user via a toast/notification, 
+					// but let's assume the event dispatch is enough for the page to refresh.
+					// If it's a notification object too, we fall through?
+					// The payload from backend is simple gin.H, so it lacks Notification fields.
+					// So we should return here.
+					return;
+				}
 
 				const notification = payload as Notification;
 				update((state) => {
@@ -160,8 +170,9 @@ function createNotificationStore() {
 		const authState = get(auth);
 		const nextUserId = authState.user?.ID ?? null;
 		const nextToken = authState.accessToken ?? null;
+		const hasPermission = authState.permissions?.includes('notifications.read');
 
-		if (!nextUserId || !nextToken) {
+		if (!nextUserId || !nextToken || !hasPermission) {
 			currentUserId = null;
 			token = null;
 			resetState();

@@ -13,6 +13,8 @@ type ForecastingRepository interface {
 	GetSalesDataForForecast(productID uint, days int) ([]domain.StockAdjustment, error)
 	CreateForecast(forecast *domain.DemandForecast) error
 	GetProductsBatch(offset, limit int) ([]domain.Product, error)
+	GetTopForecasts(limit int) ([]ForecastDashboardItem, error)
+	GetLowStockPredictions(limit int) ([]ForecastDashboardItem, error)
 }
 
 type forecastingRepository struct {
@@ -66,4 +68,49 @@ func (r *forecastingRepository) GetProductsBatch(offset, limit int) ([]domain.Pr
 		return nil, err
 	}
 	return products, nil
+}
+
+type ForecastDashboardItem struct {
+	ProductID       uint
+	ProductName     string
+	PredictedDemand int
+	CurrentStock    int
+}
+
+func (r *forecastingRepository) GetTopForecasts(limit int) ([]ForecastDashboardItem, error) {
+	var items []ForecastDashboardItem
+	// Get latest forecast for each product
+	// Simplified: assuming one forecast per product per period, or we take the latest `generated_at`
+	// We'll filter by forecasts generated in the last 24 hours to ensure freshness
+	yesterday := time.Now().AddDate(0, 0, -1)
+
+	err := r.db.Table("demand_forecasts").
+		Select("products.id as product_id, products.name as product_name, demand_forecasts.predicted_demand, COALESCE(SUM(batches.quantity), 0) as current_stock").
+		Joins("JOIN products ON products.id = demand_forecasts.product_id").
+		Joins("LEFT JOIN batches ON batches.product_id = products.id").
+		Where("demand_forecasts.generated_at >= ?", yesterday).
+		Group("products.id, products.name, demand_forecasts.predicted_demand").
+		Order("demand_forecasts.predicted_demand DESC").
+		Limit(limit).
+		Scan(&items).Error
+
+	return items, err
+}
+
+func (r *forecastingRepository) GetLowStockPredictions(limit int) ([]ForecastDashboardItem, error) {
+	var items []ForecastDashboardItem
+	yesterday := time.Now().AddDate(0, 0, -1)
+
+	err := r.db.Table("demand_forecasts").
+		Select("products.id as product_id, products.name as product_name, demand_forecasts.predicted_demand, COALESCE(SUM(batches.quantity), 0) as current_stock").
+		Joins("JOIN products ON products.id = demand_forecasts.product_id").
+		Joins("LEFT JOIN batches ON batches.product_id = products.id").
+		Where("demand_forecasts.generated_at >= ?", yesterday).
+		Group("products.id, products.name, demand_forecasts.predicted_demand").
+		Having("COALESCE(SUM(batches.quantity), 0) < demand_forecasts.predicted_demand").
+		Order("demand_forecasts.predicted_demand DESC").
+		Limit(limit).
+		Scan(&items).Error
+
+	return items, err
 }

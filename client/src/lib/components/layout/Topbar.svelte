@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Menu, RefreshCcw, Search, Sun, Moon } from 'lucide-svelte';
+	import { Menu, RefreshCcw, Search } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 
@@ -10,116 +10,70 @@
 	const dispatch = createEventDispatcher<{ toggleSidebar: void }>();
 
 	let search = $state('');
-	let isDark = $state(false);
-
-	onMount(() => {
-		isDark = document.documentElement.classList.contains('dark');
-	});
-
-	const toggleTheme = () => {
-		isDark = !isDark;
-		document.documentElement.classList.toggle('dark', isDark);
-		localStorage.setItem('theme', isDark ? 'dark' : 'light');
-	};
+	let searchFocused = $state(false);
 
 	const runGlobalSearch = () => {
 		if (!search.trim()) return;
 		toast.message('Quick search', {
-			description: `Filtering resources for "${search}"`,
+			description: `Filtering resources for "${search}"`
 		});
 	};
 </script>
 
 <header
-	class="sticky top-0 z-40 flex h-20 items-center justify-between
-	border-b border-sky-200/30
-	bg-gradient-to-r from-[#b3d4ff]/70 via-[#d9d6ff]/80 to-[#0f172a]/90
-	backdrop-blur-2xl shadow-[0_4px_30px_rgba(15,23,42,0.15)]
-	transition-all duration-500
-	dark:from-[#0f172a]/95 dark:via-[#1e293b]/95 dark:to-[#020617]/95"
+	class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/40 bg-gradient-to-r from-white/80 via-indigo-50/70 to-sky-50/80 px-3 backdrop-blur-2xl transition-all duration-500 sm:px-6"
 >
 	<!-- Left section -->
-	<div class="flex items-center gap-2">
-		<Button
-			variant="ghost"
-			size="icon"
-			class="lg:hidden hover:bg-sky-200/50 dark:hover:bg-slate-800/50 transition-colors"
-			onclick={() => dispatch('toggleSidebar')}
-		>
-			<Menu class="h-5 w-5 text-sky-700 dark:text-sky-300" />
-		</Button>
-
+	<div class="lg:ml-16">
 		<!-- Search bar -->
-		<div class="relative hidden sm:block">
-			<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-500/80" />
+		<div class="group relative hidden sm:block">
 			<Input
-				class="pl-9 pr-24 rounded-2xl border border-sky-200/60 bg-white/80 backdrop-blur-sm
-					text-slate-800 placeholder-slate-400
-					shadow-inner focus:ring-2 focus:ring-sky-200/60 focus:border-sky-400/70
-					transition-all duration-300
-					dark:bg-slate-800/80 dark:text-sky-100 dark:border-slate-600/70"
-				placeholder="Search catalog, suppliers, alerts..."
+				class="liquid-input peer h-10 w-64 pl-11 pr-4 text-sm text-slate-800 placeholder:text-transparent transition-all duration-300 focus:w-80 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:border-transparent focus-visible:outline-none focus-visible:shadow-[0_30px_70px_-30px_rgba(59,130,246,0.45)]"
+				placeholder="Search inventory"
 				value={search}
+				onfocus={() => (searchFocused = true)}
+				onblur={() => (searchFocused = false)}
 				oninput={(event) => (search = event.currentTarget.value)}
 				onkeydown={(event) => event.key === 'Enter' && runGlobalSearch()}
 			/>
-			<Button
-				size="sm"
-				class="absolute right-1 top-1/2 -translate-y-1/2 px-3 rounded-xl
-					bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600
-					text-white font-semibold shadow-md hover:shadow-lg transition-all"
-				onclick={runGlobalSearch}
-			>
-				Go
-			</Button>
+			<div class="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
+				<Search
+					class="h-4 w-4 text-slate-500 drop-shadow-[0_2px_8px_rgba(255,255,255,0.65)] transition-colors group-focus-within:text-emerald-500"
+				/>
+				{#if !search && !searchFocused}
+					<span class="text-sm text-slate-500">Search inventory</span>
+				{/if}
+			</div>
 		</div>
 	</div>
 
 	<!-- Right section -->
-	<div class="flex items-center gap-2">
+	<div class="flex items-center gap-1">
 		<Button
 			variant="ghost"
 			size="icon"
-			class="hidden sm:flex hover:bg-sky-200/40 dark:hover:bg-slate-700/40 transition-colors"
+			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 sm:flex"
 			onclick={() => window.location.reload()}
+			aria-label="Refresh data"
 		>
-			<RefreshCcw class="h-4 w-4 text-sky-700 dark:text-sky-300" />
+			<RefreshCcw class="h-4 w-4" />
 		</Button>
 
 		<NotificationBell />
 
-		<Button
-			variant="ghost"
-			size="icon"
-			class="hover:bg-sky-200/40 dark:hover:bg-slate-700/40 transition-colors"
-			onclick={toggleTheme}
-		>
-			{#if isDark}
-				<Sun class="h-4 w-4 text-amber-500" />
-			{:else}
-				<Moon class="h-4 w-4 text-indigo-700" />
-			{/if}
-		</Button>
+		<div class="ml-2 h-6 w-px bg-white/60"></div>
 
 		<!-- User badge -->
-		<div
-			class="flex items-center gap-2 rounded-2xl border border-sky-200/50
-				bg-gradient-to-br from-white/80 to-sky-50/70
-				px-3 py-1 shadow-md hover:shadow-lg transition-all
-				dark:from-slate-800/80 dark:to-slate-900/80 dark:border-slate-700/50"
-		>
-			<div
-				class="flex h-9 w-9 items-center justify-center rounded-full
-					bg-gradient-to-br from-sky-500 to-indigo-600 text-sm font-semibold text-white shadow-md"
-			>
+		<div class="ml-2 flex cursor-pointer items-center gap-3 rounded-full border border-white/40 bg-white/55 py-1 pl-1 pr-3 shadow-[0_8px_30px_-20px_rgba(15,23,42,0.8)] transition hover:bg-white/75">
+			<div class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-xs font-medium text-white shadow-[0_8px_18px_-8px_rgba(147,51,234,0.65)] ring-2 ring-white">
 				{user?.Username?.slice(0, 2)?.toUpperCase() ?? '??'}
 			</div>
-			<div class="hidden text-left text-sm leading-tight sm:block">
-				<p class="font-semibold text-slate-800 dark:text-sky-100">
-					{user?.Username ?? 'Pending'}
+			<div class="hidden text-left sm:block">
+				<p class="text-xs font-medium leading-none text-slate-700">
+					{user?.Username ?? 'Guest'}
 				</p>
-				<p class="text-xs text-sky-600/80 dark:text-sky-400/80">
-					{user ? 'Online' : 'Awaiting approval'}
+				<p class="mt-0.5 text-[10px] text-slate-500">
+					{user ? 'Online' : 'Offline'}
 				</p>
 			</div>
 		</div>
@@ -129,7 +83,8 @@
 <style>
 	/* Optional subtle glow motion for a soft ambient effect */
 	@keyframes ambientGlow {
-		0%, 100% {
+		0%,
+		100% {
 			box-shadow: 0 0 12px rgba(147, 197, 253, 0.15);
 		}
 		50% {

@@ -8,8 +8,8 @@ services:
     volumes:
       - minio_data:/data
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: minioadmin4321
+      MINIO_ROOT_PASSWORD: minioadmin4321
     command: server /data --console-address ":9001"
     networks:
       - my_network
@@ -194,8 +194,25 @@ services:
         limits:
           cpus: "0.5"
           memory: "512M"
+    environment:
+      - AI_SERVICE_URL=http://ai-service:8000
     networks:
       - my_network
+
+  ai-service:
+    build:
+      context: ./ai-service
+    ports:
+      - "8001:8000"
+    depends_on:
+      - backend
+    env_file:
+      - ./ai-service/.env
+    environment:
+      - BACKEND_URL=http://backend:8080
+    networks:
+      - my_network
+
 
   prometheus:
     image: prom/prometheus:v2.37.0

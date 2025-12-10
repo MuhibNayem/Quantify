@@ -32,6 +32,15 @@ func CreateStockTransfer(c *gin.Context) {
 		return
 	}
 
+	if req.SourceLocationID == req.DestLocationID {
+		c.Error(appErrors.NewAppError("Source and destination locations must differ", http.StatusBadRequest, nil))
+		return
+	}
+	if req.Quantity <= 0 {
+		c.Error(appErrors.NewAppError("Quantity must be greater than zero", http.StatusBadRequest, nil))
+		return
+	}
+
 	// Get UserID from context
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -56,14 +65,14 @@ func CreateStockTransfer(c *gin.Context) {
 
 		// Create stock adjustment for source location (stock out)
 		sourceAdjustment := domain.StockAdjustment{
-			ProductID:      req.ProductID,
-			LocationID:     req.SourceLocationID,
-			Type:           "STOCK_OUT",
-			Quantity:       req.Quantity,
-			ReasonCode:     "TRANSFER_OUT",
-			Notes:          "Stock transfer to location " + strconv.FormatUint(uint64(req.DestLocationID), 10),
-			AdjustedBy:     userID.(uint),
-			AdjustedAt:     time.Now(),
+			ProductID:  req.ProductID,
+			LocationID: req.SourceLocationID,
+			Type:       "STOCK_OUT",
+			Quantity:   req.Quantity,
+			ReasonCode: "TRANSFER_OUT",
+			Notes:      "Stock transfer to location " + strconv.FormatUint(uint64(req.DestLocationID), 10),
+			AdjustedBy: userID.(uint),
+			AdjustedAt: time.Now(),
 		}
 		if err := tx.Create(&sourceAdjustment).Error; err != nil {
 			return err
@@ -71,14 +80,14 @@ func CreateStockTransfer(c *gin.Context) {
 
 		// Create stock adjustment for destination location (stock in)
 		destAdjustment := domain.StockAdjustment{
-			ProductID:      req.ProductID,
-			LocationID:     req.DestLocationID,
-			Type:           "STOCK_IN",
-			Quantity:       req.Quantity,
-			ReasonCode:     "TRANSFER_IN",
-			Notes:          "Stock transfer from location " + strconv.FormatUint(uint64(req.SourceLocationID), 10),
-			AdjustedBy:     userID.(uint),
-			AdjustedAt:     time.Now(),
+			ProductID:  req.ProductID,
+			LocationID: req.DestLocationID,
+			Type:       "STOCK_IN",
+			Quantity:   req.Quantity,
+			ReasonCode: "TRANSFER_IN",
+			Notes:      "Stock transfer from location " + strconv.FormatUint(uint64(req.SourceLocationID), 10),
+			AdjustedBy: userID.(uint),
+			AdjustedAt: time.Now(),
 		}
 		if err := tx.Create(&destAdjustment).Error; err != nil {
 			return err

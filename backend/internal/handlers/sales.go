@@ -8,17 +8,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"strconv"
+
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/requests"
+	"inventory/backend/internal/services"
 )
 
 type SalesHandler struct {
-	DB *gorm.DB
+	DB               *gorm.DB
+	Settings         services.SettingsService
+	ReportingService *services.ReportingService
 }
 
-func NewSalesHandler(db *gorm.DB) *SalesHandler {
-	return &SalesHandler{DB: db}
+func NewSalesHandler(db *gorm.DB, settings services.SettingsService, reportingService *services.ReportingService) *SalesHandler {
+	return &SalesHandler{DB: db, Settings: settings, ReportingService: reportingService}
 }
 
 // Checkout godoc
@@ -54,85 +59,205 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 
 	// Transaction: All or Nothing
 	err := h.DB.Transaction(func(tx *gorm.DB) error {
-		var totalAmount float64
+		// 1. Bulk Fetch Products
+		productIDs := make([]uint, len(req.Items))
+		itemMap := make(map[uint]int) // ProductID -> Quantity
+		for i, item := range req.Items {
+			productIDs[i] = item.ProductID
+			itemMap[item.ProductID] = item.Quantity
+		}
 
-		// 1. Process each item: Validate stock and deduct
+		var products []domain.Product
+		// Lock rows for update
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").Where("id IN ?", productIDs).Find(&products).Error; err != nil {
+			return fmt.Errorf("failed to fetch products: %w", err)
+		}
+
+		if len(products) != len(req.Items) {
+			return fmt.Errorf("some products not found")
+		}
+
+		productMap := make(map[uint]domain.Product)
+		for _, p := range products {
+			productMap[p.ID] = p
+		}
+
+		// 2. Bulk Fetch Batches
+		var allBatches []domain.Batch
+		if err := tx.Where("product_id IN ? AND quantity > 0", productIDs).Order("expiry_date asc, created_at asc").Find(&allBatches).Error; err != nil {
+			return fmt.Errorf("failed to fetch batches: %w", err)
+		}
+
+		// Group batches by ProductID
+		batchesByProduct := make(map[uint][]*domain.Batch)
+		for i := range allBatches {
+			// Use pointer to modify original slice elements if needed, but here we might need to be careful.
+			// Better to append pointers to the slice elements.
+			batchesByProduct[allBatches[i].ProductID] = append(batchesByProduct[allBatches[i].ProductID], &allBatches[i])
+		}
+
+		var totalAmount float64
+		var orderItems []domain.OrderItem
+		var stockAdjustments []domain.StockAdjustment
+
+		// Fetch active promotions
+		var activePromotions []domain.Promotion
+		now := time.Now()
+		if err := tx.Preload("Product").Preload("Category").Preload("SubCategory").
+			Where("is_active = ? AND start_date <= ? AND end_date >= ?", true, now, now).
+			Find(&activePromotions).Error; err != nil {
+			return fmt.Errorf("failed to fetch promotions: %w", err)
+		}
+
+		var totalDiscountFromPromotions float64
+
+		// 3. Process Items
 		for _, item := range req.Items {
-			// Lock product row to prevent race conditions check
-			var product domain.Product
-			if err := tx.Set("gorm:query_option", "FOR UPDATE").First(&product, item.ProductID).Error; err != nil {
+			product, ok := productMap[item.ProductID]
+			if !ok {
 				return fmt.Errorf("product %d not found", item.ProductID)
 			}
 
-			// Calculate total quantity available across batches
-			var currentStock int64
-			if err := tx.Model(&domain.Batch{}).Where("product_id = ?", item.ProductID).Select("COALESCE(SUM(quantity), 0)").Row().Scan(&currentStock); err != nil {
-				return fmt.Errorf("failed to check stock for product %d", item.ProductID)
+			requestedQty := item.Quantity
+			batches := batchesByProduct[item.ProductID]
+
+			// Calculate total available stock from fetched batches
+			var availableStock int
+			for _, b := range batches {
+				availableStock += b.Quantity
 			}
 
-			if currentStock < int64(item.Quantity) {
-				return fmt.Errorf("insufficient stock for product '%s' (Available: %d, Requested: %d)", product.Name, currentStock, item.Quantity)
+			if availableStock < requestedQty {
+				return fmt.Errorf("insufficient stock for product '%s' (Available: %d, Requested: %d)", product.Name, availableStock, requestedQty)
 			}
 
-			// Deduct from batches (FIFO/FEFO)
-			quantityToReduce := item.Quantity
-			var batches []domain.Batch
-			if err := tx.Where("product_id = ? AND quantity > 0", item.ProductID).Order("expiry_date asc, created_at asc").Find(&batches).Error; err != nil {
-				return fmt.Errorf("failed to fetch batches for product %d", item.ProductID)
-			}
-
+			// Deduct from batches
+			qtyToReduce := requestedQty
 			for _, batch := range batches {
-				if quantityToReduce <= 0 {
+				if qtyToReduce <= 0 {
 					break
 				}
 
-				if batch.Quantity >= quantityToReduce {
-					batch.Quantity -= quantityToReduce
-					quantityToReduce = 0
+				if batch.Quantity >= qtyToReduce {
+					batch.Quantity -= qtyToReduce
+					qtyToReduce = 0
 				} else {
-					quantityToReduce -= batch.Quantity
+					qtyToReduce -= batch.Quantity
 					batch.Quantity = 0
 				}
 
-				if err := tx.Save(&batch).Error; err != nil {
+				// We need to save the batch updates.
+				// Since we are in a transaction, we can save them individually or collect them.
+				// For simplicity and safety, saving individually here is okay as it's in-memory modified.
+				if err := tx.Save(batch).Error; err != nil {
 					return fmt.Errorf("failed to update batch %s", batch.BatchNumber)
 				}
 			}
 
-			// Record Stock Adjustment (Stock Out)
-			adjustment := domain.StockAdjustment{
+			// Prepare Stock Adjustment
+			stockAdjustments = append(stockAdjustments, domain.StockAdjustment{
 				ProductID:        product.ID,
 				LocationID:       product.LocationID,
 				Type:             "STOCK_OUT",
 				Quantity:         item.Quantity,
 				ReasonCode:       "SALE",
-				Notes:            fmt.Sprintf("Sale to customer ID: %d", req.CustomerID), // Simplified note
+				Notes:            fmt.Sprintf("Sale to customer ID: %d", req.CustomerID),
 				AdjustedBy:       userID,
 				AdjustedAt:       time.Now(),
-				PreviousQuantity: int(currentStock),
-				NewQuantity:      int(currentStock) - item.Quantity,
-			}
-			if err := tx.Create(&adjustment).Error; err != nil {
-				return fmt.Errorf("failed to create stock adjustment record")
+				PreviousQuantity: availableStock,
+				NewQuantity:      availableStock - item.Quantity,
+			})
+
+			// Calculate Discount
+			// Priority: Product > SubCategory > Category. Then Priority field.
+			var bestPromo *domain.Promotion
+			bestScore := -1 // 0=Cat, 1=SubCat, 2=Product
+
+			for i := range activePromotions {
+				p := &activePromotions[i]
+				score := -1
+
+				// Check matches
+				if p.ProductID != nil && *p.ProductID == product.ID {
+					score = 2
+				} else if p.SubCategoryID != nil && product.SubCategoryID > 0 && *p.SubCategoryID == product.SubCategoryID {
+					score = 1
+				} else if p.CategoryID != nil && product.CategoryID > 0 && *p.CategoryID == product.CategoryID {
+					score = 0
+				}
+
+				if score > -1 {
+					// Check if this is better than current best
+					if score > bestScore {
+						bestScore = score
+						bestPromo = p
+					} else if score == bestScore {
+						// Tie breaker: Priority
+						if bestPromo != nil && p.Priority > bestPromo.Priority {
+							bestPromo = p
+						}
+					}
+				}
 			}
 
-			// Accumulate total (simplified price calculation, ideally should trust backend price or verify)
-			totalAmount += product.SellingPrice * float64(item.Quantity)
+			unitPrice := product.SellingPrice
+			if bestPromo != nil {
+				if bestPromo.DiscountType == "PERCENTAGE" {
+					discount := unitPrice * (bestPromo.DiscountValue / 100.0)
+					unitPrice -= discount
+				} else if bestPromo.DiscountType == "FIXED_AMOUNT" {
+					unitPrice -= bestPromo.DiscountValue
+				}
+				if unitPrice < 0 {
+					unitPrice = 0
+				}
+				totalDiscountFromPromotions += (product.SellingPrice - unitPrice) * float64(item.Quantity)
+			}
+
+			// Accumulate total
+			totalAmount += unitPrice * float64(item.Quantity)
+
+			// Prepare Order Item (for later creation)
+			orderItems = append(orderItems, domain.OrderItem{
+				ProductID:  item.ProductID,
+				Quantity:   item.Quantity,
+				UnitPrice:  unitPrice,
+				TotalPrice: unitPrice * float64(item.Quantity),
+			})
 		}
 
-		// 2. Update Loyalty Points if CustomerID is provided
+		// Bulk Create Stock Adjustments
+		if len(stockAdjustments) > 0 {
+			if err := tx.Create(&stockAdjustments).Error; err != nil {
+				return fmt.Errorf("failed to create stock adjustments: %w", err)
+			}
+		}
+
+		// Apply Tax
+		taxRate := 0.0
+		if val, err := h.Settings.GetSetting("tax_rate_percentage"); err == nil {
+			if v, err := strconv.ParseFloat(val, 64); err == nil {
+				taxRate = v / 100.0
+			}
+		}
+
+		taxAmount := totalAmount * taxRate
+		totalAmount += taxAmount // Update total to include tax
+
+		var discountAmount float64
+		var pointsRedeemed int
+
+		// 4. Update Loyalty Points (Redemption & Earning)
 		if req.CustomerID != nil && *req.CustomerID > 0 {
 			var loyalty domain.LoyaltyAccount
 			result := tx.Where("user_id = ?", *req.CustomerID).First(&loyalty)
 			if result.Error != nil {
 				if result.Error == gorm.ErrRecordNotFound {
-					// Create if missing (auto-enrollment)
 					loyalty = domain.LoyaltyAccount{
 						UserID: *req.CustomerID,
 						Points: 0,
 						Tier:   "Bronze",
 					}
-					// Verify user exists first? Assuming foreign key constraint will catch it if not.
 					if err := tx.Create(&loyalty).Error; err != nil {
 						return fmt.Errorf("failed to create loyalty account: %w", err)
 					}
@@ -141,40 +266,120 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 				}
 			}
 
-			pointsEarned := int(totalAmount) // 1 point per $1 spent
+			// Handle Redemption
+			if req.PointsToRedeem > 0 {
+				if loyalty.Points < req.PointsToRedeem {
+					return fmt.Errorf("insufficient loyalty points (Available: %d, Requested: %d)", loyalty.Points, req.PointsToRedeem)
+				}
+
+				// Get redemption rate
+				redemptionRate := 0.01 // Default $0.01 per point
+				if val, err := h.Settings.GetSetting("loyalty_points_redemption_rate"); err == nil {
+					if v, err := strconv.ParseFloat(val, 64); err == nil {
+						redemptionRate = v
+					}
+				}
+
+				discountAmount = float64(req.PointsToRedeem) * redemptionRate
+				if discountAmount > totalAmount {
+					return fmt.Errorf("loyalty discount amount (%.2f) exceeds order total (%.2f)", discountAmount, totalAmount)
+				}
+
+				loyalty.Points -= req.PointsToRedeem
+				pointsRedeemed = req.PointsToRedeem
+			}
+
+			// Handle Earning (on Net Amount)
+			// Get earning rate from settings
+			earningRate := 1.0
+			if val, err := h.Settings.GetSetting("loyalty_points_earning_rate"); err == nil {
+				if v, err := strconv.ParseFloat(val, 64); err == nil {
+					earningRate = v
+				}
+			}
+
+			netAmount := totalAmount - discountAmount
+			if netAmount < 0 {
+				netAmount = 0
+			}
+
+			pointsEarned := int(netAmount * earningRate)
 			loyalty.Points += pointsEarned
 
-			// Update Tier
-			if loyalty.Points >= 10000 {
+			// Get tier thresholds from settings
+			silverThreshold := 500
+			goldThreshold := 2500
+			platinumThreshold := 10000
+
+			if val, err := h.Settings.GetSetting("loyalty_tier_silver"); err == nil {
+				if v, err := strconv.Atoi(val); err == nil {
+					silverThreshold = v
+				}
+			}
+			if val, err := h.Settings.GetSetting("loyalty_tier_gold"); err == nil {
+				if v, err := strconv.Atoi(val); err == nil {
+					goldThreshold = v
+				}
+			}
+			if val, err := h.Settings.GetSetting("loyalty_tier_platinum"); err == nil {
+				if v, err := strconv.Atoi(val); err == nil {
+					platinumThreshold = v
+				}
+			}
+
+			if loyalty.Points >= platinumThreshold {
 				loyalty.Tier = "Platinum"
-			} else if loyalty.Points >= 2500 {
+			} else if loyalty.Points >= goldThreshold {
 				loyalty.Tier = "Gold"
-			} else if loyalty.Points >= 500 {
+			} else if loyalty.Points >= silverThreshold {
 				loyalty.Tier = "Silver"
 			}
 
 			if err := tx.Save(&loyalty).Error; err != nil {
 				return fmt.Errorf("failed to update loyalty points: %w", err)
 			}
+		} else if req.PointsToRedeem > 0 {
+			return fmt.Errorf("cannot redeem points without a customer selected")
 		}
 
-		// 3. Record the Sale Transaction (Simplified domain model for now)
-		// We can add a Sales/Order record here if the domain exists.
-		// For now we assume StockAdjustment is the primary record for inventory content.
-		// We will record a financial transaction.
+		// 5. Create Order and Order Items
+		// UserID corresponds to the Staff (Authenticated User)
+		// CustomerID corresponds to the Customer (if provided)
 
+		orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
+		order := domain.Order{
+			OrderNumber:    orderNumber,
+			UserID:         userID,         // Staff
+			CustomerID:     req.CustomerID, // Customer
+			TotalAmount:    totalAmount - discountAmount,
+			Status:         "COMPLETED",
+			PaymentMethod:  req.PaymentMethod,
+			OrderDate:      time.Now(),
+			PointsRedeemed: pointsRedeemed,
+			DiscountAmount: discountAmount + totalDiscountFromPromotions,
+		}
+
+		if err := tx.Create(&order).Error; err != nil {
+			return fmt.Errorf("failed to create order record: %w", err)
+		}
+
+		// Assign OrderID to items and bulk create
+		for i := range orderItems {
+			orderItems[i].OrderID = order.ID
+		}
+		if err := tx.Create(&orderItems).Error; err != nil {
+			return fmt.Errorf("failed to create order items: %w", err)
+		}
+
+		// 6. Create Transaction
 		saletransaction := domain.Transaction{
-			OrderID:              fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID),
-			Amount:               int64(totalAmount), // Storing as int/cents often better, keeping float consistent with domain for now or converting? Domain says int64.
+			OrderID:              orderNumber,
+			Amount:               int64((totalAmount - discountAmount) * 100),
 			Currency:             "USD",
 			PaymentMethod:        req.PaymentMethod,
 			Status:               "COMPLETED",
-			GatewayTransactionID: fmt.Sprintf("GW-%d", time.Now().UnixNano()), // unique placeholder
+			GatewayTransactionID: fmt.Sprintf("GW-%d", time.Now().UnixNano()),
 		}
-
-		// Fix Amount type mismatch: domain has int64 (likely cents), product has float64.
-		// Converting to cents:
-		saletransaction.Amount = int64(totalAmount * 100)
 
 		if err := tx.Create(&saletransaction).Error; err != nil {
 			return fmt.Errorf("failed to record transaction: %w", err)
@@ -187,6 +392,18 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		c.Error(appErrors.NewAppError(err.Error(), http.StatusBadRequest, err))
 		return
 	}
+
+	// Trigger Real-Time Report Updates (Async)
+	go func() {
+		if h.ReportingService != nil {
+			h.ReportingService.NotifyReportUpdate("HOURLY_HEATMAP")
+			h.ReportingService.NotifyReportUpdate("SALES_BY_EMPLOYEE")
+			h.ReportingService.NotifyReportUpdate("COGS_GMROI")
+			h.ReportingService.NotifyReportUpdate("TAX_LIABILITY")
+			h.ReportingService.NotifyReportUpdate("CATEGORY_DRILLDOWN")
+			h.ReportingService.NotifyReportUpdate("CUSTOMER_INSIGHTS")
+		}
+	}()
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Checkout successful",
@@ -209,6 +426,8 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		SKU           string  `json:"SKU"`
 		SellingPrice  float64 `json:"SellingPrice"`
 		StockQuantity int     `json:"StockQuantity"`
+		CategoryID    uint    `json:"CategoryID"`
+		SubCategoryID uint    `json:"SubCategoryID"`
 	}
 
 	var results []ProductWithStock
@@ -216,10 +435,10 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 	// Optimized query: Get products and sum their batch quantities
 	// Using LEFT JOIN to ensure products with 0 stock are also returned (with NULL sum -> 0)
 	query := h.DB.Table("products").
-		Select("products.id, products.name, products.sku, products.selling_price, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
+		Select("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
 		Joins("LEFT JOIN batches ON batches.product_id = products.id").
 		Where("products.deleted_at IS NULL"). // Respect soft delete
-		Group("products.id, products.name, products.sku, products.selling_price")
+		Group("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id")
 
 	if err := query.Scan(&results).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch products", http.StatusInternalServerError, err))
@@ -227,4 +446,215 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"products": results})
+}
+
+// ListOrders godoc
+// @Summary List orders for the authenticated user
+// @Description Retrieves all orders placed by the current user
+// @Tags sales
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.Order
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /sales/orders [get]
+func (h *SalesHandler) ListOrders(c *gin.Context) {
+	// Get authenticated user ID
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	userID := authUserID.(uint)
+
+	var orders []domain.Order
+	// Preload items and their products, AND Returns
+	if err := h.DB.Preload("OrderItems.Product").Preload("Returns").Where("user_id = ?", userID).Order("created_at desc").Find(&orders).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch orders", http.StatusInternalServerError, err))
+		return
+	}
+
+	// Compute transient fields
+	for i := range orders {
+		orders[i].AdjustedTotal = orders[i].TotalAmount
+		for _, r := range orders[i].Returns {
+			if r.Status == "PENDING" {
+				orders[i].HasPendingReturn = true
+			}
+			if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+				orders[i].AdjustedTotal -= r.RefundAmount
+			}
+		}
+		if orders[i].AdjustedTotal < 0 {
+			orders[i].AdjustedTotal = 0
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": orders})
+}
+
+// ListAllOrders godoc
+// @Summary List all sales orders (Admin/Manager)
+// @Description Retrieves all sales orders in the system
+// @Tags sales
+// @Accept json
+// @Produce json
+// @Success 200 {array} domain.Order
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /sales/history [get]
+// OrderResponseDTO reduces payload size and includes computed fields
+type OrderResponseDTO struct {
+	ID               uint            `json:"ID"`
+	OrderNumber      string          `json:"OrderNumber"`
+	OrderDate        time.Time       `json:"OrderDate"`
+	TotalAmount      float64         `json:"TotalAmount"`
+	Status           string          `json:"Status"`
+	PaymentMethod    string          `json:"PaymentMethod"`
+	User             UserSummaryDTO  `json:"User"`     // Staff
+	Customer         *UserSummaryDTO `json:"Customer"` // Actual Customer
+	OrderItems       []OrderItemDTO  `json:"OrderItems"`
+	HasPendingReturn bool            `json:"HasPendingReturn"`
+	AdjustedTotal    float64         `json:"AdjustedTotal"`
+}
+
+type UserSummaryDTO struct {
+	ID        uint   `json:"ID"`
+	Username  string `json:"Username"`
+	FirstName string `json:"FirstName"`
+	LastName  string `json:"LastName"`
+}
+
+type OrderItemDTO struct {
+	ID         uint           `json:"ID"`
+	ProductID  uint           `json:"ProductID"`
+	Product    ProductSummary `json:"Product"`
+	Quantity   int            `json:"Quantity"`
+	UnitPrice  float64        `json:"UnitPrice"`
+	TotalPrice float64        `json:"TotalPrice"`
+}
+
+type ProductSummary struct {
+	ID   uint   `json:"ID"`
+	Name string `json:"Name"`
+	SKU  string `json:"SKU"`
+}
+
+// @Router /sales/history [get]
+func (h *SalesHandler) ListAllOrders(c *gin.Context) {
+	var orders []domain.Order
+	// Preload necessary associations.
+	// Note: We preload Returns to calculate AdjustedTotal and Pending status. Preload Customer for display.
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Preload("Customer").Preload("Returns").Order("created_at desc").Find(&orders).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch all orders", http.StatusInternalServerError, err))
+		return
+	}
+
+	response := make([]OrderResponseDTO, 0, len(orders))
+
+	for _, order := range orders {
+		// Calculate Computed Fields
+		adjustedTotal := order.TotalAmount
+		hasPending := false
+
+		for _, r := range order.Returns {
+			if r.Status == "PENDING" {
+				hasPending = true
+			}
+			if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+				adjustedTotal -= r.RefundAmount
+			}
+		}
+
+		// Map OrderItems
+		items := make([]OrderItemDTO, 0, len(order.OrderItems))
+		for _, item := range order.OrderItems {
+			items = append(items, OrderItemDTO{
+				ID:        item.ID,
+				ProductID: item.ProductID,
+				Product: ProductSummary{
+					ID:   item.Product.ID,
+					Name: item.Product.Name,
+					SKU:  item.Product.SKU,
+				},
+				Quantity:   item.Quantity,
+				UnitPrice:  item.UnitPrice,
+				TotalPrice: item.TotalPrice,
+			})
+		}
+
+		// Map User (Staff)
+		userSummary := UserSummaryDTO{
+			ID:        order.User.ID,
+			Username:  order.User.Username,
+			FirstName: order.User.FirstName,
+			LastName:  order.User.LastName,
+		}
+
+		// Map Customer
+		var customerSummary *UserSummaryDTO
+		if order.Customer != nil {
+			customerSummary = &UserSummaryDTO{
+				ID:        order.Customer.ID,
+				Username:  order.Customer.Username,
+				FirstName: order.Customer.FirstName,
+				LastName:  order.Customer.LastName,
+			}
+		}
+
+		response = append(response, OrderResponseDTO{
+			ID:               order.ID,
+			OrderNumber:      order.OrderNumber,
+			OrderDate:        order.OrderDate,
+			TotalAmount:      order.TotalAmount,
+			Status:           order.Status,
+			PaymentMethod:    order.PaymentMethod,
+			User:             userSummary,
+			Customer:         customerSummary,
+			OrderItems:       items,
+			HasPendingReturn: hasPending,
+			AdjustedTotal:    adjustedTotal,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"orders": response})
+}
+
+// GetOrderByNumber godoc
+// @Summary Get order details by order number
+// @Description Retrieves a specific order by its unique order number
+// @Tags sales
+// @Accept json
+// @Produce json
+// @Param orderNumber path string true "Order Number"
+// @Success 200 {object} domain.Order
+// @Failure 404 {object} map[string]interface{} "Order not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /sales/orders/{orderNumber} [get]
+func (h *SalesHandler) GetOrderByNumber(c *gin.Context) {
+	orderNumber := c.Param("orderNumber")
+
+	var order domain.Order
+	// Preload items, product details, user, AND Returns
+	if err := h.DB.Preload("OrderItems.Product").Preload("User").Preload("Returns").Where("order_number = ?", orderNumber).First(&order).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("Order not found", http.StatusNotFound, err))
+		} else {
+			c.Error(appErrors.NewAppError("Failed to fetch order", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	// Compute transient fields
+	order.AdjustedTotal = order.TotalAmount
+	for _, r := range order.Returns {
+		if r.Status == "PENDING" {
+			order.HasPendingReturn = true
+		}
+		if r.Status == "APPROVED" || r.Status == "COMPLETED" {
+			order.AdjustedTotal -= r.RefundAmount
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"order": order})
 }

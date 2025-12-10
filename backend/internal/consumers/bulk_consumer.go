@@ -11,6 +11,7 @@ import (
 	"inventory/backend/internal/storage"
 	ws "inventory/backend/internal/websocket"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rabbitmq/amqp091-go"
@@ -38,9 +39,11 @@ type BulkConsumer struct {
 	BulkExportSvc *services.BulkExportService
 
 	Hub *ws.Hub
+
+	NotificationRepo repository.NotificationRepository
 }
 
-func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo *repository.ProductRepository, categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub) *BulkConsumer {
+func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo *repository.ProductRepository, categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub, notificationRepo repository.NotificationRepository) *BulkConsumer {
 
 	return &BulkConsumer{
 
@@ -63,6 +66,8 @@ func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo
 		BulkExportSvc: bulkExportSvc,
 
 		Hub: hub,
+
+		NotificationRepo: notificationRepo,
 	}
 
 }
@@ -340,8 +345,26 @@ func (c *BulkConsumer) emitJobUpdate(job *domain.Job) {
 
 	if userID > 0 {
 		c.Hub.SendToUser(userID, payload)
+		// Persist for user
+		userNotif := domain.Notification{
+			UserID:      userID,
+			Type:        "BULK_JOB_STATUS",
+			Title:       fmt.Sprintf("Bulk Job %s", job.Status),
+			Message:     fmt.Sprintf("Job #%d (%s) is now %s.", job.ID, job.Type, job.Status),
+			TriggeredAt: time.Now(),
+		}
+		c.NotificationRepo.CreateNotification(&userNotif)
 	} else {
-		c.Hub.Broadcast(payload)
+		// Fallback: Broadcast only to admins/managers with bulk import permission
+		c.Hub.BroadcastToPermission("bulk.import", payload)
+		// Persist for admins
+		adminNotif := domain.Notification{
+			Type:        "BULK_JOB_STATUS",
+			Title:       fmt.Sprintf("System Bulk Job %s", job.Status),
+			Message:     fmt.Sprintf("System Job #%d (%s) is now %s.", job.ID, job.Type, job.Status),
+			TriggeredAt: time.Now(),
+		}
+		c.NotificationRepo.CreateNotificationsForPermission("bulk.import", adminNotif)
 	}
 }
 

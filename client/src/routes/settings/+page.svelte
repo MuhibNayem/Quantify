@@ -21,22 +21,40 @@
 		Lock,
 		LayoutTemplate,
 		ShieldCheck,
-		Sparkles
+		Sparkles,
+		Coins,
+		Percent,
+		Zap
 	} from 'lucide-svelte';
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
+	import { adaptiveText, liquidGlass } from '$lib/styles/liquid-glass';
 
 	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
 
-	let settings: any = {
+	$effect(() => {
+		if (!auth.hasPermission('settings.view')) {
+			toast.error('Access Denied', { description: 'You do not have permission to view settings.' });
+			goto('/');
+		}
+	});
+
+	let settings: any = $state({
 		business_name: '',
 		currency_symbol: '$',
 		timezone: 'UTC',
 		privacy_policy: '',
-		terms_of_service: ''
-	};
-	let activeTab = 'general';
+		terms_of_service: '',
+		loyalty_points_earning_rate: '1',
+		loyalty_points_redemption_rate: '0.01',
+		loyalty_tier_silver: '500',
+		loyalty_tier_gold: '2500',
+		loyalty_tier_platinum: '10000',
+		tax_rate_percentage: '0'
+	});
+	let activeTab = $state('general');
 
 	const currencyOptions = [
 		{ value: '$', label: 'USD - United States Dollar' },
@@ -76,6 +94,7 @@
 				// Ensure defaults if missing
 				if (!settings['currency_symbol']) settings['currency_symbol'] = '$';
 				if (!settings['timezone']) settings['timezone'] = 'UTC';
+				if (!settings['ai_wake_up_time']) settings['ai_wake_up_time'] = '07:00';
 			}
 		} catch (e) {
 			console.error('Error loading settings', e);
@@ -94,30 +113,34 @@
 
 	const allTabs = [
 		{ id: 'general', label: 'General', icon: Settings, permission: 'settings.view' },
+		{ id: 'business', label: 'Business Rules', icon: Coins, permission: 'settings.view' },
+		{ id: 'system', label: 'System & AI', icon: Zap, permission: 'settings.view' },
 		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck, permission: 'roles.view' },
 		{ id: 'policies', label: 'Policies', icon: FileText, permission: 'settings.view' },
 		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
 	];
 
-	$: tabs = allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission));
+	let tabs = $derived(allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission)));
 
 	// Auto-select first available tab if current one becomes hidden
-	$: if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
-		activeTab = tabs[0].id;
-	}
+	$effect(() => {
+		if (tabs.length > 0 && !tabs.find((t) => t.id === activeTab)) {
+			activeTab = tabs[0].id;
+		}
+	});
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
-	<!-- Soothing Soft Background -->
-	<div class="absolute left-0 top-0 -z-10 h-full w-full overflow-hidden bg-white/50">
+<div class="relative min-h-screen overflow-hidden bg-[#F9FAFB] p-8 font-sans lg:p-12">
+	<!-- Organic Mesh Gradient Background (Apple-style) -->
+	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
 		<div
-			class="animate-blob absolute -left-[10%] -top-[10%] h-[50%] w-[50%] rounded-full bg-blue-100/60 blur-[100px]"
+			class="absolute left-[10%] top-[5%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
 		></div>
 		<div
-			class="animate-blob animation-delay-2000 absolute -right-[10%] top-[20%] h-[60%] w-[60%] rounded-full bg-purple-100/60 blur-[100px]"
+			class="absolute right-[5%] top-[30%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
 		></div>
 		<div
-			class="animate-blob animation-delay-4000 absolute -bottom-[20%] left-[20%] h-[50%] w-[50%] rounded-full bg-pink-100/60 blur-[100px]"
+			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
 		></div>
 	</div>
 
@@ -129,7 +152,7 @@
 			>
 				Configuration
 			</h1>
-			<p class="font-medium text-slate-500">
+			<p class={cn('font-medium', adaptiveText.onGlass.secondary)}>
 				Manage system preferences, security controls, and global policies.
 			</p>
 		</div>
@@ -141,15 +164,23 @@
 		>
 			<!-- Light Glass Tabs List -->
 			<Tabs.List
-				class="inline-flex h-auto w-full rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-lg backdrop-blur-xl"
+				class={cn(
+					liquidGlass.radius.medium,
+					liquidGlass.border.light,
+					liquidGlass.background.light,
+					liquidGlass.blur.heavy,
+					liquidGlass.shadow.light,
+					'inline-flex h-auto w-full p-1.5'
+				)}
 			>
 				{#each tabs as tab}
 					<Tabs.Trigger
 						value={tab.id}
 						class={cn(
 							'flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300',
-							'data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/50',
-							'text-slate-500 hover:bg-white/40 hover:text-slate-700'
+							'data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/50',
+							adaptiveText.onGlass.secondary,
+							'hover:bg-white/40 data-[state=active]:text-blue-600'
 						)}
 					>
 						<div class="flex items-center justify-center gap-2">
@@ -165,7 +196,16 @@
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Business Profile Card -->
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-8 flex items-start gap-5">
 							<div
@@ -174,8 +214,8 @@
 								<Building2 size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">Business Profile</h3>
-								<p class="text-slate-500">
+								<h3 class={cn('text-xl', adaptiveText.heading)}>Business Profile</h3>
+								<p class={adaptiveText.onGlass.secondary}>
 									Your organization's visible identity across the platform.
 								</p>
 							</div>
@@ -183,7 +223,7 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">Business Name</Label>
+								<Label class={cn('ml-1', adaptiveText.label)}>Business Name</Label>
 								<div class="flex gap-3">
 									<Input
 										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
@@ -204,13 +244,24 @@
 					<!-- Localization -->
 					<div class="grid gap-6 md:grid-cols-2">
 						<div
-							class="group rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl transition-all hover:bg-white/80"
+							class={cn(
+								liquidGlass.radius.medium,
+								liquidGlass.border.medium,
+								liquidGlass.background.medium,
+								liquidGlass.blur.heavy,
+								liquidGlass.saturate,
+								liquidGlass.shadow.medium,
+								liquidGlass.innerGlow.medium,
+								liquidGlass.transition,
+								liquidGlass.hover.shadow,
+								'group p-8'
+							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-blue-50 p-3 text-blue-600 ring-1 ring-blue-100">
 									<Globe size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">Currency</h3>
+								<h3 class={cn('text-lg', adaptiveText.heading)}>Currency</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
@@ -231,7 +282,18 @@
 						</div>
 
 						<div
-							class="group rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl transition-all hover:bg-white/80"
+							class={cn(
+								liquidGlass.radius.medium,
+								liquidGlass.border.medium,
+								liquidGlass.background.medium,
+								liquidGlass.blur.heavy,
+								liquidGlass.saturate,
+								liquidGlass.shadow.medium,
+								liquidGlass.innerGlow.medium,
+								liquidGlass.transition,
+								liquidGlass.hover.shadow,
+								'group p-8'
+							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-emerald-50 p-3 text-emerald-600 ring-1 ring-emerald-100">
@@ -260,6 +322,206 @@
 				</div>
 			</Tabs.Content>
 
+			<!-- Business Rules -->
+			<Tabs.Content value="business" class="space-y-6 pt-2 outline-none">
+				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
+					<!-- Loyalty Program -->
+					<div
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-amber-600 shadow-sm"
+							>
+								<Sparkles size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">Loyalty Program</h3>
+								<p class="text-slate-500">
+									Configure how customers earn and redeem points, and set tier thresholds.
+								</p>
+							</div>
+						</div>
+
+						<div class="grid gap-8 md:grid-cols-2">
+							<!-- Earning & Redemption -->
+							<div class="space-y-6">
+								<h4 class="font-semibold text-slate-700">Points Configuration</h4>
+								<div class="space-y-3">
+									<Label class="ml-1 font-medium text-slate-600">Earning Rate (Points per $1)</Label
+									>
+									<div class="flex gap-3">
+										<Input
+											type="number"
+											step="0.1"
+											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											bind:value={settings['loyalty_points_earning_rate']}
+										/>
+										<Button
+											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											onclick={() =>
+												saveSetting(
+													'loyalty_points_earning_rate',
+													settings['loyalty_points_earning_rate']
+												)}
+										>
+											<Save size={20} />
+										</Button>
+									</div>
+									<p class="text-xs text-slate-400">
+										How many points a customer earns for every unit of currency spent.
+									</p>
+								</div>
+
+								<div class="space-y-3">
+									<Label class="ml-1 font-medium text-slate-600"
+										>Redemption Value ($ per Point)</Label
+									>
+									<div class="flex gap-3">
+										<Input
+											type="number"
+											step="0.01"
+											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											bind:value={settings['loyalty_points_redemption_rate']}
+										/>
+										<Button
+											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											onclick={() =>
+												saveSetting(
+													'loyalty_points_redemption_rate',
+													settings['loyalty_points_redemption_rate']
+												)}
+										>
+											<Save size={20} />
+										</Button>
+									</div>
+									<p class="text-xs text-slate-400">
+										The monetary value of a single loyalty point when redeeming.
+									</p>
+								</div>
+							</div>
+
+							<!-- Tiers -->
+							<div class="space-y-6">
+								<h4 class="font-semibold text-slate-700">Tier Thresholds</h4>
+								<div class="space-y-4">
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Silver Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_silver']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-slate-400 text-white shadow-lg hover:bg-slate-500"
+												onclick={() =>
+													saveSetting('loyalty_tier_silver', settings['loyalty_tier_silver'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Gold Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_gold']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-yellow-500 text-white shadow-lg hover:bg-yellow-600"
+												onclick={() =>
+													saveSetting('loyalty_tier_gold', settings['loyalty_tier_gold'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+									<div class="space-y-2">
+										<Label class="ml-1 font-medium text-slate-600">Platinum Tier (Points)</Label>
+										<div class="flex gap-3">
+											<Input
+												type="number"
+												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												bind:value={settings['loyalty_tier_platinum']}
+											/>
+											<Button
+												class="h-12 rounded-xl bg-slate-800 text-white shadow-lg hover:bg-slate-900"
+												onclick={() =>
+													saveSetting('loyalty_tier_platinum', settings['loyalty_tier_platinum'])}
+											>
+												<Save size={20} />
+											</Button>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Tax Settings -->
+					<div
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-emerald-50 to-teal-50 p-4 text-emerald-600 shadow-sm"
+							>
+								<Percent size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">Financial Settings</h3>
+								<p class="text-slate-500">Manage tax rates and other financial parameters.</p>
+							</div>
+						</div>
+
+						<div class="max-w-xl space-y-6">
+							<div class="space-y-3">
+								<Label class="ml-1 font-medium text-slate-600">Default Tax Rate (%)</Label>
+								<div class="flex gap-3">
+									<Input
+										type="number"
+										step="0.01"
+										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										bind:value={settings['tax_rate_percentage']}
+									/>
+									<Button
+										class="h-12 rounded-xl bg-emerald-600 text-white shadow-lg hover:bg-emerald-700"
+										onclick={() =>
+											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
+									>
+										<Save size={20} class="mr-2" /> Save
+									</Button>
+								</div>
+								<p class="text-xs text-slate-400">
+									This tax rate will be applied to all applicable sales.
+								</p>
+							</div>
+						</div>
+					</div>
+				</div>
+			</Tabs.Content>
+
 			<!-- Security / RBAC -->
 			<Tabs.Content value="security" class="pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-3xl shadow-2xl">
@@ -271,7 +533,16 @@
 			<Tabs.Content value="policies" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-6 flex items-center gap-4">
 							<div class="rounded-xl bg-violet-50 p-3 text-violet-600 ring-1 ring-violet-100">
@@ -295,7 +566,16 @@
 					</div>
 
 					<div
-						class="rounded-3xl border border-white/60 bg-white/60 p-8 shadow-xl backdrop-blur-2xl"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
 						<div class="mb-6 flex items-center gap-4">
 							<div class="rounded-xl bg-pink-50 p-3 text-pink-600 ring-1 ring-pink-100">
@@ -315,6 +595,101 @@
 							>
 								<Save size={18} class="mr-2" /> Save Terms
 							</Button>
+						</div>
+					</div>
+
+					<!-- Return Policy Settings -->
+					<div
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
+					>
+						<div class="mb-6 flex items-center gap-4">
+							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">
+								<Clock size={24} />
+							</div>
+							<h3 class="text-lg font-bold text-slate-800">Return Policy</h3>
+						</div>
+						<div class="max-w-xl space-y-3">
+							<Label class="ml-1 font-medium text-slate-600">Return Window (Days)</Label>
+							<div class="flex gap-3">
+								<Input
+									type="number"
+									class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+									bind:value={settings['return_window_days']}
+									placeholder="e.g. 30"
+								/>
+								<Button
+									class="h-12 rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95"
+									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
+								>
+									<Save size={20} class="mr-2" /> Save
+								</Button>
+							</div>
+							<p class="text-xs text-slate-400">
+								Number of days after purchase that a customer can request a return.
+							</p>
+						</div>
+					</div>
+				</div>
+			</Tabs.Content>
+
+			<!-- System & AI -->
+			<Tabs.Content value="system" class="space-y-6 pt-2 outline-none">
+				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
+					<div
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
+					>
+						<div class="mb-8 flex items-start gap-5">
+							<div
+								class="rounded-2xl border border-white bg-gradient-to-br from-sky-50 to-blue-50 p-4 text-sky-600 shadow-sm"
+							>
+								<Zap size={32} />
+							</div>
+							<div>
+								<h3 class="text-xl font-bold text-slate-800">AI & System</h3>
+								<p class="text-slate-500">
+									Configure autonomous agent behavior and system-wide parameters.
+								</p>
+							</div>
+						</div>
+
+						<div class="max-w-xl space-y-6">
+							<div class="space-y-3">
+								<Label class="ml-1 font-medium text-slate-600">AI Wake Up Time</Label>
+								<div class="flex gap-3">
+									<Input
+										type="time"
+										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										bind:value={settings['ai_wake_up_time']}
+									/>
+									<Button
+										class="h-12 rounded-xl bg-sky-600 text-white shadow-lg hover:bg-sky-700"
+										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
+									>
+										<Save size={20} class="mr-2" /> Save
+									</Button>
+								</div>
+								<p class="text-xs text-slate-400">
+									The AI will run the "Daily Morning Check" at this time every day.
+								</p>
+							</div>
 						</div>
 					</div>
 				</div>

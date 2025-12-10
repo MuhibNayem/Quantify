@@ -76,7 +76,7 @@ func (h *UserHandler) ListUsers(c *gin.Context) {
 	}
 
 	// Apply pagination
-	if err := db.Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	if err := db.Preload("Role").Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to list users", http.StatusInternalServerError, err))
 		return
 	}
@@ -419,7 +419,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
 	var user domain.User
 
-	if err := h.db.First(&user, id).Error; err != nil {
+	if err := h.db.Preload("Role").First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -461,7 +461,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := h.db.First(&user, id).Error; err != nil {
+	if err := h.db.Preload("Role").First(&user, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -471,9 +471,16 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 	}
 
 	// Get the role of the authenticated user from the context
-	authUserRole, exists := c.Get("role")
+	authUserRoleVal, exists := c.Get("role")
 	if !exists {
 		c.Error(appErrors.NewAppError("User role not found in context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	authUserRole, _ := authUserRoleVal.(string)
+
+	if !canAccessUser(c, user.ID) && authUserRole != "Admin" {
+		c.Error(appErrors.NewAppError("Forbidden: cannot update this user", http.StatusForbidden, nil))
 		return
 	}
 
@@ -501,6 +508,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 			return
 		}
 		user.RoleID = role.ID
+		user.Role = role
 	}
 	if req.FirstName != "" {
 		user.FirstName = req.FirstName

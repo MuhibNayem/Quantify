@@ -14,6 +14,7 @@ type NotificationRepository interface {
 	GetUnreadNotificationCountByUserID(userID uint) (int64, error)
 	MarkNotificationAsRead(notificationID uint, userID uint) error
 	MarkAllNotificationsAsRead(userID uint) error
+	CreateNotificationsForPermission(permission string, notification domain.Notification) error
 }
 
 // notificationRepository implements NotificationRepository using GORM.
@@ -70,4 +71,38 @@ func (r *notificationRepository) MarkAllNotificationsAsRead(userID uint) error {
 	return r.db.Model(&domain.Notification{}).
 		Where("user_id = ? AND is_read = ?", userID, false).
 		Updates(map[string]interface{}{"is_read": true, "read_at": time.Now()}).Error
+}
+
+// CreateNotificationsForPermission creates a notification for all users with a specific permission.
+func (r *notificationRepository) CreateNotificationsForPermission(permission string, notification domain.Notification) error {
+	var userIDs []uint
+	// Find all users who have a role containing the given permission
+	// This assumes the schema: Users -> Role -> RolePermissions -> Permissions
+	// We use a subquery or join to find matching user IDs.
+	// Since GORM Many2Many is "role_permissions", we query:
+	err := r.db.Table("users").
+		Select("users.id").
+		Joins("JOIN roles ON users.role_id = roles.id").
+		Joins("JOIN role_permissions ON roles.id = role_permissions.role_id").
+		Joins("JOIN permissions ON role_permissions.permission_id = permissions.id").
+		Where("permissions.name = ?", permission).
+		Find(&userIDs).Error
+
+	if err != nil {
+		return err
+	}
+
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	var notifications []domain.Notification
+	for _, uid := range userIDs {
+		n := notification // Copy struct
+		n.ID = 0          // Reset ID for new creation
+		n.UserID = uid
+		notifications = append(notifications, n)
+	}
+
+	return r.db.CreateInBatches(notifications, 100).Error
 }

@@ -58,15 +58,15 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 
 	// Initialize services
 	paymentService := services.NewPaymentService(cfg, paymentRepo)
-	forecastingService := services.NewForecastingService(forecastingRepo)
+	forecastingService := services.NewForecastingService(forecastingRepo, cfg)
 	barcodeService := services.NewBarcodeService(barcodeRepo)
-	crmService := services.NewCRMService(crmRepo, db)
+	settingsService := services.NewSettingsService(settingsRepo)
+	crmService := services.NewCRMService(crmRepo, db, settingsService, cfg)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo, userRepo)
 	integrationService := services.NewIntegrationService()
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
 	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
 	replenishmentService := services.NewReplenishmentService(replenishmentRepo)
-	settingsService := services.NewSettingsService(settingsRepo)
 	roleService := services.NewRoleService(roleRepo)
 
 	// Initialize handlers
@@ -74,7 +74,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
-	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService)
+	emailService := services.NewEmailService(cfg)
+	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService, hub, notificationRepo, emailService)
 	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
 	crmHandler := handlers.NewCRMHandler(crmService)
 	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
@@ -87,13 +88,15 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	roleHandler := handlers.NewRoleHandler(roleService)
+	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo, reportingService)
+	promotionHandler := handlers.NewPromotionHandler(db)
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
 		publicRoutes.GET("/ws", func(c *gin.Context) {
-			handlers.ServeWs(hub, c, notificationRepo)
+			handlers.ServeWs(hub, c, notificationRepo, roleRepo)
 		})
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
@@ -158,6 +161,15 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			products.GET("/:productId/history", middleware.RequirePermission(roleRepo, "products.read"), handlers.ListStockHistory)
 		}
 
+		// Promotions
+		promotions := api.Group("/promotions")
+		{
+			promotions.POST("", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.CreatePromotion)
+			promotions.GET("", middleware.RequirePermission(roleRepo, "products.read"), promotionHandler.ListPromotions)
+			promotions.PUT("/:id", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.UpdatePromotion)
+			promotions.DELETE("/:id", middleware.RequirePermission(roleRepo, "products.delete"), promotionHandler.DeletePromotion)
+		}
+
 		// Categories
 		categories := api.Group("/categories")
 		{
@@ -211,23 +223,40 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		replenishment := api.Group("/replenishment")
 		{
 			replenishment.POST("/forecast/generate", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.GenerateDemandForecast)
-			replenishment.POST("/suggestions/generate", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.GenerateReorderSuggestions)
 			replenishment.GET("/forecast/:forecastId", middleware.RequirePermission(roleRepo, "replenishment.read"), handlers.GetDemandForecast)
+			replenishment.GET("/dashboard", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetForecastDashboard)
+			replenishment.POST("/suggestions/generate", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.GenerateReorderSuggestions)
 			replenishment.GET("/suggestions", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListReorderSuggestions)
 			replenishment.POST("/suggestions/:suggestionId/create-po", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.CreatePOFromSuggestion)
 			replenishment.POST("/purchase-orders/:poId/approve", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.ApprovePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/send", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.SendPurchaseOrder)
+			replenishment.POST("/purchase-orders/:poId/send", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.SendPurchaseOrder)
 			replenishment.GET("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "replenishment.read"), handlers.GetPurchaseOrder)
-			replenishment.PUT("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.UpdatePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/receive", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.ReceivePurchaseOrder)
+			replenishment.PUT("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "inventory.write"), handlers.UpdatePurchaseOrder)
+			replenishment.POST("/purchase-orders/:poId/receive", middleware.RequirePermission(roleRepo, "inventory.write"), handlers.ReceivePurchaseOrder)
 			replenishment.POST("/purchase-orders/:poId/cancel", middleware.RequirePermission(roleRepo, "replenishment.write"), handlers.CancelPurchaseOrder)
+			replenishment.POST("/purchase-orders", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePurchaseOrder)
+			replenishment.GET("/purchase-orders", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseOrders)
+			replenishment.POST("/returns", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePurchaseReturn)
+			replenishment.GET("/returns", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseReturns)
 		}
 
 		// Sales
 		sales := api.Group("/sales")
 		{
-			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db).Checkout)
-			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db).ListProducts)
+			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService, reportingService).Checkout)
+			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService, reportingService).ListProducts)
+			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService).ListOrders)
+			sales.GET("/orders/:orderNumber", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService).GetOrderByNumber)
+			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService).ListAllOrders)
+		}
+
+		// Returns
+		returns := api.Group("/returns")
+		{
+			returns.POST("/request", middleware.RequirePermission(roleRepo, "returns.request"), returnHandler.RequestReturn)
+			returns.POST("/:id/process", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ProcessReturn)
+			returns.GET("", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ListReturns)
+			returns.GET("/:id", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.GetReturn)
 		}
 
 		// Reports
@@ -239,6 +268,25 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			reports.GET("/download/:jobId", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.DownloadReportFile)
 			reports.POST("/inventory-turnover", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetInventoryTurnoverReport)
 			reports.POST("/profit-margin", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetProfitMarginReport)
+
+			// New Real-Time Reports
+			reports.GET("/stock-aging", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetStockAgingReport)
+			reports.GET("/dead-stock", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetDeadStockReport)
+			reports.GET("/supplier-performance", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetSupplierPerformanceReport)
+			reports.GET("/heatmap", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetHourlySalesHeatmap)
+			reports.GET("/employee-sales", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetSalesByEmployeeReport)
+			reports.GET("/category-drilldown", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCategoryDrillDownReport)
+			reports.GET("/gmroi", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetCOGSAndGMROIReport)
+			reports.GET("/audit/voids", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetVoidDiscountAuditReport)
+			reports.GET("/tax-liability", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetTaxLiabilityReport)
+			reports.GET("/cash-reconciliation", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetCashDrawerReconciliationReport)
+
+			// Additional Business Intelligence Reports
+			reports.GET("/customer-insights", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerInsightsReport)
+			reports.GET("/shrinkage", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetShrinkageReport)
+			reports.GET("/returns-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerReturnAnalysisReport)
+			reports.GET("/basket-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetBasketAnalysisReport)
+			reports.GET("/product-performance", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetProductPerformanceAnalytics)
 		}
 
 		// Alerts
@@ -292,14 +340,20 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			users.DELETE("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.DeleteUser)
 			users.PUT("/:id/approve", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.ApproveUser)
 
-			// Notification routes (Self access usually)
+			// Notification routes (Self access usually, but now permission enforced)
 			notifications := users.Group("/:id/notifications")
 			{
-				notifications.GET("", notificationHandler.ListNotifications)
-				notifications.GET("/unread/count", notificationHandler.GetUnreadNotificationCount)
-				notifications.PATCH("/:notificationId/read", notificationHandler.MarkNotificationAsRead)
-				notifications.PATCH("/read-all", notificationHandler.MarkAllNotificationsAsRead)
+				notifications.GET("", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.ListNotifications)
+				notifications.GET("/unread/count", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.GetUnreadNotificationCount)
+				notifications.PATCH("/:notificationId/read", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkNotificationAsRead)
+				notifications.PATCH("/read-all", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkAllNotificationsAsRead)
 			}
+		}
+
+		// Notifications (System/Broadcast)
+		notifications := api.Group("/notifications")
+		{
+			notifications.POST("/broadcast", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.BroadcastNotification)
 		}
 
 		// CRM
@@ -311,11 +365,12 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			crm.GET("/customers/username/:username", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByUsername)
 			crm.GET("/customers/email/:email", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByEmail)
 			crm.GET("/customers/phone/:phone", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByPhone)
-			crm.PUT("/customers/:userId", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.UpdateCustomer)
-			crm.DELETE("/customers/:userId", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.DeleteCustomer)
+			crm.PUT("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.UpdateCustomer)
+			crm.DELETE("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.DeleteCustomer)
 			crm.GET("/loyalty/:userId", middleware.RequirePermission(roleRepo, "loyalty.read"), crmHandler.GetLoyaltyAccount)
 			crm.POST("/loyalty/:userId/points", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.AddLoyaltyPoints)
 			crm.POST("/loyalty/:userId/redeem", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.RedeemLoyaltyPoints)
+			crm.GET("/customers/:identifier/churn-risk", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetChurnRisk)
 		}
 
 		// Time Tracking (Basic access for all staff)
@@ -354,6 +409,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 		settings := api.Group("/settings")
 		{
 			settings.GET("", middleware.RequirePermission(roleRepo, "settings.view"), settingsHandler.GetSettings)
+			settings.GET("/configurations", settingsHandler.GetPublicConfigurations) // Authenticated, no specific permission needed
 			settings.PUT("", middleware.RequirePermission(roleRepo, "settings.manage"), settingsHandler.UpdateSetting)
 		}
 

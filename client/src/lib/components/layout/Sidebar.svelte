@@ -28,9 +28,7 @@
 			.map((section) => ({
 				...section,
 				items: section.items.filter((item) => {
-					// If no permission is specified, show the item
 					if (!item.permission) return true;
-					// Otherwise, check if user has the required permission
 					return permissions.includes(item.permission);
 				})
 			}))
@@ -40,8 +38,9 @@
 
 <!-- Mobile toggle button -->
 <Button
-	class="fixed left-4 top-4 z-50 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 lg:hidden"
+	class="fixed left-4 top-4 z-50 rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-purple-500/30 transition-transform duration-300 hover:scale-105 lg:hidden"
 	onclick={() => (open = !open)}
+	aria-label="Toggle navigation"
 >
 	<Menu class="h-5 w-5" />
 </Button>
@@ -49,7 +48,7 @@
 <!-- Mobile overlay -->
 {#if open}
 	<div
-		class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
+		class="fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-lg transition-all lg:hidden"
 		onclick={() => (open = false)}
 	/>
 {/if}
@@ -57,40 +56,33 @@
 <!-- Sidebar -->
 <aside
 	class={cn(
-		'fixed inset-y-0 left-0 z-50 flex h-screen w-80 flex-col border-r border-white/10 bg-gradient-to-b from-blue-50/90 via-purple-50/80 to-pink-50/90 shadow-2xl shadow-purple-500/10 backdrop-blur-2xl transition-transform duration-500 ease-out',
+		'liquid-panel fixed inset-y-0 left-0 z-50 flex h-screen w-80 flex-col overflow-hidden border border-white/40 bg-gradient-to-b from-sky-50/90 via-blue-50/85 to-purple-50/90 px-0 text-slate-800 shadow-[0_25px_80px_-40px_rgba(59,7,100,0.45)] transition-transform duration-500 ease-out',
 		open ? 'translate-x-0' : '-translate-x-full',
 		'lg:static lg:z-auto lg:translate-x-0'
 	)}
 >
 	<!-- Header -->
-	<div
-		class="flex h-20 flex-shrink-0 items-center gap-3 border-b border-white/20 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 px-6 backdrop-blur-sm"
-	>
-		<div
-			class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/25"
-		>
-			<Sparkles class="h-6 w-6 text-white" />
+	<div class="flex h-20 flex-shrink-0 items-center gap-3 border-b border-white/30 bg-gradient-to-r from-blue-500/5 via-purple-500/10 to-pink-500/5 px-6 backdrop-blur-sm">
+		<div class="relative flex h-12 w-12 items-center justify-center rounded-[1.4rem] bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-purple-500/30">
+			<Sparkles class="h-6 w-6 text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.65)]" />
+			<div class="pointer-events-none absolute inset-0 rounded-[1.4rem] border border-white/30"></div>
 		</div>
 		<div class="flex flex-col">
-			<p
-				class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-lg font-bold text-transparent"
-			>
+			<p class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-lg font-semibold tracking-tight text-transparent">
 				Quantify Flow
 			</p>
-			<p class="text-xs font-medium text-purple-600/70">Inventory intelligence</p>
+			<p class="text-xs font-medium text-purple-600/80">Inventory intelligence</p>
 		</div>
 	</div>
 
 	<!-- Navigation -->
 	<nav class="flex flex-1 flex-col justify-between overflow-hidden">
 		<!-- Scrollable nav items -->
-		<div
-			class="scrollbar-thin scrollbar-thumb-purple-300 scrollbar-track-transparent flex-1 space-y-6 overflow-y-auto px-5 py-6"
-		>
+		<div class="scrollbar-thin scrollbar-track-transparent flex-1 space-y-6 overflow-y-auto px-5 py-6">
 			{#each filteredSections as section}
 				<div class="group">
 					<p
-						class="px-3 text-xs font-semibold uppercase tracking-wider text-purple-600/60 transition-colors duration-300 group-hover:text-purple-700/80"
+						class="px-3 text-xs font-semibold uppercase tracking-wider text-purple-600/70 transition-colors duration-300 group-hover:text-purple-700"
 					>
 						{section.title}
 					</p>
@@ -99,16 +91,16 @@
 							<a
 								href={item.href}
 								class={cn(
-									'group relative flex items-start gap-3 rounded-2xl border border-transparent p-3 transition-all duration-300 hover:border-white/30 hover:shadow-lg',
+									'liquid-hoverable group relative flex items-start gap-3 rounded-[1.4rem] border border-transparent px-4 py-3 transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]',
 									isActive(item.href, $page.url.pathname)
-										? 'border-white/20 bg-gradient-to-r from-blue-500/15 to-purple-500/15 text-blue-700 shadow-lg shadow-blue-500/10'
-										: 'text-slate-600 hover:scale-105 hover:bg-white/50 hover:text-slate-800'
+										? 'border-white/30 bg-gradient-to-r from-blue-500/15 to-purple-500/15 text-blue-700 shadow-lg shadow-blue-500/10'
+										: 'text-slate-600 hover:bg-white/55 hover:text-slate-900 hover:shadow-[0_12px_45px_-35px_rgba(15,23,42,0.6)]'
 								)}
 								onclick={() => (open = false)}
 							>
 								{#if isActive(item.href, $page.url.pathname)}
 									<div
-										class="absolute -left-2 top-1/2 h-8 w-1 -translate-y-1/2 transform rounded-full bg-gradient-to-b from-blue-500 to-purple-500 shadow-lg shadow-blue-500/50"
+										class="absolute -left-2 top-1/2 h-9 w-1.5 -translate-y-1/2 rounded-full bg-gradient-to-b from-blue-500 to-purple-500 shadow-lg shadow-blue-500/40"
 									></div>
 								{/if}
 
@@ -143,22 +135,16 @@
 		</div>
 
 		<!-- User Card -->
-		<div
-			class="m-4 space-y-3 rounded-2xl border border-white/50 bg-gradient-to-br from-white/80 to-white/40 p-5 shadow-xl shadow-purple-500/10 backdrop-blur-sm"
-		>
+		<div class="liquid-panel m-4 space-y-3 rounded-[1.6rem] border-transparent bg-gradient-to-br from-white/90 to-white/60 p-5 shadow-xl shadow-purple-500/10">
 			<div class="flex items-center gap-3">
-				<div
-					class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 shadow-lg"
-				>
-					<span class="text-sm font-bold text-white">
-						{user?.Username ? user.Username.charAt(0).toUpperCase() : 'U'}
-					</span>
+				<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-purple-500 text-sm font-bold text-white shadow-lg">
+					{user?.Username ? user.Username.charAt(0).toUpperCase() : 'U'}
 				</div>
 				<div class="min-w-0 flex-1">
-					<p class="truncate text-sm font-semibold text-slate-800">
+					<p class="truncate text-sm font-semibold text-slate-700">
 						{user?.Username ?? 'Pending approval'}
 					</p>
-					<p class="text-xs font-medium capitalize text-purple-600/70">
+					<p class="text-xs font-medium capitalize text-purple-600/80">
 						{user?.Role
 							? (typeof user.Role === 'string' ? user.Role : user.Role.Name).toLowerCase()
 							: 'role pending'}
@@ -167,7 +153,7 @@
 			</div>
 
 			<Button
-				class="mt-2 w-full border-0 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-lg shadow-slate-500/20 transition-all duration-300 hover:scale-105 hover:from-slate-600 hover:to-slate-500 hover:shadow-slate-500/30"
+				class="mt-2 w-full rounded-2xl border-0 bg-gradient-to-r from-slate-700 to-slate-600 text-white shadow-lg shadow-slate-500/20 transition-all duration-300 hover:scale-105"
 				onclick={handleLogout}
 			>
 				<LogOut class="mr-2 h-4 w-4" />
@@ -186,10 +172,10 @@
 		background: transparent;
 	}
 	.scrollbar-thin::-webkit-scrollbar-thumb {
-		background: rgba(139, 92, 246, 0.3);
+		background: rgba(125, 211, 252, 0.35);
 		border-radius: 10px;
 	}
 	.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-		background: rgba(139, 92, 246, 0.5);
+		background: rgba(125, 211, 252, 0.55);
 	}
 </style>

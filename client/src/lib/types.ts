@@ -1,7 +1,7 @@
 export interface BaseEntity {
 	ID: number;
-	CreatedAt?: string;
-	UpdatedAt?: string;
+	Reasoning?: string;
+	GeneratedAt: string;
 }
 
 export interface Category extends BaseEntity {
@@ -26,6 +26,26 @@ export interface Supplier extends BaseEntity {
 export interface Location extends BaseEntity {
 	Name: string;
 	Address?: string;
+}
+
+export interface Promotion {
+	ID: number;
+	Name: string;
+	Description?: string;
+	DiscountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+	DiscountValue: number;
+	StartDate: string;
+	EndDate: string;
+	IsActive: boolean;
+	Priority: number;
+	ProductID?: number;
+	CategoryID?: number;
+	SubCategoryID?: number;
+	Product?: Product;
+	Category?: Category;
+	SubCategory?: SubCategory;
+	CreatedAt: string;
+	UpdatedAt: string;
 }
 
 // Your existing Product type
@@ -135,8 +155,18 @@ export interface DemandForecast extends BaseEntity {
 	ProductID: number;
 	ForecastPeriod: string;
 	PredictedDemand: number;
+	ConfidenceScore?: number;
+	Reasoning?: string;
 	GeneratedAt: string;
 	Product?: Product;
+}
+
+export interface ChurnRisk {
+	churn_risk_score: number;
+	risk_level: string;
+	primary_factors: string[];
+	retention_strategy: string;
+	suggested_discount: number;
 }
 
 export interface BulkImportValidationResult {
@@ -245,4 +275,116 @@ export interface TimeClock extends BaseEntity {
 	BreakEnd?: string | null;
 	Status: string;
 	Notes?: string;
+}
+
+// New Report Interfaces
+export interface StockAgingItem {
+	ProductID: number;
+	ProductName: string;
+	SKU: string;
+	Quantity: number;
+	DaysInStock: number;
+	Value: number;
+}
+
+export interface DeadStockItem {
+	ProductID: number;
+	ProductName: string;
+	SKU: string;
+	Quantity: number;
+	LastSaleDate: string;
+	Value: number;
+	DaysSinceLastSale: number;
+}
+
+export interface HourlySalesHeatmap {
+	DayOfWeek: string;
+	HourOfDay: number;
+	TotalSales: number;
+	TransactionCount: number;
+}
+
+export interface BasketAnalysisItem {
+	ProductA: number;
+	ProductAName: string;
+	ProductB: number;
+	ProductBName: string;
+	Frequency: number;
+}
+
+export interface EmployeeSalesPerformance {
+	EmployeeID: number;
+	EmployeeName: string;
+	TotalSales: number;
+	TransactionCount: number;
+	AverageTicketSize: number;
+}
+
+export interface CategoryPerformance {
+	CategoryID: number;
+	CategoryName: string;
+	TotalSales: number;
+	TotalUnits?: number; // Kept for backward compatibility if needed
+	ItemCount: number;
+	TotalCost: number;
+	GrossMargin: number;
+	MarginPercent: number;
+}
+
+export interface GMROIReport {
+	ProductID: number;
+	ProductName: string;
+	COGS: number;
+	Revenue: number;
+	GrossMargin: number;
+	AverageInventoryValue: number;
+	GMROI: number;
+}
+
+export interface VoidAuditLog {
+	TransactionID: number;
+	CashierName: string;
+	VoidedAmount: number;
+	Reason: string;
+	Timestamp: string;
+}
+
+export interface TaxLiabilityReport {
+	TaxRate: number;
+	TaxableSales: number;
+	TaxCollected: number;
+}
+
+export interface CashReconciliation {
+	SessionID: number;
+	CashierName: string;
+	OpeningBalance: number;
+	ClosingBalance: number;
+	SystemCalculated: number;
+	Discrepancy: number;
+}
+
+export interface CustomerInsight {
+	CustomerID: number;
+	CustomerName: string;
+	TotalSpend: number;
+	VisitCount: number;
+	LastVisitDate: string;
+	Segment: string; // e.g., "VIP", "At-Risk"
+}
+
+export interface ShrinkageReport {
+	ProductID: number;
+	ProductName: string;
+	LostQuantity: number;
+	LostValue: number;
+	Reason: string;
+}
+
+export interface ReturnsAnalysis {
+	ProductID: number;
+	ProductName: string;
+	ReturnCount: number;
+	ReturnRate: number;
+	Reason: string;
 }

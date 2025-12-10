@@ -22,18 +22,24 @@ type RabbitMQManager struct {
 	conn       *amqp091.Connection
 	channel    *amqp091.Channel
 	mu         sync.Mutex
-	isReady    chan bool
+	readyCh    chan struct{}
+	connected  bool
 	isClosed   bool
 	notifyConn chan *amqp091.Error
 	notifyChan chan *amqp091.Error
+	ctx        context.Context
 	cancelFunc context.CancelFunc
+	wg         sync.WaitGroup
 }
 
 // NewRabbitMQManager creates a new RabbitMQManager.
 func NewRabbitMQManager(url string) *RabbitMQManager {
+	ctx, cancel := context.WithCancel(context.Background())
 	m := &RabbitMQManager{
-		url:     url,
-		isReady: make(chan bool),
+		url:        url,
+		readyCh:    make(chan struct{}),
+		ctx:        ctx,
+		cancelFunc: cancel,
 	}
 	go m.handleReconnect()
 	return m
@@ -41,13 +47,15 @@ func NewRabbitMQManager(url string) *RabbitMQManager {
 
 // handleReconnect handles the connection and reconnection logic.
 func (m *RabbitMQManager) handleReconnect() {
+	m.wg.Add(1)
+	defer m.wg.Done()
+
 	for {
-		m.mu.Lock()
-		if m.isClosed {
-			m.mu.Unlock()
+		select {
+		case <-m.ctx.Done():
 			return
+		default:
 		}
-		m.mu.Unlock()
 
 		logrus.Info("Attempting to connect to RabbitMQ...")
 		if err := m.connect(); err != nil {
@@ -56,59 +64,92 @@ func (m *RabbitMQManager) handleReconnect() {
 			continue
 		}
 		logrus.Info("Connected to RabbitMQ!")
-		close(m.isReady) // Signal that the initial connection is ready
+		m.signalReady()
 
 		select {
+		case <-m.ctx.Done():
+			return
 		case err := <-m.notifyConn:
 			logrus.Errorf("RabbitMQ connection lost: %v. Reconnecting...", err)
 		case err := <-m.notifyChan:
 			logrus.Errorf("RabbitMQ channel lost: %v. Reconnecting...", err)
 		}
 
-		m.mu.Lock()
-		m.isReady = make(chan bool) // Reset the ready channel for the next connection
-		m.mu.Unlock()
+		m.resetReady()
 	}
 }
 
 // connect establishes a connection and channel.
 func (m *RabbitMQManager) connect() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	conn, err := amqp091.Dial(m.url)
 	if err != nil {
 		return err
 	}
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return err
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.conn = conn
 	m.notifyConn = make(chan *amqp091.Error)
 	m.conn.NotifyClose(m.notifyConn)
 
-	ch, err := conn.Channel()
-	if err != nil {
-		return err
-	}
 	m.channel = ch
 	m.notifyChan = make(chan *amqp091.Error)
 	m.channel.NotifyClose(m.notifyChan)
+	m.connected = true
 
 	return nil
+}
+
+func (m *RabbitMQManager) signalReady() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.connected {
+		return
+	}
+	select {
+	case <-m.readyCh:
+		// already closed
+	default:
+		close(m.readyCh)
+	}
+}
+
+func (m *RabbitMQManager) resetReady() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.channel != nil {
+		m.channel.Close()
+		m.channel = nil
+	}
+	if m.conn != nil {
+		m.conn.Close()
+		m.conn = nil
+	}
+	m.connected = false
+	m.readyCh = make(chan struct{})
 }
 
 // Close gracefully closes the connection and channel.
 func (m *RabbitMQManager) Close() {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.isClosed = true
+	if m.cancelFunc != nil {
+		m.cancelFunc()
+	}
 	if m.channel != nil {
 		m.channel.Close()
 	}
 	if m.conn != nil {
 		m.conn.Close()
 	}
-	if m.cancelFunc != nil {
-		m.cancelFunc()
-	}
+	m.connected = false
+	m.mu.Unlock()
+	m.wg.Wait()
 }
 
 // InitRabbitMQ initializes the RabbitMQ manager.
@@ -127,7 +168,9 @@ func Close() {
 
 // Publish publishes a message to RabbitMQ.
 func Publish(ctx context.Context, exchange, routingKey string, body interface{}) error {
-	<-rabbitMQManager.isReady // Wait for the connection to be ready
+	if err := rabbitMQManager.waitReady(ctx); err != nil {
+		return err
+	}
 
 	rabbitMQManager.mu.Lock()
 	defer rabbitMQManager.mu.Unlock()
@@ -156,6 +199,28 @@ func Publish(ctx context.Context, exchange, routingKey string, body interface{})
 	)
 }
 
+func (m *RabbitMQManager) waitReady(ctx context.Context) error {
+	for {
+		m.mu.Lock()
+		readyCh := m.readyCh
+		connected := m.connected
+		m.mu.Unlock()
+
+		if connected {
+			return nil
+		}
+
+		select {
+		case <-readyCh:
+			// loop to re-check connected state
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-m.ctx.Done():
+			return fmt.Errorf("rabbitmq manager stopped")
+		}
+	}
+}
+
 // Subscribe subscribes to a RabbitMQ queue.
 // Subscribe subscribes to a RabbitMQ queue and handles reconnections.
 func Subscribe(ctx context.Context, exchange, queueName, routingKey string, handler func(context.Context, <-chan amqp091.Delivery)) context.CancelFunc {
@@ -168,7 +233,10 @@ func Subscribe(ctx context.Context, exchange, queueName, routingKey string, hand
 			default:
 			}
 
-			<-rabbitMQManager.isReady // Wait for the connection to be ready
+			if err := rabbitMQManager.waitReady(ctx); err != nil {
+				logrus.Errorf("Subscribe aborted waiting for readiness: %v", err)
+				return
+			}
 
 			rabbitMQManager.mu.Lock()
 			if rabbitMQManager.channel == nil {

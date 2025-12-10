@@ -62,6 +62,11 @@ func main() {
 		logrus.Info("Search index population completed.")
 	}
 
+	// Seed AI Agent User
+	if err := migrations.SeedAIUser(repository.DB); err != nil {
+		logrus.Errorf("Failed to seed AI Agent user: %v", err)
+	}
+
 	// Initialize Redis client
 	repository.InitRedis(cfg)
 	defer repository.CloseRedis()
@@ -95,7 +100,7 @@ func main() {
 	// Initialize Services
 	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo, locationRepo)
 	bulkExportSvc := services.NewBulkExportService()
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, cfg)
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
 
 	app := &App{
 		cfg:              cfg,
@@ -106,7 +111,7 @@ func main() {
 	}
 
 	// Initialize and start the BulkConsumer
-	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub)
+	bulkConsumer := consumers.NewBulkConsumer(repository.DB, jobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, minioUploader, bulkImportSvc, bulkExportSvc, hub, notificationRepo)
 	workerCount := 1
 	if cfg.ConsumerConcurrency > 0 {
 		workerCount = cfg.ConsumerConcurrency

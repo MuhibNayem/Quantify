@@ -8,6 +8,7 @@ type SalesTrendsReportRequest struct {
 	EndDate    time.Time `json:"endDate" binding:"required"`
 	CategoryID *uint     `json:"categoryId"`
 	LocationID *uint     `json:"locationId"`
+	ProductID  *uint     `json:"productId"`
 	GroupBy    string    `json:"groupBy" binding:"required,oneof=daily weekly monthly"`
 }
 

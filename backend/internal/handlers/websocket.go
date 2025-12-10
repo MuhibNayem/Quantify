@@ -22,7 +22,7 @@ var upgrader = websocket.Upgrader{
 }
 
 // ServeWs handles websocket requests from the peer.
-func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.NotificationRepository) {
+func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.NotificationRepository, roleRepo repository.RoleRepository) {
 	tokenString := c.Query("token")
 	if tokenString == "" {
 		logrus.Error("No token provided for websocket connection")
@@ -37,13 +37,32 @@ func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.Notificati
 		return
 	}
 
+	// Fetch permissions for the role
+	role, err := roleRepo.GetRoleByName(claims.Role)
+	if err != nil {
+		logrus.Errorf("Failed to fetch role permissions for user %d (role %s): %v", claims.UserID, claims.Role, err)
+		c.JSON(http.StatusForbidden, gin.H{"error": "Failed to resolve permissions"})
+		return
+	}
+
+	permissions := make(map[string]bool)
+	for _, p := range role.Permissions {
+		permissions[p.Name] = true
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		// Log the error if the WebSocket upgrade fails
 		fmt.Printf("Failed to upgrade to websocket: %v\n", err)
 		return
 	}
-	client := &ws.Client{Hub: hub, Conn: conn, Send: make(chan []byte, 256), UserID: claims.UserID}
+	client := &ws.Client{
+		Hub:         hub,
+		Conn:        conn,
+		Send:        make(chan []byte, 256),
+		UserID:      claims.UserID,
+		Permissions: permissions,
+	}
 	client.Hub.Register <- client
 
 	// Send unread notifications upon connection

@@ -3,168 +3,136 @@
 	import ManagerDashboard from '$lib/components/time-tracking/ManagerDashboard.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Clock } from 'lucide-svelte';
-	import { onMount } from 'svelte';
+	import { auth } from '$lib/stores/auth';
+	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import { fade } from 'svelte/transition';
 
-	let currentRole: 'Staff' | 'Manager' = 'Staff';
-
-	onMount(() => {
-		let ticking = false;
-		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
-
-		const handleScroll = () => {
-			if (!hero) return;
-			if (!ticking) {
-				window.requestAnimationFrame(() => {
-					const scrollY = window.scrollY || 0;
-					const translate = Math.min(scrollY * 0.25, 60);
-					const blur = Math.min(scrollY * 0.02, 6);
-					hero.style.transform = `translateY(${translate}px)`;
-					hero.style.filter = `blur(${blur}px)`;
-					ticking = false;
-				});
-				ticking = true;
-			}
-		};
-
-		window.addEventListener('scroll', handleScroll, { passive: true });
-
-		return () => {
-			window.removeEventListener('scroll', handleScroll);
-		};
+	$effect(() => {
+		if (!auth.hasPermission('users.view')) {
+			toast.error('Access Denied', {
+				description: 'You do not have permission to access time tracking.'
+			});
+			goto('/');
+		}
 	});
+
+	let currentRole: 'Staff' | 'Manager' = $state('Staff');
 </script>
 
-<section class="relative isolate w-full overflow-hidden">
-	<!-- Gradient background with motion -->
-	<div
-		class="animate-gradientShift absolute inset-0 -z-10 bg-gradient-to-r from-teal-50 via-cyan-50 to-emerald-100 bg-[length:200%_200%]"
-	></div>
+<section
+	class="relative isolate w-full overflow-hidden rounded-[32px] border border-white/30 bg-gradient-to-br from-slate-50/90 via-sky-50/70 to-indigo-50/80 shadow-[0_40px_120px_-80px_rgba(15,23,42,0.9)]"
+>
+	<div class="absolute inset-0 -z-10 opacity-80">
+		<div class="absolute -left-36 top-10 h-80 w-80 rounded-full bg-sky-200/70 blur-[120px]"></div>
+		<div class="absolute right-0 top-0 h-72 w-72 rounded-full bg-emerald-200/60 blur-[110px]"></div>
+		<div
+			class="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-indigo-200/60 blur-[150px]"
+		></div>
+	</div>
 
-	<!-- Floating glow blobs -->
 	<div
-		class="animate-pulseGlow absolute -left-24 -top-32 h-96 w-96 rounded-full bg-teal-200/40 blur-3xl"
-	></div>
-	<div
-		class="animate-pulseGlow absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-cyan-200/30 blur-3xl delay-700"
-	></div>
-
-	<!-- Hero container -->
-	<div
-		class="parallax-hero relative mx-auto max-w-7xl px-4 pb-10 pt-16 text-center sm:px-6 sm:pb-16 sm:pt-20 lg:px-8"
+		class="relative mx-auto flex max-w-4xl flex-col items-center px-6 py-20 text-center sm:px-8 lg:px-10"
 	>
-		<div class="mb-3 inline-flex items-center justify-center gap-3">
+		<div class="mb-6 flex items-center gap-3 text-slate-600">
 			<span
-				class="animate-cardFloat inline-flex rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 p-2 shadow-md"
+				class="glass-button flex h-12 w-12 items-center justify-center rounded-2xl text-sky-600 shadow-[0_12px_35px_-20px_rgba(14,165,233,0.9)]"
 			>
-				<Clock class="h-6 w-6 text-white" />
+				<Clock class="h-5 w-5" />
 			</span>
-			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700 sm:text-sm">
-				Time Management
-			</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.28em]">Time Intelligence</p>
 		</div>
-
-		<h1
-			class="mb-3 bg-gradient-to-r from-teal-700 via-cyan-700 to-emerald-700 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
-		>
-			Time Tracking Dashboard
+		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl lg:text-5xl">
+			Time Tracking Control Center
 		</h1>
-		<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:text-base">
-			Monitor and manage employee work hours with ease and precision.
+		<p class="mx-auto mt-6 max-w-3xl text-base text-slate-600">
+			Stay on top of shifts, breaks, and approvals with a calm workspace designed to feel invisible.
+			Switch between personal and manager views without losing the Apple-inspired polish.
 		</p>
 	</div>
 </section>
 
-<div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div class="mb-8 flex justify-end">
-		<div class="flex items-center gap-2 rounded-xl bg-white/60 p-1 backdrop-blur">
+<div class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+	<div
+		class="mb-8 flex flex-wrap items-center justify-center gap-3 rounded-[28px] border border-white/40 bg-white/70 px-3 py-2 text-slate-600 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:justify-between"
+	>
+		<div class="relative flex items-center gap-3">
 			<Button
-				variant={currentRole === 'Staff' ? 'default' : 'ghost'}
+				size="lg"
+				variant="ghost"
 				onclick={() => (currentRole = 'Staff')}
-				class="rounded-lg {currentRole === 'Staff' ? 'bg-teal-600 text-white' : ''}"
+				class="relative isolate rounded-2xl border border-transparent px-6 py-2 text-sm font-semibold transition-colors duration-200 hover:text-slate-900 {currentRole ===
+				'Staff'
+					? 'text-slate-900'
+					: 'text-slate-500'}"
 			>
-				Staff View
+				{#if currentRole === 'Staff'}
+					<div
+						class="glass-toggle-active absolute inset-0 -z-10 rounded-2xl"
+						in:fade={{ duration: 200 }}
+						out:fade={{ duration: 200 }}
+					></div>
+				{/if}
+				<span class="relative z-10">Staff View</span>
 			</Button>
+
 			<Button
-				variant={currentRole === 'Manager' ? 'default' : 'ghost'}
+				size="lg"
+				variant="ghost"
 				onclick={() => (currentRole = 'Manager')}
-				class="rounded-lg {currentRole === 'Manager' ? 'bg-cyan-600 text-white' : ''}"
+				class="relative isolate rounded-2xl border border-transparent px-6 py-2 text-sm font-semibold transition-colors duration-200 hover:text-slate-900 {currentRole ===
+				'Manager'
+					? 'text-slate-900'
+					: 'text-slate-500'}"
 			>
-				Manager View
+				{#if currentRole === 'Manager'}
+					<div
+						class="glass-toggle-active absolute inset-0 -z-10 rounded-2xl"
+						in:fade={{ duration: 200 }}
+						out:fade={{ duration: 200 }}
+					></div>
+				{/if}
+				<span class="relative z-10">Manager View</span>
 			</Button>
 		</div>
+		<p class="text-xs uppercase tracking-[0.3em] text-slate-400">Select dashboard</p>
 	</div>
 
 	{#if currentRole === 'Staff'}
-		<StaffDashboard />
+		<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }}>
+			<StaffDashboard />
+		</div>
 	{:else}
-		<ManagerDashboard />
+		<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }}>
+			<ManagerDashboard />
+		</div>
 	{/if}
 </div>
 
 <style lang="postcss">
-	/* Smooth transitions globally */
-	* {
+	/* Smooth transitions globally - Removed to prevent jarring tab switches */
+	/* * {
 		transition-property:
 			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
 			box-shadow, transform, filter, backdrop-filter;
 		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 		transition-duration: 300ms;
-	}
+	} */
 
-	/* Hero gradient animation */
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 16s ease-in-out infinite;
-	}
-
-	/* Soft glowing blobs */
 	@keyframes pulseGlow {
 		0%,
 		100% {
 			transform: scale(1);
-			opacity: 0.45;
-			filter: blur(80px);
+			opacity: 0.35;
+			filter: blur(70px);
 		}
 		50% {
 			transform: scale(1.08);
-			opacity: 0.6;
+			opacity: 0.55;
 			filter: blur(90px);
 		}
 	}
 	.animate-pulseGlow {
-		animation: pulseGlow 10s ease-in-out infinite;
-	}
-
-	/* Card float micro-motion */
-	@keyframes cardFloat {
-		0%,
-		100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(-4px);
-		}
-	}
-	.animate-cardFloat {
-		animation: cardFloat 4s ease-in-out infinite;
-	}
-
-	.parallax-hero {
-		transform: translateY(0);
-		will-change: transform, filter;
-		transition:
-			transform 0.1s ease-out,
-			filter 0.2s ease-out;
+		animation: pulseGlow 12s ease-in-out infinite;
 	}
 </style>

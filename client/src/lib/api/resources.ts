@@ -9,6 +9,7 @@ import type {
 	Location,
 	Product,
 	PurchaseOrder,
+	Promotion,
 	ReorderSuggestion,
 	StockAdjustment,
 	Supplier,
@@ -39,6 +40,25 @@ export const productsApi = {
 	createBatch: async (id: number, payload: Record<string, unknown>) => (await api.post<Batch>(`/products/${id}/stock/batches`, payload)).data,
 	adjustStock: async (id: number, payload: Record<string, unknown>) =>
 		(await api.post(`/products/${id}/stock/adjustments`, payload)).data,
+};
+
+export const promotionsApi = {
+	list: async (active?: boolean) => {
+		const params = active ? { active: true } : {};
+		const response = await api.get<{ promotions: Promotion[] }>('/promotions', { params });
+		return response.data.promotions;
+	},
+	create: async (data: any) => {
+		const response = await api.post<Promotion>('/promotions', data);
+		return response.data;
+	},
+	update: async (id: number, data: any) => {
+		const response = await api.put<Promotion>(`/promotions/${id}`, data);
+		return response.data;
+	},
+	delete: async (id: number) => {
+		await api.delete(`/promotions/${id}`);
+	}
 };
 
 export const categoriesApi = {
@@ -92,19 +112,19 @@ export const replenishmentApi = {
 		await api.post('/replenishment/forecast/generate', payload)
 	).data,
 	getForecast: async (id: number) => (await api.get<DemandForecast>(`/replenishment/forecast/${id}`)).data,
-	getPO: async (id: number) => (await api.get<PurchaseOrder>(`/purchase-orders/${id}`)).data,
+	getPO: async (id: number) => (await api.get<PurchaseOrder>(`/replenishment/purchase-orders/${id}`)).data,
 	listSuggestions: async (params?: Record<string, unknown>) =>
 		(await api.get<ReorderSuggestion[]>('/replenishment/suggestions', { params })).data,
 	generateSuggestions: async () => (await api.post('/replenishment/suggestions/generate')).data,
 	createPOFromSuggestion: async (suggestionId: number) =>
 		(await api.post<PurchaseOrder>(`/replenishment/suggestions/${suggestionId}/create-po`)).data,
-	approvePO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/approve`)).data,
-	sendPO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/send`)).data,
+	approvePO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/approve`)).data,
+	sendPO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/send`)).data,
 	updatePO: async (poId: number, payload: Record<string, unknown>) =>
-		(await api.put(`/purchase-orders/${poId}`, payload)).data,
+		(await api.put(`/replenishment/purchase-orders/${poId}`, payload)).data,
 	receivePO: async (poId: number, payload: Record<string, unknown>) =>
-		(await api.post(`/purchase-orders/${poId}/receive`, payload)).data,
-	cancelPO: async (poId: number) => (await api.post(`/purchase-orders/${poId}/cancel`)).data,
+		(await api.post(`/replenishment/purchase-orders/${poId}/receive`, payload)).data,
+	cancelPO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/cancel`)).data,
 };
 
 export const reportsApi = {
@@ -117,6 +137,33 @@ export const reportsApi = {
 	profitMargin: async (payload: Record<string, unknown>) => (
 		await api.post('/reports/profit-margin', payload)
 	).data,
+	// New Real-Time Reports
+	stockAging: async () => (await api.get('/reports/stock-aging')).data,
+	deadStock: async () => (await api.get('/reports/dead-stock')).data,
+	supplierPerformance: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/supplier-performance', { params })).data,
+	hourlyHeatmap: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/heatmap', { params })).data,
+	salesByEmployee: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/employee-sales', { params })).data,
+	categoryDrilldown: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/category-drilldown', { params })).data,
+	gmroi: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/gmroi', { params })).data,
+	voidAudit: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/audit/voids', { params })).data,
+	taxLiability: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/tax-liability', { params })).data,
+	cashReconciliation: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/cash-reconciliation', { params })).data,
+	customerInsights: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/customer-insights', { params })).data,
+	shrinkage: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/shrinkage', { params })).data,
+	returnsAnalysis: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/returns-analysis', { params })).data,
+	basketAnalysis: async (params?: Record<string, unknown>) =>
+		(await api.get('/reports/basket-analysis', { params })).data,
 };
 
 export const alertsApi = {
@@ -172,8 +219,9 @@ export const crmApi = {
 	getLoyalty: async (id: number) => (await api.get<LoyaltyAccount>(`/crm/loyalty/${id}`)).data,
 	addPoints: async (id: number, points: number) =>
 		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/points`, { points })).data,
-	redeemPoints: async (id: number, points: number) =>
-		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/redeem`, { points })).data,
+	redeemPoints: async (userId: number, points: number) =>
+		(await api.post<LoyaltyAccount>(`crm/loyalty/${userId}/redeem`, { points })).data,
+	getChurnRisk: async (userId: number) => (await api.get(`crm/customers/${userId}/churn-risk`)).data,
 };
 
 export const timeTrackingApi = {

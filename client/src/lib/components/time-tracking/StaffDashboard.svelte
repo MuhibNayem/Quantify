@@ -253,244 +253,206 @@
 	});
 </script>
 
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-4 md:p-8">
-	<div class="mx-auto max-w-6xl space-y-8">
-		<!-- Header -->
-		<div class="mb-6 text-center">
-			<h1
-				class="mb-2 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-3xl font-bold text-transparent md:text-4xl"
-			>
-				My Time Tracker
-			</h1>
-			<p class="text-slate-600">Track your productivity and achieve your daily goals</p>
-		</div>
+<div class="space-y-10">
+	<!-- Header -->
+	<div class="text-center">
+		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Personal Flow</p>
+		<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">My Time Tracker</h1>
+		<p class="mt-2 text-slate-500">Track your focus, breaks, and progress from one calm surface.</p>
+	</div>
 
-		<!-- Main Clock Card -->
-		<Card
-			class="overflow-hidden rounded-3xl border-0 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 text-white shadow-xl transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl"
-			data-animate="fade-up"
-		>
-			<CardHeader class="pb-4">
-				<CardTitle class="flex items-center justify-between text-white/90">
-					<span class="text-xl font-semibold">My Status</span>
-					<div class="flex items-center gap-4">
-						<span class="flex items-center gap-2 text-sm font-medium">
-							<div
-								class="h-4 w-4 rounded-full {clockedIn
-									? 'animate-pulse bg-green-300'
-									: 'bg-slate-300'}"
-							></div>
-							{clockedIn ? 'Clocked In' : 'Clocked Out'}
+	<!-- Main Clock Card -->
+	<Card
+		class="liquid-panel overflow-hidden rounded-[32px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_45px_120px_-60px_rgba(15,23,42,0.45)]"
+		data-animate="fade-up"
+	>
+		<CardHeader class="pb-4">
+			<CardTitle class="flex items-center justify-between text-slate-600">
+				<span class="text-xl font-semibold text-slate-900">My Status</span>
+				<div class="flex items-center gap-4">
+					<span class="flex items-center gap-2 text-sm font-medium">
+						<div
+							class="h-4 w-4 rounded-full {clockedIn
+								? 'animate-pulse bg-green-300'
+								: 'bg-slate-300'}"
+						></div>
+						{clockedIn ? 'Clocked In' : 'Clocked Out'}
+					</span>
+					{#if onBreak}
+						<span
+							class="flex items-center gap-2 rounded-full bg-yellow-500/10 px-3 py-1 text-sm font-medium text-slate-700"
+						>
+							<Coffee size={16} />
+							On Break
 						</span>
-						{#if onBreak}
-							<span
-								class="flex items-center gap-2 rounded-full bg-yellow-400/20 px-3 py-1 text-sm font-medium"
-							>
-								<Coffee size={16} />
-								On Break
-							</span>
-						{/if}
-					</div>
+					{/if}
+				</div>
+			</CardTitle>
+		</CardHeader>
+		<CardContent class="p-8 text-center">
+			<div class="mb-6 font-mono text-6xl font-bold tracking-tighter text-slate-900 md:text-7xl">
+				{elapsedTime}
+			</div>
+
+			{#if onBreak}
+				<div class="mb-6">
+					<div class="mb-2 text-lg font-medium text-yellow-600">Break Time</div>
+					<div class="font-mono text-2xl text-slate-800">{breakTime}</div>
+				</div>
+			{/if}
+
+			<div class="mb-6 flex flex-col gap-4 md:flex-row">
+				<div
+					class="flex-1 rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 shadow-lg shadow-blue-900/5 backdrop-blur-md transition-all hover:bg-white/60"
+				>
+					<div class="text-lg font-bold text-slate-900">{todayHours}</div>
+					<div class="text-sm font-medium text-slate-500">Today's Total</div>
+				</div>
+			</div>
+
+			<div class="flex flex-col gap-4 md:flex-row">
+				<Button
+					onclick={handleClockToggle}
+					class="glass-button flex-1 rounded-2xl py-4 text-lg font-semibold text-slate-800 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl {clockedIn
+						? 'bg-gradient-to-r from-rose-400/90 to-pink-500/90 text-white'
+						: 'bg-gradient-to-r from-emerald-400/90 to-green-500/90 text-white'}"
+				>
+					{#if clockedIn}
+						<LogOut class="mr-2" size={20} />
+						Clock Out
+					{:else}
+						<LogIn class="mr-2" size={20} />
+						Clock In
+					{/if}
+				</Button>
+				{#if clockedIn}
+					<Button
+						onclick={handleBreakToggle}
+						class="glass-button flex-1 rounded-2xl py-4 text-lg font-semibold text-slate-800 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl {onBreak
+							? 'bg-gradient-to-r from-orange-400/95 to-amber-500/95 text-white'
+							: 'bg-gradient-to-r from-blue-500/95 to-cyan-500/95 text-white'}"
+					>
+						<Coffee class="mr-2" size={20} />
+						{onBreak ? 'End Break' : 'Start Break'}
+					</Button>
+				{/if}
+			</div>
+		</CardContent>
+	</Card>
+
+	<!-- Hours Overview -->
+	<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+		<Card
+			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_30px_90px_-60px_rgba(16,185,129,0.55)] transition-all duration-300 hover:scale-[1.01]"
+			data-animate="fade-up"
+			style="animation-delay: 150ms;"
+		>
+			<CardHeader class="pb-2">
+				<CardTitle class="flex items-center gap-3 text-slate-500">
+					<Timer size={20} />
+					<span>Today's Hours</span>
 				</CardTitle>
 			</CardHeader>
-			<CardContent class="p-8 text-center">
-				<div
-					class="mb-6 bg-gradient-to-r from-white to-blue-100 bg-clip-text font-mono text-6xl font-bold tracking-tighter text-transparent md:text-7xl"
-				>
-					{elapsedTime}
+			<CardContent>
+				<p class="mb-2 text-4xl font-bold text-slate-900">{todayHours}</p>
+				<div class="mb-2 h-3 w-full rounded-full bg-slate-200/40 shadow-inner shadow-black/5">
+					<div
+						class="h-3 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+						style="width: {(parseFloat(todayHours) / todayTarget) * 100}%"
+					></div>
 				</div>
+				<p class="text-sm text-slate-500">out of {todayTarget} hours target</p>
+			</CardContent>
+		</Card>
 
-				{#if onBreak}
-					<div class="mb-6">
-						<div class="mb-2 text-lg font-medium text-yellow-200">Break Time</div>
-						<div class="font-mono text-2xl text-white">{breakTime}</div>
-					</div>
-				{/if}
-
-				<div class="mb-6 flex flex-col gap-4 md:flex-row">
-					<div class="flex-1 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
-						<div class="text-lg font-bold">{todayHours}</div>
-						<div class="text-sm opacity-80">Today's Total</div>
-					</div>
+		<Card
+			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_30px_90px_-60px_rgba(59,130,246,0.55)] transition-all duration-300 hover:scale-[1.01]"
+			data-animate="fade-up"
+			style="animation-delay: 300ms;"
+		>
+			<CardHeader class="pb-2">
+				<CardTitle class="flex items-center gap-3 text-slate-500">
+					<Calendar size={20} />
+					<span>Weekly Hours</span>
+				</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p class="mb-2 text-4xl font-bold text-slate-900">{weeklyHours}</p>
+				<div class="mb-2 h-3 w-full rounded-full bg-slate-200/40 shadow-inner shadow-black/5">
+					<div
+						class="h-3 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
+						style="width: {weeklyProgress}%"
+					></div>
 				</div>
+				<p class="text-sm text-slate-500">out of {weeklyTarget} hours target</p>
+			</CardContent>
+		</Card>
+	</div>
 
-				<div class="flex flex-col gap-4 md:flex-row">
-					<Button
-						on:click={handleClockToggle}
-						class="flex-1 rounded-2xl py-4 text-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl {clockedIn
-							? 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700'
-							: 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700'} font-semibold text-white"
-					>
-						{#if clockedIn}
-							<LogOut class="mr-2" size={20} />
-							Clock Out
-						{:else}
-							<LogIn class="mr-2" size={20} />
-							Clock In
-						{/if}
-					</Button>
-					{#if clockedIn}
-						<Button
-							on:click={handleBreakToggle}
-							class="flex-1 rounded-2xl py-4 text-lg shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl {onBreak
-								? 'bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700'
-								: 'bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700'} font-semibold text-white"
+	<!-- Current Task & Daily Goals -->
+	<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+		<!-- Current Task -->
+		<Card
+			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(147,197,253,0.6)] transition-all duration-300 hover:scale-[1.01]"
+			data-animate="fade-up"
+			style="animation-delay: 450ms;"
+		>
+			<CardHeader>
+				<CardTitle class="flex items-center gap-3 text-slate-600">
+					<Target size={20} class="text-purple-500/80" />
+					<span>Current Task</span>
+				</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<div class="space-y-4">
+					<div>
+						<label class="mb-2 block text-sm font-medium text-slate-700"
+							>What are you working on?</label
 						>
-							<Coffee class="mr-2" size={20} />
-							{onBreak ? 'End Break' : 'Start Break'}
-						</Button>
-					{/if}
+						<input
+							bind:value={currentTask}
+							type="text"
+							placeholder="Enter your current task..."
+							class="liquid-input w-full px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400"
+						/>
+					</div>
+					<Button
+						onclick={updateTask}
+						class="glass-button w-full rounded-2xl bg-gradient-to-r from-purple-500/95 to-indigo-500/95 py-3 font-semibold text-white transition-all duration-300 hover:scale-[1.01]"
+					>
+						Update Task
+					</Button>
 				</div>
 			</CardContent>
 		</Card>
 
-		<!-- Hours Overview -->
-		<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-400 to-green-500 text-white shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-				data-animate="fade-up"
-				style="animation-delay: 150ms;"
-			>
-				<CardHeader class="pb-2">
-					<CardTitle class="flex items-center gap-3 text-white/90">
-						<Timer size={20} />
-						<span>Today's Hours</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<p class="mb-2 text-4xl font-bold text-white">{todayHours}</p>
-					<div class="mb-2 h-3 w-full rounded-full bg-white/20">
-						<div
-							class="h-3 rounded-full bg-white transition-all duration-500"
-							style="width: {(parseFloat(todayHours) / todayTarget) * 100}%"
-						></div>
-					</div>
-					<p class="text-sm text-white/80">out of {todayTarget} hours target</p>
-				</CardContent>
-			</Card>
-
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-blue-400 to-indigo-500 text-white shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-				data-animate="fade-up"
-				style="animation-delay: 300ms;"
-			>
-				<CardHeader class="pb-2">
-					<CardTitle class="flex items-center gap-3 text-white/90">
-						<Calendar size={20} />
-						<span>Weekly Hours</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<p class="mb-2 text-4xl font-bold text-white">{weeklyHours}</p>
-					<div class="mb-2 h-3 w-full rounded-full bg-white/20">
-						<div
-							class="h-3 rounded-full bg-white transition-all duration-500"
-							style="width: {weeklyProgress}%"
-						></div>
-					</div>
-					<p class="text-sm text-white/80">out of {weeklyTarget} hours target</p>
-				</CardContent>
-			</Card>
-		</div>
-
-		<!-- Current Task & Daily Goals -->
-		<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
-			<!-- Current Task -->
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white to-slate-50 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-				data-animate="fade-up"
-				style="animation-delay: 450ms;"
-			>
-				<CardHeader>
-					<CardTitle class="flex items-center gap-3 text-slate-800">
-						<Target size={20} class="text-purple-500" />
-						<span>Current Task</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div class="space-y-4">
-						<div>
-							<label class="mb-2 block text-sm font-medium text-slate-700"
-								>What are you working on?</label
-							>
-							<input
-								bind:value={currentTask}
-								type="text"
-								placeholder="Enter your current task..."
-								class="w-full rounded-xl border border-slate-200 px-4 py-3 transition-all duration-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200"
-							/>
-						</div>
-						<Button
-							on:click={updateTask}
-							class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 py-3 font-semibold text-white transition-all duration-300 hover:scale-105 hover:from-purple-600 hover:to-indigo-700"
-						>
-							Update Task
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
-
-			<!-- Daily Goals -->
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white to-slate-50 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-				data-animate="fade-up"
-				style="animation-delay: 600ms;"
-			>
-				<CardHeader>
-					<CardTitle class="flex items-center gap-3 text-slate-800">
-						<TrendingUp size={20} class="text-green-500" />
-						<span>Daily Goals</span>
-					</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<div class="space-y-4">
-						{#each dailyStats.goals as goal}
-							<div class="space-y-2">
-								<div class="flex items-center justify-between">
-									<span class="text-sm font-medium text-slate-700">{goal.name}</span>
-									<span class="text-sm text-slate-500"
-										>{goal.current}{goal.unit} / {goal.target}{goal.unit}</span
-									>
-								</div>
-								<div class="h-2 w-full rounded-full bg-slate-200">
-									<div
-										class="h-2 rounded-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500"
-										style="width: {(goal.current / goal.target) * 100}%"
-									></div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				</CardContent>
-			</Card>
-		</div>
-
-		<!-- Recent Shifts -->
+		<!-- Daily Goals -->
 		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white to-slate-50 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(74,222,128,0.5)] transition-all duration-300 hover:scale-[1.01]"
 			data-animate="fade-up"
-			style="animation-delay: 750ms;"
+			style="animation-delay: 600ms;"
 		>
 			<CardHeader>
-				<CardTitle class="flex items-center gap-3 text-slate-800">
-					<Activity size={20} class="text-blue-500" />
-					<span>Recent Shifts</span>
+				<CardTitle class="flex items-center gap-3 text-slate-600">
+					<TrendingUp size={20} class="text-green-500/80" />
+					<span>Daily Goals</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<div class="space-y-3">
-					{#each recentShifts as shift}
-						<div
-							class="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50/50 p-4 transition-all duration-200 hover:bg-slate-100"
-						>
-							<div class="flex-1">
-								<div class="mb-1 flex items-center gap-3">
-									<p class="font-semibold text-slate-800">{shift.date}</p>
-								</div>
-								<p class="text-sm text-slate-500">{shift.time}</p>
+				<div class="space-y-4">
+					{#each dailyStats.goals as goal}
+						<div class="space-y-2">
+							<div class="flex items-center justify-between">
+								<span class="text-sm font-medium text-slate-700">{goal.name}</span>
+								<span class="text-sm text-slate-500"
+									>{goal.current}{goal.unit} / {goal.target}{goal.unit}</span
+								>
 							</div>
-							<div class="text-right">
-								<p class="font-mono text-lg font-semibold text-slate-700">{shift.duration}</p>
+							<div class="h-2 w-full rounded-full bg-slate-200/40 shadow-inner shadow-black/5">
+								<div
+									class="h-2 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 transition-all duration-500"
+									style="width: {(goal.current / goal.target) * 100}%"
+								></div>
 							</div>
 						</div>
 					{/each}
@@ -498,4 +460,37 @@
 			</CardContent>
 		</Card>
 	</div>
+
+	<!-- Recent Shifts -->
+	<Card
+		class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(125,211,252,0.5)] transition-all duration-300 hover:scale-[1.01]"
+		data-animate="fade-up"
+		style="animation-delay: 750ms;"
+	>
+		<CardHeader>
+			<CardTitle class="flex items-center gap-3 text-slate-600">
+				<Activity size={20} class="text-blue-500/80" />
+				<span>Recent Shifts</span>
+			</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<div class="space-y-3">
+				{#each recentShifts as shift}
+					<div
+						class="liquid-hoverable flex items-center justify-between rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all duration-200 hover:bg-white/60"
+					>
+						<div class="flex-1">
+							<div class="mb-1 flex items-center gap-3">
+								<p class="font-semibold text-slate-800">{shift.date}</p>
+							</div>
+							<p class="text-sm text-slate-500">{shift.time}</p>
+						</div>
+						<div class="text-right">
+							<p class="font-mono text-lg font-semibold text-slate-700">{shift.duration}</p>
+						</div>
+					</div>
+				{/each}
+			</div>
+		</CardContent>
+	</Card>
 </div>
