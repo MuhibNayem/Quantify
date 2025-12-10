@@ -157,13 +157,22 @@ type User struct {
 	// LegacyRole     string `gorm:"column:role"`  // Map to old column for migration
 	RoleID         uint `gorm:"index;not null;default:0"` // Foreign key to roles table
 	Role           Role
-	IsActive       bool `gorm:"default:false"`
+	RoleName       string `json:"role" gorm:"-"` // Computed field for API compatibility
+	IsActive       bool   `gorm:"default:false"`
 	FirstName      string
 	LastName       string
 	Email          string `gorm:"uniqueIndex"`
 	PhoneNumber    string `gorm:"uniqueIndex"`
 	Address        string
 	LoyaltyAccount *LoyaltyAccount `json:"loyalty,omitempty"`
+}
+
+// AfterFind populates the RoleName field for API compatibility.
+func (u *User) AfterFind(tx *gorm.DB) (err error) {
+	if u.Role.ID != 0 {
+		u.RoleName = u.Role.Name
+	}
+	return
 }
 
 // GetID implements the Searchable interface for User.

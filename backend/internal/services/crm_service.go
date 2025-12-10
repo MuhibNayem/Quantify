@@ -64,6 +64,7 @@ func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domai
 		Password:    string(hashedPassword),
 		RoleID:      role.ID,
 		Role:        role, // Explicitly set association
+		RoleName:    role.Name,
 		IsActive:    true,
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,

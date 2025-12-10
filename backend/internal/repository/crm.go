@@ -55,7 +55,7 @@ func (r *crmRepository) AddLoyaltyPointsAtomic(userID uint, points int) error {
 
 func (r *crmRepository) GetUserByUsername(username string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("username = ?", username).First(&user).Error; err != nil {
+	if err := r.db.Preload("Role").Where("username = ?", username).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -63,7 +63,7 @@ func (r *crmRepository) GetUserByUsername(username string) (*domain.User, error)
 
 func (r *crmRepository) GetUserByEmail(email string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.db.Preload("Role").Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -71,7 +71,7 @@ func (r *crmRepository) GetUserByEmail(email string) (*domain.User, error) {
 
 func (r *crmRepository) GetUserByID(userID uint) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.First(&user, userID).Error; err != nil {
+	if err := r.db.Preload("Role").First(&user, userID).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -79,7 +79,7 @@ func (r *crmRepository) GetUserByID(userID uint) (*domain.User, error) {
 
 func (r *crmRepository) GetUserByPhone(phone string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Where("phone_number = ?", phone).First(&user).Error; err != nil {
+	if err := r.db.Preload("Role").Where("phone_number = ?", phone).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -102,7 +102,9 @@ func (r *crmRepository) ListCustomers(page, limit int, search string) ([]domain.
 	var total int64
 	offset := (page - 1) * limit
 
-	query := r.db.Model(&domain.User{}).Where("role = ?", "Customer")
+	query := r.db.Model(&domain.User{}).
+		Joins("JOIN roles ON roles.id = users.role_id").
+		Where("roles.name = ?", "Customer")
 
 	if search != "" {
 		pattern := "%" + search + "%"
@@ -113,7 +115,7 @@ func (r *crmRepository) ListCustomers(page, limit int, search string) ([]domain.
 		return nil, 0, err
 	}
 
-	if err := query.Preload("LoyaltyAccount").Limit(limit).Offset(offset).Order("created_at DESC").Find(&users).Error; err != nil {
+	if err := query.Preload("Role").Preload("LoyaltyAccount").Limit(limit).Offset(offset).Order("created_at DESC").Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 

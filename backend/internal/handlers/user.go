@@ -147,6 +147,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			Username:    req.Username,
 			RoleID:      role.ID,
 			Role:        role, // Explicitly set association
+			RoleName:    role.Name,
 			IsActive:    true, // First user is active by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
@@ -159,7 +160,8 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		user = domain.User{
 			Username:    req.Username,
 			RoleID:      role.ID,
-			Role:        role,  // Explicitly set association
+			Role:        role, // Explicitly set association
+			RoleName:    role.Name,
 			IsActive:    false, // Subsequent users are inactive by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
