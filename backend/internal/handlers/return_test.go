@@ -52,7 +52,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	settingsRepo := repository.NewSettingsRepository(db)
 	settingsService := services.NewSettingsService(settingsRepo)
 
-	salesHandler := handlers.NewSalesHandler(db, settingsService, nil)
+	salesHandler := handlers.NewSalesHandler(db, settingsService, nil, nil)
 
 	hub := websocket.NewHub()
 	go hub.Run()

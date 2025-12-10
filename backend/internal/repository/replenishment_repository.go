@@ -16,6 +16,7 @@ type ReplenishmentRepository interface {
 	GetStockLevels(productIDs []uint) (map[uint]int, error)
 	GetPendingSuggestionsMap(productIDs []uint) (map[uint]bool, error)
 	GetPendingPOsMap(productIDs []uint) (map[uint]bool, error)
+	ListReorderSuggestions(status string, supplierID string) ([]domain.ReorderSuggestion, error)
 }
 
 type replenishmentRepository struct {
@@ -24,6 +25,21 @@ type replenishmentRepository struct {
 
 func NewReplenishmentRepository(db *gorm.DB) ReplenishmentRepository {
 	return &replenishmentRepository{db: db}
+}
+
+func (r *replenishmentRepository) ListReorderSuggestions(status string, supplierID string) ([]domain.ReorderSuggestion, error) {
+	var suggestions []domain.ReorderSuggestion
+	db := r.db.Preload("Product").Preload("Supplier")
+
+	if status != "" {
+		db = db.Where("status = ?", status)
+	}
+	if supplierID != "" {
+		db = db.Where("supplier_id = ?", supplierID)
+	}
+
+	err := db.Find(&suggestions).Error
+	return suggestions, err
 }
 
 func (r *replenishmentRepository) GetProductStock(productID uint) (int, error) {

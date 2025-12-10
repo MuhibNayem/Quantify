@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"inventory/backend/internal/domain"
 	"log"
+	"strconv"
 	"time"
 
 	"gorm.io/gorm"
@@ -632,57 +633,51 @@ type TaxLiabilityStats struct {
 // If tax is calculated on the fly, we need to reconstruct it or store it in Order/OrderItem.
 // For now, we'll estimate based on Order totals and implied tax.
 // Ideally, Order table should have 'TaxAmount' column.
+// GetTaxLiabilityReport calculates tax collected.
 func (r *ReportsRepository) GetTaxLiabilityReport(startDate, endDate time.Time) ([]TaxLiabilityStats, error) {
 	var stats []TaxLiabilityStats
 
-	// Assuming Order model has TotalAmount (inclusive of tax) and we can back-calculate or if we added TaxAmount column.
-	// Let's check domain/orders.go... It doesn't have TaxAmount explicitly in the struct I saw earlier?
-	// Wait, I should check.
-	// If not, I'll add a placeholder implementation that assumes 0 tax or needs schema update.
-	// Looking at previous SalesHandler code: "taxAmount := totalAmount * taxRate".
-	// But it wasn't saved to a specific column in Order?
-	// "TotalAmount: totalAmount - discountAmount" (Net or Gross?)
-	// The SalesHandler added tax to totalAmount.
+	// Fetch current tax rate from settings
+	var taxRateSetting domain.SystemSetting
+	var taxRate float64 = 0.0
 
-	// To do this accurately, we really need a TaxAmount column on Order.
-	// For this task, I will implement a query that assumes we can sum (TotalAmount - (TotalAmount / (1 + Rate))) if rate is known.
-	// But rate can change.
+	if err := r.DB.Where("key = ?", "tax_rate_percentage").First(&taxRateSetting).Error; err == nil {
+		if v, err := strconv.ParseFloat(taxRateSetting.Value, 64); err == nil {
+			taxRate = v / 100.0
+		}
+	}
 
-	// Better approach: Use the 'Transactions' table or just sum Orders and apply current rate (imperfect).
-	// OR, since I can't change schema easily right now without migration file, I will return a stub or best-effort.
-
-	// Let's assume for now we just return total sales and let frontend apply rate, OR
-	// we use a fixed rate query.
-
-	// Actually, let's look at Order struct again.
-	// It has "TotalAmount".
-
-	// I'll implement a simple aggregation of TotalAmount for now.
-
+	// Calculate total sales (inclusive of tax)
+	var totalSales sql.NullFloat64
 	query := `
-		SELECT 
-			0.0 as tax_rate, -- Placeholder
-			SUM(total_amount) as taxable_amount,
-			0.0 as tax_amount -- Placeholder
+		SELECT COALESCE(SUM(total_amount), 0)
 		FROM orders
 		WHERE status = 'COMPLETED'
 		AND order_date BETWEEN ? AND ?
 	`
-	// This is a placeholder until we add TaxAmount to Order schema.
-
-	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
-	if err != nil {
+	if err := r.DB.Raw(query, startDate, endDate).Scan(&totalSales).Error; err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var s TaxLiabilityStats
-		if err := rows.Scan(&s.TaxRate, &s.TaxableAmount, &s.TaxAmount); err != nil {
-			return nil, err
-		}
-		stats = append(stats, s)
+	totalAmount := 0.0
+	if totalSales.Valid {
+		totalAmount = totalSales.Float64
 	}
+
+	// Back-calculate tax
+	// TotalAmount = TaxableAmount + TaxAmount
+	// TaxAmount = TaxableAmount * TaxRate
+	// TotalAmount = TaxableAmount * (1 + TaxRate)
+	// TaxableAmount = TotalAmount / (1 + TaxRate)
+
+	taxableAmount := totalAmount / (1 + taxRate)
+	taxAmount := totalAmount - taxableAmount
+
+	stats = append(stats, TaxLiabilityStats{
+		TaxRate:       taxRate * 100, // Return as percentage
+		TaxableAmount: taxableAmount,
+		TaxAmount:     taxAmount,
+	})
 
 	return stats, nil
 }

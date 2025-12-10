@@ -11,6 +11,7 @@ import (
 
 type ReplenishmentService interface {
 	GenerateReorderSuggestions() error
+	ListReorderSuggestions(status string, supplierID string) ([]domain.ReorderSuggestion, error)
 }
 
 type replenishmentService struct {
@@ -113,4 +114,13 @@ func (s *replenishmentService) GenerateReorderSuggestions() error {
 	}
 
 	return nil
+}
+
+func (s *replenishmentService) ListReorderSuggestions(status string, supplierID string) ([]domain.ReorderSuggestion, error) {
+	// We need to access DB logic here. Repository should support filtering.
+	// But repository interface is currently limited.
+	// I'll add a method to repository or use db if I had access.
+	// ReplenishmentService only has repo access.
+	// I should update ReplenishmentRepository to support listing with filters.
+	return s.repo.ListReorderSuggestions(status, supplierID)
 }

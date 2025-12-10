@@ -159,7 +159,13 @@ func (s *BulkImportService) validateAndParseProduct(row []string, cache *entityC
 		}
 	}
 
-	if strings.TrimSpace(locationName) == "" {
+	// --- Location validation ---
+	var locationID uint
+	if locationName != "" {
+		if locationID, ok = cache.locations[strings.ToLower(locationName)]; !ok {
+			newEntities.Locations[locationName] = true // Mark for creation
+		}
+	} else {
 		errors = append(errors, "LocationName is required")
 	}
 
@@ -186,6 +192,7 @@ func (s *BulkImportService) validateAndParseProduct(row []string, cache *entityC
 		CategoryID:    categoryID,    // Will be 0 for new categories
 		SubCategoryID: subCategoryID, // Will be 0 for new sub-categories
 		SupplierID:    supplierID,    // Will be 0 for new suppliers
+		LocationID:    locationID,    // Will be 0 for new locations
 		Brand:         brand,
 		PurchasePrice: purchasePrice,
 		SellingPrice:  sellingPrice,

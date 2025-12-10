@@ -38,6 +38,7 @@ func SeedAIUser(db *gorm.DB) error {
 		Email:       "ai-agent@quantify.com",
 		Password:    string(hashedPassword),
 		RoleID:      adminRole.ID,
+		Role:        adminRole, // Explicitly set association
 		IsActive:    true,
 		FirstName:   "AI",
 		LastName:    "Agent",

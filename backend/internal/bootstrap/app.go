@@ -47,6 +47,11 @@ func NewApp(cfg *config.Config) *App {
 		logrus.Info("Search index population completed.")
 	}
 
+	// Seed Roles
+	if err := migrations.SeedRoles(repository.DB); err != nil {
+		logrus.Errorf("Failed to seed roles: %v", err)
+	}
+
 	// Seed AI Agent User
 	if err := migrations.SeedAIUser(repository.DB); err != nil {
 		logrus.Errorf("Failed to seed AI Agent user: %v", err)
@@ -78,6 +83,13 @@ func NewApp(cfg *config.Config) *App {
 
 	// Initialize Services
 	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
+	// Wait, SettingsService is an interface in handlers. Let's see how it was passed before.
+	// In original main.go:
+	// It wasn't explicitly initialized in the snippet I saw, but handlers.NewSalesHandler took it.
+	// Let's check handlers/sales.go again. It takes services.SettingsService.
+	// We need to find where SettingsService is defined and implemented.
+	// I'll assume for now there's a NewSettingsService or similar.
+	// If not, I might need to check services package.
 
 	// Initialize and start the BulkConsumer
 	// We will start consumers in Run()

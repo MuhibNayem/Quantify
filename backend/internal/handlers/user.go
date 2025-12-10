@@ -146,6 +146,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		user = domain.User{
 			Username:    req.Username,
 			RoleID:      role.ID,
+			Role:        role, // Explicitly set association
 			IsActive:    true, // First user is active by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
@@ -158,6 +159,7 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		user = domain.User{
 			Username:    req.Username,
 			RoleID:      role.ID,
+			Role:        role,  // Explicitly set association
 			IsActive:    false, // Subsequent users are inactive by default
 			FirstName:   req.FirstName,
 			LastName:    req.LastName,
@@ -225,17 +227,8 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	// Dynamic RBAC Migration: If RoleID Is Missing but LegacyRole exists
-	if user.RoleID == 0 && user.LegacyRole != "" {
-		var mappedRole domain.Role
-		// FIXED: Preload Permissions when fetching the mapped role
-		if err := h.db.Preload("Permissions").Where("name = ?", user.LegacyRole).First(&mappedRole).Error; err == nil {
-			// Found matching role, migrate user
-			user.RoleID = mappedRole.ID
-			user.Role = mappedRole // Populate for token generation and response
-			h.db.Model(&user).Update("role_id", mappedRole.ID)
-		}
-	}
+	// Dynamic RBAC Migration: LegacyRole removed.
+	// if user.RoleID == 0 && user.LegacyRole != "" { ... }
 
 	// Fallback/Safety: If still no role, try to default to Customer or fail
 	if user.Role.ID == 0 {

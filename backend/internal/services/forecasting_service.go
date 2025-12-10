@@ -17,6 +17,7 @@ import (
 type ForecastingService interface {
 	GenerateDemandForecast(productID *uint, periodInDays int) (*domain.DemandForecast, error)
 	GetForecastDashboard() (map[string]interface{}, error)
+	GetDemandForecastByID(id string) (*domain.DemandForecast, error)
 }
 
 type forecastingService struct {
@@ -200,4 +201,8 @@ func (s *forecastingService) GetForecastDashboard() (map[string]interface{}, err
 		"topForecasts": topForecasts,
 		"lowStock":     lowStock,
 	}, nil
+}
+
+func (s *forecastingService) GetDemandForecastByID(id string) (*domain.DemandForecast, error) {
+	return s.repo.GetForecast(id)
 }

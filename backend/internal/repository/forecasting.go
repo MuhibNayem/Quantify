@@ -15,6 +15,7 @@ type ForecastingRepository interface {
 	GetProductsBatch(offset, limit int) ([]domain.Product, error)
 	GetTopForecasts(limit int) ([]ForecastDashboardItem, error)
 	GetLowStockPredictions(limit int) ([]ForecastDashboardItem, error)
+	GetForecast(id string) (*domain.DemandForecast, error)
 }
 
 type forecastingRepository struct {
@@ -113,4 +114,12 @@ func (r *forecastingRepository) GetLowStockPredictions(limit int) ([]ForecastDas
 		Scan(&items).Error
 
 	return items, err
+}
+
+func (r *forecastingRepository) GetForecast(id string) (*domain.DemandForecast, error) {
+	var forecast domain.DemandForecast
+	if err := r.db.First(&forecast, id).Error; err != nil {
+		return nil, err
+	}
+	return &forecast, nil
 }
