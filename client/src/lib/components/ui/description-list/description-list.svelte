@@ -1,5 +1,5 @@
 
-<script context="module">
+<script context="module" lang="ts">
 	export type DescriptionItem = {
 			label: string;
 			value?: string | number | null;
