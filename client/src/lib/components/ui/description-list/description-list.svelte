@@ -15,6 +15,7 @@
 <script lang="ts">
 	import type { ComponentType } from 'svelte';
 	import { cn } from '$lib/utils';
+	import { t } from '$lib/i18n';
 
 	
 
@@ -48,7 +49,7 @@
 					{#if item.icon}
 						<svelte:component this={item.icon} class="h-4 w-4 text-slate-400" />
 					{/if}
-					{item.label}
+					{$t(item.label)}
 				</dt>
 				<dd class={cn('text-slate-900', dense ? 'mt-1 text-sm font-semibold' : 'mt-2 text-base font-semibold')}>
 					<span>{item.value ?? '—'}</span>

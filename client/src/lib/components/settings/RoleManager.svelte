@@ -18,6 +18,7 @@
 		AlertCircle
 	} from 'lucide-svelte';
 	import { cn } from '$lib/utils';
+	import { t } from '$lib/i18n';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { fade, fly, slide } from 'svelte/transition';
 
@@ -194,7 +195,7 @@
 				<h3
 					class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-lg font-bold text-transparent"
 				>
-					Roles & Access
+					{$t('roles.title')}
 				</h3>
 				<Button
 					variant="ghost"
@@ -228,7 +229,7 @@
 										: 'text-slate-700 group-hover:text-slate-900'
 								)}
 							>
-								{role.Name}
+								{role.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${role.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) : role.Name}
 							</span>
 							{#if role.IsSystem}
 								<ShieldCheck class="h-4 w-4 text-amber-500" />
@@ -270,25 +271,25 @@
 							</div>
 							<div class="space-y-1 overflow-hidden">
 								<h2 class="truncate text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">
-									{selectedRole.ID === 0 ? 'Create New Role' : selectedRole.Name}
+									{selectedRole.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) : selectedRole.Name}
 								</h2>
 								<div class="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500">
 									{#if selectedRole.IsSystem}
 										<span
 											class="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-100/50 px-2.5 py-0.5 text-amber-700"
 										>
-											<AlertCircle class="h-3.5 w-3.5" /> System Managed
+											<AlertCircle class="h-3.5 w-3.5" /> {$t('roles.system_managed')}
 										</span>
 									{:else}
 										<span
 											class="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-100/50 px-2.5 py-0.5 text-emerald-700"
 										>
-											<Check class="h-3.5 w-3.5" /> Custom Role
+											<Check class="h-3.5 w-3.5" /> {$t('roles.custom_role')}
 										</span>
 									{/if}
 									<span class="hidden h-1 w-1 rounded-full bg-slate-300 sm:block"></span>
 									<span class="whitespace-nowrap text-slate-600"
-										>{selectedPermissionIds.length} Permissions Active</span
+										>{selectedPermissionIds.length} {$t('roles.active_permissions')}</span
 									>
 								</div>
 							</div>
@@ -304,7 +305,7 @@
 								disabled={isSaving}
 								class="rounded-xl font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
 							>
-								Reset
+								{$t('roles.reset')}
 							</Button>
 							{#if !selectedRole.IsSystem && selectedRole.ID !== 0}
 								<Button
@@ -312,7 +313,7 @@
 									class="rounded-xl font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
 									onclick={handleDelete}
 								>
-									<Trash2 class="mr-2 h-4 w-4" /> Delete
+									<Trash2 class="mr-2 h-4 w-4" /> {$t('roles.delete')}
 								</Button>
 							{/if}
 							<Button
@@ -327,7 +328,7 @@
 								{:else}
 									<Save class="mr-2 h-4 w-4" />
 								{/if}
-								{isSaving ? 'Saving...' : 'Save Changes'}
+								{isSaving ? $t('roles.saving') : $t('roles.save_changes')}
 							</Button>
 						</div>
 					</div>
@@ -339,7 +340,7 @@
 						<!-- Inputs -->
 						<div class="mb-10 grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
 							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-								<Label class="text-base font-semibold text-slate-700">Role Name</Label>
+								<Label class="text-base font-semibold text-slate-700">{$t('roles.role_name')}</Label>
 								<div class="group relative">
 									<Input
 										bind:value={editName}
@@ -355,7 +356,7 @@
 								</div>
 							</div>
 							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 200 }}>
-								<Label class="text-base font-semibold text-slate-700">Description</Label>
+								<Label class="text-base font-semibold text-slate-700">{$t('roles.description')}</Label>
 								<Input
 									bind:value={editDescription}
 									placeholder="Describe the responsibilities..."
@@ -374,8 +375,8 @@
 									<Sparkles class="h-5 w-5 text-purple-600" />
 								</div>
 								<div>
-									<h3 class="text-lg font-bold text-slate-800">Capabilities</h3>
-									<p class="text-sm text-slate-500">Fine-tune access controls for this role</p>
+									<h3 class="text-lg font-bold text-slate-800">{$t('roles.capabilities')}</h3>
+									<p class="text-sm text-slate-500">{$t('roles.capabilities_desc')}</p>
 								</div>
 							</div>
 
@@ -394,14 +395,14 @@
 											class="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-y-2"
 										>
 											<h4 class="flex items-center gap-2 text-lg font-bold text-slate-700">
-												{group}
+												{$t(`permissions.groups.${group.toLowerCase()}`) !== `permissions.groups.${group.toLowerCase()}` ? $t(`permissions.groups.${group.toLowerCase()}`) : group}
 											</h4>
 											<div class="flex items-center gap-2">
 												<Label
 													for="group-{group}"
 													class="cursor-pointer text-xs font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-blue-600"
 												>
-													Select All
+													{$t('roles.select_all')}
 												</Label>
 												<Checkbox
 													id="group-{group}"
@@ -436,10 +437,10 @@
 																	: 'text-slate-600'
 															)}
 														>
-															{perm.Name}
+															{$t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) !== `permissions.names.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) : perm.Name}
 														</span>
 														<span class="line-clamp-2 block text-xs leading-relaxed text-slate-500">
-															{perm.Description}
+															{$t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) !== `permissions.descriptions.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) : perm.Description}
 														</span>
 													</div>
 												</label>
@@ -465,16 +466,15 @@
 							/>
 						</div>
 					</div>
-					<h3 class="text-2xl font-bold text-slate-800">Security & Access Control</h3>
+					<h3 class="text-2xl font-bold text-slate-800">{$t('roles.security_access_control')}</h3>
 					<p class="mt-3 max-w-md text-lg text-slate-500">
-						Select a role from the sidebar to configure permissions, or create a new custom role to
-						delegate specific access capabilities.
+						{$t('roles.security_desc')}
 					</p>
 					<Button
 						class="mt-10 h-12 rounded-xl bg-slate-900 px-8 font-semibold text-white shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-1 hover:bg-blue-600 hover:shadow-blue-600/20"
 						onclick={handleNewRole}
 					>
-						<Plus class="mr-2 h-5 w-5" /> Create First Role
+						<Plus class="mr-2 h-5 w-5" /> {$t('roles.create_first')}
 					</Button>
 				</div>
 			{/if}

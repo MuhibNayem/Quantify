@@ -397,9 +397,9 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 	// 1. Create New Categories
 	for name := range importResult.NewEntities.Categories {
 		cat := &domain.Category{Name: name}
-		if err := tx.Create(cat).Error; err != nil {
+		if err := tx.Where("name = ?", name).FirstOrCreate(cat).Error; err != nil {
 			tx.Rollback()
-			c.failJob(job, fmt.Sprintf("failed to create category '%s'", name))
+			c.failJob(job, fmt.Sprintf("failed to create category '%s': %v", name, err))
 			return err
 		}
 		newCategoryIDs[name] = cat.ID
@@ -408,9 +408,9 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 	// 2. Create New Suppliers
 	for name := range importResult.NewEntities.Suppliers {
 		sup := &domain.Supplier{Name: name}
-		if err := tx.Create(sup).Error; err != nil {
+		if err := tx.Where("name = ?", name).FirstOrCreate(sup).Error; err != nil {
 			tx.Rollback()
-			c.failJob(job, fmt.Sprintf("failed to create supplier '%s'", name))
+			c.failJob(job, fmt.Sprintf("failed to create supplier '%s': %v", name, err))
 			return err
 		}
 		newSupplierIDs[name] = sup.ID
@@ -419,9 +419,9 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 	// 3. Create New Locations
 	for name := range importResult.NewEntities.Locations {
 		loc := &domain.Location{Name: name}
-		if err := tx.Create(loc).Error; err != nil {
+		if err := tx.Where("name = ?", name).FirstOrCreate(loc).Error; err != nil {
 			tx.Rollback()
-			c.failJob(job, fmt.Sprintf("failed to create location '%s'", name))
+			c.failJob(job, fmt.Sprintf("failed to create location '%s': %v", name, err))
 			return err
 		}
 		newLocationIDs[name] = loc.ID
@@ -470,9 +470,9 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 			} else if importResult.NewEntities.SubCategories[p.SubCategory.Name] {
 				// It's marked as new, create it
 				subCat := &domain.SubCategory{Name: p.SubCategory.Name, CategoryID: p.CategoryID}
-				if err := tx.Create(subCat).Error; err != nil {
+				if err := tx.Where("name = ? AND category_id = ?", p.SubCategory.Name, p.CategoryID).FirstOrCreate(subCat).Error; err != nil {
 					tx.Rollback()
-					c.failJob(job, fmt.Sprintf("failed to create sub-category '%s'", p.SubCategory.Name))
+					c.failJob(job, fmt.Sprintf("failed to create sub-category '%s': %v", p.SubCategory.Name, err))
 					return err
 				}
 				p.SubCategoryID = subCat.ID

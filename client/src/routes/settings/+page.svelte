@@ -29,8 +29,10 @@
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
+	import { t } from '$lib/i18n';
 	import { adaptiveText, liquidGlass } from '$lib/styles/liquid-glass';
 
+	import { settings as systemSettings } from '$lib/stores/settings';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 
@@ -118,19 +120,23 @@
 	async function saveSetting(key: string, value: string) {
 		try {
 			await settingsApi.updateSetting(key, value);
-			toast.success('Saved successfully');
+			
+			// Update global store to reflect changes immediately (e.g. locale change)
+			systemSettings.update(s => ({ ...s, [key]: value }));
+			
+			toast.success($t('common.saved_successfully'));
 		} catch (e) {
-			toast.error('Failed to save');
+			toast.error($t('common.failed_to_save'));
 		}
 	}
 
 	const allTabs = [
-		{ id: 'general', label: 'General', icon: Settings, permission: 'settings.view' },
-		{ id: 'business', label: 'Business Rules', icon: Coins, permission: 'settings.view' },
-		{ id: 'system', label: 'System & AI', icon: Zap, permission: 'settings.view' },
-		{ id: 'security', label: 'Security & Roles', icon: ShieldCheck, permission: 'roles.view' },
-		{ id: 'policies', label: 'Policies', icon: FileText, permission: 'settings.view' },
-		{ id: 'notifications', label: 'Notifications', icon: Bell, permission: 'settings.view' }
+		{ id: 'general', label: 'settings.tabs.general', icon: Settings, permission: 'settings.view' },
+		{ id: 'business', label: 'settings.tabs.business_rules', icon: Coins, permission: 'settings.view' },
+		{ id: 'system', label: 'settings.tabs.system_ai', icon: Zap, permission: 'settings.view' },
+		{ id: 'security', label: 'settings.tabs.security_roles', icon: ShieldCheck, permission: 'roles.view' },
+		{ id: 'policies', label: 'settings.tabs.policies', icon: FileText, permission: 'settings.view' },
+		{ id: 'notifications', label: 'settings.tabs.notifications', icon: Bell, permission: 'settings.view' }
 	];
 
 	let tabs = $derived(allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission)));
@@ -163,10 +169,10 @@
 			<h1
 				class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent drop-shadow-sm"
 			>
-				Configuration
+				{$t('common.configuration')}
 			</h1>
 			<p class={cn('font-medium', adaptiveText.onGlass.secondary)}>
-				Manage system preferences, security controls, and global policies.
+				{$t('common.manage_preferences')}
 			</p>
 		</div>
 
@@ -198,7 +204,7 @@
 					>
 						<div class="flex items-center justify-center gap-2">
 							<tab.icon size={18} />
-							{tab.label}
+							{$t(tab.label)}
 						</div>
 					</Tabs.Trigger>
 				{/each}
@@ -227,16 +233,16 @@
 								<Building2 size={32} />
 							</div>
 							<div>
-								<h3 class={cn('text-xl', adaptiveText.heading)}>Business Profile</h3>
+								<h3 class={cn('text-xl', adaptiveText.heading)}>{$t('settings.general.business_profile')}</h3>
 								<p class={adaptiveText.onGlass.secondary}>
-									Your organization's visible identity across the platform.
+									{$t('settings.general.business_profile_desc')}
 								</p>
 							</div>
 						</div>
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class={cn('ml-1', adaptiveText.label)}>Business Name</Label>
+								<Label class={cn('ml-1', adaptiveText.label)}>{$t('settings.general.business_name')}</Label>
 								<div class="flex gap-3">
 									<Input
 										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
@@ -247,7 +253,7 @@
 										class="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 text-white shadow-lg transition-all hover:from-blue-700 hover:to-purple-700 active:scale-95"
 										onclick={() => saveSetting('business_name', settings['business_name'])}
 									>
-										<Save size={20} class="mr-2" /> Save
+										<Save size={20} class="mr-2" /> {$t('common.save')}
 									</Button>
 								</div>
 							</div>
@@ -267,21 +273,21 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8'
+								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-blue-50 p-3 text-blue-600 ring-1 ring-blue-100">
 									<Globe size={24} />
 								</div>
-								<h3 class={cn('text-lg', adaptiveText.heading)}>Currency</h3>
+								<h3 class={cn('text-lg', adaptiveText.heading)}>{$t('settings.general.currency')}</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
 										options={currencyOptions}
 										bind:value={settings['currency_code']}
-										placeholder="Select Currency"
+										placeholder={$t('settings.general.select_currency')}
 										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
 									/>
 								</div>
@@ -314,21 +320,21 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8'
+								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-emerald-50 p-3 text-emerald-600 ring-1 ring-emerald-100">
 									<Clock size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">Timezone</h3>
+								<h3 class="text-lg font-bold text-slate-800">{$t('settings.general.timezone')}</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
 										options={timezoneOptions}
 										bind:value={settings['timezone']}
-										placeholder="Select Timezone"
+										placeholder={$t('settings.general.select_timezone')}
 										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
 									/>
 								</div>
@@ -352,21 +358,21 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8'
+								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-purple-50 p-3 text-purple-600 ring-1 ring-purple-100">
 									<Globe size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">Locale / Language</h3>
+								<h3 class="text-lg font-bold text-slate-800">{$t('settings.general.locale')}</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
 										options={localeOptions}
 										bind:value={settings['locale']}
-										placeholder="Select Locale"
+										placeholder={$t('settings.general.select_locale')}
 										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
 									/>
 								</div>
@@ -405,9 +411,9 @@
 								<Sparkles size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">Loyalty Program</h3>
+								<h3 class="text-xl font-bold text-slate-800">{$t('settings.business.loyalty_program')}</h3>
 								<p class="text-slate-500">
-									Configure how customers earn and redeem points, and set tier thresholds.
+									{$t('settings.business.loyalty_program_desc')}
 								</p>
 							</div>
 						</div>
@@ -415,9 +421,9 @@
 						<div class="grid gap-8 md:grid-cols-2">
 							<!-- Earning & Redemption -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">Points Configuration</h4>
+								<h4 class="font-semibold text-slate-700">{$t('settings.business.points_configuration')}</h4>
 								<div class="space-y-3">
-									<Label class="ml-1 font-medium text-slate-600">Earning Rate (Points per $1)</Label
+									<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.earning_rate')}</Label
 									>
 									<div class="flex gap-3">
 										<Input
@@ -438,13 +444,13 @@
 										</Button>
 									</div>
 									<p class="text-xs text-slate-400">
-										How many points a customer earns for every unit of currency spent.
+										{$t('settings.business.earning_rate_hint')}
 									</p>
 								</div>
 
 								<div class="space-y-3">
 									<Label class="ml-1 font-medium text-slate-600"
-										>Redemption Value ($ per Point)</Label
+										>{$t('settings.business.redemption_value')}</Label
 									>
 									<div class="flex gap-3">
 										<Input
@@ -465,17 +471,17 @@
 										</Button>
 									</div>
 									<p class="text-xs text-slate-400">
-										The monetary value of a single loyalty point when redeeming.
+										{$t('settings.business.redemption_value_hint')}
 									</p>
 								</div>
 							</div>
 
 							<!-- Tiers -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">Tier Thresholds</h4>
+								<h4 class="font-semibold text-slate-700">{$t('settings.business.tier_thresholds')}</h4>
 								<div class="space-y-4">
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">Silver Tier (Points)</Label>
+										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.silver_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -492,7 +498,7 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">Gold Tier (Points)</Label>
+										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.gold_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -509,7 +515,7 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">Platinum Tier (Points)</Label>
+										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.platinum_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -550,14 +556,14 @@
 								<Percent size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">Financial Settings</h3>
-								<p class="text-slate-500">Manage tax rates and other financial parameters.</p>
+								<h3 class="text-xl font-bold text-slate-800">{$t('settings.business.financial_settings')}</h3>
+								<p class="text-slate-500">{$t('settings.business.financial_settings_desc')}</p>
 							</div>
 						</div>
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">Default Tax Rate (%)</Label>
+								<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.default_tax_rate')}</Label>
 								<div class="flex gap-3">
 									<Input
 										type="number"
@@ -570,11 +576,11 @@
 										onclick={() =>
 											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
 									>
-										<Save size={20} class="mr-2" /> Save
+										<Save size={20} class="mr-2" /> {$t('common.save')}
 									</Button>
 								</div>
 								<p class="text-xs text-slate-400">
-									This tax rate will be applied to all applicable sales.
+									{$t('settings.business.default_tax_rate_hint')}
 								</p>
 							</div>
 						</div>
@@ -608,11 +614,11 @@
 							<div class="rounded-xl bg-violet-50 p-3 text-violet-600 ring-1 ring-violet-100">
 								<Lock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">Privacy Policy</h3>
+							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.privacy_policy')}</h3>
 						</div>
 						<Textarea
 							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-violet-500/20"
-							placeholder="Enter your privacy policy (Markdown supported)..."
+							placeholder={$t('settings.policies.privacy_policy_placeholder')}
 							bind:value={settings['privacy_policy']}
 						/>
 						<div class="mt-4 flex justify-end">
@@ -620,7 +626,7 @@
 								class="rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 active:scale-95"
 								onclick={() => saveSetting('privacy_policy', settings['privacy_policy'])}
 							>
-								<Save size={18} class="mr-2" /> Save Policy
+								<Save size={18} class="mr-2" /> {$t('settings.policies.save_policy')}
 							</Button>
 						</div>
 					</div>
@@ -641,11 +647,11 @@
 							<div class="rounded-xl bg-pink-50 p-3 text-pink-600 ring-1 ring-pink-100">
 								<LayoutTemplate size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">Terms of Service</h3>
+							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.terms_of_service')}</h3>
 						</div>
 						<Textarea
 							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-pink-500 focus:bg-white focus:ring-pink-500/20"
-							placeholder="Enter your terms of service (Markdown supported)..."
+							placeholder={$t('settings.policies.terms_of_service_placeholder')}
 							bind:value={settings['terms_of_service']}
 						/>
 						<div class="mt-4 flex justify-end">
@@ -653,7 +659,7 @@
 								class="rounded-xl bg-pink-600 text-white shadow-lg shadow-pink-500/20 transition-all hover:bg-pink-700 active:scale-95"
 								onclick={() => saveSetting('terms_of_service', settings['terms_of_service'])}
 							>
-								<Save size={18} class="mr-2" /> Save Terms
+								<Save size={18} class="mr-2" /> {$t('settings.policies.save_terms')}
 							</Button>
 						</div>
 					</div>
@@ -675,10 +681,10 @@
 							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">
 								<Clock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">Return Policy</h3>
+							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.return_policy')}</h3>
 						</div>
 						<div class="max-w-xl space-y-3">
-							<Label class="ml-1 font-medium text-slate-600">Return Window (Days)</Label>
+							<Label class="ml-1 font-medium text-slate-600">{$t('settings.policies.return_window')}</Label>
 							<div class="flex gap-3">
 								<Input
 									type="number"
@@ -690,11 +696,11 @@
 									class="h-12 rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95"
 									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
 								>
-									<Save size={20} class="mr-2" /> Save
+									<Save size={20} class="mr-2" /> {$t('common.save')}
 								</Button>
 							</div>
 							<p class="text-xs text-slate-400">
-								Number of days after purchase that a customer can request a return.
+								{$t('settings.policies.return_window_hint')}
 							</p>
 						</div>
 					</div>
@@ -723,16 +729,16 @@
 								<Zap size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">AI & System</h3>
+								<h3 class="text-xl font-bold text-slate-800">{$t('settings.system.ai_system')}</h3>
 								<p class="text-slate-500">
-									Configure autonomous agent behavior and system-wide parameters.
+									{$t('settings.system.ai_system_desc')}
 								</p>
 							</div>
 						</div>
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">AI Wake Up Time</Label>
+								<Label class="ml-1 font-medium text-slate-600">{$t('settings.system.wake_up_time')}</Label>
 								<div class="flex gap-3">
 									<Input
 										type="time"
@@ -743,11 +749,11 @@
 										class="h-12 rounded-xl bg-sky-600 text-white shadow-lg hover:bg-sky-700"
 										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
 									>
-										<Save size={20} class="mr-2" /> Save
+										<Save size={20} class="mr-2" /> {$t('common.save')}
 									</Button>
 								</div>
 								<p class="text-xs text-slate-400">
-									The AI will run the "Daily Morning Check" at this time every day.
+									{$t('settings.system.wake_up_time_hint')}
 								</p>
 							</div>
 						</div>
@@ -766,9 +772,9 @@
 					>
 						<Bell size={40} />
 					</div>
-					<h3 class="text-2xl font-bold text-slate-800">Global Alerts Center</h3>
+					<h3 class="text-2xl font-bold text-slate-800">{$t('settings.notifications.global_alerts_center')}</h3>
 					<p class="mt-2 max-w-sm text-slate-500">
-						Advanced notification routing and webhooks configuration is coming in the next update.
+						{$t('settings.notifications.coming_soon')}
 					</p>
 				</div>
 			</Tabs.Content>

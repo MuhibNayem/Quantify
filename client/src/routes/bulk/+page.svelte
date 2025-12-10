@@ -59,6 +59,7 @@
 	};
 
 	import { auth } from '$lib/stores/auth';
+	import { t } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 
 	// --- State: Import Wizard ---
@@ -73,8 +74,8 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('bulk.import')) {
-			toast.error('Access Denied', {
-				description: 'You do not have permission to perform bulk operations.'
+			toast.error($t('common.access_denied'), {
+				description: $t('common.no_permission_settings')
 			});
 			goto('/');
 		}
@@ -324,23 +325,37 @@
 		refreshJobs();
 	};
 
-	onMount(async () => {
+	onMount(() => {
 		if (!browser) return;
 
 		// Load initial data
-		try {
-			const [cats, sups, jobs] = await Promise.all([
-				categoriesApi.list(),
-				suppliersApi.list(),
-				bulkApi.listJobs()
-			]);
-			categories = cats;
-			suppliers = sups;
-			recentJobs = jobs;
-		} catch (error) {
-			console.error('Failed to load initial data', error);
-			toast.error('Failed to load some data');
+		(async () => {
+			try {
+				const [cats, sups, jobs] = await Promise.all([
+					categoriesApi.list(),
+					suppliersApi.list(),
+					bulkApi.listJobs()
+				]);
+				categories = cats;
+				suppliers = sups;
+				recentJobs = jobs;
+			} catch (error) {
+				console.error('Failed to load initial data', error);
+				toast.error('Failed to load some data');
+			}
+		})();
+
+		// Initial load of job status if a query ID exists
+		if (jobIdQuery) {
+			loadJobStatus();
 		}
+
+		// Poll for updates if there's an active job or export is in progress
+		const interval = setInterval(() => {
+			if (currentStep === 'importing' || currentStep === 'validating' || exporting) {
+				loadJobStatus();
+			}
+		}, 5000);
 
 		const handler = (event: Event) => {
 			const custom = event as CustomEvent<JobStatusEventDetail>;
@@ -367,10 +382,10 @@
 			<h1
 				class="mb-2 bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-4xl font-extrabold text-transparent"
 			>
-				Bulk Operations
+				{$t('bulk.title')}
 			</h1>
 			<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
-				Manage your catalog efficiently with bulk imports, exports, and job tracking.
+				{$t('bulk.subtitle')}
 			</p>
 		</header>
 
@@ -378,9 +393,9 @@
 			<TabsList
 				class="grid w-full grid-cols-3 border border-sky-100 bg-white/60 backdrop-blur-sm lg:w-[400px]"
 			>
-				<TabsTrigger value="import">Import</TabsTrigger>
-				<TabsTrigger value="export">Export</TabsTrigger>
-				<TabsTrigger value="status">Status</TabsTrigger>
+				<TabsTrigger value="import">{$t('bulk.tabs.import')}</TabsTrigger>
+				<TabsTrigger value="export">{$t('bulk.tabs.export')}</TabsTrigger>
+				<TabsTrigger value="status">{$t('bulk.tabs.status')}</TabsTrigger>
 			</TabsList>
 
 			<!-- IMPORT TAB -->
@@ -389,7 +404,7 @@
 				<ol
 					class="flex items-center justify-center overflow-x-auto rounded-2xl border border-sky-100 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm sm:justify-start"
 				>
-					{#each ['Download Template', 'Upload', 'Validate', 'Import', 'Done'] as label, i}
+					{#each [$t('bulk.steps.download'), $t('bulk.steps.upload'), $t('bulk.steps.validate'), $t('bulk.steps.import'), $t('bulk.steps.done')] as label, i}
 						<li class="relative flex items-center">
 							<div
 								class="mr-2 grid size-8 place-items-center rounded-full border text-xs font-semibold shadow-sm transition-all duration-300"
@@ -407,7 +422,7 @@
 								{/if}
 							</div>
 							<span class="mr-3 whitespace-nowrap text-xs text-slate-700 sm:text-sm">{label}</span>
-							{#if i < 5}<div class="h-[2px] w-8 bg-slate-200/70"></div>{/if}
+							{#if i < 4}<div class="h-[2px] w-8 bg-slate-200/70"></div>{/if}
 						</li>
 					{/each}
 				</ol>
@@ -419,17 +434,17 @@
 					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<FileDown class="h-5 w-5 text-sky-600" /> Step 1: Download & Prepare
+								<FileDown class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step1_title')}
 							</CardTitle>
 							<CardDescription class="text-slate-600"
-								>Use the correct CSV format for seamless import.</CardDescription
+								>{$t('bulk.steps.step1_desc')}</CardDescription
 							>
 						</CardHeader>
 						<CardContent class="p-6">
 							<Button
 								onclick={downloadTemplate}
 								class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-white shadow-md hover:from-sky-600 hover:to-blue-700 hover:shadow-lg sm:w-auto"
-								>Download Template</Button
+								>{$t('bulk.buttons.download_template')}</Button
 							>
 						</CardContent>
 					</Card>
@@ -440,10 +455,10 @@
 					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<Upload class="h-5 w-5 text-sky-600" /> Step 2: Upload File
+								<Upload class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step2_title')}
 							</CardTitle>
 							<CardDescription class="text-slate-600"
-								>Validate your CSV before importing products.</CardDescription
+								>{$t('bulk.steps.step2_desc')}</CardDescription
 							>
 						</CardHeader>
 						<CardContent class="flex flex-col items-center gap-4 p-6 sm:flex-row">
@@ -460,7 +475,7 @@
 								class="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-2.5 text-white shadow-md hover:shadow-lg sm:w-auto"
 							>
 								{#if currentStep === 'uploading'}<Loader class="mr-2 h-4 w-4 animate-spin" />{/if}
-								Upload & Validate
+								{$t('bulk.buttons.upload_validate')}
 							</Button>
 						</CardContent>
 					</Card>
@@ -473,31 +488,31 @@
 					>
 						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
 							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<CheckCircle class="h-5 w-5 text-sky-600" /> Step 3: Review & Confirm
+								<CheckCircle class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step3_title')}
 							</CardTitle>
 							<CardDescription class="text-slate-600"
-								>Ensure validation passes before final import.</CardDescription
+								>{$t('bulk.steps.step3_desc')}</CardDescription
 							>
 						</CardHeader>
 						<CardContent class="space-y-6 p-6">
 							{#if currentStep === 'validating'}
 								<div class="flex items-center gap-2 text-sky-700">
-									<Loader class="h-4 w-4 animate-spin" /> Validating file...
+									<Loader class="h-4 w-4 animate-spin" /> {$t('bulk.status.validating')}
 								</div>
 							{/if}
 
 							{#if validationResult}
 								<div class="grid gap-4 sm:grid-cols-3">
 									<div class="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-center">
-										<p class="text-xs text-slate-500">Valid</p>
+										<p class="text-xs text-slate-500">{$t('bulk.labels.valid')}</p>
 										<p class="text-xl font-bold text-sky-700">{validationResult.validRecords}</p>
 									</div>
 									<div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
-										<p class="text-xs text-slate-500">Invalid</p>
+										<p class="text-xs text-slate-500">{$t('bulk.labels.invalid')}</p>
 										<p class="text-xl font-bold text-rose-700">{validationResult.invalidRecords}</p>
 									</div>
 									<div class="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center">
-										<p class="text-xs text-slate-500">Total</p>
+										<p class="text-xs text-slate-500">{$t('bulk.labels.total')}</p>
 										<p class="text-xl font-bold text-amber-700">{validationResult.totalRecords}</p>
 									</div>
 								</div>
@@ -505,19 +520,19 @@
 								{#if validationResult.newEntities}
 									<div class="grid grid-cols-3 gap-4">
 										<div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-											<p class="text-xs font-medium text-indigo-600">New Categories</p>
+											<p class="text-xs font-medium text-indigo-600">{$t('bulk.labels.new_categories')}</p>
 											<p class="text-lg font-bold text-indigo-800">
 												{Object.keys(validationResult.newEntities.categories || {}).length}
 											</p>
 										</div>
 										<div class="rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-3 text-center">
-											<p class="text-xs font-medium text-fuchsia-600">New Suppliers</p>
+											<p class="text-xs font-medium text-fuchsia-600">{$t('bulk.labels.new_suppliers')}</p>
 											<p class="text-lg font-bold text-fuchsia-800">
 												{Object.keys(validationResult.newEntities.suppliers || {}).length}
 											</p>
 										</div>
 										<div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-											<p class="text-xs font-medium text-emerald-600">New Locations</p>
+											<p class="text-xs font-medium text-emerald-600">{$t('bulk.labels.new_locations')}</p>
 											<p class="text-lg font-bold text-emerald-800">
 												{Object.keys(validationResult.newEntities.locations || {}).length}
 											</p>
@@ -566,21 +581,21 @@
 
 							{#if currentStep === 'importing'}
 								<p class="flex items-center gap-2 text-sky-700">
-									<Loader class="h-4 w-4 animate-spin" /> Importing products...
+									<Loader class="h-4 w-4 animate-spin" /> {$t('bulk.status.importing')}
 								</p>
 							{/if}
 
 							{#if currentStep === 'complete'}
 								<div class="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
 									<CheckCircle class="mx-auto h-12 w-12 text-green-600" />
-									<h3 class="mt-2 text-lg font-semibold text-green-700">Import Complete</h3>
+									<h3 class="mt-2 text-lg font-semibold text-green-700">{$t('bulk.status.import_complete')}</h3>
 									<p class="mt-1 text-slate-600">
-										{importJob?.message || 'Products imported successfully.'}
+										{importJob?.message || $t('bulk.status.success')}
 									</p>
 									<Button
 										onclick={resetImportState}
 										class="mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-white hover:brightness-110"
-										>New Import</Button
+										>{$t('bulk.buttons.new_import')}</Button
 									>
 								</div>
 							{/if}
@@ -588,14 +603,14 @@
 							{#if currentStep === 'failed'}
 								<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
 									<AlertTriangle class="mx-auto h-12 w-12 text-rose-600" />
-									<h3 class="mt-2 text-lg font-semibold text-rose-700">Import Failed</h3>
+									<h3 class="mt-2 text-lg font-semibold text-rose-700">{$t('bulk.status.import_failed')}</h3>
 									<p class="mt-1 text-slate-600">
 										{importJob?.lastError || 'Unknown error occurred.'}
 									</p>
 									<Button
 										onclick={resetImportState}
 										class="mt-4 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 text-white hover:brightness-110"
-										>Try Again</Button
+										>{$t('bulk.buttons.try_again')}</Button
 									>
 								</div>
 							{/if}
@@ -613,16 +628,16 @@
 						class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
 					>
 						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<Download class="h-5 w-5 text-violet-600" /> Catalog Export
+							<Download class="h-5 w-5 text-violet-600" /> {$t('bulk.tabs.export')}
 						</CardTitle>
 						<CardDescription class="text-slate-600"
-							>Filter and download your product catalog.</CardDescription
+							>{$t('bulk.subtitle')}</CardDescription
 						>
 					</CardHeader>
 					<CardContent class="space-y-6 p-6">
 						<div class="grid gap-4 sm:grid-cols-3">
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">Format</label>
+								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.format')}</label>
 								<select
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
 									bind:value={exportParams.format}
@@ -632,24 +647,24 @@
 								</select>
 							</div>
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">Category (Optional)</label>
+								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.category')}</label>
 								<select
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
 									bind:value={exportParams.category}
 								>
-									<option value="">All Categories</option>
+									<option value="">{$t('bulk.labels.all_categories')}</option>
 									{#each categories as cat}
 										<option value={cat.ID.toString()}>{cat.Name}</option>
 									{/each}
 								</select>
 							</div>
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">Supplier (Optional)</label>
+								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.supplier')}</label>
 								<select
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
 									bind:value={exportParams.supplier}
 								>
-									<option value="">All Suppliers</option>
+									<option value="">{$t('bulk.labels.all_suppliers')}</option>
 									{#each suppliers as sup}
 										<option value={sup.ID.toString()}>{sup.Name}</option>
 									{/each}
@@ -662,7 +677,7 @@
 							disabled={exporting}
 						>
 							{#if exporting}<Loader class="mr-2 h-4 w-4 animate-spin" />{/if}
-							Generate Export
+							{$t('bulk.buttons.generate_export')}
 						</Button>
 					</CardContent>
 				</Card>
@@ -677,7 +692,7 @@
 					<div class="relative w-full sm:w-72">
 						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<Input
-							placeholder="Search by Job ID..."
+							placeholder={$t('bulk.labels.search_placeholder')}
 							bind:value={jobIdQuery}
 							onkeydown={(e) => e.key === 'Enter' && loadJobStatus()}
 							class="rounded-xl border-slate-200 bg-white/80 pl-10 focus:ring-sky-200"
@@ -689,7 +704,7 @@
 						onclick={refreshJobs}
 						class="gap-2 rounded-xl border-slate-200 text-slate-600 hover:bg-sky-50 hover:text-sky-700"
 					>
-						<RefreshCw class="h-4 w-4" /> Refresh
+						<RefreshCw class="h-4 w-4" /> {$t('bulk.buttons.refresh')}
 					</Button>
 				</div>
 
@@ -710,8 +725,8 @@
 								>
 									<Clock class="h-8 w-8 text-slate-300" />
 								</div>
-								<h3 class="text-lg font-medium text-slate-700">No History</h3>
-								<p class="text-slate-500">Recent import and export jobs will appear here.</p>
+								<h3 class="text-lg font-medium text-slate-700">{$t('bulk.labels.no_history')}</h3>
+								<p class="text-slate-500">{$t('bulk.labels.no_history_desc')}</p>
 							</div>
 						{:else}
 							<div class="space-y-3">
@@ -795,7 +810,7 @@
 															Check details
 														</p>
 													{:else if job.status === 'COMPLETED'}
-														<p class="text-[10px] text-slate-400">Success</p>
+														<p class="text-[10px] text-slate-400">{$t('bulk.status.success')}</p>
 													{/if}
 												</div>
 												<div class="text-slate-300 transition-colors group-hover:text-sky-400">
@@ -867,7 +882,7 @@
 											class="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200 hover:from-violet-700 hover:to-indigo-700"
 											onclick={() => lookupJob && downloadExport(lookupJob)}
 										>
-											<Download class="mr-2 h-4 w-4" /> Download Export
+											<Download class="mr-2 h-4 w-4" /> {$t('bulk.buttons.download_export')}
 										</Button>
 									{/if}
 
@@ -877,7 +892,7 @@
 											<div
 												class="rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm"
 											>
-												<p class="mb-1 text-xs font-medium text-slate-400">Processed</p>
+												<p class="mb-1 text-xs font-medium text-slate-400">{$t('bulk.labels.processed')}</p>
 												<p class="text-2xl font-bold text-slate-700">{summary.totalRecords || 0}</p>
 											</div>
 											<div
@@ -895,7 +910,7 @@
 										<!-- Breakdown -->
 										<div class="space-y-3">
 											<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
-												Breakdown
+												{$t('bulk.labels.breakdown')}
 											</h4>
 
 											<div
@@ -903,7 +918,7 @@
 											>
 												<div class="flex items-center gap-2">
 													<Check class="h-4 w-4 text-emerald-600" />
-													<span class="text-sm font-medium text-emerald-900">Valid Records</span>
+													<span class="text-sm font-medium text-emerald-900">{$t('bulk.labels.valid_records')}</span>
 												</div>
 												<span class="font-bold text-emerald-700">{summary.validRecords}</span>
 											</div>
@@ -913,7 +928,7 @@
 											>
 												<div class="flex items-center gap-2">
 													<AlertCircle class="h-4 w-4 text-rose-600" />
-													<span class="text-sm font-medium text-rose-900">Invalid Records</span>
+													<span class="text-sm font-medium text-rose-900">{$t('bulk.labels.invalid_records')}</span>
 												</div>
 												<span class="font-bold text-rose-700">{summary.invalidRecords}</span>
 											</div>
@@ -923,7 +938,7 @@
 										{#if summary.newEntities && (Object.keys(summary.newEntities.categories || {}).length > 0 || Object.keys(summary.newEntities.suppliers || {}).length > 0)}
 											<div class="space-y-3">
 												<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
-													Changes
+													{$t('bulk.labels.changes')}
 												</h4>
 												<div class="flex flex-wrap gap-2">
 													{#if Object.keys(summary.newEntities.categories || {}).length > 0}
@@ -963,7 +978,7 @@
 								>
 									<ArrowRight class="h-6 w-6" />
 								</div>
-								<p class="font-medium text-slate-500">Select a job to view details</p>
+								<p class="font-medium text-slate-500">{$t('bulk.labels.select_job')}</p>
 							</div>
 						{/if}
 					</div>

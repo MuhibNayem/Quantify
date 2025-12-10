@@ -195,6 +195,8 @@ export interface BulkImportJob extends BaseEntity {
 	retryCount?: number;
 	maxRetries?: number;
 	message?: string;
+	CreatedAt: string;
+	UpdatedAt: string;
 }
 
 export interface LoyaltyAccount extends BaseEntity {
