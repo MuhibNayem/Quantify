@@ -5,12 +5,15 @@ from backend_client import BackendClient
 from openai import OpenAI
 import os
 
+from analytics import ForecastEngine
+
 # Initialize clients
 backend_client = BackendClient()
 ZAI_API_KEY = os.getenv("ZAI_API_KEY")
 ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4/")
 client = OpenAI(api_key=ZAI_API_KEY, base_url=ZAI_BASE_URL)
 MODEL_NAME = "glm-4.5-flash"
+forecast_engine = ForecastEngine()
 
 def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dict[str, Any]:
     """
@@ -33,8 +36,10 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
         # 3. Prepare Prompt
         sales_trends = sales_report.get("salesTrends", [])
         product_name = product_details.get("name", "Unknown Product")
-        current_stock = product_details.get("quantity", 0) # Note: get_inventory_status returns list or dict depending on impl. 
-        # Actually get_inventory_status(product_id) returns a single product dict based on backend_client.py
+        current_stock = product_details.get("quantity", 0) 
+        
+        # Generate Statistical Forecast
+        stats_forecast = forecast_engine.predict(sales_trends, days_to_forecast)
         
         prompt = f"""
         You are an expert Demand Planner. 
@@ -45,15 +50,19 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
         Historical Sales Data (Last 90 Days):
         {json.dumps(sales_trends, indent=2)}
         
+        Statistical Baseline Forecast (Linear Regression):
+        {json.dumps(stats_forecast, indent=2)}
+        
         Task:
         Predict the demand for this product for the next {days_to_forecast} days.
-        Consider seasonality, trends, and recent sales velocity.
+        Use the Statistical Baseline as a strong anchor, but adjust for seasonality or recent velocity changes if visible in the history.
+        Do NOT deviate significantly from the statistical baseline without a strong reason.
         
         Output Format (JSON):
         {{
             "predicted_demand": <integer>,
             "confidence_score": <float 0-1>,
-            "reasoning": "<concise explanation of the forecast>",
+            "reasoning": "<concise explanation of the forecast, referencing the statistical baseline>",
             "daily_forecast": [
                 {{"date": "YYYY-MM-DD", "quantity": <integer>}},
                 ...
@@ -73,6 +82,9 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
         
         content = response.choices[0].message.content
         forecast_data = json.loads(content)
+        
+        # Merge statistical data for debugging/transparency
+        forecast_data["statistical_baseline"] = stats_forecast
         
         return forecast_data
 
