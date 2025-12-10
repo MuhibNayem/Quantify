@@ -156,8 +156,12 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 		logrus.Errorf("Failed to unmarshal cached products for key %s: %v", cacheKey, err)
 	}
 
+	// Count with filters applied (GORM safely ignores Preloads for Count)
 	var total int64
-	h.db.Model(&domain.Product{}).Count(&total)
+	if err := db.Model(&domain.Product{}).Count(&total).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to count products", http.StatusInternalServerError, err))
+		return
+	}
 
 	if err := db.Limit(limit).Offset(offset).Find(&products).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch products", http.StatusInternalServerError, err))
