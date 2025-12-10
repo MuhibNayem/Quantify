@@ -61,6 +61,7 @@ func (h *CRMHandler) CreateCustomer(c *gin.Context) {
 		return
 	}
 
+	user.Password = ""
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -73,6 +74,7 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	if userID, parseErr := strconv.ParseUint(identifier, 10, 32); parseErr == nil {
 		user, err = h.crmService.GetCustomerByID(uint(userID))
 		if err == nil {
+			user.Password = ""
 			c.JSON(http.StatusOK, user)
 			return
 		}
@@ -83,6 +85,7 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	if strings.Contains(identifier, "@") && strings.Contains(identifier, ".") {
 		user, err = h.crmService.GetCustomerByEmail(identifier)
 		if err == nil {
+			user.Password = ""
 			c.JSON(http.StatusOK, user)
 			return
 		}
@@ -93,6 +96,7 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	if len(cleanedPhone) >= 10 && (cleanedPhone[0] == '+' || (cleanedPhone[0] >= '0' && cleanedPhone[0] <= '9')) {
 		user, err = h.crmService.GetCustomerByPhone(identifier)
 		if err == nil {
+			user.Password = ""
 			c.JSON(http.StatusOK, user)
 			return
 		}
@@ -105,6 +109,7 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 		return
 	}
 
+	user.Password = ""
 	c.JSON(http.StatusOK, user)
 }
 
@@ -115,6 +120,7 @@ func (h *CRMHandler) GetCustomerByUsername(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
 	}
+	user.Password = ""
 	c.JSON(http.StatusOK, user)
 }
 
@@ -125,6 +131,7 @@ func (h *CRMHandler) GetCustomerByEmail(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
 	}
+	user.Password = ""
 	c.JSON(http.StatusOK, user)
 }
 
@@ -135,6 +142,7 @@ func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
 	}
+	user.Password = ""
 	c.JSON(http.StatusOK, user)
 }
 
@@ -157,6 +165,7 @@ func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 		return
 	}
 
+	user.Password = ""
 	c.JSON(http.StatusOK, user)
 }
 

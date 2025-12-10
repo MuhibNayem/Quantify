@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/google/uuid"
 )
 
 var jwtKey []byte
@@ -23,32 +24,35 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func GenerateTokens(userID uint, role string) (string, string, error) {
-	accessToken, err := generateAccessToken(userID, role)
+func GenerateTokens(userID uint, role string) (string, string, string, error) {
+	accessToken, accessJTI, err := generateAccessToken(userID, role)
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	refreshToken, err := generateRefreshToken()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return accessToken, refreshToken, nil
+	return accessToken, refreshToken, accessJTI, nil
 }
 
-func generateAccessToken(userID uint, role string) (string, error) {
+func generateAccessToken(userID uint, role string) (string, string, error) {
 	expirationTime := time.Now().Add(8 * time.Hour)
+	jti := uuid.NewString()
 	claims := &Claims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ID:        jti,
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(jwtKey)
+	return tokenString, jti, err
 }
 
 func generateRefreshToken() (string, error) {
@@ -75,5 +79,16 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 		return nil, fmt.Errorf("invalid token")
 	}
 
+	return claims, nil
+}
+
+// GetTokenClaims parses the token and returns the claims without validating the signature or expiration.
+// This is useful for extracting information like JTI for logout.
+func GetTokenClaims(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	_, _, err := new(jwt.Parser).ParseUnverified(tokenString, claims)
+	if err != nil {
+		return nil, err
+	}
 	return claims, nil
 }

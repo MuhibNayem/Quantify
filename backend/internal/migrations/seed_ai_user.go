@@ -39,6 +39,8 @@ func SeedAIUser(db *gorm.DB) error {
 		Password:    string(hashedPassword),
 		RoleID:      adminRole.ID,
 		Role:        adminRole, // Explicitly set association
+		RoleName:    adminRole.Name,
+		LegacyRole:  adminRole.Name, // Populate legacy column
 		IsActive:    true,
 		FirstName:   "AI",
 		LastName:    "Agent",

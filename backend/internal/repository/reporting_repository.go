@@ -780,7 +780,10 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 		SELECT 
 			u.id, 
 			u.username, 
-			COALESCE(u.first_name || ' ' || u.last_name, u.username) as full_name,
+			CASE 
+				WHEN u.first_name IS NOT NULL AND u.first_name != '' THEN u.first_name || ' ' || COALESCE(u.last_name, '')
+				ELSE u.username 
+			END as full_name,
 			SUM(o.total_amount) as total_spent,
 			COUNT(o.id) as order_count,
 			MAX(o.order_date) as last_order_date
@@ -788,7 +791,7 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 		JOIN orders o ON o.customer_id = u.id
 		WHERE o.status = 'COMPLETED'
 		AND o.order_date BETWEEN ? AND ?
-		GROUP BY u.id, u.username, full_name
+		GROUP BY u.id, u.username, u.first_name, u.last_name
 		ORDER BY total_spent DESC
 		LIMIT 50
 	`

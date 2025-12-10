@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
 	"inventory/backend/internal/auth"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/repository"
+
+	"github.com/gin-gonic/gin"
 )
 
 // AuthMiddleware authenticates requests using JWT.
@@ -27,22 +28,28 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Check if token is in Redis
-		userID, err := repository.GetCache("access_token:" + tokenString)
+		claims, err := auth.ValidateJWT(tokenString)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid token", http.StatusUnauthorized, err))
+			c.Abort()
+			return
+		}
+
+		// Check if token is in Redis (Whitelist) using JTI
+		if claims.ID == "" {
+			c.Error(appErrors.NewAppError("Invalid token claims", http.StatusUnauthorized, nil))
+			c.Abort()
+			return
+		}
+
+		userID, err := repository.GetCache("access_token:" + claims.ID)
 		if err != nil {
 			c.Error(appErrors.NewAppError("Failed to check access token", http.StatusInternalServerError, err))
 			c.Abort()
 			return
 		}
 		if userID == "" {
-			c.Error(appErrors.NewAppError("Invalid access token", http.StatusUnauthorized, nil))
-			c.Abort()
-			return
-		}
-
-		claims, err := auth.ValidateJWT(tokenString)
-		if err != nil {
-			c.Error(appErrors.NewAppError("Invalid token", http.StatusUnauthorized, err))
+			c.Error(appErrors.NewAppError("Invalid or expired access token", http.StatusUnauthorized, nil))
 			c.Abort()
 			return
 		}

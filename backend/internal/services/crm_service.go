@@ -9,6 +9,7 @@ import (
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
 	"net/http"
+	"time"
 
 	"strconv"
 
@@ -49,7 +50,13 @@ func NewCRMService(repo repository.CRMRepository, db *gorm.DB, settings Settings
 }
 
 func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domain.User, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	password := req.Password
+	if password == "" {
+		// Generate a random password if not provided
+		password = "Customer@" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +72,8 @@ func (s *crmService) CreateCustomer(req *requests.CreateCustomerRequest) (*domai
 		RoleID:      role.ID,
 		Role:        role, // Explicitly set association
 		RoleName:    role.Name,
-		IsActive:    true,
+		LegacyRole:  role.Name, // Populate legacy column
+		IsActive:    false,     // Customers are inactive by default
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
 		Email:       req.Email,

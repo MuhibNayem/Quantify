@@ -20,13 +20,11 @@ import (
 
 type UserHandler struct {
 	userRepo *repository.UserRepository
-	db       *gorm.DB
 }
 
-func NewUserHandler(userRepo *repository.UserRepository, db *gorm.DB) *UserHandler {
+func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {
 	return &UserHandler{
 		userRepo: userRepo,
-		db:       db,
 	}
 }
 
@@ -45,38 +43,16 @@ func NewUserHandler(userRepo *repository.UserRepository, db *gorm.DB) *UserHandl
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users [get]
 func (h *UserHandler) ListUsers(c *gin.Context) {
-	var users []domain.User
-	db := h.db
-
-	// Pagination (optional - backward compatible)
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	if limit > 200 {
 		limit = 200 // Cap at 200 to prevent abuse
 	}
-	offset := (page - 1) * limit
+	status := strings.ToLower(c.Query("status"))
+	search := c.Query("q")
 
-	switch strings.ToLower(c.Query("status")) {
-	case "approved":
-		db = db.Where("is_active = ?", true)
-	case "pending":
-		db = db.Where("is_active = ?", false)
-	}
-
-	if q := c.Query("q"); q != "" {
-		pattern := fmt.Sprintf("%%%s%%", q)
-		db = db.Where("username ILIKE ? OR CAST(id AS TEXT) ILIKE ?", pattern, pattern)
-	}
-
-	// Get total count
-	var total int64
-	if err := db.Model(&domain.User{}).Count(&total).Error; err != nil {
-		c.Error(appErrors.NewAppError("Failed to count users", http.StatusInternalServerError, err))
-		return
-	}
-
-	// Apply pagination
-	if err := db.Preload("Role").Order("id ASC").Limit(limit).Offset(offset).Find(&users).Error; err != nil {
+	users, total, err := h.userRepo.ListUsers(page, limit, status, search)
+	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to list users", http.StatusInternalServerError, err))
 		return
 	}
@@ -117,19 +93,19 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 	}
 
 	// Check if any user already exists
-	var userCount int64
-	if err := h.db.Model(&domain.User{}).Count(&userCount).Error; err != nil {
+	userCount, err := h.userRepo.CountUsers()
+	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to check for existing users", http.StatusInternalServerError, err))
 		return
 	}
 
 	var user domain.User
-	var role domain.Role
+	var role *domain.Role
 
 	// Lookup the role
 	roleName := req.Role
 	// Enforce Admin for first user
-	if userCount == 0 {
+	if userCount <= 1 {
 		roleName = "Admin"
 		if req.Role != "Admin" {
 			c.Error(appErrors.NewAppError("The first user must be an Admin", http.StatusBadRequest, nil))
@@ -137,38 +113,24 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 		}
 	}
 
-	if err := h.db.Where("name = ?", roleName).First(&role).Error; err != nil {
+	role, err = h.userRepo.GetRoleByName(roleName)
+	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid role", http.StatusBadRequest, err))
 		return
 	}
 
-	if userCount == 0 {
-		user = domain.User{
-			Username:    req.Username,
-			RoleID:      role.ID,
-			Role:        role, // Explicitly set association
-			RoleName:    role.Name,
-			IsActive:    true, // First user is active by default
-			FirstName:   req.FirstName,
-			LastName:    req.LastName,
-			Email:       req.Email,
-			PhoneNumber: req.PhoneNumber,
-			Address:     req.Address,
-		}
-	} else {
-		// Subsequent users are not active by default
-		user = domain.User{
-			Username:    req.Username,
-			RoleID:      role.ID,
-			Role:        role, // Explicitly set association
-			RoleName:    role.Name,
-			IsActive:    false, // Subsequent users are inactive by default
-			FirstName:   req.FirstName,
-			LastName:    req.LastName,
-			Email:       req.Email,
-			PhoneNumber: req.PhoneNumber,
-			Address:     req.Address,
-		}
+	user = domain.User{
+		Username:    req.Username,
+		RoleID:      role.ID,
+		Role:        *role,
+		RoleName:    role.Name,
+		LegacyRole:  role.Name, // Populate legacy column
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Email:       req.Email,
+		PhoneNumber: req.PhoneNumber,
+		Address:     req.Address,
+		IsActive:    userCount <= 1, // First human user is active by default (AI agent is 0)
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -206,9 +168,10 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	var user domain.User
+	var user *domain.User
 	// Preload Role AND Permissions
-	if err := h.db.Preload("Role.Permissions").Where("username = ?", req.Username).First(&user).Error; err != nil {
+	user, err := h.userRepo.GetUserByUsername(req.Username)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Invalid credentials", http.StatusUnauthorized, nil))
 			return
@@ -238,15 +201,15 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role.Name)
+	accessToken, refreshToken, accessJTI, err := auth.GenerateTokens(user.ID, user.Role.Name)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
 	}
 
-	// Store tokens in Redis
+	// Store tokens in Redis using JTI for Access Token
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
-	if err := repository.SetCache("access_token:"+accessToken, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
+	if err := repository.SetCache("access_token:"+accessJTI, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
@@ -320,20 +283,20 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	var user domain.User
-	if err := h.db.First(&user, userID).Error; err != nil {
+	user, err := h.userRepo.GetUserByID(userID)
+	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch user", http.StatusInternalServerError, err))
 		return
 	}
 
-	accessToken, refreshToken, err := auth.GenerateTokens(user.ID, user.Role.Name)
+	accessToken, refreshToken, accessJTI, err := auth.GenerateTokens(user.ID, user.Role.Name)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate tokens", http.StatusInternalServerError, err))
 		return
 	}
 
 	accessTokenExpiresAt := time.Now().Add(8 * time.Hour)
-	if err := repository.SetCache("access_token:"+accessToken, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
+	if err := repository.SetCache("access_token:"+accessJTI, user.ID, time.Until(accessTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store access token", http.StatusInternalServerError, err))
 		return
 	}
@@ -384,8 +347,12 @@ func (h *UserHandler) LogoutUser(c *gin.Context) {
 	// Invalidate access token
 	authHeader := c.GetHeader("Authorization")
 	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	if err := repository.DeleteCache("access_token:" + tokenString); err != nil {
-		// Even if the access token is already expired, we should proceed with logout
+
+	claims, err := auth.GetTokenClaims(tokenString)
+	if err == nil && claims.ID != "" {
+		if err := repository.DeleteCache("access_token:" + claims.ID); err != nil {
+			// Even if the access token is already expired, we should proceed with logout
+		}
 	}
 
 	csrfToken := c.GetHeader("X-CSRF-Token")
@@ -412,9 +379,8 @@ func (h *UserHandler) LogoutUser(c *gin.Context) {
 // @Router /users/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
 	id := c.Param("id")
-	var user domain.User
-
-	if err := h.db.Preload("Role").First(&user, id).Error; err != nil {
+	user, err := h.userRepo.GetUserByID(id)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -455,8 +421,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	var user domain.User
-	if err := h.db.Preload("Role").First(&user, id).Error; err != nil {
+	user, err := h.userRepo.GetUserByID(id)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -497,13 +463,14 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		user.Password = string(hashedPassword)
 	}
 	if req.Role != "" {
-		var role domain.Role
-		if err := h.db.Where("name = ?", req.Role).First(&role).Error; err != nil {
+		role, err := h.userRepo.GetRoleByName(req.Role)
+		if err != nil {
 			c.Error(appErrors.NewAppError("Invalid role", http.StatusBadRequest, err))
 			return
 		}
 		user.RoleID = role.ID
-		user.Role = role
+		user.Role = *role
+		user.RoleName = role.Name
 	}
 	if req.FirstName != "" {
 		user.FirstName = req.FirstName
@@ -521,7 +488,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 		user.Address = req.Address
 	}
 
-	if err := h.userRepo.UpdateUser(&user); err != nil {
+	if err := h.userRepo.UpdateUser(user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to update user", http.StatusInternalServerError, err))
 		return
 	}
@@ -545,9 +512,8 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Router /users/{id} [delete]
 func (h *UserHandler) DeleteUser(c *gin.Context) {
 	id := c.Param("id")
-	var user domain.User
-
-	if err := h.db.First(&user, id).Error; err != nil {
+	user, err := h.userRepo.GetUserByID(id)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -556,7 +522,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 		return
 	}
 
-	if err := h.userRepo.DeleteUser(&user); err != nil {
+	if err := h.userRepo.DeleteUser(user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete user", http.StatusInternalServerError, err))
 		return
 	}
@@ -579,9 +545,8 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 // @Router /users/{id}/approve [put]
 func (h *UserHandler) ApproveUser(c *gin.Context) {
 	id := c.Param("id")
-	var user domain.User
-
-	if err := h.db.First(&user, id).Error; err != nil {
+	user, err := h.userRepo.GetUserByID(id)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -591,7 +556,7 @@ func (h *UserHandler) ApproveUser(c *gin.Context) {
 	}
 
 	user.IsActive = true
-	if err := h.userRepo.UpdateUser(&user); err != nil {
+	if err := h.userRepo.UpdateUser(user); err != nil {
 		c.Error(appErrors.NewAppError("Failed to approve user", http.StatusInternalServerError, err))
 		return
 	}

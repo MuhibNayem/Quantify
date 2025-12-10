@@ -154,8 +154,8 @@ type User struct {
 	Username string `gorm:"uniqueIndex;not null"`
 	Password string `gorm:"not null"`
 	// Role           string `gorm:"not null"` // Deprecated in favor of RoleID
-	// LegacyRole     string `gorm:"column:role"`  // Map to old column for migration
-	RoleID         uint `gorm:"index;not null;default:0"` // Foreign key to roles table
+	LegacyRole     string `gorm:"column:role"`              // Map to old column for migration
+	RoleID         uint   `gorm:"index;not null;default:0"` // Foreign key to roles table
 	Role           Role
 	RoleName       string `json:"role" gorm:"-"` // Computed field for API compatibility
 	IsActive       bool   `gorm:"default:false"`
