@@ -53,6 +53,7 @@ func (s *settingsService) GetPublicSettings() (map[string]string, error) {
 
 	publicKeys := map[string]bool{
 		"currency_symbol":                true,
+		"currency_code":                  true,
 		"timezone":                       true,
 		"locale":                         true,
 		"business_name":                  true,

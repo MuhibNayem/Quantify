@@ -44,6 +44,7 @@
 	let settings: any = $state({
 		business_name: '',
 		currency_symbol: '$',
+		currency_code: 'USD',
 		timezone: 'UTC',
 		privacy_policy: '',
 		terms_of_service: '',
@@ -57,15 +58,15 @@
 	let activeTab = $state('general');
 
 	const currencyOptions = [
-		{ value: '$', label: 'USD - United States Dollar' },
-		{ value: '€', label: 'EUR - Euro' },
-		{ value: '£', label: 'GBP - British Pound' },
-		{ value: '৳', label: 'BDT - Bangladeshi Taka' },
-		{ value: '₹', label: 'INR - Indian Rupee' },
-		{ value: '₨', label: 'PKR - Pakistani Rupee' },
-		{ value: '¥', label: '¥ - JPY / CNY' },
-		{ value: 'C$', label: 'CAD - Canadian Dollar' },
-		{ value: 'A$', label: 'AUD - Australian Dollar' }
+		{ value: 'USD', label: 'USD - United States Dollar', symbol: '$' },
+		{ value: 'EUR', label: 'EUR - Euro', symbol: '€' },
+		{ value: 'GBP', label: 'GBP - British Pound', symbol: '£' },
+		{ value: 'BDT', label: 'BDT - Bangladeshi Taka', symbol: '৳' },
+		{ value: 'INR', label: 'INR - Indian Rupee', symbol: '₹' },
+		{ value: 'PKR', label: 'PKR - Pakistani Rupee', symbol: '₨' },
+		{ value: 'JPY', label: 'JPY - Japanese Yen', symbol: '¥' },
+		{ value: 'CAD', label: 'CAD - Canadian Dollar', symbol: 'C$' },
+		{ value: 'AUD', label: 'AUD - Australian Dollar', symbol: 'A$' }
 	];
 
 	const timezoneOptions = [
@@ -93,6 +94,7 @@
 					});
 				// Ensure defaults if missing
 				if (!settings['currency_symbol']) settings['currency_symbol'] = '$';
+				if (!settings['currency_code']) settings['currency_code'] = 'USD';
 				if (!settings['timezone']) settings['timezone'] = 'UTC';
 				if (!settings['ai_wake_up_time']) settings['ai_wake_up_time'] = '07:00';
 			}
@@ -267,14 +269,23 @@
 								<div class="flex-1">
 									<Select
 										options={currencyOptions}
-										bind:value={settings['currency_symbol']}
+										bind:value={settings['currency_code']}
 										placeholder="Select Currency"
 										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
 									/>
 								</div>
 								<Button
 									class="h-12 w-12 rounded-xl bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 active:scale-95"
-									onclick={() => saveSetting('currency_symbol', settings['currency_symbol'])}
+									onclick={() => {
+										const selected = currencyOptions.find(
+											(c) => c.value === settings['currency_code']
+										);
+										if (selected) {
+											saveSetting('currency_code', selected.value);
+											saveSetting('currency_symbol', selected.symbol);
+											settings['currency_symbol'] = selected.symbol; // Update local state
+										}
+									}}
 								>
 									<Save size={20} />
 								</Button>

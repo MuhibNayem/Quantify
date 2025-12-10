@@ -3,6 +3,7 @@ import api from '$lib/api';
 
 export interface SystemSettings {
     currency_symbol: string;
+    currency_code: string;
     timezone: string;
     locale: string;
     business_name: string;
@@ -17,6 +18,7 @@ export interface SystemSettings {
 
 const defaultSettings: SystemSettings = {
     currency_symbol: '$',
+    currency_code: 'USD',
     timezone: 'UTC',
     locale: 'en-US',
     business_name: 'Quantify Business',
@@ -43,6 +45,7 @@ function createSettingsStore() {
 
                 const newSettings: SystemSettings = {
                     currency_symbol: data.currency_symbol || defaultSettings.currency_symbol,
+                    currency_code: data.currency_code || defaultSettings.currency_code,
                     timezone: data.timezone || defaultSettings.timezone,
                     locale: 'en-US',
                     business_name: data.business_name || defaultSettings.business_name,

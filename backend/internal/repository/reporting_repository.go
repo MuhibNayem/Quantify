@@ -30,21 +30,30 @@ type TopSellingProduct struct {
 	TotalSold float64
 }
 
-func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy string) ([]SalesTrend, []TopSellingProduct, error) {
+func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy, timezone string) ([]SalesTrend, []TopSellingProduct, error) {
 	var salesTrends []SalesTrend
 	var topSellingProducts []TopSellingProduct
 
 	// Sales Trends
-	dateTrunc := "DATE"
+	truncUnit := "day"
 	switch groupBy {
 	case "week":
-		dateTrunc = "WEEK"
+		truncUnit = "week"
 	case "month":
-		dateTrunc = "MONTH"
+		truncUnit = "month"
 	}
 
+	// Construct date expression with timezone
+	// adjusted_at is assumed to be stored in UTC (or DB server time).
+	// We convert it to the requested timezone before truncating.
+	// Postgres syntax: DATE_TRUNC('unit', adjusted_at AT TIME ZONE 'UTC' AT TIME ZONE 'timezone')
+	// Note: We assume adjusted_at is TIMESTAMP WITHOUT TIME ZONE (stored as UTC) or TIMESTAMPTZ.
+	// If TIMESTAMPTZ, 'AT TIME ZONE timezone' is enough.
+	// Safest for GORM (usually timestamptz in postgres driver): adjusted_at AT TIME ZONE timezone
+	dateExpr := fmt.Sprintf("DATE_TRUNC('%s', adjusted_at AT TIME ZONE '%s')", truncUnit, timezone)
+
 	query := r.DB.Model(&domain.StockAdjustment{}).
-		Select(fmt.Sprintf("%s(adjusted_at) as date, SUM(quantity) as total_sales", dateTrunc)).
+		Select(fmt.Sprintf("%s as date, SUM(quantity) as total_sales", dateExpr)).
 		Where("type = ?", "STOCK_OUT").
 		Where("reason_code = ?", "SALE").
 		Where("adjusted_at BETWEEN ? AND ?", startDate, endDate)
@@ -60,7 +69,7 @@ func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categor
 		query = query.Where("stock_adjustments.product_id = ?", *productID)
 	}
 
-	err := query.Group(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Order(fmt.Sprintf("%s(adjusted_at)", dateTrunc)).Scan(&salesTrends).Error
+	err := query.Group(dateExpr).Order(dateExpr).Scan(&salesTrends).Error
 	if err != nil {
 		return nil, nil, err
 	}
@@ -434,14 +443,14 @@ type HeatmapPoint struct {
 }
 
 // GetHourlySalesHeatmap aggregates sales by hour and day of week.
-func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time) ([]HeatmapPoint, error) {
+func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, timezone string) ([]HeatmapPoint, error) {
 	var points []HeatmapPoint
 
-	// Postgres-specific date functions
-	query := `
+	// Postgres-specific date functions with timezone
+	query := fmt.Sprintf(`
 		SELECT 
-			EXTRACT(DOW FROM adjusted_at) as day_of_week,
-			EXTRACT(HOUR FROM adjusted_at) as hour_of_day,
+			EXTRACT(DOW FROM adjusted_at AT TIME ZONE '%s') as day_of_week,
+			EXTRACT(HOUR FROM adjusted_at AT TIME ZONE '%s') as hour_of_day,
 			SUM(quantity * p.selling_price) as total_sales
 		FROM stock_adjustments sa
 		JOIN products p ON p.id = sa.product_id
@@ -450,7 +459,7 @@ func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time) 
 		AND sa.adjusted_at BETWEEN ? AND ?
 		GROUP BY day_of_week, hour_of_day
 		ORDER BY day_of_week, hour_of_day
-	`
+	`, timezone, timezone)
 
 	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
 	if err != nil {

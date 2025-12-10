@@ -64,7 +64,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	crmService := services.NewCRMService(crmRepo, db, settingsService, cfg)
 	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo, userRepo)
 	integrationService := services.NewIntegrationService()
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
 	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
 	replenishmentService := services.NewReplenishmentService(replenishmentRepo)
 	roleService := services.NewRoleService(roleRepo)

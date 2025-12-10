@@ -25,17 +25,19 @@ type ReportingService struct {
 	uploader             storage.Uploader
 	jobRepo              *repository.JobRepository
 	hub                  *websocket.Hub
+	settings             SettingsService
 	salesTrendsTTL       time.Duration
 	inventoryTurnoverTTL time.Duration
 	profitMarginTTL      time.Duration
 }
 
-func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, hub *websocket.Hub, cfg *config.Config) *ReportingService {
+func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, hub *websocket.Hub, cfg *config.Config, settings SettingsService) *ReportingService {
 	return &ReportingService{
 		repo:                 repo,
 		uploader:             uploader,
 		jobRepo:              jobRepo,
 		hub:                  hub,
+		settings:             settings,
 		salesTrendsTTL:       cfg.SalesTrendsCacheTTL,
 		inventoryTurnoverTTL: cfg.InventoryTurnoverCacheTTL,
 		profitMarginTTL:      cfg.ProfitMarginCacheTTL,
@@ -201,7 +203,12 @@ func (s *ReportingService) GetSalesTrendsReport(startDate, endDate time.Time, ca
 		}
 	}
 
-	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, productID, groupBy)
+	timezone, err := s.settings.GetSetting("timezone")
+	if err != nil || timezone == "" {
+		timezone = "UTC"
+	}
+
+	salesTrends, topSellingProducts, err := s.repo.GetSalesTrends(startDate, endDate, categoryID, locationID, productID, groupBy, timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -451,7 +458,12 @@ func (s *ReportingService) GetHourlySalesHeatmap(startDate, endDate time.Time) (
 		}
 	}
 
-	data, err := s.repo.GetHourlySalesHeatmap(startDate, endDate)
+	timezone, err := s.settings.GetSetting("timezone")
+	if err != nil || timezone == "" {
+		timezone = "UTC"
+	}
+
+	data, err := s.repo.GetHourlySalesHeatmap(startDate, endDate, timezone)
 	if err != nil {
 		return nil, err
 	}

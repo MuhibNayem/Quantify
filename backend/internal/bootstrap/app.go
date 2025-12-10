@@ -80,9 +80,11 @@ func NewApp(cfg *config.Config) *App {
 	jobRepo := repository.NewJobRepository(repository.DB)
 	reportsRepo := repository.NewReportsRepository(repository.DB)
 	notificationRepo := repository.NewNotificationRepository(repository.DB)
+	settingsRepo := repository.NewSettingsRepository(repository.DB)
 
 	// Initialize Services
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg)
+	settingsService := services.NewSettingsService(settingsRepo)
+	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
 	// Wait, SettingsService is an interface in handlers. Let's see how it was passed before.
 	// In original main.go:
 	// It wasn't explicitly initialized in the snippet I saw, but handlers.NewSalesHandler took it.

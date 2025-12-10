@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-// ... (Types remain same) ...
 
 // WithElementRef...
 export type WithElementRef<T extends SvelteHTMLElements[keyof SvelteHTMLElements]> = T & {
@@ -27,7 +26,7 @@ export function formatDate(dateString: string): string {
 		year: 'numeric',
 		month: 'short',
 		day: 'numeric',
-		// timeZone: globalConfig.timezone // Optional: Enforce server timezone or let it be user browser local
+		timeZone: globalConfig.timezone
 	});
 }
 
@@ -41,8 +40,8 @@ export function formatCurrency(amount: number): string {
 	// Custom formatting:
 	return new Intl.NumberFormat(globalConfig.locale, {
 		style: 'currency',
-		currency: 'USD', // Fallback as we don't have code in settings yet
-	}).format(amount).replace('$', globalConfig.currency_symbol);
+		currency: globalConfig.currency_code || 'USD',
+	}).format(amount).replace(globalConfig.currency_code === 'USD' ? '$' : '', globalConfig.currency_symbol);
 }
 
 export function formatDateTime(dateString: string): string {
@@ -54,7 +53,7 @@ export function formatDateTime(dateString: string): string {
 		day: 'numeric',
 		hour: 'numeric',
 		minute: 'numeric',
-		// timeZone: globalConfig.timezone // Optional
+		timeZone: globalConfig.timezone
 	});
 }
 

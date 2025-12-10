@@ -111,6 +111,8 @@ func AutoMigrate() {
 		&domain.CashDrawerSession{},
 		&domain.CashDrop{},
 		&domain.Promotion{},
+		&domain.PurchaseReturn{},
+		&domain.PurchaseReturnItem{},
 	)
 
 	if err != nil {
@@ -294,6 +296,7 @@ func seedSettings() {
 	settings := []domain.SystemSetting{
 		{Key: "business_name", Value: "Quantify Business", Group: "General", Type: "string"},
 		{Key: "currency_symbol", Value: "$", Group: "General", Type: "string"},
+		{Key: "currency_code", Value: "USD", Group: "General", Type: "string", Description: "ISO 4217 Currency Code"},
 		{Key: "timezone", Value: "UTC", Group: "General", Type: "string"},
 		{Key: "return_window_days", Value: "30", Group: "Policy", Type: "number", Description: "Number of days allowing returns after purchase"},
 		{Key: "sales_trends_cache_ttl", Value: "5m", Group: "System", Type: "string", Description: "Cache TTL for sales trends report"},
