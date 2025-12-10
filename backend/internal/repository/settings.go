@@ -35,7 +35,22 @@ func (r *settingsRepository) GetAllSettings() ([]domain.SystemSetting, error) {
 }
 
 func (r *settingsRepository) UpdateSetting(key, value string) error {
-	return r.db.Model(&domain.SystemSetting{}).Where("key = ?", key).Update("value", value).Error
+	var setting domain.SystemSetting
+	err := r.db.Where("key = ?", key).First(&setting).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			setting = domain.SystemSetting{
+				Key:   key,
+				Value: value,
+				Group: "General",
+				Type:  "string",
+			}
+			return r.db.Create(&setting).Error
+		}
+		return err
+	}
+	setting.Value = value
+	return r.db.Save(&setting).Error
 }
 
 func (r *settingsRepository) GetSettingByKey(key string) (*domain.SystemSetting, error) {

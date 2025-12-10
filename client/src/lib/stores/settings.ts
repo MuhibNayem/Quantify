@@ -47,7 +47,7 @@ function createSettingsStore() {
                     currency_symbol: data.currency_symbol || defaultSettings.currency_symbol,
                     currency_code: data.currency_code || defaultSettings.currency_code,
                     timezone: data.timezone || defaultSettings.timezone,
-                    locale: 'en-US',
+                    locale: data.locale || defaultSettings.locale,
                     business_name: data.business_name || defaultSettings.business_name,
                     return_window_days: parseFloat(data.return_window_days) || defaultSettings.return_window_days,
                     tax_rate_percentage: parseFloat(data.tax_rate_percentage) || defaultSettings.tax_rate_percentage,

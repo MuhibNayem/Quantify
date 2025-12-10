@@ -334,10 +334,13 @@ func (r *ReportsRepository) GetDeadStockReport(daysThreshold int) ([]DeadStockIt
 		LEFT JOIN stock_adjustments sa ON sa.product_id = p.id AND sa.type = 'STOCK_OUT' AND sa.reason_code = 'SALE'
 		WHERE p.deleted_at IS NULL
 		GROUP BY p.id
-		HAVING COALESCE(SUM(b.quantity), 0) > 0 AND (MAX(sa.adjusted_at) < ? OR MAX(sa.adjusted_at) IS NULL)
+		HAVING COALESCE(SUM(b.quantity), 0) > 0 
+		AND (MAX(sa.adjusted_at) < ? OR MAX(sa.adjusted_at) IS NULL)
+		AND MAX(b.created_at) < ?
+		ORDER BY last_sale_date ASC NULLS FIRST
 	`
 
-	rows, err := r.DB.Raw(query, thresholdDate).Rows()
+	rows, err := r.DB.Raw(query, thresholdDate, thresholdDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +380,7 @@ type SupplierScorecard struct {
 
 // GetSupplierPerformanceReport calculates metrics for suppliers based on PO history.
 func (r *ReportsRepository) GetSupplierPerformanceReport(startDate, endDate time.Time) ([]SupplierScorecard, error) {
-	var scorecards []SupplierScorecard
+	scorecards := []SupplierScorecard{}
 
 	// Logic:
 	// 1. Fetch all COMPLETED/RECEIVED POs in range

@@ -46,6 +46,7 @@
 		currency_symbol: '$',
 		currency_code: 'USD',
 		timezone: 'UTC',
+		locale: 'en-US',
 		privacy_policy: '',
 		terms_of_service: '',
 		loyalty_points_earning_rate: '1',
@@ -83,6 +84,15 @@
 		{ value: 'America/Los_Angeles', label: 'America/Los_Angeles (PST/PDT)' }
 	];
 
+	const localeOptions = [
+		{ value: 'en-US', label: 'English (United States)' },
+		{ value: 'bn-BD', label: 'Bengali (Bangladesh)' },
+		{ value: 'en-GB', label: 'English (United Kingdom)' },
+		{ value: 'hi-IN', label: 'Hindi (India)' },
+		{ value: 'ja-JP', label: 'Japanese (Japan)' },
+		{ value: 'fr-FR', label: 'French (France)' }
+	];
+
 	onMount(async () => {
 		try {
 			const settingsData = await settingsApi.getSettings();
@@ -96,6 +106,7 @@
 				if (!settings['currency_symbol']) settings['currency_symbol'] = '$';
 				if (!settings['currency_code']) settings['currency_code'] = 'USD';
 				if (!settings['timezone']) settings['timezone'] = 'UTC';
+				if (!settings['locale']) settings['locale'] = 'en-US';
 				if (!settings['ai_wake_up_time']) settings['ai_wake_up_time'] = '07:00';
 			}
 		} catch (e) {
