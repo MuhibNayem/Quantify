@@ -28,11 +28,37 @@ class ForecastEngine:
                 "error": "No historical data provided"
             }
 
-        df = pd.DataFrame(sales_data)
+        # Normalize keys to handle backend response format
+        normalized_data = []
+        for item in sales_data:
+            # Handle potential case differences from backend (e.g., 'Date' vs 'date', 'TotalSales' vs 'quantity')
+            new_item = {}
+            if 'Date' in item:
+                new_item['date'] = item['Date']
+            elif 'date' in item:
+                new_item['date'] = item['date']
+            
+            if 'TotalSales' in item:
+                new_item['quantity'] = item['TotalSales']
+            elif 'quantity' in item:
+                new_item['quantity'] = item['quantity']
+                
+            if 'date' in new_item and 'quantity' in new_item:
+                normalized_data.append(new_item)
+
+        if not normalized_data:
+             return {
+                "error": "No valid sales data found (check keys)"
+            }
+
+        df = pd.DataFrame(normalized_data)
         df['date'] = pd.to_datetime(df['date'])
         df = df.sort_values('date')
         
         # Fill missing dates with 0 sales
+        if df.empty:
+             return {"error": "DataFrame empty after processing"}
+             
         idx = pd.date_range(df['date'].min(), df['date'].max())
         df = df.set_index('date').reindex(idx, fill_value=0).reset_index()
         df.rename(columns={'index': 'date'}, inplace=True)
@@ -51,7 +77,10 @@ class ForecastEngine:
         future_dates = [last_date + pd.Timedelta(days=x) for x in range(1, days_to_forecast + 1)]
         future_ordinals = [[d.toordinal()] for d in future_dates]
         
-        predictions = model.predict(future_ordinals)
+        # Create DataFrame for prediction to match training feature names
+        future_X = pd.DataFrame(future_ordinals, columns=['day_ordinal'])
+        
+        predictions = model.predict(future_X)
         predictions = np.maximum(predictions, 0) # No negative sales
         
         predicted_total = int(np.sum(predictions))

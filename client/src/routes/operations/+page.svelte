@@ -25,11 +25,12 @@
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { t } from '$lib/i18n';
 
 	$effect(() => {
 		if (!auth.hasPermission('inventory.view')) {
-			toast.error('Access Denied', {
-				description: 'You do not have permission to access operations.'
+			toast.error($t('operations.toasts.access_denied'), {
+				description: $t('operations.toasts.access_denied_desc')
 			});
 			goto('/');
 		}
@@ -56,16 +57,16 @@
 	let barcodeImage = $state<string | null>(null);
 
 	const loadStock = async () => {
-		if (!stockQuery.productId) return toast.warning('Enter a product ID first');
+		if (!stockQuery.productId) return toast.warning($t('operations.toasts.product_id_required'));
 		stockLoading = true;
 		try {
 			const snapshot = await productsApi.stock(Number(stockQuery.productId), {
 				locationId: stockQuery.locationId || undefined
 			});
 			stockSnapshot = snapshot;
-			toast.success('Inventory snapshot updated');
+			toast.success($t('operations.toasts.snapshot_updated'));
 		} catch (error) {
-			toast.error('Failed to Fetch Stock', {
+			toast.error($t('operations.toasts.fetch_stock_fail'), {
 				description: error.response?.data?.error || 'Unable to fetch stock'
 			});
 		} finally {
@@ -74,7 +75,7 @@
 	};
 
 	const submitAdjustment = async () => {
-		if (!adjustmentForm.productId) return toast.warning('Select a product');
+		if (!adjustmentForm.productId) return toast.warning($t('operations.toasts.select_product'));
 		try {
 			await productsApi.adjustStock(Number(adjustmentForm.productId), {
 				type: adjustmentForm.type,
@@ -82,10 +83,10 @@
 				reasonCode: adjustmentForm.reasonCode,
 				notes: adjustmentForm.notes
 			});
-			toast.success('Stock adjusted');
+			toast.success($t('operations.toasts.stock_adjusted'));
 			loadStock();
 		} catch (error) {
-			toast.error('Failed to Apply Adjustment', {
+			toast.error($t('operations.toasts.adjust_fail'), {
 				description: error.response?.data?.error || 'Unable to apply adjustment'
 			});
 		}
@@ -99,34 +100,34 @@
 				destLocationId: Number(transferForm.destLocationId),
 				quantity: Number(transferForm.quantity)
 			});
-			toast.success('Transfer queued');
+			toast.success($t('operations.toasts.transfer_queued'));
 		} catch (error) {
-			toast.error('Failed to Create Transfer', {
+			toast.error($t('operations.toasts.transfer_fail'), {
 				description: error.response?.data?.error || 'Unable to create transfer'
 			});
 		}
 	};
 
 	const runBarcodeLookup = async () => {
-		if (!barcodeLookup.value) return toast.warning('Provide a barcode value');
+		if (!barcodeLookup.value) return toast.warning($t('operations.toasts.barcode_required'));
 		try {
 			const product = await barcodeApi.lookup(barcodeLookup.value);
 			barcodeLookup.result = product;
-			toast.success('SKU resolved');
+			toast.success($t('operations.toasts.sku_resolved'));
 		} catch (error) {
-			toast.error('Failed to Lookup Barcode', {
-				description: error.response?.data?.error || 'Product not found'
+			toast.error($t('operations.toasts.lookup_fail'), {
+				description: error.response?.data?.error || $t('operations.toasts.product_not_found')
 			});
 		}
 	};
 
 	const generateBarcode = async () => {
-		if (!barcodeLookup.value) return toast.warning('Provide SKU or product ID');
+		if (!barcodeLookup.value) return toast.warning($t('operations.toasts.sku_or_id_required'));
 		try {
 			const blob = await barcodeApi.generate({ sku: barcodeLookup.value });
 			barcodeImage = URL.createObjectURL(blob);
 		} catch (error) {
-			toast.error('Failed to Generate Barcode', {
+			toast.error($t('operations.toasts.generate_fail'), {
 				description: error.response?.data?.error || 'Unable to generate barcode'
 			});
 		}
@@ -162,10 +163,10 @@
 		<h1
 			class="animate-fadeUp bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl"
 		>
-			Stock Adjustments, Transfers & Barcode Intelligence
+			{$t('operations.hero.title')}
 		</h1>
 		<p class="animate-fadeUp text-base text-slate-600 delay-200">
-			Unified real-time control for stock, movement & labeling.
+			{$t('operations.hero.subtitle')}
 		</p>
 	</div>
 </section>
@@ -182,23 +183,23 @@
 			>
 				<CardTitle class="flex items-center gap-2 text-slate-800">
 					<ClipboardCheck class="h-5 w-5 text-sky-600" />
-					Inventory Snapshot
+					{$t('operations.snapshot.title')}
 				</CardTitle>
 				<CardDescription class="text-slate-600"
-					>View product balance and batch details</CardDescription
+					>{$t('operations.snapshot.subtitle')}</CardDescription
 				>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
 				<div class="grid gap-3 sm:grid-cols-2">
 					<ProductSelector
 						bind:value={stockQuery.productId}
-						placeholder="Search product..."
+						placeholder={$t('operations.snapshot.search_placeholder')}
 						className="w-full"
 						onSelect={() => setTimeout(loadStock, 100)}
 					/>
 					<Input
 						type="number"
-						placeholder="Location ID (optional)"
+						placeholder={$t('operations.snapshot.location_id')}
 						bind:value={stockQuery.locationId}
 						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
 						onkeydown={(e) => e.key === 'Enter' && loadStock()}
@@ -208,28 +209,28 @@
 					class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 font-semibold text-white shadow-md transition-all hover:scale-[1.02] hover:from-sky-600 hover:to-blue-700 hover:shadow-lg"
 					onclick={loadStock}
 				>
-					Fetch stock levels
+					{$t('operations.snapshot.fetch_button')}
 				</Button>
 				{#if stockLoading}
 					<Skeleton class="h-32 w-full bg-white/70" />
 				{:else if stockSnapshot}
 					<div class="rounded-2xl border border-sky-200 bg-white/80 p-4 shadow-sm backdrop-blur">
-						<p class="text-sm text-slate-500">Current quantity</p>
+						<p class="text-sm text-slate-500">{$t('operations.snapshot.current_qty')}</p>
 						<p class="text-3xl font-semibold text-sky-700">{stockSnapshot.currentQuantity}</p>
 					</div>
 					<Table class="mt-4 overflow-hidden rounded-xl border border-sky-100">
 						<TableHeader class="bg-gradient-to-r from-sky-100 to-blue-100">
 							<TableRow>
-								<TableHead>Batch</TableHead>
-								<TableHead>Qty</TableHead>
-								<TableHead>Expiry</TableHead>
+								<TableHead>{$t('operations.snapshot.table.batch')}</TableHead>
+								<TableHead>{$t('operations.snapshot.table.qty')}</TableHead>
+								<TableHead>{$t('operations.snapshot.table.expiry')}</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
 							{#if stockSnapshot.batches.length === 0}
 								<TableRow>
 									<TableCell colspan="3" class="py-4 text-center text-sm text-slate-500"
-										>No batch detail available</TableCell
+										>{$t('operations.snapshot.table.empty')}</TableCell
 									>
 								</TableRow>
 							{:else}
@@ -257,16 +258,16 @@
 				>
 					<CardTitle class="flex items-center gap-2 text-slate-800">
 						<Activity class="h-5 w-5 text-emerald-600" />
-						Manual Adjustment
+						{$t('operations.adjustment.title')}
 					</CardTitle>
 					<CardDescription class="text-slate-600"
-						>Perform adhoc cycle counts or receipts</CardDescription
+						>{$t('operations.adjustment.subtitle')}</CardDescription
 					>
 				</CardHeader>
 				<CardContent class="space-y-4 p-6">
 					<ProductSelector
 						bind:value={adjustmentForm.productId}
-						placeholder="Select product to adjust..."
+						placeholder={$t('operations.adjustment.select_product')}
 						className="w-full border-emerald-200"
 					/>
 					<div class="grid grid-cols-2 gap-3">
@@ -274,29 +275,29 @@
 							class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400"
 							bind:value={adjustmentForm.type}
 						>
-							<option value="STOCK_IN">Stock In (+)</option>
-							<option value="STOCK_OUT">Stock Out (-)</option>
+							<option value="STOCK_IN">{$t('operations.adjustment.stock_in')}</option>
+							<option value="STOCK_OUT">{$t('operations.adjustment.stock_out')}</option>
 						</select>
 						<Input
 							type="number"
-							placeholder="Quantity"
+							placeholder={$t('operations.adjustment.quantity')}
 							bind:value={adjustmentForm.quantity}
 							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 						/>
 					</div>
 					<Input
-						placeholder="Reason code"
+						placeholder={$t('operations.adjustment.reason_code')}
 						bind:value={adjustmentForm.reasonCode}
 						class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 					/>
 					<Input
-						placeholder="Notes"
+						placeholder={$t('operations.adjustment.notes')}
 						bind:value={adjustmentForm.notes}
 						class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 					/>
 					<Button
 						class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
-						onclick={submitAdjustment}>Apply adjustment</Button
+						onclick={submitAdjustment}>{$t('operations.adjustment.submit_button')}</Button
 					>
 				</CardContent>
 			</Card>
@@ -314,39 +315,39 @@
 				>
 					<CardTitle class="flex items-center gap-2 text-slate-800">
 						<ArrowRightLeft class="h-5 w-5 text-violet-600" />
-						Stock Transfer
+						{$t('operations.transfer.title')}
 					</CardTitle>
-					<CardDescription class="text-slate-600">Move inventory across locations</CardDescription>
+					<CardDescription class="text-slate-600">{$t('operations.transfer.subtitle')}</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-4 p-6">
 					<ProductSelector
 						bind:value={transferForm.productId}
-						placeholder="Select product to transfer..."
+						placeholder={$t('operations.transfer.select_product')}
 						className="w-full border-violet-200"
 					/>
 					<div class="grid grid-cols-2 gap-3">
 						<Input
 							type="number"
-							placeholder="Source location"
+							placeholder={$t('operations.transfer.source')}
 							bind:value={transferForm.sourceLocationId}
 							class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 						/>
 						<Input
 							type="number"
-							placeholder="Destination location"
+							placeholder={$t('operations.transfer.dest')}
 							bind:value={transferForm.destLocationId}
 							class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 						/>
 					</div>
 					<Input
 						type="number"
-						placeholder="Quantity"
+						placeholder={$t('operations.transfer.quantity')}
 						bind:value={transferForm.quantity}
 						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 					/>
 					<Button
 						class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
-						onclick={submitTransfer}>Create transfer</Button
+						onclick={submitTransfer}>{$t('operations.transfer.submit_button')}</Button
 					>
 				</CardContent>
 			</Card>
@@ -361,15 +362,15 @@
 			>
 				<CardTitle class="flex items-center gap-2 text-slate-800">
 					<ScanLine class="h-5 w-5 text-amber-600" />
-					Barcode Intelligence
+					{$t('operations.barcode.title')}
 				</CardTitle>
 				<CardDescription class="text-slate-600"
-					>Lookup and generate barcodes for SKUs</CardDescription
+					>{$t('operations.barcode.subtitle')}</CardDescription
 				>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
 				<Input
-					placeholder="Scan or type barcode / SKU"
+					placeholder={$t('operations.barcode.input_placeholder')}
 					bind:value={barcodeLookup.value}
 					class="rounded-xl border-amber-200 bg-white/90 focus:ring-2 focus:ring-amber-400"
 					onkeydown={(e) => e.key === 'Enter' && runBarcodeLookup()}
@@ -380,14 +381,14 @@
 						variant="secondary"
 						onclick={runBarcodeLookup}
 					>
-						Lookup Product
+						{$t('operations.barcode.lookup_button')}
 					</Button>
 
 					<Button
 						class="flex-1 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-lg"
 						onclick={generateBarcode}
 					>
-						Generate Image
+						{$t('operations.barcode.generate_button')}
 					</Button>
 				</div>
 
@@ -403,7 +404,7 @@
 					<div
 						class="rounded-xl border border-dashed border-amber-200 bg-white/70 p-3 text-center shadow-sm backdrop-blur"
 					>
-						<img src={barcodeImage} alt="Barcode preview" class="mx-auto" />
+						<img src={barcodeImage} alt={$t('operations.barcode.preview_alt')} class="mx-auto" />
 					</div>
 				{/if}
 			</CardContent>

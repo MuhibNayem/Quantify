@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 from backend_client import BackendClient
-from openai import OpenAI
+from openai import AsyncOpenAI
 import os
 
 from analytics import ForecastEngine
@@ -11,11 +11,11 @@ from analytics import ForecastEngine
 backend_client = BackendClient()
 ZAI_API_KEY = os.getenv("ZAI_API_KEY")
 ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4/")
-client = OpenAI(api_key=ZAI_API_KEY, base_url=ZAI_BASE_URL)
+client = AsyncOpenAI(api_key=ZAI_API_KEY, base_url=ZAI_BASE_URL)
 MODEL_NAME = "glm-4.5-flash"
 forecast_engine = ForecastEngine()
 
-def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dict[str, Any]:
+async def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dict[str, Any]:
     """
     Generates a demand forecast for a specific product using historical sales data.
     """
@@ -24,14 +24,14 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
         end_date = datetime.now()
         start_date = end_date - timedelta(days=90)
         
-        sales_report = backend_client.get_sales_report(
+        sales_report = await backend_client.get_sales_report(
             start_date.strftime("%Y-%m-%d"), 
             end_date.strftime("%Y-%m-%d"),
             product_id=product_id
         )
         
         # 2. Fetch Product Details (for context)
-        product_details = backend_client.get_inventory_status(product_id=product_id)
+        product_details = await backend_client.get_inventory_status(product_id=product_id)
         
         # 3. Prepare Prompt
         sales_trends = sales_report.get("salesTrends", [])
@@ -71,7 +71,7 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
         """
         
         # 4. Call LLM
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "You are a helpful AI assistant for inventory management. Always output valid JSON."},
@@ -91,3 +91,4 @@ def generate_demand_forecast(product_id: int, days_to_forecast: int = 30) -> Dic
     except Exception as e:
         print(f"Error generating forecast: {e}")
         return {"error": str(e)}
+

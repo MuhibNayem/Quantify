@@ -113,6 +113,48 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		Where("products.deleted_at IS NULL"). // Respect soft delete
 		Group("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id")
 
+	// Pagination & Search
+	type ProductQuery struct {
+		Page   int    `form:"page,default=1"`
+		Limit  int    `form:"limit,default=50"`
+		Q      string `form:"q"`
+		Status string `form:"status"` // "IN_STOCK", "OUT_OF_STOCK", "LOW_STOCK"
+	}
+
+	var pq ProductQuery
+	if err := c.ShouldBindQuery(&pq); err == nil {
+		if pq.Page < 1 {
+			pq.Page = 1
+		}
+		if pq.Limit < 1 {
+			pq.Limit = 50
+		}
+		if pq.Limit > 1000 {
+			pq.Limit = 1000
+		}
+
+		offset := (pq.Page - 1) * pq.Limit
+		query = query.Limit(pq.Limit).Offset(offset)
+
+		if pq.Q != "" {
+			searchPattern := "%" + pq.Q + "%"
+			query = query.Where("products.name ILIKE ? OR products.sku ILIKE ? OR CAST(products.id AS TEXT) = ?", searchPattern, searchPattern, pq.Q)
+		}
+	}
+
+	// Filter by Stock Status (HAVING clause)
+	if pq.Status != "" {
+		switch pq.Status {
+		case "IN_STOCK":
+			query = query.Having("COALESCE(SUM(batches.quantity), 0) > 0")
+		case "OUT_OF_STOCK":
+			query = query.Having("COALESCE(SUM(batches.quantity), 0) <= 0")
+		case "LOW_STOCK":
+			// Assuming low stock threshold is < 10 (or configurable, but hardcoded for now per standard POS logic)
+			query = query.Having("COALESCE(SUM(batches.quantity), 0) > 0 AND COALESCE(SUM(batches.quantity), 0) < 10")
+		}
+	}
+
 	if err := query.Scan(&results).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch products", http.StatusInternalServerError, err))
 		return

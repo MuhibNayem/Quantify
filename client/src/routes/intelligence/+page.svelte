@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import {
@@ -30,7 +31,7 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
-			toast.error('Access Denied', { description: 'You do not have permission to view reports.' });
+			toast.error($t('intelligence.toasts.access_denied'), { description: $t('intelligence.toasts.access_denied_desc') });
 			goto('/');
 		}
 	});
@@ -115,8 +116,8 @@
 		try {
 			suggestions = await replenishmentApi.listSuggestions();
 		} catch (error: any) {
-			const errorMessage = error.response?.data?.error || 'Unable to load suggestions';
-			toast.error('Failed to Load Suggestions', { description: errorMessage });
+			const errorMessage = error.response?.data?.error || $t('intelligence.toasts.load_suggestions_fail');
+			toast.error($t('intelligence.toasts.load_suggestions_fail'), { description: errorMessage });
 		} finally {
 			suggestionsLoading = false;
 		}
@@ -128,11 +129,11 @@
 	const createPO = async (suggestionId: number) => {
 		try {
 			const po = await replenishmentApi.createPOFromSuggestion(suggestionId);
-			toast.success(`PO ${po.ID ?? 'created'}`);
+			toast.success($t('intelligence.toasts.po_created', { id: po.ID ?? 'created' }));
 			await loadSuggestions();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to create PO';
-			toast.error('Failed to Create PO', { description: errorMessage });
+			toast.error($t('intelligence.toasts.po_create_fail'), { description: errorMessage });
 		}
 	};
 
@@ -151,10 +152,10 @@
 			} else {
 				reportResults.margin = await reportsApi.profitMargin(payload) as MarginReport;
 			}
-			toast.success('Report ready');
+			toast.success($t('intelligence.toasts.report_ready'));
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to run report';
-			toast.error('Failed to Run Report', { description: errorMessage });
+			toast.error($t('intelligence.toasts.report_fail'), { description: errorMessage });
 		} finally {
 			reportsLoading = false;
 		}
@@ -190,10 +191,10 @@
 		<h1
 			class="animate-fadeUp bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl"
 		>
-			Forecasting, Reorder Suggestions & Business Reports
+			{$t('intelligence.hero.title')}
 		</h1>
 		<p class="animate-fadeUp text-base text-slate-600 delay-200">
-			Plan ahead, act on signals, and align analytics across one horizon.
+			{$t('intelligence.hero.subtitle')}
 		</p>
 	</div>
 </section>
@@ -220,9 +221,9 @@
 			<CardHeader
 				class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
 			>
-				<CardTitle class="text-slate-800">Report Range</CardTitle>
+				<CardTitle class="text-slate-800">{$t('intelligence.report_range.title')}</CardTitle>
 				<CardDescription class="text-slate-600"
-					>Align analytics across shared horizon</CardDescription
+					>{$t('intelligence.report_range.subtitle')}</CardDescription
 				>
 			</CardHeader>
 			<CardContent class="space-y-4 p-6">
@@ -246,21 +247,21 @@
 						variant="secondary"
 						onclick={() => runReport('sales')}
 					>
-						Sales Trends
+						{$t('intelligence.report_range.sales_trends')}
 					</Button>
 					<Button
 						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
 						variant="secondary"
 						onclick={() => runReport('turnover')}
 					>
-						Inventory Turnover
+						{$t('intelligence.report_range.turnover')}
 					</Button>
 					<Button
 						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
 						variant="secondary"
 						onclick={() => runReport('margin')}
 					>
-						Profit Margin
+						{$t('intelligence.report_range.margin')}
 					</Button>
 				</div>
 			</CardContent>
@@ -276,9 +277,9 @@
 				<div>
 					<CardTitle class="flex items-center gap-2 text-slate-800">
 						<ShoppingCart class="h-5 w-5 text-emerald-600" />
-						Reorder Suggestions
+						{$t('intelligence.reorder_suggestions.title')}
 					</CardTitle>
-					<CardDescription class="text-slate-600">AI-recommended purchase orders</CardDescription>
+					<CardDescription class="text-slate-600">{$t('intelligence.reorder_suggestions.subtitle')}</CardDescription>
 				</div>
 				<Button
 					variant="outline"
@@ -289,9 +290,9 @@
 						try {
 							await replenishmentApi.generateSuggestions();
 							await loadSuggestions();
-							toast.success('Suggestions refreshed');
+							toast.success($t('intelligence.toasts.suggestions_refreshed'));
 						} catch (e) {
-							toast.error('Failed to refresh suggestions');
+							toast.error($t('intelligence.toasts.refresh_fail'));
 						} finally {
 							suggestionsLoading = false;
 						}
@@ -299,7 +300,7 @@
 					disabled={suggestionsLoading}
 				>
 					<RefreshCw class={suggestionsLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-					Refresh
+					{$t('intelligence.reorder_suggestions.refresh_btn')}
 				</Button>
 			</div>
 		</CardHeader>
@@ -307,11 +308,11 @@
 			<Table class="overflow-hidden rounded-2xl border border-amber-200/60">
 				<TableHeader class="bg-gradient-to-r from-amber-100 to-orange-100">
 					<TableRow>
-						<TableHead>Product</TableHead>
-						<TableHead>Supplier</TableHead>
-						<TableHead>Suggested qty</TableHead>
-						<TableHead>Status</TableHead>
-						<TableHead class="text-right">Actions</TableHead>
+						<TableHead>{$t('intelligence.reorder_suggestions.table.product')}</TableHead>
+						<TableHead>{$t('intelligence.reorder_suggestions.table.supplier')}</TableHead>
+						<TableHead>{$t('intelligence.reorder_suggestions.table.suggested_qty')}</TableHead>
+						<TableHead>{$t('intelligence.reorder_suggestions.table.status')}</TableHead>
+						<TableHead class="text-right">{$t('intelligence.reorder_suggestions.table.actions')}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/60">
@@ -326,7 +327,7 @@
 					{:else if suggestions.length === 0}
 						<TableRow>
 							<TableCell colspan={5} class="py-6 text-center text-sm text-slate-500"
-								>No pending suggestions</TableCell
+								>{$t('intelligence.reorder_suggestions.table.empty')}</TableCell
 							>
 						</TableRow>
 					{:else}
@@ -352,7 +353,7 @@
 										class="rounded-md px-3 py-1.5 text-amber-700 hover:bg-amber-50"
 										onclick={() => createPO(suggestion.ID)}
 									>
-										Create PO
+										{$t('intelligence.reorder_suggestions.table.create_po')}
 									</Button>
 								</TableCell>
 							</TableRow>
@@ -377,9 +378,9 @@
 					<div>
 						<CardTitle class="flex items-center gap-2 text-slate-800">
 							<TrendingUp class="h-5 w-5 text-sky-600" />
-							Sales Report
+							{$t('intelligence.reports.sales.title')}
 						</CardTitle>
-						<CardDescription class="text-slate-600">Trend of total vs average sales</CardDescription
+						<CardDescription class="text-slate-600">{$t('intelligence.reports.sales.subtitle')}</CardDescription
 						>
 					</div>
 					<button
@@ -409,14 +410,14 @@
 						</svg>
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Total Sales</p>
+						<p>{$t('intelligence.reports.sales.total_sales')}</p>
 						<p class="font-semibold text-sky-700">{fmt(reportResults.sales?.totalSales)}</p>
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Avg Daily Sales</p>
+						<p>{$t('intelligence.reports.sales.avg_daily_sales')}</p>
 						<p class="font-semibold text-blue-700">{fmt(reportResults.sales?.averageDailySales)}</p>
 					</div>
-					<p class="text-xs text-slate-500">Period: {reportResults.sales?.period ?? '—'}</p>
+					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.sales?.period ?? '—' })}</p>
 				</CardContent>
 			</Card>
 		{/if}
@@ -432,9 +433,9 @@
 					<div>
 						<CardTitle class="flex items-center gap-2 text-slate-800">
 							<RotateCcw class="h-5 w-5 text-teal-600" />
-							Turnover Report
+							{$t('intelligence.reports.turnover.title')}
 						</CardTitle>
-						<CardDescription class="text-slate-600">Inventory efficiency over time</CardDescription>
+						<CardDescription class="text-slate-600">{$t('intelligence.reports.turnover.subtitle')}</CardDescription>
 					</div>
 					<button
 						class="rounded-full p-2 hover:bg-teal-100"
@@ -454,18 +455,18 @@
 						{/each}
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Avg Inventory Value</p>
+						<p>{$t('intelligence.reports.turnover.avg_inventory_value')}</p>
 						<p class="font-semibold text-teal-700">
 							${fmt(reportResults.turnover?.averageInventoryValue)}
 						</p>
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Turnover Rate</p>
+						<p>{$t('intelligence.reports.turnover.turnover_rate')}</p>
 						<p class="font-semibold text-teal-700">
 							{fmt(reportResults.turnover?.inventoryTurnoverRate)}
 						</p>
 					</div>
-					<p class="text-xs text-slate-500">Period: {reportResults.turnover?.period ?? '—'}</p>
+					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.turnover?.period ?? '—' })}</p>
 				</CardContent>
 			</Card>
 		{/if}
@@ -481,9 +482,9 @@
 					<div>
 						<CardTitle class="flex items-center gap-2 text-slate-800">
 							<Percent class="h-5 w-5 text-rose-600" />
-							Margin Report
+							{$t('intelligence.reports.margin.title')}
 						</CardTitle>
-						<CardDescription class="text-slate-600">Profitability visualization</CardDescription>
+						<CardDescription class="text-slate-600">{$t('intelligence.reports.margin.subtitle')}</CardDescription>
 					</div>
 					<button
 						class="rounded-full p-2 hover:bg-pink-100"
@@ -516,14 +517,14 @@
 						</span>
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Gross Profit</p>
+						<p>{$t('intelligence.reports.margin.gross_profit')}</p>
 						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.grossProfit)}</p>
 					</div>
 					<div class="flex justify-between text-sm text-slate-600">
-						<p>Total Revenue</p>
+						<p>{$t('intelligence.reports.margin.total_revenue')}</p>
 						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.totalRevenue)}</p>
 					</div>
-					<p class="text-xs text-slate-500">Period: {reportResults.margin?.period ?? '—'}</p>
+					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.margin?.period ?? '—' })}</p>
 				</CardContent>
 			</Card>
 		{/if}

@@ -20,6 +20,7 @@
 	import { toast } from 'svelte-sonner';
 	import { dashboardApi } from '$lib/api/resources';
 	import type { Alert, Product, ReorderSuggestion } from '$lib/types';
+	import { t } from '$lib/i18n';
 	import { auth } from '$lib/stores/auth';
 	import {
 		Activity,
@@ -59,8 +60,8 @@
 			chartSeries = data.chartData || [];
 			trend = data.trend || { direction: 'neutral', percentage: 0 };
 		} catch (error: any) {
-			toast.error('Failed to Load Dashboard', {
-				description: error?.response?.data?.error || 'An unexpected error occurred'
+			toast.error($t('dashboard.toasts.load_fail'), {
+				description: error?.response?.data?.error || $t('dashboard.toasts.error_desc')
 			});
 		} finally {
 			loading = false;
@@ -104,10 +105,10 @@
 						<h1
 							class="bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent"
 						>
-							Real-time Inventory Intelligence
+							{$t('dashboard.title')}
 						</h1>
 						<p class="max-w-2xl text-slate-600">
-							Monitor, analyze, and optimize your inventory ecosystem with AI-powered insights
+							{$t('dashboard.subtitle')}
 						</p>
 					</div>
 					<div class="flex flex-wrap gap-3">
@@ -119,14 +120,14 @@
 							<RefreshCcw
 								class="mr-2 h-4 w-4 transition-transform duration-500 group-hover:rotate-180"
 							/>
-							Refresh Data
+							{$t('dashboard.refresh')}
 						</Button>
 						<Button
 							href="/catalog"
 							class="rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-600 hover:shadow-xl"
 						>
 							<Boxes class="mr-2 h-4 w-4" />
-							Update Catalog
+							{$t('dashboard.update_catalog')}
 						</Button>
 					</div>
 				</div>
@@ -144,7 +145,7 @@
 					class="absolute right-0 top-0 h-20 w-20 -translate-y-10 translate-x-10 rounded-full bg-blue-200/30 transition-transform duration-500 group-hover:scale-150"
 				></div>
 				<CardHeader class="relative z-10 flex flex-row items-center justify-between pb-3">
-					<CardTitle class="text-sm font-semibold text-blue-800/80">Active Products</CardTitle>
+					<CardTitle class="text-sm font-semibold text-blue-800/80">{$t('dashboard.stats.active_products')}</CardTitle>
 					<div class="rounded-xl bg-white/50 p-2 shadow-sm">
 						<ShoppingCart class="h-5 w-5 text-blue-600" />
 					</div>
@@ -155,7 +156,7 @@
 					{:else}
 						<div class="mb-1 text-3xl font-bold text-blue-900">{stats.products}</div>
 						<p class="text-xs font-medium text-blue-700/70">
-							📈 {Math.round(stats.products * 1.12)} forecasted for Q4
+							{$t('dashboard.stats.forecast_hint').replace('{value}', Math.round(stats.products * 1.12).toString())}
 						</p>
 					{/if}
 				</CardContent>
@@ -170,7 +171,7 @@
 					class="absolute right-0 top-0 h-20 w-20 -translate-y-10 translate-x-10 rounded-full bg-green-200/30 transition-transform duration-500 group-hover:scale-150"
 				></div>
 				<CardHeader class="relative z-10 flex flex-row items-center justify-between pb-3">
-					<CardTitle class="text-sm font-semibold text-green-800/80">Categories</CardTitle>
+					<CardTitle class="text-sm font-semibold text-green-800/80">{$t('dashboard.stats.categories')}</CardTitle>
 					<div class="rounded-xl bg-white/50 p-2 shadow-sm">
 						<BarChart3 class="h-5 w-5 text-green-600" />
 					</div>
@@ -181,7 +182,7 @@
 					{:else}
 						<div class="mb-1 text-3xl font-bold text-green-900">{stats.categories}</div>
 						<p class="text-xs font-medium text-green-700/70">
-							🔄 Across {stats.suppliers} suppliers
+							{$t('dashboard.stats.supplier_hint').replace('{count}', stats.suppliers.toString())}
 						</p>
 					{/if}
 				</CardContent>
@@ -196,7 +197,7 @@
 					class="absolute right-0 top-0 h-20 w-20 -translate-y-10 translate-x-10 rounded-full bg-purple-200/30 transition-transform duration-500 group-hover:scale-150"
 				></div>
 				<CardHeader class="relative z-10 flex flex-row items-center justify-between pb-3">
-					<CardTitle class="text-sm font-semibold text-purple-800/80">Suppliers</CardTitle>
+					<CardTitle class="text-sm font-semibold text-purple-800/80">{$t('dashboard.stats.suppliers')}</CardTitle>
 					<div class="rounded-xl bg-white/50 p-2 shadow-sm">
 						<Users class="h-5 w-5 text-purple-600" />
 					</div>
@@ -206,7 +207,7 @@
 						<Skeleton class="h-8 w-20 bg-white/50" />
 					{:else}
 						<div class="mb-1 text-3xl font-bold text-purple-900">{stats.suppliers}</div>
-						<p class="text-xs font-medium text-purple-700/70">✅ All SLAs active</p>
+						<p class="text-xs font-medium text-purple-700/70">{$t('dashboard.stats.sla_hint')}</p>
 					{/if}
 				</CardContent>
 			</Card>
@@ -220,7 +221,7 @@
 					class="absolute right-0 top-0 h-20 w-20 -translate-y-10 translate-x-10 rounded-full bg-red-200/30 transition-transform duration-500 group-hover:scale-150"
 				></div>
 				<CardHeader class="relative z-10 flex flex-row items-center justify-between pb-3">
-					<CardTitle class="text-sm font-semibold text-red-800/80">Active Alerts</CardTitle>
+					<CardTitle class="text-sm font-semibold text-red-800/80">{$t('dashboard.stats.active_alerts')}</CardTitle>
 					<div class="rounded-xl bg-white/50 p-2 shadow-sm">
 						<AlertTriangle class="h-5 w-5 text-red-600" />
 					</div>
@@ -230,7 +231,7 @@
 						<Skeleton class="h-8 w-20 bg-white/50" />
 					{:else}
 						<div class="mb-1 text-3xl font-bold text-red-900">{stats.alerts}</div>
-						<p class="text-xs font-medium text-red-700/70">🚨 Auto-escalations active</p>
+						<p class="text-xs font-medium text-red-700/70">{$t('dashboard.stats.escalation_hint')}</p>
 					{/if}
 				</CardContent>
 			</Card>
@@ -248,10 +249,10 @@
 							<div class="rounded-xl bg-gradient-to-r from-sky-400 to-blue-400 p-2 shadow-sm">
 								<Activity class="h-5 w-5 text-white" />
 							</div>
-							Demand Pulse Analytics
+							{$t('dashboard.demand.title')}
 						</CardTitle>
 						<CardDescription class="text-slate-600"
-							>Real-time inventory movement trends</CardDescription
+							>{$t('dashboard.demand.subtitle')}</CardDescription
 						>
 					</CardHeader>
 					<CardContent>
@@ -267,39 +268,40 @@
 												class="absolute inset-0 bg-gradient-to-b from-white/30 to-transparent"
 											></div>
 										</div>
-										<span class="mt-2 text-xs font-medium text-slate-600">Day {index + 1}</span>
+
+										<span class="mt-2 text-xs font-medium text-slate-600">{$t('dashboard.demand.day_label').replace('{day}', (index + 1).toString())}</span>
 									</div>
 								{/each}
 							</div>
 							<div class="flex items-center justify-between border-t border-blue-100 pt-4">
-								<p class="text-sm text-slate-600">📊 Based on sales velocity & stock buffers</p>
+								<p class="text-sm text-slate-600">{$t('dashboard.demand.chart_hint')}</p>
 								<div class="flex gap-2">
 									{#if trend.direction === 'up'}
 										<span
 											class="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700"
-											>↑ Trend: Positive</span
+											>{$t('dashboard.demand.trend_positive')}</span
 										>
 										<span
 											class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
-											>📈 {trend.percentage.toFixed(1)}% Growth</span
+											>{$t('dashboard.demand.growth').replace('{value}', trend.percentage.toFixed(1))}</span
 										>
 									{:else if trend.direction === 'down'}
 										<span
 											class="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-medium text-red-700"
-											>↓ Trend: Negative</span
+											>{$t('dashboard.demand.trend_negative')}</span
 										>
 										<span
 											class="rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-medium text-orange-700"
-											>📉 {Math.abs(trend.percentage).toFixed(1)}% Decline</span
+											>{$t('dashboard.demand.decline').replace('{value}', Math.abs(trend.percentage).toFixed(1))}</span
 										>
 									{:else}
 										<span
 											class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-											>→ Trend: Stable</span
+											>{$t('dashboard.demand.trend_stable')}</span
 										>
 										<span
 											class="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700"
-											>No Change</span
+											>{$t('dashboard.demand.no_change')}</span
 										>
 									{/if}
 								</div>
@@ -319,9 +321,9 @@
 						<div class="rounded-xl bg-gradient-to-r from-violet-400 to-purple-400 p-2 shadow-sm">
 							<Zap class="h-5 w-5 text-white" />
 						</div>
-						Quick Actions
+						{$t('dashboard.quick_actions.title')}
 					</CardTitle>
-					<CardDescription class="text-slate-600">Instant inventory operations</CardDescription>
+					<CardDescription class="text-slate-600">{$t('dashboard.quick_actions.subtitle')}</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-3">
 					<Button
@@ -330,8 +332,8 @@
 					>
 						<TrendingUp class="mr-3 h-5 w-5 transition-transform group-hover:scale-110" />
 						<div class="text-left">
-							<div class="font-semibold">Balance Stock</div>
-							<div class="text-xs opacity-90">Optimize inventory levels</div>
+							<div class="font-semibold">{$t('dashboard.quick_actions.balance_stock')}</div>
+							<div class="text-xs opacity-90">{$t('dashboard.quick_actions.balance_desc')}</div>
 						</div>
 					</Button>
 
@@ -341,8 +343,8 @@
 					>
 						<Activity class="mr-3 h-5 w-5 transition-transform group-hover:scale-110" />
 						<div class="text-left">
-							<div class="font-semibold">Run Forecast</div>
-							<div class="text-xs opacity-90">AI predictions</div>
+							<div class="font-semibold">{$t('dashboard.quick_actions.run_forecast')}</div>
+							<div class="text-xs opacity-90">{$t('dashboard.quick_actions.forecast_desc')}</div>
 						</div>
 					</Button>
 
@@ -352,8 +354,8 @@
 					>
 						<Boxes class="mr-3 h-5 w-5 transition-transform group-hover:scale-110" />
 						<div class="text-left">
-							<div class="font-semibold">Export Catalog</div>
-							<div class="text-xs opacity-90">Bulk operations</div>
+							<div class="font-semibold">{$t('dashboard.quick_actions.export_catalog')}</div>
+							<div class="text-xs opacity-90">{$t('dashboard.quick_actions.export_desc')}</div>
 						</div>
 					</Button>
 				</CardContent>
@@ -372,19 +374,19 @@
 							<div class="rounded-xl bg-gradient-to-r from-emerald-400 to-green-400 p-2 shadow-sm">
 								<Boxes class="h-5 w-5 text-white" />
 							</div>
-							Fresh Inventory
+							{$t('dashboard.fresh_inventory.title')}
 						</CardTitle>
-						<CardDescription class="text-slate-600">Recently added or updated SKUs</CardDescription>
+						<CardDescription class="text-slate-600">{$t('dashboard.fresh_inventory.subtitle')}</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<div class="scrollbar-gradient max-h-80 overflow-y-auto pr-2">
 							<Table>
 								<TableHeader class="sticky top-0 rounded-lg bg-white/90 backdrop-blur-sm">
 									<TableRow class="border-b border-green-100">
-										<TableHead class="py-3 font-semibold text-slate-700">SKU</TableHead>
-										<TableHead class="py-3 font-semibold text-slate-700">Product Name</TableHead>
+										<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.fresh_inventory.sku')}</TableHead>
+										<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.fresh_inventory.product_name')}</TableHead>
 										<TableHead class="py-3 text-right font-semibold text-slate-700"
-											>Status</TableHead
+											>{$t('dashboard.fresh_inventory.status')}</TableHead
 										>
 									</TableRow>
 								</TableHeader>
@@ -405,7 +407,7 @@
 											<TableCell colspan="3" class="py-8 text-center text-slate-500">
 												<div class="space-y-2">
 													<Boxes class="mx-auto h-8 w-8 text-slate-400" />
-													<div>No recent inventory changes</div>
+													<div>{$t('dashboard.fresh_inventory.no_data')}</div>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -449,19 +451,19 @@
 							<div class="rounded-xl bg-gradient-to-r from-orange-400 to-amber-400 p-2 shadow-sm">
 								<AlertTriangle class="h-5 w-5 text-white" />
 							</div>
-							Priority Alerts
+							{$t('dashboard.priority_alerts.title')}
 						</CardTitle>
-						<CardDescription class="text-slate-600">Requires immediate attention</CardDescription>
+						<CardDescription class="text-slate-600">{$t('dashboard.priority_alerts.subtitle')}</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<div class="scrollbar-gradient max-h-80 overflow-y-auto pr-2">
 							<Table>
 								<TableHeader class="sticky top-0 rounded-lg bg-white/90 backdrop-blur-sm">
 									<TableRow class="border-b border-amber-100">
-										<TableHead class="py-3 font-semibold text-slate-700">Alert Type</TableHead>
-										<TableHead class="py-3 font-semibold text-slate-700">Product</TableHead>
+										<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.priority_alerts.type')}</TableHead>
+										<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.priority_alerts.product')}</TableHead>
 										<TableHead class="py-3 text-right font-semibold text-slate-700"
-											>Status</TableHead
+											>{$t('dashboard.priority_alerts.status')}</TableHead
 										>
 									</TableRow>
 								</TableHeader>
@@ -482,7 +484,7 @@
 											<TableCell colspan="3" class="py-8 text-center text-slate-500">
 												<div class="space-y-2">
 													<AlertTriangle class="mx-auto h-8 w-8 text-emerald-400" />
-													<div>All systems normal</div>
+													<div>{$t('dashboard.priority_alerts.no_data')}</div>
 												</div>
 											</TableCell>
 										</TableRow>
@@ -524,21 +526,21 @@
 						<div class="rounded-xl bg-gradient-to-r from-cyan-400 to-teal-400 p-2 shadow-sm">
 							<ShoppingCart class="h-5 w-5 text-white" />
 						</div>
-						Procurement Intelligence
+						{$t('dashboard.procurement.title')}
 					</CardTitle>
-					<CardDescription class="text-slate-600">AI-powered reorder suggestions</CardDescription>
+					<CardDescription class="text-slate-600">{$t('dashboard.procurement.subtitle')}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div class="scrollbar-gradient max-h-80 overflow-y-auto pr-2">
 						<Table>
 							<TableHeader class="sticky top-0 rounded-lg bg-white/90 backdrop-blur-sm">
 								<TableRow class="border-b border-teal-100">
-									<TableHead class="py-3 font-semibold text-slate-700">Product</TableHead>
+									<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.procurement.product')}</TableHead>
 									<TableHead class="py-3 text-right font-semibold text-slate-700"
-										>Suggested Qty</TableHead
+										>{$t('dashboard.procurement.suggested_qty')}</TableHead
 									>
-									<TableHead class="py-3 font-semibold text-slate-700">Supplier</TableHead>
-									<TableHead class="py-3 text-right font-semibold text-slate-700">Status</TableHead>
+									<TableHead class="py-3 font-semibold text-slate-700">{$t('dashboard.procurement.supplier')}</TableHead>
+									<TableHead class="py-3 text-right font-semibold text-slate-700">{$t('dashboard.procurement.status')}</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -558,7 +560,7 @@
 										<TableCell colspan="4" class="py-8 text-center text-slate-500">
 											<div class="space-y-2">
 												<ShoppingCart class="mx-auto h-8 w-8 text-slate-400" />
-												<div>No pending suggestions</div>
+												<div>{$t('dashboard.procurement.no_data')}</div>
 											</div>
 										</TableCell>
 									</TableRow>
@@ -590,7 +592,7 @@
 												<span
 													class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-100 px-3 py-1.5 text-xs font-medium text-cyan-700 shadow-sm"
 												>
-													💡 {suggestion?.Status ?? suggestion?.status ?? 'Ready to Order'}
+													💡 {suggestion?.Status ?? suggestion?.status ?? $t('dashboard.procurement.ready_to_order')}
 												</span>
 											</TableCell>
 										</TableRow>

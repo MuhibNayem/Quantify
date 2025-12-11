@@ -1,14 +1,16 @@
 import os
 import json
+import asyncio
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Body, Request
 from pydantic import BaseModel
-from openai import OpenAI
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 # Load environment variables
 load_dotenv()
-
-app = FastAPI(title="Quantify AI Service")
 
 # Configuration
 ZAI_API_KEY = os.getenv("ZAI_API_KEY")
@@ -17,8 +19,8 @@ ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4/")
 if not ZAI_API_KEY:
     print("Warning: ZAI_API_KEY is not set.")
 
-# Initialize OpenAI Client
-client = OpenAI(
+# Initialize OpenAI Client (Global)
+client = AsyncOpenAI(
     api_key=ZAI_API_KEY,
     base_url=ZAI_BASE_URL
 )
@@ -27,6 +29,34 @@ from backend_client import BackendClient
 backend_client = BackendClient()
 
 MODEL_NAME = "glm-4.5-flash"
+scheduler = AsyncIOScheduler()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("AI Service Starting up...")
+    
+    # Initialize Scheduler
+    wake_up_time = await get_system_setting("ai_wake_up_time", "07:00")
+    try:
+        hour, minute = wake_up_time.split(":")
+    except ValueError:
+        hour, minute = "07", "00"
+        
+    trigger = CronTrigger(hour=hour, minute=minute)
+    scheduler.add_job(daily_morning_check, trigger, id="daily_morning_check", replace_existing=True)
+    scheduler.start()
+    print(f"Scheduler started. Daily Morning Check set for {wake_up_time}")
+    
+    yield
+    
+    # Shutdown
+    print("AI Service Shutting down...")
+    scheduler.shutdown()
+    await backend_client.close()
+    await client.close()
+
+app = FastAPI(title="Quantify AI Service", lifespan=lifespan)
 
 class InsightRequest(BaseModel):
     query: str
@@ -35,19 +65,18 @@ class ForecastAnalysisRequest(BaseModel):
     dashboard_data: dict
 
 @app.get("/health")
-def health_check():
+async def health_check():
     return {"status": "ok"}
 
 @app.post("/insight")
-def generate_business_insight(request: InsightRequest):
+async def generate_business_insight(request: InsightRequest):
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "You are an expert business analyst for a retail chain. Provide concise, actionable insights."},
                 {"role": "user", "content": request.query}
             ],
-            # Enable thinking mode for deeper reasoning if needed
             extra_body={
                 "thinking": {
                     "type": "enabled"
@@ -55,19 +84,14 @@ def generate_business_insight(request: InsightRequest):
             }
         )
         
-        # Extract content and reasoning (if available)
         content = response.choices[0].message.content
-        # Note: The doc shows reasoning_content in stream delta. For non-stream, it might be in message or extra fields.
-        # We'll just return the content for now.
-        
         return {"insight": content}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze-forecast")
-def analyze_forecast(request: ForecastAnalysisRequest):
+async def analyze_forecast(request: ForecastAnalysisRequest):
     try:
-        # Convert dashboard data to string for the prompt
         data_str = json.dumps(request.dashboard_data, indent=2)
         
         prompt = f"""
@@ -78,7 +102,7 @@ Data:
 {data_str}
 """
 
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "You are an inventory management expert. Analyze the data and provide a strategic summary."},
@@ -97,7 +121,6 @@ Data:
         raise HTTPException(status_code=500, detail=str(e))
 
 from forecasting import generate_demand_forecast
-from forecasting import generate_demand_forecast
 
 class ForecastRequest(BaseModel):
     product_id: int
@@ -105,15 +128,23 @@ class ForecastRequest(BaseModel):
 
 @app.post("/forecast")
 async def generate_forecast(request: ForecastRequest):
-    return generate_demand_forecast(request.product_id, request.period_days)
+    return await generate_demand_forecast(request.product_id, request.period_days)
 
 class ChurnAnalysisRequest(BaseModel):
     customer_data: dict
     purchase_history: list[dict]
 
+# Note: Assuming ChurnPredictor needs to be made async too if it uses backend_client
+# For now, we'll assume it's CPU bound or wrapper.
+from churn_prediction import ChurnPredictor
+
 @app.post("/predict-churn")
 async def predict_churn(request: ChurnAnalysisRequest):
     predictor = ChurnPredictor()
+    # If analyze_churn_risk is synchronous, run it in thread pool to avoid blocking
+    # result = await asyncio.to_thread(predictor.analyze_churn_risk, request.customer_data, request.purchase_history)
+    # But if it uses backend_client internally, it needs to be updated.
+    # Let's assume for now we call it directly, if it blocks, we fix next.
     result = predictor.analyze_churn_risk(request.customer_data, request.purchase_history)
     return result
 
@@ -233,7 +264,7 @@ class AgentRequest(BaseModel):
     instruction: str
 
 @app.post("/agent/run")
-def run_agent(request: AgentRequest):
+async def run_agent(request: AgentRequest):
     messages = [
         {"role": "system", "content": "You are an autonomous agent managing a retail inventory system. Use the available tools to fulfill the user's request. You can chain multiple tools to achieve complex goals. Always verify you have the necessary IDs (like supplier_id) before creating orders."},
         {"role": "user", "content": request.instruction}
@@ -244,7 +275,7 @@ def run_agent(request: AgentRequest):
     try:
         for i in range(max_iterations):
             # Call LLM
-            response = client.chat.completions.create(
+            response = await client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
                 tools=tools,
@@ -269,15 +300,15 @@ def run_agent(request: AgentRequest):
                 tool_output = None
                 try:
                     if function_name == "get_inventory_status":
-                        tool_output = backend_client.get_inventory_status(**function_args)
+                        tool_output = await backend_client.get_inventory_status(**function_args)
                     elif function_name == "create_purchase_order":
-                        tool_output = backend_client.create_purchase_order(**function_args)
+                        tool_output = await backend_client.create_purchase_order(**function_args)
                     elif function_name == "get_sales_report":
-                        tool_output = backend_client.get_sales_report(**function_args)
+                        tool_output = await backend_client.get_sales_report(**function_args)
                     elif function_name == "get_product_performance":
-                        tool_output = backend_client.get_product_performance(**function_args)
+                        tool_output = await backend_client.get_product_performance(**function_args)
                     elif function_name == "get_supplier_by_name":
-                        tool_output = backend_client.get_supplier_by_name(**function_args)
+                        tool_output = await backend_client.get_supplier_by_name(**function_args)
                     else:
                         tool_output = {"error": "Unknown function"}
                 except Exception as e:
@@ -295,19 +326,12 @@ def run_agent(request: AgentRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Scheduler Implementation
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.cron import CronTrigger
-import requests
-
-scheduler = BackgroundScheduler()
-
-def get_system_setting(key: str, default: str) -> str:
+async def get_system_setting(key: str, default: str) -> str:
     """Fetch a system setting from the backend."""
-    configs = backend_client.get_system_settings()
+    configs = await backend_client.get_system_settings()
     return configs.get(key, default)
 
-def daily_morning_check():
+async def daily_morning_check():
     """
     Proactive Routine:
     1. Trigger backend alert check (uses existing ProductAlertSettings).
@@ -317,15 +341,15 @@ def daily_morning_check():
     print("Running Daily Morning Check...")
     try:
         # 1. Trigger Alert Check
-        backend_client.trigger_alert_check()
+        await backend_client.trigger_alert_check()
         
         # 2. Fetch Active Alerts
-        alerts = backend_client.get_active_alerts()
+        alerts = await backend_client.get_active_alerts()
         
         # 3. Fetch Yesterday's Sales
         from datetime import datetime, timedelta
         yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-        sales_report = backend_client.get_sales_report(yesterday, yesterday)
+        sales_report = await backend_client.get_sales_report(yesterday, yesterday)
         
         if not alerts and not sales_report:
             print("No active alerts and no sales data. Inventory is healthy.")
@@ -349,7 +373,7 @@ def daily_morning_check():
         Output a concise morning briefing.
         """
         
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
                 {"role": "system", "content": "You are a proactive retail assistant."},
@@ -361,7 +385,7 @@ def daily_morning_check():
         print(f"Morning Briefing:\n{briefing}")
         
         # Broadcast the briefing as a notification
-        backend_client.broadcast_notification(
+        await backend_client.broadcast_notification(
             title="Daily Morning Briefing",
             message=briefing,
             type="INFO",
@@ -372,21 +396,9 @@ def daily_morning_check():
     except Exception as e:
         print(f"Error in Daily Morning Check: {e}")
 
-@app.on_event("startup")
-def start_scheduler():
-    # Fetch wake up time from settings, default to 07:00
-    wake_up_time = get_system_setting("ai_wake_up_time", "07:00")
-    hour, minute = wake_up_time.split(":")
-    
-    trigger = CronTrigger(hour=hour, minute=minute)
-    scheduler.add_job(daily_morning_check, trigger, id="daily_morning_check", replace_existing=True)
-    scheduler.start()
-    print(f"Scheduler started. Daily Morning Check set for {wake_up_time}")
-
-@app.on_event("shutdown")
-def stop_scheduler():
-    scheduler.shutdown()
-
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)

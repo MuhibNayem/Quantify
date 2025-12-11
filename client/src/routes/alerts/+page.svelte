@@ -3,6 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { alertsApi } from '$lib/api/resources';
 	import type { Alert } from '$lib/types';
+	import { t } from '$lib/i18n';
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
 
@@ -41,7 +42,7 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('alerts.view')) {
-			toast.error('Access Denied', { description: 'You do not have permission to view alerts.' });
+			toast.error($t('alerts.toasts.access_denied'), { description: $t('alerts.toasts.access_denied_desc') });
 			goto('/');
 		}
 	});
@@ -84,24 +85,24 @@
 				type: 'summary',
 				cards: [
 					{
-						title: 'Alert Type',
+						title: $t('alerts.details.type'),
 						value: alert.Type,
 						hint: `Alert #${alert.ID}`,
 						icon: AlertTriangle,
 						accent: 'amber'
 					},
 					{
-						title: 'Status',
+						title: $t('alerts.details.status'),
 						value: alert.Status,
 						hint:
 							alert.Status === 'RESOLVED'
-								? `Resolved ${formatDateTime(alert.UpdatedAt)}`
-								: 'Awaiting action',
+								? `${$t('alerts.details.resolved_at')} ${formatDateTime(alert.UpdatedAt)}`
+								: $t('alerts.details.awaiting_action'),
 						icon: Activity,
 						accent: alert.Status === 'RESOLVED' ? 'emerald' : 'rose'
 					},
 					{
-						title: 'Triggered',
+						title: $t('alerts.details.triggered'),
 						value: formatDateTime(alert.TriggeredAt),
 						hint: productName,
 						icon: CalendarClock,
@@ -111,30 +112,30 @@
 			},
 			{
 				type: 'description',
-				title: 'Alert Context',
+				title: $t('alerts.details.context'),
 				items: [
-					{ label: 'Product', value: productName, icon: Package },
-					{ label: 'Message', value: alert.Message },
-					{ label: 'Product ID', value: `#${alert.ProductID}` },
-					{ label: 'Triggered At', value: formatDateTime(alert.TriggeredAt) },
-					{ label: 'Updated At', value: formatDateTime(alert.UpdatedAt) }
+					{ label: $t('alerts.details.product'), value: productName, icon: Package },
+					{ label: $t('alerts.details.message'), value: alert.Message },
+					{ label: $t('alerts.details.product_id'), value: `#${alert.ProductID}` },
+					{ label: $t('alerts.details.triggered_at'), value: formatDateTime(alert.TriggeredAt) },
+					{ label: $t('alerts.details.updated_at'), value: formatDateTime(alert.UpdatedAt) }
 				]
 			},
 			{
 				type: 'description',
-				title: 'Batch Details',
+				title: $t('alerts.details.batch_details'),
 				items: [
-					{ label: 'Batch ID', value: alert.BatchID ? `#${alert.BatchID}` : 'N/A' },
+					{ label: $t('alerts.details.batch_id'), value: alert.BatchID ? `#${alert.BatchID}` : $t('alerts.details.na') },
 					{
-						label: 'Batch Number',
+						label: $t('alerts.details.batch_number'),
 						value: alert.Batch?.BatchNumber ?? '—'
 					},
 					{
-						label: 'Quantity',
+						label: $t('alerts.details.quantity'),
 						value: alert.Batch ? `${alert.Batch.Quantity}` : '—'
 					},
 					{
-						label: 'Expiry Date',
+						label: $t('alerts.details.expiry_date'),
 						value: alert.Batch?.ExpiryDate ? formatDateTime(alert.Batch.ExpiryDate) : '—'
 					}
 				]
@@ -157,8 +158,8 @@
 				status: filters.status || undefined
 			});
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.error || 'Unable to load alerts';
-			toast.error('Failed to Load Alerts', { description: errorMessage });
+			const errorMessage = error?.response?.data?.error || $t('alerts.toasts.load_fail');
+			toast.error($t('alerts.toasts.load_fail'), { description: errorMessage });
 		} finally {
 			loading = false;
 		}
@@ -167,17 +168,17 @@
 	const resolveAlert = async (alertId: number) => {
 		try {
 			await alertsApi.resolve(alertId);
-			toast.success('Alert resolved');
+			toast.success($t('alerts.toasts.resolve_success'));
 			await loadAlerts();
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.error || 'Unable to resolve alert';
-			toast.error('Failed to Resolve Alert', { description: errorMessage });
+			const errorMessage = error?.response?.data?.error || $t('alerts.toasts.resolve_fail');
+			toast.error($t('alerts.toasts.resolve_fail'), { description: errorMessage });
 		}
 	};
 
 	const updateProductSettings = async () => {
 		if (!productSettingsForm.productId) {
-			toast.warning('Select a product');
+			toast.warning($t('alerts.toasts.select_product'));
 			return;
 		}
 		try {
@@ -186,16 +187,16 @@
 				overStockLevel: Number(productSettingsForm.overStockLevel) || 0,
 				expiryAlertDays: Number(productSettingsForm.expiryAlertDays) || 0
 			});
-			toast.success('Thresholds updated');
+			toast.success($t('alerts.toasts.thresholds_updated'));
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.error || 'Unable to save thresholds';
-			toast.error('Failed to Save Thresholds', { description: errorMessage });
+			const errorMessage = error?.response?.data?.error || $t('alerts.toasts.thresholds_fail');
+			toast.error($t('alerts.toasts.thresholds_fail'), { description: errorMessage });
 		}
 	};
 
 	const updateUserSettings = async () => {
 		if (!userSettingsForm.userId) {
-			toast.warning('Provide a user ID');
+			toast.warning($t('alerts.toasts.provide_user'));
 			return;
 		}
 		try {
@@ -205,10 +206,10 @@
 				emailAddress: userSettingsForm.emailAddress,
 				phoneNumber: userSettingsForm.phoneNumber
 			});
-			toast.success('Notification preferences saved');
+			toast.success($t('alerts.toasts.prefs_saved'));
 		} catch (error: any) {
-			const errorMessage = error?.response?.data?.error || 'Unable to save preferences';
-			toast.error('Failed to Save Preferences', { description: errorMessage });
+			const errorMessage = error?.response?.data?.error || $t('alerts.toasts.prefs_fail');
+			toast.error($t('alerts.toasts.prefs_fail'), { description: errorMessage });
 		}
 	};
 
@@ -257,10 +258,10 @@
 			<h1
 				class="animate-fadeUp bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-3xl font-extrabold leading-tight text-transparent sm:text-5xl"
 			>
-				Alerts & Notifications Control
+				{$t('alerts.title')}
 			</h1>
 			<p class="animate-fadeUp mt-3 text-sm text-slate-600 delay-200 sm:text-base">
-				Thresholds, escalations, and targeted user messaging — all in one soothing, vibrant cockpit.
+				{$t('alerts.subtitle')}
 			</p>
 			<div class="animate-fadeUp mt-6 flex flex-wrap justify-center gap-3 delay-300">
 				<Button
@@ -268,13 +269,13 @@
 					class="rounded-xl border border-amber-200 bg-white/80 font-medium text-amber-700 shadow-sm transition-all hover:scale-105 hover:bg-amber-50 hover:shadow-md"
 					onclick={loadAlerts}
 				>
-					Refresh Alerts
+					{$t('alerts.refresh')}
 				</Button>
 				<a href="/operations">
 					<Button
 						class="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-lg"
 					>
-						Go to Operations
+						{$t('alerts.go_to_ops')}
 					</Button>
 				</a>
 			</div>
@@ -286,7 +287,7 @@
 	bind:open={detailModalOpen}
 	resourceId={detailAlertId}
 	endpoint="/alerts"
-	title="Alert Details"
+	title={$t('alerts.details.title')}
 	subtitle={detailModalSubtitle}
 	buildSections={buildAlertSections}
 />
@@ -301,8 +302,8 @@
 			class="flex flex-col gap-4 border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur sm:flex-row sm:items-end sm:justify-between"
 		>
 			<div>
-				<CardTitle class="text-slate-800">Live Alerts</CardTitle>
-				<CardDescription class="text-slate-600">Filter by type or lifecycle state</CardDescription>
+				<CardTitle class="text-slate-800">{$t('alerts.live_alerts')}</CardTitle>
+				<CardDescription class="text-slate-600">{$t('alerts.live_alerts_desc')}</CardDescription>
 			</div>
 			<div class="flex gap-2">
 				<div class="select-wrapper w-[200px]">
@@ -310,11 +311,11 @@
 						class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400"
 						bind:value={filters.type}
 					>
-						<option value="">All types</option>
-						<option value="LOW_STOCK">Low stock</option>
-						<option value="OVERSTOCK">Overstock</option>
-						<option value="OUT_OF_STOCK">Out of stock</option>
-						<option value="EXPIRY_ALERT">Expiry</option>
+						<option value="">{$t('alerts.filters.placeholder_type')}</option>
+						<option value="LOW_STOCK">{$t('alerts.filters.type_options.low_stock')}</option>
+						<option value="OVERSTOCK">{$t('alerts.filters.type_options.overstock')}</option>
+						<option value="OUT_OF_STOCK">{$t('alerts.filters.type_options.out_of_stock')}</option>
+						<option value="EXPIRY_ALERT">{$t('alerts.filters.type_options.expiry')}</option>
 					</select>
 				</div>
 
@@ -323,9 +324,9 @@
 						class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400"
 						bind:value={filters.status}
 					>
-						<option value="">Any status</option>
-						<option value="ACTIVE">Active</option>
-						<option value="RESOLVED">Resolved</option>
+						<option value="">{$t('alerts.filters.placeholder_status')}</option>
+						<option value="ACTIVE">{$t('alerts.filters.status_options.active')}</option>
+						<option value="RESOLVED">{$t('alerts.filters.status_options.resolved')}</option>
 					</select>
 				</div>
 
@@ -334,7 +335,7 @@
 					class="rounded-xl border border-amber-200 bg-white/90 text-amber-700 hover:bg-amber-50"
 					onclick={loadAlerts}
 				>
-					Refresh
+					{$t('alerts.filters.refresh_btn')}
 				</Button>
 			</div>
 		</CardHeader>
@@ -344,12 +345,12 @@
 					class="sticky top-0 z-10 bg-gradient-to-r from-amber-100/85 to-orange-100/85 backdrop-blur"
 				>
 					<TableRow class="border-y border-amber-200/70">
-						<TableHead class="px-4 py-3 text-slate-700">Type</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">Product</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">Message</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">Status</TableHead>
+						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.type')}</TableHead>
+						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.product')}</TableHead>
+						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.message')}</TableHead>
+						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.status')}</TableHead>
 						{#if auth.hasPermission('alerts.manage')}
-							<TableHead class="px-4 py-3 text-right text-slate-700">Action</TableHead>
+							<TableHead class="px-4 py-3 text-right text-slate-700">{$t('alerts.table.action')}</TableHead>
 						{/if}
 					</TableRow>
 				</TableHeader>
@@ -366,7 +367,7 @@
 						<TableRow>
 							<TableCell
 								colspan={auth.hasPermission('alerts.manage') ? 5 : 4}
-								class="py-6 text-center text-sm text-slate-600">No alerts found</TableCell
+								class="py-6 text-center text-sm text-slate-600">{$t('alerts.table.empty')}</TableCell
 							>
 						</TableRow>
 					{:else}
@@ -379,7 +380,7 @@
 									>{alert.Type}</TableCell
 								>
 								<TableCell class="px-4 py-3 text-slate-800"
-									>{alert.Product?.Name ?? `Product ${alert.ProductID}`}</TableCell
+									>{alert.Product?.Name ?? `${$t('alerts.table.product_fallback')} ${alert.ProductID}`}</TableCell
 								>
 								<TableCell class="px-4 py-3 text-sm text-slate-600">{alert.Message}</TableCell>
 								<TableCell class="px-4 py-3">
@@ -406,7 +407,7 @@
 													resolveAlert(alert.ID);
 												}}
 											>
-												Resolve
+												{$t('alerts.table.resolve')}
 											</Button>
 										{/if}
 									</TableCell>
@@ -427,34 +428,34 @@
 				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
 			>
 				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-					<CardTitle class="text-slate-800">Product Thresholds</CardTitle>
-					<CardDescription class="text-slate-600">Configure alerting per SKU</CardDescription>
+					<CardTitle class="text-slate-800">{$t('alerts.thresholds.title')}</CardTitle>
+					<CardDescription class="text-slate-600">{$t('alerts.thresholds.subtitle')}</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700">Product</label>
+						<label class="text-sm font-medium text-slate-700">{$t('alerts.thresholds.product_label')}</label>
 						<ProductSelector
 							bind:value={productSettingsForm.productId}
-							placeholder="Search product..."
+							placeholder={$t('alerts.thresholds.product_placeholder')}
 							className="w-full"
 						/>
 					</div>
 					<div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
 						<Input
 							type="number"
-							placeholder="Low stock"
+							placeholder={$t('alerts.thresholds.low_stock')}
 							bind:value={productSettingsForm.lowStockLevel}
 							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 						/>
 						<Input
 							type="number"
-							placeholder="Overstock"
+							placeholder={$t('alerts.thresholds.overstock')}
 							bind:value={productSettingsForm.overStockLevel}
 							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 						/>
 						<Input
 							type="number"
-							placeholder="Expiry days"
+							placeholder={$t('alerts.thresholds.expiry_days')}
 							bind:value={productSettingsForm.expiryAlertDays}
 							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
 						/>
@@ -463,7 +464,7 @@
 						class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md transition-all hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
 						onclick={updateProductSettings}
 					>
-						Save thresholds
+						{$t('alerts.thresholds.save')}
 					</Button>
 				</CardContent>
 			</Card>
@@ -473,45 +474,45 @@
 				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
 			>
 				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-					<CardTitle class="text-slate-800">User Notifications</CardTitle>
+					<CardTitle class="text-slate-800">{$t('alerts.notifications.title')}</CardTitle>
 					<CardDescription class="text-slate-600"
-						>Escalation preferences per operator</CardDescription
+						>{$t('alerts.notifications.subtitle')}</CardDescription
 					>
 				</CardHeader>
 				<CardContent class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700">User</label>
+						<label class="text-sm font-medium text-slate-700">{$t('alerts.notifications.user_label')}</label>
 						<UserSelector
 							bind:value={userSettingsForm.userId}
-							placeholder="Search user..."
+							placeholder={$t('alerts.notifications.user_placeholder')}
 							className="w-full border-violet-200"
 						/>
 					</div>
 					<Input
-						placeholder="Email"
+						placeholder={$t('alerts.notifications.email_placeholder')}
 						bind:value={userSettingsForm.emailAddress}
 						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 					/>
 					<Input
-						placeholder="Phone"
+						placeholder={$t('alerts.notifications.phone_placeholder')}
 						bind:value={userSettingsForm.phoneNumber}
 						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
 					/>
 					<div class="flex flex-wrap items-center gap-4 text-sm">
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={userSettingsForm.emailNotificationsEnabled} />
-							Email
+							{$t('alerts.notifications.email_label')}
 						</label>
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={userSettingsForm.smsNotificationsEnabled} />
-							SMS
+							{$t('alerts.notifications.sms_label')}
 						</label>
 					</div>
 					<Button
 						class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md transition-all hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
 						onclick={updateUserSettings}
 					>
-						Save preferences
+						{$t('alerts.notifications.save')}
 					</Button>
 				</CardContent>
 			</Card>

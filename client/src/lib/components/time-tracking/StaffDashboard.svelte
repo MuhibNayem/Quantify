@@ -19,6 +19,7 @@
 	import { timeTrackingApi } from '$lib/api/resources';
 	import { page } from '$app/stores';
 	import type { TimeClock } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	// Core state
 	let clockedIn = false;
@@ -146,8 +147,8 @@
 				clockedIn = true;
 				shiftStartTime = new Date(entry.ClockIn);
 				startTimer();
-				toast.success('Clocked In Successfully', {
-					description: 'Your shift has started. Have a productive day!'
+				toast.success($t('time_tracking.toasts.clock_in_success'), {
+					description: $t('time_tracking.toasts.clock_in_desc')
 				});
 				loadData();
 			} else {
@@ -158,14 +159,14 @@
 					stopBreakTimer();
 					onBreak = false;
 				}
-				toast.info('Clocked Out', {
-					description: `Great work today! You completed ${elapsedTime} of focused time.`
+				toast.info($t('time_tracking.toasts.clock_out_info'), {
+					description: $t('time_tracking.toasts.clock_out_desc', { time: elapsedTime })
 				});
 				shiftStartTime = null;
 				loadData(); // Refresh history
 			}
 		} catch (e) {
-			toast.error('Operation failed', { description: (e as Error).message });
+			toast.error($t('time_tracking.toasts.op_fail'), { description: (e as Error).message });
 		}
 	};
 
@@ -177,21 +178,21 @@
 				onBreak = true;
 				breakStartTime = new Date(entry.BreakStart!);
 				startBreakTimer();
-				toast.info('Break Started', {
-					description: 'Take a well-deserved break! Your timer is paused.'
+				toast.info($t('time_tracking.toasts.break_start'), {
+					description: $t('time_tracking.toasts.break_start_desc')
 				});
 			} else {
 				await timeTrackingApi.endBreak(user.id);
 				onBreak = false;
 				stopBreakTimer();
-				toast.success('Break Ended', {
-					description: 'Welcome back! Ready to continue your productive day?'
+				toast.success($t('time_tracking.toasts.break_end'), {
+					description: $t('time_tracking.toasts.break_end_desc')
 				});
 				// breakStartTime = null; // Keep it for display? No, reset.
 				breakStartTime = null;
 			}
 		} catch (e) {
-			toast.error('Operation failed', { description: (e as Error).message });
+			toast.error($t('time_tracking.toasts.op_fail'), { description: (e as Error).message });
 		}
 	};
 
@@ -236,8 +237,8 @@
 
 	const updateTask = () => {
 		if (currentTask) {
-			toast.success('Task Updated', {
-				description: `Now working on: ${currentTask}`
+			toast.success($t('time_tracking.toasts.task_updated'), {
+				description: $t('time_tracking.toasts.task_updated_desc', { task: currentTask })
 			});
 			// In real implementation, could update Notes of current TimeClock entry
 		}
@@ -256,9 +257,9 @@
 <div class="space-y-10">
 	<!-- Header -->
 	<div class="text-center">
-		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Personal Flow</p>
-		<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">My Time Tracker</h1>
-		<p class="mt-2 text-slate-500">Track your focus, breaks, and progress from one calm surface.</p>
+		<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{$t('time_tracking.staff.header.subtitle')}</p>
+		<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">{$t('time_tracking.staff.header.title')}</h1>
+		<p class="mt-2 text-slate-500">{$t('time_tracking.staff.header.desc')}</p>
 	</div>
 
 	<!-- Main Clock Card -->
@@ -268,7 +269,7 @@
 	>
 		<CardHeader class="pb-4">
 			<CardTitle class="flex items-center justify-between text-slate-600">
-				<span class="text-xl font-semibold text-slate-900">My Status</span>
+				<span class="text-xl font-semibold text-slate-900">{$t('time_tracking.staff.status_card.title')}</span>
 				<div class="flex items-center gap-4">
 					<span class="flex items-center gap-2 text-sm font-medium">
 						<div
@@ -276,14 +277,14 @@
 								? 'animate-pulse bg-green-300'
 								: 'bg-slate-300'}"
 						></div>
-						{clockedIn ? 'Clocked In' : 'Clocked Out'}
+						{clockedIn ? $t('time_tracking.staff.status_card.clocked_in') : $t('time_tracking.staff.status_card.clocked_out')}
 					</span>
 					{#if onBreak}
 						<span
 							class="flex items-center gap-2 rounded-full bg-yellow-500/10 px-3 py-1 text-sm font-medium text-slate-700"
 						>
 							<Coffee size={16} />
-							On Break
+							{$t('time_tracking.staff.status_card.on_break')}
 						</span>
 					{/if}
 				</div>
@@ -296,7 +297,7 @@
 
 			{#if onBreak}
 				<div class="mb-6">
-					<div class="mb-2 text-lg font-medium text-yellow-600">Break Time</div>
+					<div class="mb-2 text-lg font-medium text-yellow-600">{$t('time_tracking.staff.status_card.break_time')}</div>
 					<div class="font-mono text-2xl text-slate-800">{breakTime}</div>
 				</div>
 			{/if}
@@ -306,7 +307,7 @@
 					class="flex-1 rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 shadow-lg shadow-blue-900/5 backdrop-blur-md transition-all hover:bg-white/60"
 				>
 					<div class="text-lg font-bold text-slate-900">{todayHours}</div>
-					<div class="text-sm font-medium text-slate-500">Today's Total</div>
+					<div class="text-sm font-medium text-slate-500">{$t('time_tracking.staff.status_card.today_total')}</div>
 				</div>
 			</div>
 
@@ -319,10 +320,10 @@
 				>
 					{#if clockedIn}
 						<LogOut class="mr-2" size={20} />
-						Clock Out
+						{$t('time_tracking.staff.status_card.clock_out_btn')}
 					{:else}
 						<LogIn class="mr-2" size={20} />
-						Clock In
+						{$t('time_tracking.staff.status_card.clock_in_btn')}
 					{/if}
 				</Button>
 				{#if clockedIn}
@@ -333,7 +334,7 @@
 							: 'bg-gradient-to-r from-blue-500/95 to-cyan-500/95 text-white'}"
 					>
 						<Coffee class="mr-2" size={20} />
-						{onBreak ? 'End Break' : 'Start Break'}
+						{onBreak ? $t('time_tracking.staff.status_card.end_break_btn') : $t('time_tracking.staff.status_card.start_break_btn')}
 					</Button>
 				{/if}
 			</div>
@@ -350,7 +351,7 @@
 			<CardHeader class="pb-2">
 				<CardTitle class="flex items-center gap-3 text-slate-500">
 					<Timer size={20} />
-					<span>Today's Hours</span>
+					<span>{$t('time_tracking.staff.stats.today_hours')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -361,7 +362,7 @@
 						style="width: {(parseFloat(todayHours) / todayTarget) * 100}%"
 					></div>
 				</div>
-				<p class="text-sm text-slate-500">out of {todayTarget} hours target</p>
+				<p class="text-sm text-slate-500">{$t('time_tracking.staff.stats.target_label', { target: todayTarget })}</p>
 			</CardContent>
 		</Card>
 
@@ -373,7 +374,7 @@
 			<CardHeader class="pb-2">
 				<CardTitle class="flex items-center gap-3 text-slate-500">
 					<Calendar size={20} />
-					<span>Weekly Hours</span>
+					<span>{$t('time_tracking.staff.stats.weekly_hours')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -384,7 +385,7 @@
 						style="width: {weeklyProgress}%"
 					></div>
 				</div>
-				<p class="text-sm text-slate-500">out of {weeklyTarget} hours target</p>
+				<p class="text-sm text-slate-500">{$t('time_tracking.staff.stats.target_label', { target: weeklyTarget })}</p>
 			</CardContent>
 		</Card>
 	</div>
@@ -400,19 +401,19 @@
 			<CardHeader>
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<Target size={20} class="text-purple-500/80" />
-					<span>Current Task</span>
+					<span>{$t('time_tracking.staff.task.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-4">
 					<div>
 						<label class="mb-2 block text-sm font-medium text-slate-700"
-							>What are you working on?</label
+							>{$t('time_tracking.staff.task.label')}</label
 						>
 						<input
 							bind:value={currentTask}
 							type="text"
-							placeholder="Enter your current task..."
+							placeholder={$t('time_tracking.staff.task.placeholder')}
 							class="liquid-input w-full px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400"
 						/>
 					</div>
@@ -420,7 +421,7 @@
 						onclick={updateTask}
 						class="glass-button w-full rounded-2xl bg-gradient-to-r from-purple-500/95 to-indigo-500/95 py-3 font-semibold text-white transition-all duration-300 hover:scale-[1.01]"
 					>
-						Update Task
+						{$t('time_tracking.staff.task.button')}
 					</Button>
 				</div>
 			</CardContent>
@@ -435,7 +436,7 @@
 			<CardHeader>
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<TrendingUp size={20} class="text-green-500/80" />
-					<span>Daily Goals</span>
+					<span>{$t('time_tracking.staff.goals.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -470,7 +471,7 @@
 		<CardHeader>
 			<CardTitle class="flex items-center gap-3 text-slate-600">
 				<Activity size={20} class="text-blue-500/80" />
-				<span>Recent Shifts</span>
+				<span>{$t('time_tracking.staff.recent_shifts.title')}</span>
 			</CardTitle>
 		</CardHeader>
 		<CardContent>

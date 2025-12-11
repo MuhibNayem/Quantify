@@ -498,6 +498,9 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 		return err
 	}
 
+	// Invalidate product cache
+	repository.DeleteCachePattern("products:*")
+
 	job.Status = "COMPLETED"
 	job.LastError = ""
 	return c.saveJob(job)

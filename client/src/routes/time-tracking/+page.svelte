@@ -8,10 +8,12 @@
 	import { toast } from 'svelte-sonner';
 	import { fade } from 'svelte/transition';
 
+	import { t } from '$lib/i18n';
+
 	$effect(() => {
 		if (!auth.hasPermission('users.view')) {
-			toast.error('Access Denied', {
-				description: 'You do not have permission to access time tracking.'
+			toast.error($t('time_tracking.toasts.access_denied'), {
+				description: $t('time_tracking.toasts.access_denied_desc')
 			});
 			goto('/');
 		}
@@ -40,14 +42,13 @@
 			>
 				<Clock class="h-5 w-5" />
 			</span>
-			<p class="text-xs font-semibold uppercase tracking-[0.28em]">Time Intelligence</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.28em]">{$t('time_tracking.hero.label')}</p>
 		</div>
 		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl lg:text-5xl">
-			Time Tracking Control Center
+			{$t('time_tracking.hero.title')}
 		</h1>
 		<p class="mx-auto mt-6 max-w-3xl text-base text-slate-600">
-			Stay on top of shifts, breaks, and approvals with a calm workspace designed to feel invisible.
-			Switch between personal and manager views without losing the Apple-inspired polish.
+			{$t('time_tracking.hero.subtitle')}
 		</p>
 	</div>
 </section>
@@ -73,7 +74,7 @@
 						out:fade={{ duration: 200 }}
 					></div>
 				{/if}
-				<span class="relative z-10">Staff View</span>
+				<span class="relative z-10">{$t('time_tracking.role_toggle.staff')}</span>
 			</Button>
 
 			<Button
@@ -92,10 +93,10 @@
 						out:fade={{ duration: 200 }}
 					></div>
 				{/if}
-				<span class="relative z-10">Manager View</span>
+				<span class="relative z-10">{$t('time_tracking.role_toggle.manager')}</span>
 			</Button>
 		</div>
-		<p class="text-xs uppercase tracking-[0.3em] text-slate-400">Select dashboard</p>
+		<p class="text-xs uppercase tracking-[0.3em] text-slate-400">{$t('time_tracking.role_toggle.label')}</p>
 	</div>
 
 	{#if currentRole === 'Staff'}

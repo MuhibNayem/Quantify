@@ -8,6 +8,7 @@
     import { debounce } from '$lib/utils';
 	import { Loader2, Users, Search, AlertTriangle, CheckCircle2, XCircle } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+    import { t } from '$lib/i18n';
 
 	let loading = false;
 	let userId: number | null = null;
@@ -41,7 +42,7 @@
 
 	async function analyzeChurnRisk() {
 		if (!userId) {
-			toast.error('Please select a customer');
+			toast.error($t('intelligence.toasts.select_customer'));
 			return;
 		}
 
@@ -50,9 +51,9 @@
 		try {
 			const res = await crmApi.getChurnRisk(userId);
 			churnRisk = res;
-			toast.success('Analysis complete');
+			toast.success($t('intelligence.toasts.analysis_complete'));
 		} catch (error: any) {
-			toast.error('Failed to analyze churn risk', {
+			toast.error($t('intelligence.toasts.analysis_fail'), {
 				description: error?.response?.data?.error || 'An unexpected error occurred'
 			});
 		} finally {
@@ -76,14 +77,14 @@
 			<div class="rounded-lg bg-purple-100 p-2 text-purple-600">
 				<Users class="h-5 w-5" />
 			</div>
-			Customer Churn Prediction
+			{$t('intelligence.churn_risk.title')}
 		</CardTitle>
-		<CardDescription>Identify at-risk customers and retention strategies</CardDescription>
+		<CardDescription>{$t('intelligence.churn_risk.subtitle')}</CardDescription>
 	</CardHeader>
 	<CardContent class="space-y-4">
         <!-- Customer Search -->
 		<div class="space-y-2">
-			<Label>Select Customer</Label>
+			<Label>{$t('intelligence.churn_risk.select_customer')}</Label>
             {#if selectedCustomer}
                 <div class="flex items-center justify-between rounded-md border border-purple-200 bg-purple-50 p-2">
                     <div class="flex flex-col">
@@ -98,7 +99,7 @@
                 <div class="relative">
                     <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                     <Input 
-                        placeholder="Search by name or email..." 
+                        placeholder={$t('intelligence.churn_risk.placeholder')} 
                         class="pl-9" 
                         bind:value={customerSearch}
                         oninput={searchCustomers}
@@ -124,9 +125,9 @@
 			<Button onclick={analyzeChurnRisk} disabled={loading || !userId} class="bg-purple-600 hover:bg-purple-700">
 				{#if loading}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					Analyzing...
+					{$t('intelligence.churn_risk.analyzing_btn')}
 				{:else}
-					Analyze Risk
+					{$t('intelligence.churn_risk.analyze_btn')}
 				{/if}
 			</Button>
 		</div>
@@ -135,20 +136,20 @@
 			<div class="mt-4 space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<div class="text-sm text-slate-500">Risk Level</div>
+						<div class="text-sm text-slate-500">{$t('intelligence.churn_risk.risk_level')}</div>
                         <div class={`mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold ${getRiskColor(churnRisk.risk_level)}`}>
                             {churnRisk.risk_level}
                         </div>
 					</div>
                     <div class="text-right">
-                        <div class="text-sm text-slate-500">Risk Score</div>
+                        <div class="text-sm text-slate-500">{$t('intelligence.churn_risk.risk_score')}</div>
                         <div class="text-2xl font-bold text-slate-900">{(churnRisk.churn_risk_score * 100).toFixed(0)}%</div>
                     </div>
 				</div>
                 
                 {#if churnRisk.primary_factors && churnRisk.primary_factors.length > 0}
                     <div class="space-y-1">
-                        <div class="text-sm font-medium text-slate-700">Primary Factors</div>
+                        <div class="text-sm font-medium text-slate-700">{$t('intelligence.churn_risk.primary_factors')}</div>
                         <ul class="list-inside list-disc text-sm text-slate-600">
                             {#each churnRisk.primary_factors as factor}
                                 <li>{factor}</li>
@@ -159,7 +160,7 @@
 
                 <div class="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                     <div class="mb-1 font-medium text-slate-900 flex items-center gap-2">
-                        <CheckCircle2 class="h-3 w-3 text-emerald-600" /> Retention Strategy
+                        <CheckCircle2 class="h-3 w-3 text-emerald-600" /> {$t('intelligence.churn_risk.retention_strategy')}
                     </div>
                     {churnRisk.retention_strategy}
                 </div>
@@ -167,9 +168,9 @@
                 {#if churnRisk.suggested_discount > 0}
                     <div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
                         <div class="font-medium flex items-center gap-2">
-                            <AlertTriangle class="h-3 w-3" /> Suggested Action
+                            <AlertTriangle class="h-3 w-3" /> {$t('intelligence.churn_risk.suggested_action')}
                         </div>
-                        Offer a {churnRisk.suggested_discount}% discount to retain this customer.
+                        {$t('intelligence.churn_risk.discount_offer', { discount: churnRisk.suggested_discount })}
                     </div>
                 {/if}
 			</div>

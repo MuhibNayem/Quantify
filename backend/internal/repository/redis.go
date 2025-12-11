@@ -95,3 +95,25 @@ func GetCache(key string) (string, error) {
 func DeleteCache(key string) error {
 	return RedisClient.UniversalClient.Del(ctx, key).Err()
 }
+
+// DeleteCachePattern deletes all keys matching a pattern from Redis.
+func DeleteCachePattern(pattern string) error {
+	logrus.Infof("Attempting to delete keys matching pattern: %s", pattern)
+	iter := RedisClient.UniversalClient.Scan(ctx, 0, pattern, 1000).Iterator()
+	deletedCount := 0
+	for iter.Next(ctx) {
+		key := iter.Val()
+		if err := RedisClient.UniversalClient.Del(ctx, key).Err(); err != nil {
+			logrus.Errorf("Failed to delete key %s: %v", key, err)
+			return err
+		}
+		deletedCount++
+		logrus.Infof("Deleted cache key: %s", key)
+	}
+	if err := iter.Err(); err != nil {
+		logrus.Errorf("Error during scan for pattern %s: %v", pattern, err)
+		return err
+	}
+	logrus.Infof("Finished deleting pattern %s. Total keys deleted: %d", pattern, deletedCount)
+	return nil
+}

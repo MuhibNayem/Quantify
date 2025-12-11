@@ -54,6 +54,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { formatCurrency, formatDateTime, formatPercent } from '$lib/utils';
+	import { t } from '$lib/i18n';
 
 	type TabKey = 'products' | 'categories' | 'sub-categories' | 'suppliers' | 'locations';
 
@@ -63,8 +64,8 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('products.read')) {
-			toast.error('Access Denied', {
-				description: 'You do not have permission to view the catalog.'
+			toast.error($t('catalog.toasts.access_denied'), {
+				description: $t('catalog.toasts.access_denied_desc')
 			});
 			goto('/');
 		}
@@ -115,41 +116,41 @@
 
 	// Column definitions with permission checks
 	const productColumns = $derived([
-		{ header: 'SKU', accessorKey: 'SKU' },
-		{ header: 'Name', accessorKey: 'Name' },
-		{ header: 'Status', accessorKey: 'Status' },
+		{ header: $t('catalog.products.columns.sku'), accessorKey: 'SKU' },
+		{ header: $t('catalog.products.columns.name'), accessorKey: 'Name' },
+		{ header: $t('catalog.products.columns.status'), accessorKey: 'Status' },
 		...(auth.hasPermission('products.write') || auth.hasPermission('products.delete')
-			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
 			: [])
 	]);
 
 	const categoryColumns = $derived([
-		{ header: 'Name', accessorKey: 'Name' },
+		{ header: $t('catalog.categories.form.name'), accessorKey: 'Name' },
 		...(auth.hasPermission('categories.write')
-			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
 			: [])
 	]);
 
 	const subCategoryColumns = $derived([
-		{ header: 'Name', accessorKey: 'Name' },
+		{ header: $t('catalog.sub_categories.form.name'), accessorKey: 'Name' },
 		...(auth.hasPermission('categories.write')
-			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
 			: [])
 	]);
 
 	const supplierColumns = $derived([
-		{ header: 'Name', accessorKey: 'Name' },
-		{ header: 'Contact', accessorKey: 'ContactPerson' },
+		{ header: $t('catalog.suppliers.form.name'), accessorKey: 'Name' },
+		{ header: $t('catalog.suppliers.columns.contact'), accessorKey: 'ContactPerson' },
 		...(auth.hasPermission('suppliers.write')
-			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
 			: [])
 	]);
 
 	const locationColumns = $derived([
-		{ header: 'Name', accessorKey: 'Name' },
-		{ header: 'Address', accessorKey: 'Address' },
+		{ header: $t('catalog.locations.form.name'), accessorKey: 'Name' },
+		{ header: $t('catalog.locations.columns.address'), accessorKey: 'Address' },
 		...(auth.hasPermission('locations.write')
-			? [{ header: 'Actions', accessorKey: 'id', class: 'text-right' }]
+			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
 			: [])
 	]);
 
@@ -222,16 +223,16 @@
 						accent: 'sky'
 					},
 					{
-						title: 'Status',
+						title: $t('catalog.details.status'),
 						value: product.Status ?? 'Unknown',
 						hint: lastAdjustment
-							? `Updated ${formatDateTime(lastAdjustment.AdjustedAt)}`
+							? `${$t('catalog.details.updated')} ${formatDateTime(lastAdjustment.AdjustedAt)}`
 							: 'No adjustments yet',
 						icon: Tag,
 						accent: 'emerald'
 					},
 					{
-						title: 'Selling Price',
+						title: $t('catalog.details.selling_price'),
 						value: formatCurrency(product.SellingPrice),
 						hint: `Purchase ${formatCurrency(product.PurchasePrice)}`,
 						icon: BadgeDollarSign,
@@ -244,15 +245,15 @@
 				title: 'Catalog Profile',
 				description: 'Key identifiers & pricing context.',
 				items: [
-					{ label: 'SKU', value: product.SKU },
-					{ label: 'Name', value: product.Name },
+					{ label: $t('catalog.details.sku'), value: product.SKU },
+					{ label: $t('catalog.details.name'), value: product.Name },
 					{
-						label: 'Status',
+						label: $t('catalog.details.status'),
 						value: product.Status ?? 'Unknown',
 						badge: statusBadge(product.Status)
 					},
-					{ label: 'Purchase Price', value: formatCurrency(product.PurchasePrice) },
-					{ label: 'Selling Price', value: formatCurrency(product.SellingPrice) },
+					{ label: $t('catalog.details.purchase_price'), value: formatCurrency(product.PurchasePrice) },
+					{ label: $t('catalog.details.selling_price'), value: formatCurrency(product.SellingPrice) },
 					{ label: 'Barcode', value: product.BarcodeUPC ?? '—' }
 				]
 			},
@@ -262,17 +263,17 @@
 				description: 'Upstream supplier & placement details.',
 				items: [
 					{
-						label: 'Category',
+						label: $t('catalog.products.form.select_category'),
 						value: product.Category?.Name ?? (product.CategoryID ? `#${product.CategoryID}` : '—')
 					},
 					{
-						label: 'Sub-Category',
+						label: $t('catalog.products.form.select_sub_category'),
 						value:
 							product.SubCategory?.Name ??
 							(product.SubCategoryID ? `#${product.SubCategoryID}` : '—')
 					},
 					{
-						label: 'Supplier',
+						label: $t('catalog.products.form.select_supplier'),
 						value: product.Supplier?.Name ?? (product.SupplierID ? `#${product.SupplierID}` : '—')
 					},
 					{
@@ -340,10 +341,10 @@
 				type: 'description',
 				title: 'Category Profile',
 				items: [
-					{ label: 'Name', value: category.Name },
-					{ label: 'ID', value: category.ID },
-					{ label: 'Created', value: formatDateTime(category.CreatedAt) },
-					{ label: 'Updated', value: formatDateTime(category.UpdatedAt) },
+					{ label: $t('catalog.details.name'), value: category.Name },
+					{ label: $t('catalog.details.id'), value: category.ID },
+					{ label: $t('catalog.details.created'), value: formatDateTime(category.CreatedAt) },
+					{ label: $t('catalog.details.updated'), value: formatDateTime(category.UpdatedAt) },
 					{ label: 'Sub-categories', value: children.length ? `${children.length} linked` : '—' }
 				]
 			},
@@ -398,10 +399,10 @@
 				type: 'description',
 				title: 'Sub-category Profile',
 				items: [
-					{ label: 'Name', value: subCategory.Name },
-					{ label: 'Parent', value: parent?.Name ?? `Category #${subCategory.CategoryID}` },
-					{ label: 'Created', value: formatDateTime(subCategory.CreatedAt) },
-					{ label: 'Updated', value: formatDateTime(subCategory.UpdatedAt) }
+					{ label: $t('catalog.details.name'), value: subCategory.Name },
+					{ label: $t('catalog.details.parent_category'), value: parent?.Name ?? `Category #${subCategory.CategoryID}` },
+					{ label: $t('catalog.details.created'), value: formatDateTime(subCategory.CreatedAt) },
+					{ label: $t('catalog.details.updated'), value: formatDateTime(subCategory.UpdatedAt) }
 				]
 			}
 		];
@@ -442,13 +443,13 @@
 			},
 			{
 				type: 'description',
-				title: 'Contact Details',
+				title: $t('catalog.details.contact_details'),
 				items: [
-					{ label: 'Name', value: supplier.Name },
-					{ label: 'Contact Person', value: supplier.ContactPerson ?? '—' },
-					{ label: 'Email', value: supplier.Email ?? '—', icon: Mail },
-					{ label: 'Phone', value: supplier.Phone ?? '—', icon: Phone },
-					{ label: 'Address', value: supplier.Address ?? '—', icon: MapPin }
+					{ label: $t('catalog.details.name'), value: supplier.Name },
+					{ label: $t('catalog.details.contact_person'), value: supplier.ContactPerson ?? '—' },
+					{ label: $t('catalog.details.email'), value: supplier.Email ?? '—', icon: Mail },
+					{ label: $t('catalog.details.phone'), value: supplier.Phone ?? '—', icon: Phone },
+					{ label: $t('catalog.details.address'), value: supplier.Address ?? '—', icon: MapPin }
 				]
 			},
 			{
@@ -499,12 +500,12 @@
 			},
 			{
 				type: 'description',
-				title: 'Location Profile',
+				title: $t('catalog.details.location_profile'),
 				items: [
-					{ label: 'Name', value: location.Name },
-					{ label: 'Address', value: location.Address ?? '—' },
-					{ label: 'Created', value: formatDateTime(location.CreatedAt) },
-					{ label: 'Updated', value: formatDateTime(location.UpdatedAt) }
+					{ label: $t('catalog.details.name'), value: location.Name },
+					{ label: $t('catalog.details.address'), value: location.Address ?? '—' },
+					{ label: $t('catalog.details.created'), value: formatDateTime(location.CreatedAt) },
+					{ label: $t('catalog.details.updated'), value: formatDateTime(location.UpdatedAt) }
 				]
 			}
 		];
@@ -805,29 +806,29 @@
 		try {
 			if (editingProduct) {
 				await productsApi.update(editingProduct.ID, payload);
-				toast.success('Product updated successfully');
+				toast.success($t('catalog.toasts.product_saved'));
 			} else {
 				await productsApi.create(payload);
-				toast.success('Product created successfully');
+				toast.success($t('catalog.toasts.product_saved'));
 			}
 			await loadAll();
 			resetProductForm();
 		} catch (error: any) {
 			const backendMessage =
 				error?.response?.data?.error || error?.response?.data?.message || 'Unable to save product';
-			toast.error('Failed to Save Product', { description: backendMessage });
+			toast.error($t('catalog.toasts.product_save_fail'), { description: backendMessage });
 		}
 	};
 
 	const deleteProduct = async (product: Product) => {
-		if (!window.confirm(`Are you sure you want to delete ${product.Name}?`)) return;
+		if (!window.confirm($t('catalog.toasts.confirm_delete', { name: product.Name }))) return;
 		try {
 			await productsApi.remove(product.ID);
-			toast.success('Product removed');
+			toast.success($t('catalog.toasts.product_removed'));
 			await loadAll();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to delete product';
-			toast.error('Failed to Delete Product', { description: errorMessage });
+			toast.error($t('catalog.toasts.product_remove_fail'), { description: errorMessage });
 		}
 	};
 
@@ -843,24 +844,24 @@
 			} else {
 				await categoriesApi.create({ name: categoryForm.name });
 			}
-			toast.success('Category saved');
+			toast.success($t('catalog.toasts.category_saved'));
 			await loadAll();
 			resetCategoryForm();
 		} catch (error) {
 			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save category';
-			toast.error('Failed to Save Category', { description: errorMessage });
+			toast.error($t('catalog.toasts.category_save_fail'), { description: errorMessage });
 		}
 	};
 
 	const deleteCategory = async (category: Category) => {
-		if (!window.confirm(`Are you sure you want to delete ${category.Name}?`)) return;
+		if (!window.confirm($t('catalog.toasts.confirm_delete', { name: category.Name }))) return;
 		try {
 			await categoriesApi.remove(category.ID);
-			toast.success('Category removed');
+			toast.success($t('catalog.toasts.category_removed'));
 			await loadAll();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to delete category';
-			toast.error('Failed to Delete Category', { description: errorMessage });
+			toast.error($t('catalog.toasts.category_remove_fail'), { description: errorMessage });
 		}
 	};
 
@@ -878,24 +879,24 @@
 			} else {
 				await subCategoriesApi.create(payload, Number(subCategoryForm.categoryId));
 			}
-			toast.success('Sub-category saved');
+			toast.success($t('catalog.toasts.sub_category_saved'));
 			await loadAll();
 			resetSubCategoryForm();
 		} catch (error) {
 			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save sub-category';
-			toast.error('Failed to Save Sub-Category', { description: errorMessage });
+			toast.error($t('catalog.toasts.sub_category_save_fail'), { description: errorMessage });
 		}
 	};
 
 	const deleteSubCategory = async (subCategory: SubCategory) => {
-		if (!window.confirm(`Are you sure you want to delete ${subCategory.Name}?`)) return;
+		if (!window.confirm($t('catalog.toasts.confirm_delete', { name: subCategory.Name }))) return;
 		try {
 			await subCategoriesApi.remove(subCategory.ID);
-			toast.success('Sub-category removed');
+			toast.success($t('catalog.toasts.sub_category_removed'));
 			await loadAll();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to delete sub-category';
-			toast.error('Failed to Delete Sub-Category', { description: errorMessage });
+			toast.error($t('catalog.toasts.sub_category_remove_fail'), { description: errorMessage });
 		}
 	};
 
@@ -915,24 +916,24 @@
 			} else {
 				await suppliersApi.create(supplierForm);
 			}
-			toast.success('Supplier saved');
+			toast.success($t('catalog.toasts.supplier_saved'));
 			await loadAll();
 			resetSupplierForm();
 		} catch (error) {
 			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save supplier';
-			toast.error('Failed to Save Supplier', { description: errorMessage });
+			toast.error($t('catalog.toasts.supplier_save_fail'), { description: errorMessage });
 		}
 	};
 
 	const deleteSupplier = async (supplier: Supplier) => {
-		if (!window.confirm(`Are you sure you want to delete ${supplier.Name}?`)) return;
+		if (!window.confirm($t('catalog.toasts.confirm_delete', { name: supplier.Name }))) return;
 		try {
 			await suppliersApi.remove(supplier.ID);
-			toast.success('Supplier removed');
+			toast.success($t('catalog.toasts.supplier_removed'));
 			await loadAll();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to delete supplier';
-			toast.error('Failed to Delete Supplier', { description: errorMessage });
+			toast.error($t('catalog.toasts.supplier_remove_fail'), { description: errorMessage });
 		}
 	};
 
@@ -949,24 +950,24 @@
 			} else {
 				await locationsApi.create(locationForm);
 			}
-			toast.success('Location saved');
+			toast.success($t('catalog.toasts.location_saved'));
 			await loadAll();
 			resetLocationForm();
 		} catch (error) {
 			const errorMessage = (error as any)?.response?.data?.error || 'Unable to save location';
-			toast.error('Failed to Save Location', { description: errorMessage });
+			toast.error($t('catalog.toasts.location_save_fail'), { description: errorMessage });
 		}
 	};
 
 	const deleteLocation = async (location: Location) => {
-		if (!window.confirm(`Are you sure you want to delete ${location.Name}?`)) return;
+		if (!window.confirm($t('catalog.toasts.confirm_delete', { name: location.Name }))) return;
 		try {
 			await locationsApi.remove(location.ID);
-			toast.success('Location removed');
+			toast.success($t('catalog.toasts.location_removed'));
 			await loadAll();
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || 'Unable to delete location';
-			toast.error('Failed to Delete Location', { description: errorMessage });
+			toast.error($t('catalog.toasts.location_remove_fail'), { description: errorMessage });
 		}
 	};
 </script>
@@ -1025,17 +1026,17 @@
 				<Zap class="h-6 w-6 text-white" />
 			</span>
 			<p class="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 sm:text-sm">
-				Catalog Cockpit
+				{$t('catalog.hero.subtitle')}
 			</p>
 		</div>
 
 		<h1
 			class="mb-3 bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
 		>
-			Products, Categories &amp; Partners
+			{$t('catalog.hero.title')}
 		</h1>
 		<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
-			Unified control center for your catalog data
+			{$t('catalog.hero.description')}
 		</p>
 
 		<!-- Action buttons -->
@@ -1045,14 +1046,14 @@
 				onclick={loadAll}
 				class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl focus:ring-2 focus:ring-sky-300 sm:w-auto"
 			>
-				<RefreshCcw class="mr-2 h-4 w-4" /> Sync data
+				<RefreshCcw class="mr-2 h-4 w-4" /> {$t('catalog.hero.sync_data')}
 			</Button>
 			<Button
 				href="/bulk"
 				variant="outline"
 				class="w-full rounded-xl border border-sky-200 bg-white/80 px-5 py-2.5 font-medium text-sky-700 shadow-md transition-all duration-300 hover:scale-105 hover:bg-sky-50 hover:shadow-lg focus:ring-2 focus:ring-sky-200 sm:w-auto"
 			>
-				<PlusCircle class="mr-2 h-4 w-4" /> Bulk import
+				<PlusCircle class="mr-2 h-4 w-4" /> {$t('catalog.hero.bulk_import')}
 			</Button>
 		</div>
 	</div>
@@ -1072,7 +1073,7 @@
 				onclick={() => (activeTab = tab as TabKey)}
 				style={`animation-delay:${100 + i * 50}ms`}
 			>
-				{tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+				{$t(`catalog.tabs.${tab.replace('-', '_')}`)}
 			</button>
 		{/each}
 	</div>
@@ -1093,14 +1094,14 @@
 							class="flex gap-4 rounded-2xl border border-sky-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">SKU Registry</h2>
-								<p class="text-sm text-slate-500">Manage items synced with the warehouse</p>
+								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.products.title')}</h2>
+								<p class="text-sm text-slate-500">{$t('catalog.products.subtitle')}</p>
 							</div>
 							<div class="flex flex-col gap-3 sm:flex-row">
 								<div class="relative flex-1">
 									<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 									<Input
-										placeholder="Search products..."
+										placeholder={$t('catalog.products.search_placeholder')}
 										bind:value={search.term}
 										onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 										class="rounded-xl border-sky-200 bg-white/90 pl-9 focus:ring-2 focus:ring-sky-400"
@@ -1112,7 +1113,7 @@
 										onclick={handleSearch}
 										class="rounded-xl border border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
 									>
-										Search
+										{$t('catalog.common.search')}
 									</Button>
 									{#if auth.hasPermission('products.write')}
 										<Button
@@ -1122,7 +1123,7 @@
 											}}
 											class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
 										>
-											<PlusCircle class="mr-2 h-4 w-4" /> Add Product
+											<PlusCircle class="mr-2 h-4 w-4" /> {$t('catalog.products.add_button')}
 										</Button>
 									{/if}
 								</div>
@@ -1171,7 +1172,7 @@
 														editProduct(product);
 													}}
 												>
-													Edit
+													{$t('catalog.common.edit')}
 												</Button>
 											{/if}
 											{#if auth.hasPermission('products.delete')}
@@ -1184,7 +1185,7 @@
 														deleteProduct(product.ID);
 													}}
 												>
-													Delete
+													{$t('catalog.common.delete')}
 												</Button>
 											{/if}
 										</div>
@@ -1205,29 +1206,33 @@
 								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
 								<CardTitle class="text-slate-800"
-									>{editingProduct ? 'Update product' : 'Create product'}</CardTitle
+									>{editingProduct
+										? $t('catalog.products.form.update_title')
+										: $t('catalog.products.form.create_title')}</CardTitle
 								>
-								<CardDescription class="text-slate-600">SKU-level metadata</CardDescription>
+								<CardDescription class="text-slate-600"
+									>{$t('catalog.products.form.subtitle')}</CardDescription
+								>
 							</CardHeader>
 							<CardContent class="space-y-4 p-6">
 								<Input
 									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="SKU"
+									placeholder={$t('catalog.products.form.sku')}
 									bind:value={productForm.sku}
 								/>
 								<Input
 									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="Name"
+									placeholder={$t('catalog.products.form.name')}
 									bind:value={productForm.name}
 								/>
 								<Input
 									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="Description"
+									placeholder={$t('catalog.products.form.description')}
 									bind:value={productForm.description}
 								/>
 								<Input
 									class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-									placeholder="Barcode / UPC (must be unique)"
+									placeholder={$t('catalog.products.form.barcode')}
 									bind:value={productForm.barCodeUPC}
 								/>
 
@@ -1237,7 +1242,7 @@
 										bind:value={productForm.categoryId}
 										onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}
 									>
-										<option value="">Select category</option>
+										<option value="">{$t('catalog.products.form.select_category')}</option>
 										{#each categories as category}
 											<option value={String(category.ID)}>{category.Name}</option>
 										{/each}
@@ -1250,7 +1255,7 @@
 											class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
 											bind:value={productForm.subCategoryId}
 										>
-											<option value="">Select sub-category</option>
+											<option value="">{$t('catalog.products.form.select_sub_category')}</option>
 											{#each subCategories.filter((sc) => sc.CategoryID === Number(productForm.categoryId)) as subCategory}
 												<option value={String(subCategory.ID)}>{subCategory.Name}</option>
 											{/each}
@@ -1261,7 +1266,9 @@
 										size="sm"
 										variant="outline"
 										class="rounded-xl border border-sky-200 px-3 py-2 text-sky-700 hover:bg-sky-50"
-										onclick={() => (activeTab = 'sub-categories')}>New</Button
+										onclick={() => (activeTab = 'sub-categories')}
+									>
+										{$t('catalog.common.new')}</Button
 									>
 								</div>
 
@@ -1270,7 +1277,7 @@
 										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
 										bind:value={productForm.supplierId}
 									>
-										<option value="">Select supplier</option>
+										<option value="">{$t('catalog.products.form.select_supplier')}</option>
 										{#each suppliers as supplier}
 											<option value={String(supplier.ID)}>{supplier.Name}</option>
 										{/each}
@@ -1282,7 +1289,7 @@
 										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
 										bind:value={productForm.locationId}
 									>
-										<option value="">Default location</option>
+										<option value="">{$t('catalog.products.form.default_location')}</option>
 										{#each locations as location}
 											<option value={String(location.ID)}>{location.Name}</option>
 										{/each}
@@ -1295,7 +1302,7 @@
 										min="0"
 										step="0.01"
 										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-										placeholder="Purchase price"
+										placeholder={$t('catalog.products.form.purchase_price')}
 										bind:value={productForm.purchasePrice}
 									/>
 									<Input
@@ -1303,7 +1310,7 @@
 										min="0"
 										step="0.01"
 										class="w-full rounded-xl border border-sky-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-										placeholder="Selling price"
+										placeholder={$t('catalog.products.form.selling_price')}
 										bind:value={productForm.sellingPrice}
 									/>
 								</div>
@@ -1324,14 +1331,16 @@
 											class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl sm:w-1/2"
 											onclick={saveProduct}
 										>
-											{editingProduct ? 'Update' : 'Create'}
+											{editingProduct
+												? $t('catalog.common.update')
+												: $t('catalog.common.create')}
 										</Button>
 									{/if}
 									<Button
 										class="w-full rounded-xl border border-sky-200 py-2.5 text-sky-700 transition hover:bg-sky-50 sm:w-1/2"
 										onclick={resetProductForm}
 									>
-										Reset
+										{$t('catalog.common.reset')}
 									</Button>
 								</div>
 							</CardContent>
@@ -1351,23 +1360,23 @@
 							class="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">Categories</h2>
-								<p class="text-sm text-slate-500">Structure your catalog foundation</p>
+								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.categories.title')}</h2>
+								<p class="text-sm text-slate-500">{$t('catalog.categories.subtitle')}</p>
 							</div>
 							<div class="flex flex-wrap items-center gap-2">
 								<Input
 									class="w-full rounded-xl border-emerald-200 bg-white/80 px-3 text-sm focus:ring-2 focus:ring-emerald-400 sm:w-48"
-									placeholder="Search by name..."
+									placeholder={$t('catalog.categories.search_placeholder')}
 									bind:value={categorySearchTerm}
 								/>
 								<Button
 									class="rounded-xl bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
-									onclick={handleCategorySearch}>Search</Button
+									onclick={handleCategorySearch}>{$t('catalog.common.search')}</Button
 								>
 								<Button
 									variant="ghost"
 									class="rounded-xl px-4 py-2 text-emerald-600 hover:bg-emerald-50"
-									onclick={clearCategorySearch}>Clear</Button
+									onclick={clearCategorySearch}>{$t('catalog.common.clear')}</Button
 								>
 							</div>
 						</div>
@@ -1393,7 +1402,7 @@
 													categoryForm.name = category.Name;
 												}}
 											>
-												Edit
+												{$t('catalog.common.edit')}
 											</Button>
 											<Button
 												size="sm"
@@ -1404,7 +1413,7 @@
 													deleteCategory(category);
 												}}
 											>
-												Delete
+												{$t('catalog.common.delete')}
 											</Button>
 										</div>
 									</TableCell>
@@ -1424,23 +1433,28 @@
 								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
 								<CardTitle class="text-slate-800"
-									>{editingCategory ? 'Update category' : 'Create category'}</CardTitle
+									>{editingCategory
+										? $t('catalog.categories.form.update_title')
+										: $t('catalog.categories.form.create_title')}</CardTitle
 								>
 							</CardHeader>
 							<CardContent class="space-y-4 p-6">
 								<Input
 									class="w-full rounded-xl border border-emerald-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400"
-									placeholder="Name"
+									placeholder={$t('catalog.categories.form.name')}
 									bind:value={categoryForm.name}
 								/>
 								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
 									<Button
 										class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-xl sm:w-1/2"
-										onclick={saveCategory}>{editingCategory ? 'Update' : 'Create'}</Button
+										onclick={saveCategory}
+										>{editingCategory
+											? $t('catalog.common.update')
+											: $t('catalog.common.create')}</Button
 									>
 									<Button
 										class="w-full rounded-xl border border-emerald-200 py-2.5 text-emerald-700 transition hover:bg-emerald-50 sm:w-1/2"
-										onclick={resetCategoryForm}>Reset</Button
+										onclick={resetCategoryForm}>{$t('catalog.common.reset')}</Button
 									>
 								</div>
 							</CardContent>
@@ -1460,8 +1474,8 @@
 							class="flex flex-col gap-4 rounded-2xl border border-amber-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">Sub Categories</h2>
-								<p class="text-sm text-slate-500">Filter by parent category</p>
+								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.sub_categories.title')}</h2>
+								<p class="text-sm text-slate-500">{$t('catalog.sub_categories.subtitle')}</p>
 							</div>
 							<div class="select-wrapper w-full sm:w-1/2">
 								<select
@@ -1469,13 +1483,13 @@
 									bind:value={subCategoryForm.categoryId}
 									onchange={(e) => loadSubCategories(Number(e?.currentTarget?.value))}
 								>
-									<option value="">Select category to view sub-categories</option>
+									<option value="">{$t('catalog.sub_categories.select_category')}</option>
 									{#if categories.length > 0}
 										{#each categories as category}
 											<option value={category.ID}>{category.Name}</option>
 										{/each}
 									{:else}
-										<option disabled>Loading categories...</option>
+										<option disabled>{$t('catalog.sub_categories.loading_categories')}</option>
 									{/if}
 								</select>
 							</div>
@@ -1486,8 +1500,8 @@
 								class="rounded-2xl border-2 border-dashed border-amber-200/50 bg-white/40 py-12 text-center text-slate-500"
 							>
 								<Layers class="mx-auto mb-3 h-12 w-12 text-amber-200" />
-								<p class="text-base font-medium">Select a category above</p>
-								<p class="text-sm text-slate-400">Sub-categories will appear here</p>
+								<p class="text-base font-medium">{$t('catalog.sub_categories.empty_state')}</p>
+								<p class="text-sm text-slate-400">{$t('catalog.sub_categories.empty_subtitle')}</p>
 							</div>
 						{:else}
 							<DataTable
@@ -1546,20 +1560,22 @@
 								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
 								<CardTitle class="text-slate-800"
-									>{editingSubCategory ? 'Update sub-category' : 'Create sub-category'}</CardTitle
+									>{editingSubCategory
+										? $t('catalog.sub_categories.form.update_title')
+										: $t('catalog.sub_categories.form.create_title')}</CardTitle
 								>
 							</CardHeader>
 							<CardContent class="space-y-4 p-6">
 								<Input
 									class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
-									placeholder="Name"
+									placeholder={$t('catalog.sub_categories.form.name')}
 									bind:value={subCategoryForm.name}
 								/>
 								<select
 									class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
 									bind:value={subCategoryForm.categoryId}
 								>
-									<option value="">Select category</option>
+									<option value="">{$t('catalog.sub_categories.form.select_category')}</option>
 									{#each categories as category}
 										<option value={category.ID}>{category.Name}</option>
 									{/each}
@@ -1569,13 +1585,15 @@
 										class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl sm:w-1/2"
 										onclick={saveSubCategory}
 									>
-										{editingSubCategory ? 'Update' : 'Create'}
+										{editingSubCategory
+											? $t('catalog.common.update')
+											: $t('catalog.common.create')}
 									</Button>
 									<Button
 										class="w-full rounded-xl border border-amber-200 py-2.5 text-amber-700 transition hover:bg-amber-50 sm:w-1/2"
 										onclick={resetSubCategoryForm}
 									>
-										Reset
+										{$t('catalog.common.reset')}
 									</Button>
 								</div>
 							</CardContent>
@@ -1595,23 +1613,23 @@
 							class="flex flex-col gap-4 rounded-2xl border border-violet-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">Suppliers</h2>
-								<p class="text-sm text-slate-500">Strategic partners powering replenishment</p>
+								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.suppliers.title')}</h2>
+								<p class="text-sm text-slate-500">{$t('catalog.suppliers.subtitle')}</p>
 							</div>
 							<div class="flex flex-wrap items-center gap-2">
 								<Input
 									class="w-full rounded-xl border-violet-200 bg-white/80 px-3 text-sm focus:ring-2 focus:ring-violet-400 sm:w-48"
-									placeholder="Search by name..."
+									placeholder={$t('catalog.suppliers.search_placeholder')}
 									bind:value={supplierSearchTerm}
 								/>
 								<Button
 									class="rounded-xl bg-violet-500 px-4 py-2 text-white hover:bg-violet-600"
-									onclick={handleSupplierSearch}>Search</Button
+									onclick={handleSupplierSearch}>{$t('catalog.common.search')}</Button
 								>
 								<Button
 									variant="ghost"
 									class="rounded-xl px-4 py-2 text-violet-600 hover:bg-violet-50"
-									onclick={clearSupplierSearch}>Clear</Button
+									onclick={clearSupplierSearch}>{$t('catalog.common.clear')}</Button
 								>
 							</div>
 						</div>
@@ -1647,7 +1665,7 @@
 													});
 												}}
 											>
-												Edit
+												{$t('catalog.common.edit')}
 											</Button>
 											<Button
 												size="sm"
@@ -1658,7 +1676,7 @@
 													deleteSupplier(supplier);
 												}}
 											>
-												Delete
+												{$t('catalog.common.delete')}
 											</Button>
 										</div>
 									</TableCell>
@@ -1678,43 +1696,47 @@
 								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
 								<CardTitle class="text-slate-800"
-									>{editingSupplier ? 'Update supplier' : 'Create supplier'}</CardTitle
+									>{editingSupplier
+										? $t('catalog.suppliers.form.update_title')
+										: $t('catalog.suppliers.form.create_title')}</CardTitle
 								>
 							</CardHeader>
 							<CardContent class="space-y-4 p-6">
 								<Input
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-									placeholder="Name"
+									placeholder={$t('catalog.suppliers.form.name')}
 									bind:value={supplierForm.name}
 								/>
 								<Input
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-									placeholder="Contact person"
+									placeholder={$t('catalog.suppliers.form.contact_person')}
 									bind:value={supplierForm.contactPerson}
 								/>
 								<Input
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-									placeholder="Email"
+									placeholder={$t('catalog.suppliers.form.email')}
 									bind:value={supplierForm.email}
 								/>
 								<Input
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-									placeholder="Phone"
+									placeholder={$t('catalog.suppliers.form.phone')}
 									bind:value={supplierForm.phone}
 								/>
 								<Input
 									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-violet-400"
-									placeholder="Address"
+									placeholder={$t('catalog.suppliers.form.address')}
 									bind:value={supplierForm.address}
 								/>
 								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
 									<Button
 										class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-xl sm:w-1/2"
-										onclick={saveSupplier}>{editingSupplier ? 'Update' : 'Create'}</Button
+										onclick={saveSupplier}>{editingSupplier
+											? $t('catalog.common.update')
+											: $t('catalog.common.create')}</Button
 									>
 									<Button
 										class="w-full rounded-xl border border-violet-200 py-2.5 text-violet-700 transition hover:bg-violet-50 sm:w-1/2"
-										onclick={resetSupplierForm}>Reset</Button
+										onclick={resetSupplierForm}>{$t('catalog.common.reset')}</Button
 									>
 								</div>
 							</CardContent>
@@ -1735,8 +1757,8 @@
 							class="flex flex-col gap-4 rounded-2xl border border-teal-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">Locations</h2>
-								<p class="text-sm text-slate-500">Fulfilment nodes and stores</p>
+								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.locations.title')}</h2>
+								<p class="text-sm text-slate-500">{$t('catalog.locations.subtitle')}</p>
 							</div>
 						</div>
 
@@ -1763,7 +1785,7 @@
 													locationForm.address = location.Address;
 												}}
 											>
-												Edit
+												{$t('catalog.common.edit')}
 											</Button>
 											<Button
 												size="sm"
@@ -1774,7 +1796,7 @@
 													deleteLocation(location);
 												}}
 											>
-												Delete
+												{$t('catalog.common.delete')}
 											</Button>
 										</div>
 									</TableCell>
@@ -1794,28 +1816,32 @@
 								class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur"
 							>
 								<CardTitle class="text-slate-800"
-									>{editingLocation ? 'Update location' : 'Create location'}</CardTitle
+									>{editingLocation
+										? $t('catalog.locations.form.update_title')
+										: $t('catalog.locations.form.create_title')}</CardTitle
 								>
 							</CardHeader>
 							<CardContent class="space-y-4 p-6">
 								<Input
 									class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
-									placeholder="Name"
+									placeholder={$t('catalog.locations.form.name')}
 									bind:value={locationForm.name}
 								/>
 								<Input
 									class="w-full rounded-xl border border-teal-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-teal-400"
-									placeholder="Address"
+									placeholder={$t('catalog.locations.form.address')}
 									bind:value={locationForm.address}
 								/>
 								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
 									<Button
 										class="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-teal-600 hover:to-emerald-700 hover:shadow-xl sm:w-1/2"
-										onclick={saveLocation}>{editingLocation ? 'Update' : 'Create'}</Button
+										onclick={saveLocation}>{editingLocation
+											? $t('catalog.common.update')
+											: $t('catalog.common.create')}</Button
 									>
 									<Button
 										class="w-full rounded-xl border border-teal-200 py-2.5 text-teal-700 transition hover:bg-teal-50 sm:w-1/2"
-										onclick={resetLocationForm}>Reset</Button
+										onclick={resetLocationForm}>{$t('catalog.common.reset')}</Button
 									>
 								</div>
 							</CardContent>

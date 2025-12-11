@@ -85,7 +85,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 
 	// Invalidate relevant caches
 	repository.DeleteCache(fmt.Sprintf("product:%d", product.ID))
-	repository.DeleteCache("products:*") // Invalidate all product list caches
+	repository.DeleteCachePattern("products:*") // Invalidate all product list caches
 
 	// Publish ProductCreatedEvent
 	payload := ProductEventPayload{
@@ -336,7 +336,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 
 	// Invalidate relevant caches
 	repository.DeleteCache(fmt.Sprintf("product:%d", product.ID))
-	repository.DeleteCache("products:*") // Invalidate all product list caches
+	repository.DeleteCachePattern("products:*") // Invalidate all product list caches
 
 	// Publish ProductUpdatedEvent
 	payload := ProductEventPayload{
@@ -399,7 +399,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 
 	// Invalidate relevant caches
 	repository.DeleteCache(fmt.Sprintf("product:%d", product.ID))
-	repository.DeleteCache("products:*") // Invalidate all product list caches
+	repository.DeleteCachePattern("products:*") // Invalidate all product list caches
 
 	// Publish ProductDeletedEvent
 	payload := ProductEventPayload{
@@ -451,7 +451,7 @@ func (h *ProductHandler) ArchiveProduct(c *gin.Context) {
 
 	// Invalidate relevant caches
 	repository.DeleteCache(fmt.Sprintf("product:%d", product.ID))
-	repository.DeleteCache("products:*") // Invalidate all product list caches
+	repository.DeleteCachePattern("products:*") // Invalidate all product list caches
 
 	c.JSON(http.StatusOK, product)
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -46,7 +47,7 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('pos.view')) {
-			toast.error('Access Denied', { description: 'You do not have permission to access POS.' });
+			toast.error($t('pos.toasts.access_denied'), { description: $t('pos.toasts.access_denied_desc') });
 			goto('/');
 		}
 	});
@@ -56,6 +57,8 @@
     let promotions = $state<any[]>([]);
 	let cart = $state<any[]>([]);
 	let searchTerm = $state('');
+    let fetchLimit = $state(100); // Default limit
+    let fetchStatus = $state('IN_STOCK'); // Default: In Stock
 	let customerSearchTerm = $state('');
 	let selectedCustomer = $state<any | null>(null);
 	let paymentMethod = $state<string | null>(null);
@@ -81,22 +84,17 @@
 
 	const fetchProducts = async (search = '') => {
 		try {
-			// Efficiently fetch products with stock in one go
-			const response = await api.get('/sales/products');
-			let productsData = response.data.products;
+			// Optimized: Fetch products with server-side search and limit
+			const response = await api.get('/sales/products', {
+				params: {
+					q: search,
+					limit: fetchLimit,
+                    status: fetchStatus
+				}
+			});
+			const productsData = response.data.products;
 
-			// Client-side filtering for search (since the optimized endpoint returns all active products for POS cache)
-			if (search) {
-				const lowerSearch = search.toLowerCase();
-				productsData = productsData.filter(
-					(p: any) =>
-						p.Name.toLowerCase().includes(lowerSearch) ||
-						p.SKU.toLowerCase().includes(lowerSearch) ||
-						p.ID.toString().includes(search)
-				);
-			}
-
-			// Map to expected structure (or update usage in template)
+			// Map to expected structure
 			products = productsData.map((p: any) => ({
 				...p,
 				stock: { currentQuantity: p.StockQuantity } // Adapter for existing template usage
@@ -204,13 +202,13 @@
 					selectedCustomer = idResp.data;
 				} catch (e) {
 					selectedCustomer = null;
-					toast.error('Customer not found');
+					toast.error($t('pos.toasts.customer_not_found'));
 				}
 			}
 		} catch (error) {
 			console.error('Error fetching customer:', error);
 			selectedCustomer = null;
-			toast.error('Error searching for customer');
+			toast.error($t('pos.toasts.search_error'));
 		}
 	};
 
@@ -223,6 +221,14 @@
 
 	const addToCart = (product: any) => {
 		const existingItem = cart.find((item) => item.id === product.ID);
+        const currentQty = existingItem ? existingItem.quantity : 0;
+        const stockLimit = product.stock ? product.stock.currentQuantity : 0;
+
+        if (currentQty >= stockLimit) {
+            toast.error($t('pos.toasts.out_of_stock'));
+            return;
+        }
+
 		if (existingItem) {
 			existingItem.quantity++;
 			cart = [...cart];
@@ -244,9 +250,17 @@
 
 	const updateQuantity = (productId: number, quantity: number) => {
 		if (!quantity || quantity < 1) quantity = 1;
+
 		const item = cart.find((item) => item.id === productId);
 		if (item) {
-			item.quantity = quantity;
+            const stockLimit = item.stock ? item.stock.currentQuantity : 0;
+            
+            if (quantity > stockLimit) {
+                toast.error($t('pos.toasts.stock_limit_reached', { stock: stockLimit }));
+                item.quantity = stockLimit;
+            } else {
+			    item.quantity = quantity;
+            }
 			cart = [...cart];
 		}
 	};
@@ -280,7 +294,7 @@
 		if (!canCompleteOrder || isProcessing) return;
 		isProcessing = true;
 
-		const toastId = toast.loading('Processing transaction...');
+		const toastId = toast.loading($t('pos.toasts.processing'));
 
 		try {
 			const payload = {
@@ -298,17 +312,22 @@
 
 			await api.post('/sales/checkout', payload);
 
-			toast.success('Order completed successfully!', { id: toastId });
+			toast.success($t('pos.toasts.order_success'), { id: toastId });
 			if (selectedCustomer && potentialPoints > 0) {
-				toast.info(`Customer earned ${potentialPoints} loyalty points!`);
+				toast.info($t('pos.toasts.loyalty_earned', { points: potentialPoints }));
 			}
+			// Reset all state
 			cart = [];
 			paymentMethod = null;
+			selectedCustomer = null;
+			customerSearchTerm = '';
+			pointsToRedeem = 0;
+			
 			await fetchProducts(); // Refresh stock
 		} catch (error: any) {
 			console.error('Error completing order:', error);
 			const msg = error.response?.data?.error || 'Failed to complete order';
-			toast.error(`Transaction Failed: ${msg}`, { id: toastId });
+			toast.error(`${$t('pos.toasts.transaction_fail')}: ${msg}`, { id: toastId });
 		} finally {
 			isProcessing = false;
 		}
@@ -320,7 +339,7 @@
 		const lastName = nameParts.slice(1).join(' ') || '';
 
 		if (!firstName) {
-			toast.error('Name is required');
+			toast.error($t('pos.toasts.name_required'));
 			return;
 		}
 
@@ -337,11 +356,11 @@
 
 			selectedCustomer = newUser;
 			isNewCustomerModalOpen = false;
-			toast.success('Customer created and selected!');
+			toast.success($t('pos.toasts.customer_created'));
 			newCustomerForm = { name: '', email: '', phone: '' };
 		} catch (error) {
 			console.error('Error creating customer:', error);
-			toast.error('Failed to create customer');
+			toast.error($t('pos.toasts.create_fail'));
 		}
 	};
 </script>
@@ -379,10 +398,10 @@
 				<p
 					class="text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-indigo-700 sm:text-xs"
 				>
-					Point of Sale
+					{$t('pos.hero.label')}
 				</p>
 				<p class="text-[0.65rem] text-slate-500 sm:text-[0.7rem]">
-					Live checkout canvas for counter teams
+					{$t('pos.hero.sub_label')}
 				</p>
 			</div>
 		</div>
@@ -390,11 +409,10 @@
 		<h1
 			class="mb-3 bg-gradient-to-r from-slate-900 via-indigo-700 to-sky-700 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
 		>
-			Unified Checkout Console
+			{$t('pos.hero.title')}
 		</h1>
 		<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
-			Scan, search, and complete orders with a low-friction flow that stays in sync with your
-			catalog.
+			{$t('pos.hero.subtitle')}
 		</p>
 
 		<div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row sm:justify-start">
@@ -404,7 +422,7 @@
 				class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-indigo-600 hover:to-sky-600 hover:shadow-xl focus:ring-2 focus:ring-indigo-300 sm:w-auto"
 			>
 				<Zap class="mr-2 h-4 w-4" />
-				New walk-in sale
+				{$t('pos.hero.new_sale_btn')}
 			</Button>
 			<Button
 				variant="outline"
@@ -412,7 +430,7 @@
 				class="w-full rounded-xl border border-indigo-100 bg-white/80 px-5 py-2.5 font-medium text-indigo-700 shadow-md transition-all duration-300 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg focus:ring-2 focus:ring-indigo-200 sm:w-auto"
 			>
 				<Search class="mr-2 h-4 w-4" />
-				Refresh catalog
+				{$t('pos.hero.refresh_catalog_btn')}
 			</Button>
 		</div>
 	</div>
@@ -434,15 +452,15 @@
 						>
 							<CreditCard class="h-4 w-4" />
 						</span>
-						Point of Sale
+						{$t('pos.header.title')}
 					</CardTitle>
 					<CardDescription class="text-[0.75rem] text-slate-500">
-						Tap products to build the cart, review below, then confirm on the right.
+						{$t('pos.header.description')}
 					</CardDescription>
 				</div>
 				<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
 					<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
-						>Super shop mode</span
+						>{$t('pos.header.super_shop_mode')}</span
 					>
 				</div>
 			</CardHeader>
@@ -452,17 +470,18 @@
 						<Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<Input
 							bind:value={searchTerm}
-							placeholder="Search by name, barcode, or SKU..."
+							placeholder={$t('pos.header.search_placeholder')}
 							class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
 							onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 						/>
 					</div>
+
 					<Button
 						class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
 						onclick={handleSearch}
 					>
 						<Search class="mr-2 h-4 w-4" />
-						Search
+						{$t('pos.header.search_btn')}
 					</Button>
 				</div>
 			</CardContent>
@@ -475,22 +494,49 @@
 					class="flex-1 overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
 				>
 					<CardHeader class="border-b border-white/60 bg-white/70 pb-3 backdrop-blur">
-						<div class="flex items-center justify-between gap-2">
+						<div class="flex flex-col gap-3">
 							<div>
-								<CardTitle class="text-sm text-slate-800">Products</CardTitle>
+								<CardTitle class="text-sm text-slate-800">{$t('pos.products.title')}</CardTitle>
 								<CardDescription class="text-[0.75rem] text-slate-500">
-									Tap a tile to add it to the active cart.
+									{$t('pos.products.description')}
 								</CardDescription>
 							</div>
-							<div class="text-[0.7rem] text-slate-500">
-								<span class="font-medium text-slate-700">{products.length}</span> results
-							</div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <!-- Status Filter -->
+                                <select
+                                    bind:value={fetchStatus}
+                                    onchange={() => fetchProducts(searchTerm.trim())}
+                                    class="h-9 rounded-lg border-slate-200 bg-white/80 text-xs font-medium text-slate-600 shadow-sm focus:border-indigo-300 focus:ring-indigo-300 outline-none pl-2 pr-2 cursor-pointer hover:bg-white flex-1 sm:flex-none"
+                                    aria-label={$t('pos.products.filter_status.label')}
+                                >
+                                    <option value="">{$t('pos.products.filter_status.all')}</option>
+                                    <option value="IN_STOCK">{$t('pos.products.filter_status.in_stock')}</option>
+                                    <option value="LOW_STOCK">{$t('pos.products.filter_status.low_stock')}</option>
+                                    <option value="OUT_OF_STOCK">{$t('pos.products.filter_status.out_of_stock')}</option>
+                                </select>
+
+                                <div class="flex items-center gap-2 flex-1 sm:flex-none">
+                                    <select
+                                        bind:value={fetchLimit}
+                                        onchange={() => fetchProducts(searchTerm.trim())}
+                                        class="h-9 w-full sm:w-auto rounded-lg border-slate-200 bg-white/80 text-xs font-medium text-slate-600 shadow-sm focus:border-indigo-300 focus:ring-indigo-300 outline-none pl-2 pr-2 cursor-pointer hover:bg-white"
+                                    >
+                                        <option value={100}>100 items</option>
+                                        <option value={200}>200 items</option>
+                                        <option value={500}>500 items</option>
+                                        <option value={1000}>1,000 items</option>
+                                    </select>
+                                    <div class="text-[0.7rem] text-slate-500 whitespace-nowrap">
+                                        <span class="font-medium text-slate-700">{products.length}</span> results
+                                    </div>
+                                </div>
+                            </div>
 						</div>
 					</CardHeader>
 					<CardContent class="max-h-[22rem] overflow-y-auto p-3 pt-3">
 						{#if products.length === 0}
 							<div class="flex h-full items-center justify-center text-[0.8rem] text-slate-500">
-								No products found. Try adjusting your search.
+								{$t('pos.products.no_results')}
 							</div>
 						{:else}
 							<div class="grid grid-cols-2 gap-3 xl:grid-cols-3">
@@ -506,7 +552,7 @@
 												{product.Name}
 											</div>
 											<div class="mt-0.5 flex flex-col gap-1">
-                                                <div class="flex items-center gap-2">
+                                                <div class="flex flex-wrap items-center gap-2">
                                                     {#if price < originalPrice}
                                                         <span class="text-[0.65rem] text-slate-400 line-through">
                                                             {formatCurrency(originalPrice)}
@@ -534,7 +580,7 @@
 															: 'bg-rose-400'}"
 													/>
 													<span>
-														{getAvailableStock(product)} in stock
+														{$t('pos.products.in_stock', { count: getAvailableStock(product) })}
 													</span>
 												</div>
 											</div>
@@ -548,7 +594,7 @@
 												>
 													Tap
 												</span>
-												to add
+												{$t('pos.products.tap_to_add')}
 											</span>
 											<span class="text-[0.65rem] uppercase tracking-wide text-slate-400"
 												>#{product.ID}</span
@@ -571,11 +617,11 @@
 						class="flex flex-row items-center justify-between border-b border-slate-100/80 bg-slate-50/70 pb-3"
 					>
 						<div>
-							<CardTitle class="text-sm text-slate-900">Cart</CardTitle>
+							<CardTitle class="text-sm text-slate-900">{$t('pos.cart.title')}</CardTitle>
 							<CardDescription class="text-[0.75rem] text-slate-500">
 								{cart.length === 0
-									? 'No items added yet.'
-									: `${cart.length} item${cart.length > 1 ? 's' : ''} in cart`}
+									? $t('pos.cart.empty_desc')
+									: $t('pos.cart.items_desc', { count: cart.length, s: cart.length > 1 ? 's' : '' })}
 							</CardDescription>
 						</div>
 
@@ -586,26 +632,26 @@
 								class="rounded-xl px-3 py-1.5 text-[0.75rem] text-slate-500 hover:bg-rose-50 hover:text-rose-500"
 								onclick={clearCart}
 							>
-								Clear cart
+								{$t('pos.cart.clear_btn')}
 							</Button>
 						{/if}
 					</CardHeader>
 
-					<CardContent class="max-h-[20rem] overflow-y-auto pt-0">
+					<CardContent class="max-h-[20rem] overflow-auto pt-0">
 						{#if cart.length === 0}
 							<div class="py-6 text-center text-[0.8rem] text-slate-400">
-								Add products from the grid above to start a new order.
+								{$t('pos.cart.empty_state')}
 							</div>
 						{:else}
-							<!-- ⭐ FIX: force proper word wrapping and no horizontal scroll -->
-							<Table class="w-full table-fixed">
+							<!-- ⭐ FIX: horizontal scroll enabled, no fixed width constraint -->
+							<Table class="w-full min-w-[30rem]">
 								<TableHeader>
 									<TableRow class="border-slate-100 bg-slate-50/80">
-										<TableHead class="w-1/3 text-[0.7rem] text-slate-500">Product</TableHead>
-										<TableHead class="text-[0.7rem] text-slate-500">Price</TableHead>
-										<TableHead class="text-[0.7rem] text-slate-500">Qty</TableHead>
-										<TableHead class="text-right text-[0.7rem] text-slate-500">Total</TableHead>
 										<TableHead />
+										<TableHead class="w-1/3 min-w-[8rem] text-[0.7rem] text-slate-500">{$t('pos.cart.table.product')}</TableHead>
+										<TableHead class="text-[0.7rem] text-slate-500">{$t('pos.cart.table.price')}</TableHead>
+										<TableHead class="text-[0.7rem] min-w-[5rem] text-slate-500">{$t('pos.cart.table.qty')}</TableHead>
+										<TableHead class="text-right text-[0.7rem] text-slate-500">{$t('pos.cart.table.total')}</TableHead>
 									</TableRow>
 								</TableHeader>
 
@@ -613,6 +659,16 @@
 									{#each cart as item}
                                         {@const { price, originalPrice, discountName } = getProductPrice(item)}
 										<TableRow class="border-slate-100 hover:bg-slate-50/60">
+											<TableCell class="text-right align-top">
+												<Button
+													variant="ghost"
+													size="icon"
+													class="h-7 w-7 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
+													onclick={() => removeFromCart(item.id)}
+												>
+													<X class="h-3 w-3" />
+												</Button>
+											</TableCell>
 											<TableCell class="min-w-0 whitespace-normal align-top">
 												<div
 													class="
@@ -639,7 +695,7 @@
 												</div>
 											</TableCell>
 
-											<TableCell class="align-top text-[0.8rem] text-slate-800">
+											<TableCell class="min-w-[8rem] align-top text-[0.8rem] text-slate-800 whitespace-nowrap">
                                                 {#if price < originalPrice}
                                                     <div class="flex flex-col">
     												    <span class="line-through text-slate-400 text-[0.65rem]">{formatCurrency(originalPrice)}</span>
@@ -651,10 +707,10 @@
 											</TableCell>
 
 											<!-- Quantity input -->
-											<TableCell class="min-w-[4rem] align-top">
+											<TableCell class="min-w-[5rem] align-top">
 												<Input
 													type="number"
-													class="h-8 w-full rounded-lg border-slate-200 bg-slate-50/80 px-2 text-[0.8rem]"
+													class="min-w-[5rem] h-8 w-full rounded-lg border-slate-200 bg-slate-50/80 px-2 text-[0.8rem]"
 													min="1"
 													value={item.quantity}
 													onchange={(e) => updateQuantity(item.id, parseInt(e.currentTarget.value))}
@@ -662,21 +718,12 @@
 											</TableCell>
 
 											<TableCell
-												class="text-right align-top text-[0.8rem] font-semibold text-slate-900"
+												class="min-w-[12rem] text-right align-top text-[0.8rem] font-semibold text-slate-900 whitespace-nowrap"
 											>
 												{formatCurrency(price * item.quantity)}
 											</TableCell>
 
-											<TableCell class="text-right align-top">
-												<Button
-													variant="ghost"
-													size="icon"
-													class="h-7 w-7 rounded-full text-slate-400 hover:bg-rose-50 hover:text-rose-500"
-													onclick={() => removeFromCart(item.id)}
-												>
-													<X class="h-3 w-3" />
-												</Button>
-											</TableCell>
+											
 										</TableRow>
 									{/each}
 								</TableBody>
@@ -695,9 +742,9 @@
 					style="animation-delay:160ms"
 				>
 					<CardHeader class="border-b border-slate-100/80 bg-white/80 pb-3">
-						<CardTitle class="text-sm text-slate-900">Customer</CardTitle>
+						<CardTitle class="text-sm text-slate-900">{$t('pos.customer.title')}</CardTitle>
 						<CardDescription class="text-[0.75rem] text-slate-500">
-							Attach a customer by ID, username, email, or phone. Optional for walk-ins.
+							{$t('pos.customer.description')}
 						</CardDescription>
 					</CardHeader>
 					<CardContent class="space-y-3 pt-3">
@@ -706,7 +753,7 @@
 								<Search class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 								<Input
 									bind:value={customerSearchTerm}
-									placeholder="Search by ID, username, email, phone"
+									placeholder={$t('pos.customer.search_placeholder')}
 									class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-emerald-300"
 									onkeydown={(e) => e.key === 'Enter' && handleCustomerSearch()}
 								/>
@@ -725,7 +772,7 @@
 								onclick={() => (isNewCustomerModalOpen = true)}
 							>
 								<UserPlus class="h-4 w-4" />
-								<span class="font-medium">New</span>
+								<span class="font-medium">{$t('pos.customer.new_btn')}</span>
 							</Button>
 						</div>
 
@@ -753,19 +800,19 @@
 								{#if selectedCustomer.loyalty}
 									<div class="mt-1 flex items-center gap-2 border-t border-emerald-100/50 pt-1">
 										<span class="font-semibold text-emerald-700">
-											{selectedCustomer.loyalty.Points} pts
+											{$t('pos.customer.loyalty_pts', { points: selectedCustomer.loyalty.Points })}
 										</span>
 										<span
 											class="rounded-sm bg-emerald-100 px-1 text-[0.65rem] uppercase text-emerald-800"
 										>
-											{selectedCustomer.loyalty.Tier}
+											{$t('pos.customer.tier', { tier: selectedCustomer.loyalty.Tier })}
 										</span>
 									</div>
 								{/if}
 							</div>
 						{:else}
 							<div class="text-[0.75rem] text-slate-400">
-								No customer selected. You can still complete a walk-in sale.
+								{$t('pos.customer.no_selected')}
 							</div>
 						{/if}
 					</CardContent>
@@ -778,14 +825,14 @@
 					style="animation-delay:200ms"
 				>
 					<CardHeader class="border-b border-slate-100/80 bg-white/80 pb-3">
-						<CardTitle class="text-sm text-slate-900">Payment</CardTitle>
+						<CardTitle class="text-sm text-slate-900">{$t('pos.payment.title')}</CardTitle>
 						<CardDescription class="text-[0.75rem] text-slate-500">
-							Choose how the customer is paying for this order.
+							{$t('pos.payment.description')}
 						</CardDescription>
 					</CardHeader>
 					<CardContent class="pt-3">
 						<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-							{#each [{ id: 'CASH', label: 'Cash', icon: Banknote, color: 'text-emerald-500', sub: 'Physical' }, { id: 'CARD', label: 'Card', icon: CreditCard, color: 'text-violet-500', sub: 'Terminal' }, { id: 'BKASH', label: 'bKash', icon: QrCode, color: 'text-pink-500', sub: 'Mobile' }, { id: 'OTHER', label: 'Other', icon: Wallet, color: 'text-orange-500', sub: 'Check/Due' }] as method}
+							{#each [{ id: 'CASH', label: $t('pos.payment.methods.cash'), icon: Banknote, color: 'text-emerald-500', sub: $t('pos.payment.sub.physical') }, { id: 'CARD', label: $t('pos.payment.methods.card'), icon: CreditCard, color: 'text-violet-500', sub: $t('pos.payment.sub.terminal') }, { id: 'BKASH', label: $t('pos.payment.methods.bkash'), icon: QrCode, color: 'text-pink-500', sub: $t('pos.payment.sub.mobile') }, { id: 'OTHER', label: $t('pos.payment.methods.other'), icon: Wallet, color: 'text-orange-500', sub: $t('pos.payment.sub.check_due') }] as method}
 								<button
 									type="button"
 									onclick={() => setPayment(method.id)}
@@ -836,13 +883,13 @@
 							<div class="mt-4 border-t border-slate-100/80 pt-4">
 								<div class="flex items-center justify-between">
 									<Label class="text-[0.7rem] font-medium text-slate-500"
-										>Redeem Loyalty Points</Label
+										>{$t('pos.loyalty.redeem_label')}</Label
 									>
 									<span class="text-[0.7rem] font-medium text-emerald-600">
-										Available: {selectedCustomer.loyalty.Points} pts (${formatCurrency(
-											selectedCustomer.loyalty.Points *
-												($settings.loyalty_points_redemption_rate || 0.01)
-										)} value)
+										{$t('pos.loyalty.available', {
+											points: selectedCustomer.loyalty.Points,
+											value: formatCurrency(selectedCustomer.loyalty.Points * ($settings.loyalty_points_redemption_rate || 0.01))
+										})}
 									</span>
 								</div>
 								<div class="mt-2 flex items-center gap-3">
@@ -853,7 +900,7 @@
 										bind:value={pointsToRedeem}
 										class="h-9 w-24 rounded-lg border-slate-200 bg-slate-50 text-right text-sm"
 									/>
-									<span class="text-xs text-slate-400">points</span>
+									<span class="text-xs text-slate-400">{$t('pos.loyalty.points')}</span>
 
 									{#if pointsToRedeem > 0}
 										<span class="ml-auto text-sm font-semibold text-emerald-500">
@@ -864,7 +911,7 @@
 									{/if}
 								</div>
 								{#if pointsToRedeem > selectedCustomer.loyalty.Points}
-									<p class="mt-1 text-[0.65rem] text-rose-500">Cannot exceed available balance.</p>
+									<p class="mt-1 text-[0.65rem] text-rose-500">{$t('pos.loyalty.error_exceed')}</p>
 								{/if}
 							</div>
 						{/if}
@@ -882,22 +929,22 @@
 					/>
 					<div class="relative">
 						<CardHeader class="pb-3">
-							<CardTitle class="text-[0.9rem] text-slate-50/90">Order Summary</CardTitle>
+							<CardTitle class="text-[0.9rem] text-slate-50/90">{$t('pos.summary.title')}</CardTitle>
 							<CardDescription class="text-[0.7rem] text-slate-300">
-								Review totals and payment before confirming the sale.
+								{$t('pos.summary.description')}
 							</CardDescription>
 						</CardHeader>
 						<CardContent class="space-y-2 pt-0 text-[0.8rem]">
 							<div class="flex justify-between text-slate-200">
-								<span>Subtotal</span>
+								<span>{$t('pos.summary.subtotal')}</span>
 								<span>{formatCurrency(subtotal)}</span>
 							</div>
 							<div class="flex justify-between text-[0.75rem] text-slate-300/90">
-								<span>Tax ({(taxRate * 100).toFixed(0)}%)</span>
+								<span>{$t('pos.summary.tax', { rate: Number((taxRate * 100).toFixed(2)) })}</span>
 								<span>{formatCurrency(tax)}</span>
 							</div>
 							<div class="flex items-center justify-between border-t border-slate-700/70 pt-2">
-								<span class="text-[0.85rem] font-medium text-slate-100">Total</span>
+								<span class="text-[0.85rem] font-medium text-slate-100">{$t('pos.summary.total')}</span>
 								<span class="text-lg font-semibold tracking-tight text-slate-50">
 									{formatCurrency(total)}
 								</span>
@@ -905,13 +952,13 @@
 
 							<div class="flex items-center justify-between pt-1 text-[0.7rem] text-slate-300/90">
 								<div>
-									<span class="font-medium">Payment:</span>
+									<span class="font-medium">{$t('pos.summary.payment')}</span>
 									<span class="ml-1">
-										{paymentMethod ? paymentMethod : 'Not selected'}
+										{paymentMethod ? paymentMethod : $t('pos.summary.not_selected')}
 									</span>
 								</div>
 								<div>
-									<span class="font-medium">Items:</span>
+									<span class="font-medium">{$t('pos.summary.items')}</span>
 									<span class="ml-1">{cart.length}</span>
 								</div>
 							</div>
@@ -922,9 +969,9 @@
 								>
 									<div class="flex items-center gap-1">
 										<Zap class="h-3 w-3" />
-										<span class="font-medium">Loyalty Earnings</span>
+										<span class="font-medium">{$t('pos.summary.loyalty_earnings')}</span>
 									</div>
-									<span class="font-bold">+{potentialPoints} pts</span>
+									<span class="font-bold">+{potentialPoints} pt</span>
 								</div>
 							{/if}
 						</CardContent>
@@ -937,13 +984,13 @@
 							>
 								{#if isProcessing}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									Processing...
+									{$t('pos.summary.processing_btn')}
 								{:else if !cart.length}
-									Add items to cart to continue
+									{$t('pos.summary.add_items_hint')}
 								{:else if !paymentMethod}
-									Select a payment method to complete
+									{$t('pos.summary.select_payment_hint')}
 								{:else}
-									Complete Order
+									{$t('pos.summary.complete_btn')}
 								{/if}
 							</Button>
 						</CardFooter>
@@ -969,10 +1016,10 @@
 
 				<div class="relative z-10">
 					<Dialog.Title class="text-2xl font-bold tracking-tight text-white">
-						New Customer
+						{$t('pos.new_customer_modal.title')}
 					</Dialog.Title>
 					<Dialog.Description class="mt-1.5 text-violet-100">
-						Add a new member to your customer base.
+						{$t('pos.new_customer_modal.description')}
 					</Dialog.Description>
 				</div>
 			</div>
@@ -986,7 +1033,7 @@
 							for="name"
 							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
 						>
-							Full Name
+							{$t('pos.new_customer_modal.name_label')}
 						</label>
 						<div class="relative">
 							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -995,7 +1042,7 @@
 							<Input
 								id="name"
 								bind:value={newCustomerForm.name}
-								placeholder="Jane Doe"
+								placeholder={$t('pos.new_customer_modal.name_placeholder')}
 								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
 							/>
 						</div>
@@ -1007,7 +1054,7 @@
 							for="email"
 							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
 						>
-							Email Address
+							{$t('pos.new_customer_modal.email_label')}
 						</label>
 						<div class="relative">
 							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -1017,7 +1064,7 @@
 								id="email"
 								type="email"
 								bind:value={newCustomerForm.email}
-								placeholder="jane@example.com"
+								placeholder={$t('pos.new_customer_modal.email_placeholder')}
 								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
 							/>
 						</div>
@@ -1029,7 +1076,7 @@
 							for="phone"
 							class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
 						>
-							Phone Number
+							{$t('pos.new_customer_modal.phone_label')}
 						</label>
 						<div class="relative">
 							<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -1038,7 +1085,7 @@
 							<Input
 								id="phone"
 								bind:value={newCustomerForm.phone}
-								placeholder="+1 (555) 000-0000"
+								placeholder={$t('pos.new_customer_modal.phone_placeholder')}
 								class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
 							/>
 						</div>
@@ -1055,13 +1102,13 @@
 					onclick={() => (isNewCustomerModalOpen = false)}
 					class="rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900"
 				>
-					Cancel
+					{$t('pos.new_customer_modal.cancel_btn')}
 				</Button>
 				<Button
 					onclick={saveNewCustomer}
 					class="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/35 active:scale-[0.98]"
 				>
-					Create Customer
+					{$t('pos.new_customer_modal.create_btn')}
 				</Button>
 			</div>
 		</Dialog.Content>

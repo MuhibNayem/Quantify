@@ -8,6 +8,7 @@
 	import { Loader2, TrendingUp, Search, AlertCircle, CheckCircle2 } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
     import { onMount } from 'svelte';
+    import { t } from '$lib/i18n';
 
 	let loading = false;
 	let productId: number | null = null;
@@ -41,7 +42,7 @@
 
 	async function generateForecast() {
 		if (!productId) {
-			toast.error('Please select a product');
+			toast.error($t('intelligence.toasts.select_product'));
 			return;
 		}
 
@@ -54,9 +55,9 @@
 			});
             // Backend returns { message, forecast }
 			forecast = res.forecast;
-			toast.success('Forecast generated successfully');
+			toast.success($t('intelligence.toasts.forecast_success'));
 		} catch (error: any) {
-			toast.error('Failed to generate forecast', {
+			toast.error($t('intelligence.toasts.forecast_fail'), {
 				description: error?.response?.data?.error || 'An unexpected error occurred'
 			});
 		} finally {
@@ -71,14 +72,14 @@
 			<div class="rounded-lg bg-blue-100 p-2 text-blue-600">
 				<TrendingUp class="h-5 w-5" />
 			</div>
-			AI Demand Forecast
+			{$t('intelligence.demand_forecast.title')}
 		</CardTitle>
-		<CardDescription>Predict future demand for specific products</CardDescription>
+		<CardDescription>{$t('intelligence.demand_forecast.subtitle')}</CardDescription>
 	</CardHeader>
 	<CardContent class="space-y-4">
         <!-- Product Search -->
 		<div class="space-y-2">
-			<Label>Select Product</Label>
+			<Label>{$t('intelligence.demand_forecast.select_product')}</Label>
             {#if selectedProduct}
                 <div class="flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 p-2">
                     <div class="flex flex-col">
@@ -93,7 +94,7 @@
                 <div class="relative">
                     <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
                     <Input 
-                        placeholder="Search by name or SKU..." 
+                        placeholder={$t('intelligence.demand_forecast.placeholder')} 
                         class="pl-9" 
                         bind:value={productSearch}
                         oninput={searchProducts}
@@ -117,15 +118,15 @@
 
 		<div class="flex items-end gap-4">
 			<div class="flex-1 space-y-2">
-				<Label>Forecast Period (Days)</Label>
+				<Label>{$t('intelligence.demand_forecast.period_label')}</Label>
 				<Input type="number" bind:value={days} min="7" max="90" />
 			</div>
 			<Button onclick={generateForecast} disabled={loading || !productId} class="bg-blue-600 hover:bg-blue-700">
 				{#if loading}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-					Generating...
+					{$t('intelligence.demand_forecast.generating_btn')}
 				{:else}
-					Generate
+					{$t('intelligence.demand_forecast.generate_btn')}
 				{/if}
 			</Button>
 		</div>
@@ -134,12 +135,12 @@
 			<div class="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4">
 				<div class="mb-4 flex items-center justify-between">
 					<div>
-						<div class="text-sm text-slate-500">Predicted Demand</div>
+						<div class="text-sm text-slate-500">{$t('intelligence.demand_forecast.predicted_demand')}</div>
 						<div class="text-2xl font-bold text-slate-900">{forecast.PredictedDemand} units</div>
 					</div>
                     {#if forecast.ConfidenceScore}
                         <div class="text-right">
-                            <div class="text-sm text-slate-500">Confidence</div>
+                            <div class="text-sm text-slate-500">{$t('intelligence.demand_forecast.confidence')}</div>
                             <div class="flex items-center gap-1 font-medium text-emerald-600">
                                 <CheckCircle2 class="h-4 w-4" />
                                 {(forecast.ConfidenceScore * 100).toFixed(0)}%
@@ -151,14 +152,14 @@
                 {#if forecast.Reasoning}
                     <div class="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
                         <div class="mb-1 font-medium text-slate-900 flex items-center gap-2">
-                            <AlertCircle class="h-3 w-3" /> AI Reasoning
+                            <AlertCircle class="h-3 w-3" /> {$t('intelligence.demand_forecast.reasoning')}
                         </div>
                         {forecast.Reasoning}
                     </div>
                 {/if}
                 
 				<div class="mt-2 text-xs text-slate-400">
-					Generated at {new Date(forecast.GeneratedAt).toLocaleString()}
+					{$t('intelligence.demand_forecast.generated_at')} {new Date(forecast.GeneratedAt).toLocaleString()}
 				</div>
 			</div>
 		{/if}

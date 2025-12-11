@@ -130,6 +130,7 @@
 	// For MVP, we will just show the list of returns. Creating requires complex "Batch selection" which is hard to UI without a deeper flow.
 	// But I will add the UI to LIST returns first.
 
+	import { t } from '$lib/i18n';
 	import { notifications } from '$lib/stores/notifications';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -146,7 +147,7 @@
 	// Data Loading
 	async function loadData() {
 		if (!auth.hasPermission('pos.view') && !auth.hasPermission('inventory.view')) {
-			toast.error('Access Denied', { description: 'You do not have permission to view orders.' });
+			toast.error($t('orders.errors.access_denied'), { description: $t('orders.errors.access_denied_desc') });
 			goto('/');
 			return;
 		}
@@ -190,7 +191,7 @@
 			}
 		} catch (err) {
 			console.error('Failed to load data', err);
-			error = 'Failed to load order history.';
+			error = $t('orders.errors.load_fail');
 		} finally {
 			loading = false;
 		}
@@ -318,10 +319,10 @@
 				<h1
 					class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent"
 				>
-					Orders Management
+					{$t('orders.title')}
 				</h1>
 				<p class="text-slate-500">
-					Manage customer sales invoices and supplier purchase orders & returns.
+					{$t('orders.subtitle')}
 				</p>
 			</div>
 
@@ -340,7 +341,7 @@
 						)}
 						onclick={() => (activeTab = 'sales')}
 					>
-						<TrendingUp class="h-4 w-4" /> Sales (Invoices)
+						<TrendingUp class="h-4 w-4" /> {$t('orders.tabs.sales')}
 					</Button>
 					<Button
 						variant="ghost"
@@ -352,7 +353,7 @@
 						)}
 						onclick={() => (activeTab = 'purchases')}
 					>
-						<Factory class="h-4 w-4" /> Purchases & Returns
+						<Factory class="h-4 w-4" /> {$t('orders.tabs.purchases')}
 					</Button>
 				</div>
 
@@ -368,7 +369,7 @@
 							)}
 							onclick={() => (subTab = 'orders')}
 						>
-							Sales Orders
+							{$t('orders.subtabs.sales_orders')}
 						</button>
 						<button
 							class={cn(
@@ -379,7 +380,7 @@
 							)}
 							onclick={() => (subTab = 'returns')}
 						>
-							Customer Returns
+							{$t('orders.subtabs.customer_returns')}
 						</button>
 					{:else}
 						<button
@@ -391,7 +392,7 @@
 							)}
 							onclick={() => (subTab = 'orders')}
 						>
-							Purchase Orders
+							{$t('orders.subtabs.purchase_orders')}
 						</button>
 						<button
 							class={cn(
@@ -402,7 +403,7 @@
 							)}
 							onclick={() => (subTab = 'returns')}
 						>
-							Vendor Returns
+							{$t('orders.subtabs.vendor_returns')}
 						</button>
 					{/if}
 				</div>
@@ -418,10 +419,10 @@
 				<Input
 					bind:value={searchQuery}
 					placeholder={activeTab === 'sales'
-						? 'Search sales...'
+						? $t('orders.search.sales')
 						: subTab === 'orders'
-							? 'Search POs...'
-							: 'Search returns...'}
+							? $t('orders.search.pos')
+							: $t('orders.search.returns')}
 					class="border-slate-200 bg-white pl-9 shadow-none focus:border-blue-500 focus:ring-blue-500/20"
 				/>
 			</div>
@@ -441,7 +442,7 @@
 				<AlertCircle class="mb-4 h-8 w-8" />
 				<p class="font-medium">{error}</p>
 				<Button variant="link" onclick={loadData} class="mt-2 text-red-600 underline"
-					>Try Again</Button
+					>{$t('orders.actions.try_again')}</Button
 				>
 			</div>
 		{:else}
@@ -460,7 +461,7 @@
 									<div
 										class="absolute right-0 top-0 rounded-bl-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-600 shadow-sm"
 									>
-										RETURN PENDING
+										{$t('orders.status.return_pending')}
 									</div>
 								{/if}
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
@@ -481,15 +482,15 @@
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Customer</span>
+										<span class="text-slate-500">{$t('orders.labels.customer')}</span>
 										<span class="font-medium text-slate-700">
 											{order.Customer
 												? `${order.Customer.FirstName} ${order.Customer.LastName}`
-												: 'Guest'}
+												: $t('orders.labels.guest')}
 										</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Items</span>
+										<span class="text-slate-500">{$t('orders.labels.items')}</span>
 										<span class="font-medium text-slate-700">{order.OrderItems.length}</span>
 									</div>
 									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
@@ -501,7 +502,7 @@
 										{/each}
 										{#if order.OrderItems.length > 2}
 											<div class="text-[10px] italic text-slate-400">
-												+{order.OrderItems.length - 2} more
+												+{order.OrderItems.length - 2} {$t('orders.labels.more')}
 											</div>
 										{/if}
 									</div>
@@ -528,13 +529,13 @@
 										size="sm"
 										class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
 									>
-										View Details <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.view_details')} <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
-								No sales orders found.
+								{$t('orders.empty.sales')}
 							</div>
 						{/each}
 					{:else if activeTab === 'sales' && subTab === 'returns'}
@@ -560,15 +561,15 @@
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Refund</span>
+										<span class="text-slate-500">{$t('orders.labels.refund')}</span>
 										<span class="font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Reason</span>
+										<span class="text-slate-500">{$t('orders.labels.reason')}</span>
 										<span class="font-medium text-slate-700">{ret.Reason}</span>
 									</div>
 									<div class="space-y-1 rounded-lg bg-orange-50/50 p-2 text-xs text-slate-600">
-										<p class="mb-1 font-semibold text-orange-800">Items Returned</p>
+										<p class="mb-1 font-semibold text-orange-800">{$t('orders.status.items_returned')}</p>
 										{#if ret.ReturnItems && ret.ReturnItems.length > 0}
 											{#each ret.ReturnItems.slice(0, 2) as item}
 												<div class="flex justify-between">
@@ -579,7 +580,7 @@
 												</div>
 											{/each}
 										{:else}
-											<p class="italic text-slate-400">No items detail</p>
+											<p class="italic text-slate-400">{$t('orders.status.no_items')}</p>
 										{/if}
 									</div>
 								</div>
@@ -591,13 +592,13 @@
 										size="sm"
 										class="w-full text-orange-600 hover:bg-orange-50 hover:text-orange-700"
 									>
-										View Details <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.view_details')} <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
-								No customer returns found.
+								{$t('orders.empty.customer_returns')}
 							</div>
 						{/each}
 					{:else if subTab === 'orders'}
@@ -623,19 +624,19 @@
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Supplier</span>
-										<span class="font-medium text-slate-700">{po.Supplier?.Name || 'Unknown'}</span>
+										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
+										<span class="font-medium text-slate-700">{po.Supplier?.Name || $t('orders.labels.unknown')}</span>
 									</div>
 									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
 										{#each po.PurchaseOrderItems.slice(0, 2) as item}
 											<div class="flex justify-between">
 												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-purple-600">Qty: {item.OrderedQuantity}</span>
+												<span class="font-medium text-purple-600">{$t('orders.status.qty')}: {item.OrderedQuantity}</span>
 											</div>
 										{/each}
 										{#if po.PurchaseOrderItems.length > 2}
 											<div class="text-[10px] italic text-slate-400">
-												+{po.PurchaseOrderItems.length - 2} more
+												+{po.PurchaseOrderItems.length - 2} {$t('orders.labels.more')}
 											</div>
 										{/if}
 									</div>
@@ -645,7 +646,7 @@
 									<div>
 										{#if po.PurchaseOrderItems.length > 0}
 											<p class="text-xs font-semibold text-slate-500">
-												Total Items: {po.PurchaseOrderItems.reduce(
+												{$t('orders.status.total_items')}: {po.PurchaseOrderItems.reduce(
 													(acc, item) => acc + item.OrderedQuantity,
 													0
 												)}
@@ -658,13 +659,13 @@
 										size="sm"
 										class="text-purple-600 hover:bg-purple-50 hover:text-purple-700"
 									>
-										Manage PO <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.manage_po')} <ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
-								No purchase orders found.
+								{$t('orders.empty.purchase_orders')}
 							</div>
 						{/each}
 					{:else}
@@ -690,12 +691,12 @@
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Supplier</span>
-										<span class="font-medium text-slate-700">{ret.Supplier?.Name || 'Unknown'}</span
+										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
+										<span class="font-medium text-slate-700">{ret.Supplier?.Name || $t('orders.labels.unknown')}</span
 										>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Reason</span>
+										<span class="text-slate-500">{$t('orders.labels.reason')}</span>
 										<span class="font-medium text-slate-700">{ret.Reason}</span>
 									</div>
 
@@ -703,7 +704,7 @@
 										{#each ret.PurchaseReturnItems.slice(0, 2) as item}
 											<div class="flex justify-between">
 												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-red-600">Qty: -{item.Quantity}</span>
+												<span class="font-medium text-red-600">{$t('orders.status.qty')}: -{item.Quantity}</span>
 											</div>
 										{/each}
 									</div>
@@ -711,12 +712,12 @@
 
 								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
 									<p class="text-lg font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</p>
-									<span class="text-xs font-semibold text-slate-400">Refund Value</span>
+									<span class="text-xs font-semibold text-slate-400">{$t('orders.status.refund_value')}</span>
 								</div>
 							</div>
 						{:else}
 							<div class="col-span-full py-12 text-center text-slate-500">
-								No vendor returns found.
+								{$t('orders.empty.vendor_returns')}
 							</div>
 						{/each}
 					{/if}

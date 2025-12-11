@@ -24,6 +24,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { timeTrackingApi } from '$lib/api/resources';
+	import { t } from '$lib/i18n';
 
 	// Team data
 	let teamMembers: any[] = [];
@@ -48,14 +49,14 @@
 	let statusFilter = 'all';
 
 	const handleExportReport = () => {
-		toast.success('Report Exported', {
-			description: 'Weekly time report has been exported successfully.'
+		toast.success($t('time_tracking.toasts.report_exported'), {
+			description: $t('time_tracking.toasts.report_exported_desc')
 		});
 	};
 
 	const handleSendReminder = (memberName: string) => {
-		toast.info('Reminder Sent', {
-			description: `Reminder sent to ${memberName} to complete their timesheet.`
+		toast.info($t('time_tracking.toasts.reminder_sent'), {
+			description: $t('time_tracking.toasts.reminder_sent_desc', { name: memberName })
 		});
 	};
 
@@ -91,7 +92,7 @@
 			}
 		} catch (e) {
 			console.error('Failed to load manager dashboard', e);
-			toast.error('Failed to load data');
+			toast.error($t('time_tracking.toasts.load_fail'));
 		}
 	}
 
@@ -104,9 +105,9 @@
 	<!-- Header -->
 	<div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
 		<div>
-			<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Leadership</p>
-			<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">Team Dashboard</h1>
-			<p class="text-slate-500">Monitor attendance, live shifts, and weekly momentum.</p>
+			<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{$t('time_tracking.manager.header.subtitle')}</p>
+			<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">{$t('time_tracking.manager.header.title')}</h1>
+			<p class="text-slate-500">{$t('time_tracking.manager.header.desc')}</p>
 		</div>
 		<div class="flex gap-3">
 			<Button
@@ -114,14 +115,14 @@
 				class="glass-button flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500/90 to-indigo-500/90 px-5 py-3 font-semibold text-white shadow-lg"
 			>
 				<Download size={18} />
-				Export Report
+				{$t('time_tracking.manager.actions.export')}
 			</Button>
 			<Button
 				variant="ghost"
 				class="glass-button flex items-center gap-2 rounded-2xl px-5 py-3 text-slate-700"
 			>
 				<Filter size={18} />
-				Filter
+				{$t('time_tracking.manager.actions.filter')}
 			</Button>
 		</div>
 	</div>
@@ -134,7 +135,7 @@
 			<CardHeader class="pb-2">
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<Clock size={20} />
-					<span>Total Hours</span>
+					<span>{$t('time_tracking.manager.stats.total_hours')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -145,7 +146,7 @@
 						style="width: {teamStats.progress}%"
 					></div>
 				</div>
-				<p class="mt-1 text-sm text-slate-500">{teamStats.progress}% of weekly target</p>
+				<p class="mt-1 text-sm text-slate-500">{$t('time_tracking.manager.stats.weekly_target_percent', { percent: teamStats.progress })}</p>
 			</CardContent>
 		</Card>
 
@@ -155,12 +156,12 @@
 			<CardHeader class="pb-2">
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<Users size={20} />
-					<span>Active Members</span>
+					<span>{$t('time_tracking.manager.stats.active_members')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-3xl font-bold text-slate-900">{teamStats.activeMembers}/5</p>
-				<p class="text-sm text-slate-500">Currently working</p>
+				<p class="text-sm text-slate-500">{$t('time_tracking.manager.stats.working')}</p>
 			</CardContent>
 		</Card>
 
@@ -170,12 +171,12 @@
 			<CardHeader class="pb-2">
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<Target size={20} />
-					<span>Weekly Target</span>
+					<span>{$t('time_tracking.manager.stats.weekly_target')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-3xl font-bold text-slate-900">{teamStats.weeklyTarget}h</p>
-				<p class="text-sm text-slate-500">Team goal</p>
+				<p class="text-sm text-slate-500">{$t('time_tracking.manager.stats.team_goal')}</p>
 			</CardContent>
 		</Card>
 	</div>
@@ -189,7 +190,7 @@
 			<CardHeader>
 				<CardTitle class="flex items-center gap-3 text-slate-600">
 					<Users size={20} class="text-blue-500/80" />
-					<span>Team Members</span>
+					<span>{$t('time_tracking.manager.team.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -220,10 +221,10 @@
 									></div>
 									<span class="text-xs font-medium text-slate-600">
 										{member.status === 'active'
-											? 'Working'
+											? $t('time_tracking.manager.team.status.working')
 											: member.status === 'break'
-												? 'On Break'
-												: 'Offline'}
+												? $t('time_tracking.manager.team.status.on_break')
+												: $t('time_tracking.manager.team.status.offline')}
 									</span>
 								</div>
 								<p class="font-mono font-medium text-slate-700">{member.hours}</p>
@@ -244,7 +245,7 @@
 			<CardHeader>
 				<CardTitle class="flex items-center gap-3 text-slate-800">
 					<Calendar size={20} class="text-green-500" />
-					<span>Weekly Attendance</span>
+					<span>{$t('time_tracking.manager.attendance.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -277,15 +278,15 @@
 					<div class="flex justify-center gap-6">
 						<div class="flex items-center gap-2">
 							<div class="h-3 w-3 rounded-full bg-green-500"></div>
-							<span class="text-xs text-slate-600">Present</span>
+							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.present')}</span>
 						</div>
 						<div class="flex items-center gap-2">
 							<div class="h-3 w-3 rounded-full bg-amber-500"></div>
-							<span class="text-xs text-slate-600">Late</span>
+							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.late')}</span>
 						</div>
 						<div class="flex items-center gap-2">
 							<div class="h-3 w-3 rounded-full bg-rose-500"></div>
-							<span class="text-xs text-slate-600">Absent</span>
+							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.absent')}</span>
 						</div>
 					</div>
 				</div>
@@ -299,7 +300,7 @@
 			<CardHeader>
 				<CardTitle class="flex items-center gap-3 text-slate-800">
 					<Activity size={20} class="text-indigo-500" />
-					<span>Recent Activities</span>
+					<span>{$t('time_tracking.manager.recent_activity.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
@@ -346,7 +347,7 @@
 		<CardHeader>
 			<CardTitle class="flex items-center gap-3 text-slate-800">
 				<Settings size={20} class="text-slate-500" />
-				<span>Quick Actions</span>
+				<span>{$t('time_tracking.manager.quick_actions.title')}</span>
 			</CardTitle>
 		</CardHeader>
 		<CardContent>
@@ -356,28 +357,28 @@
 					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
 				>
 					<PieChart size={24} class="text-blue-500" />
-					<span class="text-sm font-medium">Reports</span>
+					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.reports')}</span>
 				</Button>
 				<Button
 					variant="ghost"
 					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
 				>
 					<Calendar size={24} class="text-green-500" />
-					<span class="text-sm font-medium">Schedule</span>
+					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.schedule')}</span>
 				</Button>
 				<Button
 					variant="ghost"
 					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
 				>
 					<DollarSign size={24} class="text-purple-500" />
-					<span class="text-sm font-medium">Payroll</span>
+					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.payroll')}</span>
 				</Button>
 				<Button
 					variant="ghost"
 					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
 				>
 					<AlertCircle size={24} class="text-amber-500" />
-					<span class="text-sm font-medium">Reminders</span>
+					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.reminders')}</span>
 				</Button>
 			</div>
 		</CardContent>
