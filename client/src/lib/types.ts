@@ -334,12 +334,10 @@ export interface CategoryPerformance {
 }
 
 export interface GMROIReport {
-	ProductID: number;
-	ProductName: string;
+	TotalRevenue: number;
 	COGS: number;
-	Revenue: number;
 	GrossMargin: number;
-	AverageInventoryValue: number;
+	AverageInventoryVal: number;
 	GMROI: number;
 }
 
@@ -349,12 +347,25 @@ export interface VoidAuditLog {
 	VoidedAmount: number;
 	Reason: string;
 	Timestamp: string;
+	RiskScore: string;
+	VoidCount: number;
+	TotalVoidValue: number;
+}
+
+export interface TaxLiabilityItem {
+	TaxRate: number;
+	TaxableAmount: number;
+	TaxAmount: number;
 }
 
 export interface TaxLiabilityReport {
-	TaxRate: number;
-	TaxableSales: number;
-	TaxCollected: number;
+	TotalTax: number;
+	Breakdown: {
+		RateName: string;
+		Rate: number;
+		TaxableAmount: number;
+		TaxAmount: number;
+	}[];
 }
 
 export interface CashReconciliation {
@@ -367,12 +378,17 @@ export interface CashReconciliation {
 }
 
 export interface CustomerInsight {
-	CustomerID: number;
-	CustomerName: string;
-	TotalSpend: number;
+	UserID: number;
+	Username: string;
+	FullName: string;
+	Email: string;
+	TotalSpent: number;
+	OrderCount: number;
+	LastOrderDate: string;
+	DaysSinceLastOrder: number;
 	VisitCount: number;
 	LastVisitDate: string;
-	Segment: string; // e.g., "VIP", "At-Risk"
+	Segment: string;
 }
 
 export interface ShrinkageReport {

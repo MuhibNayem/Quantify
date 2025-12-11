@@ -1095,5 +1095,130 @@ export default {
             access_denied: 'Access Denied',
             access_denied_desc: 'You do not have permission to view orders.'
         }
+    },
+    reports: {
+        title: 'Intelligence Suite',
+        subtitle: 'Deep insights into operational efficiency and sales performance.',
+        actions: {
+            refresh: 'Refresh Data'
+        },
+        tabs: {
+            sales: 'Sales & Staff',
+            inventory: 'Inventory Health',
+            financial: 'Financials'
+        },
+        heatmap: {
+            title: 'Hourly Sales Intensity',
+            subtitle: 'Peak transaction hours',
+            description: 'Visualizes the busiest hours of the week based on sales volume.'
+        },
+        staff: {
+            title: 'Staff Performance',
+            subtitle: 'Sales by team member',
+            transactions: 'Transactions',
+            description: 'Tracks individual employee sales contributions and transaction counts.'
+        },
+        customers: {
+            title: 'Top Customers',
+            subtitle: 'Highest value clients',
+            spent: 'Spent',
+            orders: 'Orders',
+            last_order: 'Last Order',
+            unknown: 'Unknown Customer',
+            orders_suffix: 'orders',
+            days_ago: 'days ago',
+            lost: 'Lost?',
+            lifetime_value: 'Lifetime Value',
+            headers: {
+                customer: 'Customer',
+                contact: 'Contact',
+                orders: 'Orders',
+                last_order: 'Last Order',
+                total_spent: 'Total Spent'
+            },
+            table: {
+                user: 'User / Email',
+                name: 'Name',
+                spent: 'Total Spent',
+                orders: 'Orders',
+                last_order: 'Last Order',
+                days_ago: 'Days Ago'
+            },
+            description: 'Identifies your most valuable customers based on total spending.'
+        },
+        frequency: {
+            title: 'Frequency Analysis',
+            order_count: 'Order Count',
+            orders: 'Orders',
+            unknown: 'Unknown Product',
+            description: 'Analyzes how frequently two items are bought together (Market Basket Analysis). Helps in cross-selling strategies and optimizing product placement.'
+        },
+        stock_aging: {
+            title: 'Stock Aging',
+            subtitle: 'Inventory by age duration',
+            headers: {
+                product: 'Product / SKU',
+                age: 'Age (Days)',
+                quantity: 'Qty',
+                value: 'Value'
+            },
+            days_suffix: 'd',
+            description: 'Categorizes inventory by how long it has been in stock to identify stagnant items.'
+        },
+        dead_stock: {
+            title: 'Dead Stock (180+ Days)',
+            days_idle: 'days idle',
+            description: 'List of products that have not sold in the last 180 days.'
+        },
+        supplier: {
+            title: 'Supplier Reliability',
+            time: 'Time',
+            rate: 'Rate',
+            days_suffix: 'd',
+            description: 'Evaluates suppliers based on delivery times and order accuracy.'
+        },
+
+        category: {
+            title: 'Category Breakdown',
+            items: 'Items',
+            sales: 'Sales',
+            margin: 'Margin',
+            description: 'Shows which product categories generate the most revenue and profit.'
+        },
+        financials: {
+            revenue: 'Revenue',
+            cogs: 'COGS',
+            margin: 'Margin',
+            gmroi: 'GMROI',
+            description: 'Key financial metrics including Revenue, Cost of Goods Sold, and Gross Margin.',
+            revenue_desc: 'Total income generated from sales before any expenses are deducted.',
+            cogs_desc: 'Direct costs attributable to the production of the goods sold.',
+            margin_desc: 'The percentage of revenue that exceeds the cost of goods sold.',
+            gmroi_desc: 'Gross Margin Return on Investment. Measures inventory profitability.'
+        },
+        void_analysis: {
+            title: 'Void Analysis',
+            subtitle: 'Cancelled transactions audit',
+            risk_score: 'Risk Score',
+            voids: 'Voids',
+            risk: {
+                high: 'High Risk',
+                medium: 'Medium Risk',
+                low: 'Low Risk'
+            },
+            description: 'Audits cancelled transactions to identify potential fraud or training issues.'
+        },
+        tax: {
+            title: 'Tax Liability',
+            collected: 'Collected',
+            rate: 'Rate',
+            taxable_sales: 'Taxable Sales',
+            description: 'Summarizes tax collected and taxable sales by tax rate.'
+        },
+        cash_reconciliation: {
+            title: 'Cash Reconciliation',
+            discrepancy: 'Discrepancy',
+            description: 'Compares system records with actual cash counts to find discrepancies.'
+        }
     }
 };
