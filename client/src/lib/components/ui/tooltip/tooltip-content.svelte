@@ -1,12 +1,13 @@
+<!-- client/src/lib/components/ui/tooltip/tooltip-content.svelte -->
 <script lang="ts">
-	import { Tooltip as TooltipPrimitive } from "bits-ui";
-	import { cn } from "$lib/utils.js";
+	import { Tooltip as TooltipPrimitive } from 'bits-ui';
+	import { cn } from '$lib/utils.js';
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		sideOffset = 0,
-		side = "top",
+		side = 'top',
 		children,
 		arrowClasses,
 		...restProps
@@ -22,7 +23,7 @@
 		{sideOffset}
 		{side}
 		class={cn(
-			"bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--bits-tooltip-content-transform-origin) z-50 w-fit text-balance rounded-md px-3 py-1.5 text-xs",
+			'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 origin-(--bits-tooltip-content-transform-origin) z-50 w-fit rounded-xl border border-white/50 bg-gradient-to-br from-white/90 to-white/60 px-3 py-1.5 text-xs font-bold text-slate-800 shadow-[inset_1px_1px_1px_0_rgba(255,255,255,0.9),0_10px_20px_-5px_rgba(0,0,0,0.1)] backdrop-blur-xl backdrop-saturate-[180%]',
 			className
 		)}
 		{...restProps}
@@ -32,11 +33,11 @@
 			{#snippet child({ props })}
 				<div
 					class={cn(
-						"bg-primary z-50 size-2.5 rotate-45 rounded-[2px]",
-						"data-[side=top]:translate-x-1/2 data-[side=top]:translate-y-[calc(-50%_+_2px)]",
-						"data-[side=bottom]:-translate-x-1/2 data-[side=bottom]:-translate-y-[calc(-50%_+_1px)]",
-						"data-[side=right]:translate-x-[calc(50%_+_2px)] data-[side=right]:translate-y-1/2",
-						"data-[side=left]:-translate-y-[calc(50%_-_3px)]",
+						'z-50 size-2.5 rotate-45 rounded-[2px] bg-white/90',
+						'data-[side=top]:translate-x-1/2 data-[side=top]:translate-y-[calc(-50%_+_2px)]',
+						'data-[side=bottom]:-translate-x-1/2 data-[side=bottom]:-translate-y-[calc(-50%_+_1px)]',
+						'data-[side=right]:translate-x-[calc(50%_+_2px)] data-[side=right]:translate-y-1/2',
+						'data-[side=left]:-translate-y-[calc(50%_-_3px)]',
 						arrowClasses
 					)}
 					{...props}

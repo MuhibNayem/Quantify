@@ -14,6 +14,7 @@
 
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import type {
 		DetailBuilderContext,
 		DetailExtraFetcher,
@@ -252,8 +253,14 @@
 						value: product.Status ?? 'Unknown',
 						badge: statusBadge(product.Status)
 					},
-					{ label: $t('catalog.details.purchase_price'), value: formatCurrency(product.PurchasePrice) },
-					{ label: $t('catalog.details.selling_price'), value: formatCurrency(product.SellingPrice) },
+					{
+						label: $t('catalog.details.purchase_price'),
+						value: formatCurrency(product.PurchasePrice)
+					},
+					{
+						label: $t('catalog.details.selling_price'),
+						value: formatCurrency(product.SellingPrice)
+					},
 					{ label: 'Barcode', value: product.BarcodeUPC ?? '—' }
 				]
 			},
@@ -400,7 +407,10 @@
 				title: 'Sub-category Profile',
 				items: [
 					{ label: $t('catalog.details.name'), value: subCategory.Name },
-					{ label: $t('catalog.details.parent_category'), value: parent?.Name ?? `Category #${subCategory.CategoryID}` },
+					{
+						label: $t('catalog.details.parent_category'),
+						value: parent?.Name ?? `Category #${subCategory.CategoryID}`
+					},
 					{ label: $t('catalog.details.created'), value: formatDateTime(subCategory.CreatedAt) },
 					{ label: $t('catalog.details.updated'), value: formatDateTime(subCategory.UpdatedAt) }
 				]
@@ -1046,14 +1056,16 @@
 				onclick={loadAll}
 				class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl focus:ring-2 focus:ring-sky-300 sm:w-auto"
 			>
-				<RefreshCcw class="mr-2 h-4 w-4" /> {$t('catalog.hero.sync_data')}
+				<RefreshCcw class="mr-2 h-4 w-4" />
+				{$t('catalog.hero.sync_data')}
 			</Button>
 			<Button
 				href="/bulk"
 				variant="outline"
 				class="w-full rounded-xl border border-sky-200 bg-white/80 px-5 py-2.5 font-medium text-sky-700 shadow-md transition-all duration-300 hover:scale-105 hover:bg-sky-50 hover:shadow-lg focus:ring-2 focus:ring-sky-200 sm:w-auto"
 			>
-				<PlusCircle class="mr-2 h-4 w-4" /> {$t('catalog.hero.bulk_import')}
+				<PlusCircle class="mr-2 h-4 w-4" />
+				{$t('catalog.hero.bulk_import')}
 			</Button>
 		</div>
 	</div>
@@ -1061,22 +1073,17 @@
 
 <!-- ===== TABS ===== -->
 <div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div
-		class="data-animate='fade-up' mb-8 flex overflow-x-auto rounded-xl border-b border-sky-200 bg-white/60 px-2 backdrop-blur"
-	>
-		{#each ['products', 'categories', 'sub-categories', 'suppliers', 'locations'] as tab, i}
-			<button
-				class="m-1 rounded-t-xl px-5 py-2.5 text-sm font-medium transition-all duration-200
-		           {activeTab === tab
-					? 'border-b-2 border-sky-500 bg-gradient-to-b from-sky-100 to-blue-100 text-sky-800 shadow-sm'
-					: 'text-slate-600 hover:bg-sky-50 hover:text-sky-700'}"
-				onclick={() => (activeTab = tab as TabKey)}
-				style={`animation-delay:${100 + i * 50}ms`}
-			>
-				{$t(`catalog.tabs.${tab.replace('-', '_')}`)}
-			</button>
-		{/each}
-	</div>
+	<GlassTabs
+		bind:value={activeTab}
+		tabs={[
+			{ value: 'products', label: $t('catalog.tabs.products') },
+			{ value: 'categories', label: $t('catalog.tabs.categories') },
+			{ value: 'sub-categories', label: $t('catalog.tabs.sub_categories') },
+			{ value: 'suppliers', label: $t('catalog.tabs.suppliers') },
+			{ value: 'locations', label: $t('catalog.tabs.locations') }
+		]}
+		class="mb-8 overflow-x-auto"
+	/>
 
 	<!-- ===== SECTIONS ===== -->
 	<section class="space-y-10">
@@ -1123,7 +1130,8 @@
 											}}
 											class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
 										>
-											<PlusCircle class="mr-2 h-4 w-4" /> {$t('catalog.products.add_button')}
+											<PlusCircle class="mr-2 h-4 w-4" />
+											{$t('catalog.products.add_button')}
 										</Button>
 									{/if}
 								</div>
@@ -1331,9 +1339,7 @@
 											class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-sky-600 hover:to-blue-700 hover:shadow-xl sm:w-1/2"
 											onclick={saveProduct}
 										>
-											{editingProduct
-												? $t('catalog.common.update')
-												: $t('catalog.common.create')}
+											{editingProduct ? $t('catalog.common.update') : $t('catalog.common.create')}
 										</Button>
 									{/if}
 									<Button
@@ -1360,7 +1366,9 @@
 							class="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.categories.title')}</h2>
+								<h2 class="text-lg font-semibold text-slate-800">
+									{$t('catalog.categories.title')}
+								</h2>
 								<p class="text-sm text-slate-500">{$t('catalog.categories.subtitle')}</p>
 							</div>
 							<div class="flex flex-wrap items-center gap-2">
@@ -1474,7 +1482,9 @@
 							class="flex flex-col gap-4 rounded-2xl border border-amber-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.sub_categories.title')}</h2>
+								<h2 class="text-lg font-semibold text-slate-800">
+									{$t('catalog.sub_categories.title')}
+								</h2>
 								<p class="text-sm text-slate-500">{$t('catalog.sub_categories.subtitle')}</p>
 							</div>
 							<div class="select-wrapper w-full sm:w-1/2">
@@ -1585,9 +1595,7 @@
 										class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl sm:w-1/2"
 										onclick={saveSubCategory}
 									>
-										{editingSubCategory
-											? $t('catalog.common.update')
-											: $t('catalog.common.create')}
+										{editingSubCategory ? $t('catalog.common.update') : $t('catalog.common.create')}
 									</Button>
 									<Button
 										class="w-full rounded-xl border border-amber-200 py-2.5 text-amber-700 transition hover:bg-amber-50 sm:w-1/2"
@@ -1613,7 +1621,9 @@
 							class="flex flex-col gap-4 rounded-2xl border border-violet-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.suppliers.title')}</h2>
+								<h2 class="text-lg font-semibold text-slate-800">
+									{$t('catalog.suppliers.title')}
+								</h2>
 								<p class="text-sm text-slate-500">{$t('catalog.suppliers.subtitle')}</p>
 							</div>
 							<div class="flex flex-wrap items-center gap-2">
@@ -1730,7 +1740,8 @@
 								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
 									<Button
 										class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-xl sm:w-1/2"
-										onclick={saveSupplier}>{editingSupplier
+										onclick={saveSupplier}
+										>{editingSupplier
 											? $t('catalog.common.update')
 											: $t('catalog.common.create')}</Button
 									>
@@ -1757,7 +1768,9 @@
 							class="flex flex-col gap-4 rounded-2xl border border-teal-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
 						>
 							<div class="space-y-1">
-								<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.locations.title')}</h2>
+								<h2 class="text-lg font-semibold text-slate-800">
+									{$t('catalog.locations.title')}
+								</h2>
 								<p class="text-sm text-slate-500">{$t('catalog.locations.subtitle')}</p>
 							</div>
 						</div>
@@ -1835,7 +1848,8 @@
 								<div class="flex flex-col gap-3 pt-1 sm:flex-row">
 									<Button
 										class="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-teal-600 hover:to-emerald-700 hover:shadow-xl sm:w-1/2"
-										onclick={saveLocation}>{editingLocation
+										onclick={saveLocation}
+										>{editingLocation
 											? $t('catalog.common.update')
 											: $t('catalog.common.create')}</Button
 									>

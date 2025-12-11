@@ -3,6 +3,7 @@
 	import { settingsApi } from '$lib/api/settings';
 	import { toast } from 'svelte-sonner';
 	import * as Tabs from '$lib/components/ui/tabs';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
@@ -120,10 +121,10 @@
 	async function saveSetting(key: string, value: string) {
 		try {
 			await settingsApi.updateSetting(key, value);
-			
+
 			// Update global store to reflect changes immediately (e.g. locale change)
-			systemSettings.update(s => ({ ...s, [key]: value }));
-			
+			systemSettings.update((s) => ({ ...s, [key]: value }));
+
 			toast.success($t('common.saved_successfully'));
 		} catch (e) {
 			toast.error($t('common.failed_to_save'));
@@ -132,11 +133,31 @@
 
 	const allTabs = [
 		{ id: 'general', label: 'settings.tabs.general', icon: Settings, permission: 'settings.view' },
-		{ id: 'business', label: 'settings.tabs.business_rules', icon: Coins, permission: 'settings.view' },
+		{
+			id: 'business',
+			label: 'settings.tabs.business_rules',
+			icon: Coins,
+			permission: 'settings.view'
+		},
 		{ id: 'system', label: 'settings.tabs.system_ai', icon: Zap, permission: 'settings.view' },
-		{ id: 'security', label: 'settings.tabs.security_roles', icon: ShieldCheck, permission: 'roles.view' },
-		{ id: 'policies', label: 'settings.tabs.policies', icon: FileText, permission: 'settings.view' },
-		{ id: 'notifications', label: 'settings.tabs.notifications', icon: Bell, permission: 'settings.view' }
+		{
+			id: 'security',
+			label: 'settings.tabs.security_roles',
+			icon: ShieldCheck,
+			permission: 'roles.view'
+		},
+		{
+			id: 'policies',
+			label: 'settings.tabs.policies',
+			icon: FileText,
+			permission: 'settings.view'
+		},
+		{
+			id: 'notifications',
+			label: 'settings.tabs.notifications',
+			icon: Bell,
+			permission: 'settings.view'
+		}
 	];
 
 	let tabs = $derived(allTabs.filter((t) => !t.permission || auth.hasPermission(t.permission)));
@@ -181,34 +202,14 @@
 			class="w-full space-y-8"
 			onValueChange={(val) => (activeTab = val)}
 		>
-			<!-- Light Glass Tabs List -->
-			<Tabs.List
-				class={cn(
-					liquidGlass.radius.medium,
-					liquidGlass.border.light,
-					liquidGlass.background.light,
-					liquidGlass.blur.heavy,
-					liquidGlass.shadow.light,
-					'inline-flex h-auto w-full p-1.5'
-				)}
-			>
-				{#each tabs as tab}
-					<Tabs.Trigger
-						value={tab.id}
-						class={cn(
-							'flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300',
-							'data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:ring-1 data-[state=active]:ring-slate-200/50',
-							adaptiveText.onGlass.secondary,
-							'hover:bg-white/40 data-[state=active]:text-blue-600'
-						)}
-					>
-						<div class="flex items-center justify-center gap-2">
-							<tab.icon size={18} />
-							{$t(tab.label)}
-						</div>
-					</Tabs.Trigger>
-				{/each}
-			</Tabs.List>
+			<!-- Liquid Glass Tabs -->
+			<div class="overflow-x-auto pb-4">
+				<GlassTabs
+					bind:value={activeTab}
+					tabs={tabs.map((tab) => ({ value: tab.id, label: $t(tab.label) }))}
+					class="mx-auto flex-nowrap"
+				/>
+			</div>
 
 			<!-- General Settings -->
 			<Tabs.Content value="general" class="space-y-6 pt-2 outline-none">
@@ -233,7 +234,9 @@
 								<Building2 size={32} />
 							</div>
 							<div>
-								<h3 class={cn('text-xl', adaptiveText.heading)}>{$t('settings.general.business_profile')}</h3>
+								<h3 class={cn('text-xl', adaptiveText.heading)}>
+									{$t('settings.general.business_profile')}
+								</h3>
 								<p class={adaptiveText.onGlass.secondary}>
 									{$t('settings.general.business_profile_desc')}
 								</p>
@@ -242,7 +245,9 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class={cn('ml-1', adaptiveText.label)}>{$t('settings.general.business_name')}</Label>
+								<Label class={cn('ml-1', adaptiveText.label)}
+									>{$t('settings.general.business_name')}</Label
+								>
 								<div class="flex gap-3">
 									<Input
 										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
@@ -253,7 +258,8 @@
 										class="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 text-white shadow-lg transition-all hover:from-blue-700 hover:to-purple-700 active:scale-95"
 										onclick={() => saveSetting('business_name', settings['business_name'])}
 									>
-										<Save size={20} class="mr-2" /> {$t('common.save')}
+										<Save size={20} class="mr-2" />
+										{$t('common.save')}
 									</Button>
 								</div>
 							</div>
@@ -273,14 +279,16 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
+								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
 								<div class="rounded-xl bg-blue-50 p-3 text-blue-600 ring-1 ring-blue-100">
 									<Globe size={24} />
 								</div>
-								<h3 class={cn('text-lg', adaptiveText.heading)}>{$t('settings.general.currency')}</h3>
+								<h3 class={cn('text-lg', adaptiveText.heading)}>
+									{$t('settings.general.currency')}
+								</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
@@ -320,7 +328,7 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
+								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
@@ -358,7 +366,7 @@
 								liquidGlass.innerGlow.medium,
 								liquidGlass.transition,
 								liquidGlass.hover.shadow,
-								'group p-8 relative z-0 hover:z-50 focus-within:z-50'
+								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
 							)}
 						>
 							<div class="mb-6 flex items-center gap-4">
@@ -411,7 +419,9 @@
 								<Sparkles size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">{$t('settings.business.loyalty_program')}</h3>
+								<h3 class="text-xl font-bold text-slate-800">
+									{$t('settings.business.loyalty_program')}
+								</h3>
 								<p class="text-slate-500">
 									{$t('settings.business.loyalty_program_desc')}
 								</p>
@@ -421,9 +431,12 @@
 						<div class="grid gap-8 md:grid-cols-2">
 							<!-- Earning & Redemption -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">{$t('settings.business.points_configuration')}</h4>
+								<h4 class="font-semibold text-slate-700">
+									{$t('settings.business.points_configuration')}
+								</h4>
 								<div class="space-y-3">
-									<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.earning_rate')}</Label
+									<Label class="ml-1 font-medium text-slate-600"
+										>{$t('settings.business.earning_rate')}</Label
 									>
 									<div class="flex gap-3">
 										<Input
@@ -478,10 +491,14 @@
 
 							<!-- Tiers -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">{$t('settings.business.tier_thresholds')}</h4>
+								<h4 class="font-semibold text-slate-700">
+									{$t('settings.business.tier_thresholds')}
+								</h4>
 								<div class="space-y-4">
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.silver_tier')}</Label>
+										<Label class="ml-1 font-medium text-slate-600"
+											>{$t('settings.business.silver_tier')}</Label
+										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -498,7 +515,9 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.gold_tier')}</Label>
+										<Label class="ml-1 font-medium text-slate-600"
+											>{$t('settings.business.gold_tier')}</Label
+										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -515,7 +534,9 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.platinum_tier')}</Label>
+										<Label class="ml-1 font-medium text-slate-600"
+											>{$t('settings.business.platinum_tier')}</Label
+										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -556,14 +577,18 @@
 								<Percent size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">{$t('settings.business.financial_settings')}</h3>
+								<h3 class="text-xl font-bold text-slate-800">
+									{$t('settings.business.financial_settings')}
+								</h3>
 								<p class="text-slate-500">{$t('settings.business.financial_settings_desc')}</p>
 							</div>
 						</div>
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">{$t('settings.business.default_tax_rate')}</Label>
+								<Label class="ml-1 font-medium text-slate-600"
+									>{$t('settings.business.default_tax_rate')}</Label
+								>
 								<div class="flex gap-3">
 									<Input
 										type="number"
@@ -576,7 +601,8 @@
 										onclick={() =>
 											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
 									>
-										<Save size={20} class="mr-2" /> {$t('common.save')}
+										<Save size={20} class="mr-2" />
+										{$t('common.save')}
 									</Button>
 								</div>
 								<p class="text-xs text-slate-400">
@@ -614,7 +640,9 @@
 							<div class="rounded-xl bg-violet-50 p-3 text-violet-600 ring-1 ring-violet-100">
 								<Lock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.privacy_policy')}</h3>
+							<h3 class="text-lg font-bold text-slate-800">
+								{$t('settings.policies.privacy_policy')}
+							</h3>
 						</div>
 						<Textarea
 							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-violet-500/20"
@@ -626,7 +654,8 @@
 								class="rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 active:scale-95"
 								onclick={() => saveSetting('privacy_policy', settings['privacy_policy'])}
 							>
-								<Save size={18} class="mr-2" /> {$t('settings.policies.save_policy')}
+								<Save size={18} class="mr-2" />
+								{$t('settings.policies.save_policy')}
 							</Button>
 						</div>
 					</div>
@@ -647,7 +676,9 @@
 							<div class="rounded-xl bg-pink-50 p-3 text-pink-600 ring-1 ring-pink-100">
 								<LayoutTemplate size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.terms_of_service')}</h3>
+							<h3 class="text-lg font-bold text-slate-800">
+								{$t('settings.policies.terms_of_service')}
+							</h3>
 						</div>
 						<Textarea
 							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-pink-500 focus:bg-white focus:ring-pink-500/20"
@@ -659,7 +690,8 @@
 								class="rounded-xl bg-pink-600 text-white shadow-lg shadow-pink-500/20 transition-all hover:bg-pink-700 active:scale-95"
 								onclick={() => saveSetting('terms_of_service', settings['terms_of_service'])}
 							>
-								<Save size={18} class="mr-2" /> {$t('settings.policies.save_terms')}
+								<Save size={18} class="mr-2" />
+								{$t('settings.policies.save_terms')}
 							</Button>
 						</div>
 					</div>
@@ -681,10 +713,14 @@
 							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">
 								<Clock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">{$t('settings.policies.return_policy')}</h3>
+							<h3 class="text-lg font-bold text-slate-800">
+								{$t('settings.policies.return_policy')}
+							</h3>
 						</div>
 						<div class="max-w-xl space-y-3">
-							<Label class="ml-1 font-medium text-slate-600">{$t('settings.policies.return_window')}</Label>
+							<Label class="ml-1 font-medium text-slate-600"
+								>{$t('settings.policies.return_window')}</Label
+							>
 							<div class="flex gap-3">
 								<Input
 									type="number"
@@ -696,7 +732,8 @@
 									class="h-12 rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95"
 									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
 								>
-									<Save size={20} class="mr-2" /> {$t('common.save')}
+									<Save size={20} class="mr-2" />
+									{$t('common.save')}
 								</Button>
 							</div>
 							<p class="text-xs text-slate-400">
@@ -738,7 +775,9 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600">{$t('settings.system.wake_up_time')}</Label>
+								<Label class="ml-1 font-medium text-slate-600"
+									>{$t('settings.system.wake_up_time')}</Label
+								>
 								<div class="flex gap-3">
 									<Input
 										type="time"
@@ -749,7 +788,8 @@
 										class="h-12 rounded-xl bg-sky-600 text-white shadow-lg hover:bg-sky-700"
 										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
 									>
-										<Save size={20} class="mr-2" /> {$t('common.save')}
+										<Save size={20} class="mr-2" />
+										{$t('common.save')}
 									</Button>
 								</div>
 								<p class="text-xs text-slate-400">
@@ -772,7 +812,9 @@
 					>
 						<Bell size={40} />
 					</div>
-					<h3 class="text-2xl font-bold text-slate-800">{$t('settings.notifications.global_alerts_center')}</h3>
+					<h3 class="text-2xl font-bold text-slate-800">
+						{$t('settings.notifications.global_alerts_center')}
+					</h3>
 					<p class="mt-2 max-w-sm text-slate-500">
 						{$t('settings.notifications.coming_soon')}
 					</p>

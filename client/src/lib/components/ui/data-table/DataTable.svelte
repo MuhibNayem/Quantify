@@ -54,20 +54,20 @@
 <div class="w-full space-y-6">
 	<!-- Main Table Container -->
 	<div
-		class="relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 shadow-2xl shadow-indigo-100/50 backdrop-blur-xl transition-all duration-500 hover:shadow-indigo-200/50"
+		class="relative overflow-hidden rounded-[40px] border border-white/50 bg-gradient-to-br from-white/60 to-white/20 shadow-[inset_1px_1px_2px_0_rgba(255,255,255,0.8),inset_-1px_-1px_2px_0_rgba(255,255,255,0.2),0_40px_80px_-20px_rgba(50,60,90,0.3)] backdrop-blur-3xl backdrop-saturate-[180%] transition-all duration-500"
 		in:fly={{ y: 20, duration: 600, delay: 200 }}
 	>
-		<!-- Decorative Gradient Blob -->
+		<!-- Decorative Liquid Blob -->
 		<div
-			class="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-indigo-100/40 to-purple-100/40 blur-3xl transition-transform duration-1000"
+			class="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-gradient-to-br from-blue-100/20 to-purple-100/20 blur-3xl transition-transform duration-1000"
 		></div>
 
 		<Table>
-			<TableHeader class="bg-gradient-to-r from-indigo-50/50 to-white/50">
-				<TableRow class="border-b border-indigo-100/50 hover:bg-transparent">
+			<TableHeader class="border-b border-white/30 bg-white/40 backdrop-blur-xl">
+				<TableRow class="border-b border-white/20 shadow-none hover:bg-transparent">
 					{#each columns as col}
 						<TableHead
-							class="h-14 px-6 text-xs font-bold uppercase tracking-widest text-indigo-900/60 {col.class ??
+							class="h-14 px-6 text-xs font-bold uppercase tracking-widest text-slate-600 {col.class ??
 								''}"
 						>
 							<div
@@ -79,7 +79,7 @@
 									<Button
 										variant="ghost"
 										size="sm"
-										class="-ml-3 h-8 text-xs font-bold uppercase tracking-widest text-indigo-900/60 transition-colors hover:bg-indigo-100/50 hover:text-indigo-700"
+										class="-ml-3 h-8 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100/50 hover:text-slate-900"
 									>
 										{col.header}
 										<ArrowUpDown class="ml-2 h-3.5 w-3.5 opacity-50" />
@@ -95,11 +95,11 @@
 			<TableBody>
 				{#if loading}
 					{#each Array(pageSize) as _, i}
-						<TableRow class="border-b border-indigo-50/30 hover:bg-transparent">
+						<TableRow class="border-b border-white/10 hover:bg-transparent">
 							{#each columns as _}
 								<TableCell class="px-6 py-4">
 									<div
-										class="h-8 w-full animate-pulse rounded-full bg-indigo-50/50"
+										class="h-8 w-full animate-pulse rounded-full bg-slate-100/50"
 										style="animation-delay: {i * 100}ms"
 									></div>
 								</TableCell>
@@ -109,13 +109,13 @@
 				{:else if data.length === 0}
 					<TableRow>
 						<TableCell colspan={columns.length} class="h-[400px] text-center">
-							<div class="flex flex-col items-center justify-center gap-4 text-indigo-300">
-								<div class="rounded-full bg-indigo-50 p-6 shadow-inner">
-									<FileQuestion class="h-10 w-10 text-indigo-400" />
+							<div class="flex flex-col items-center justify-center gap-4 text-slate-300">
+								<div class="rounded-full bg-slate-50 p-6 shadow-inner">
+									<FileQuestion class="h-10 w-10 text-slate-400" />
 								</div>
 								<div class="space-y-1">
-									<p class="text-lg font-semibold text-indigo-900/70">No records found</p>
-									<p class="text-sm text-indigo-400">Try adjusting your filters</p>
+									<p class="text-lg font-semibold text-slate-700">No records found</p>
+									<p class="text-sm text-slate-400">Try adjusting your filters</p>
 								</div>
 							</div>
 						</TableCell>
@@ -123,8 +123,8 @@
 				{:else}
 					{#each data as row, i (i)}
 						<TableRow
-							class="group border-b border-indigo-50/30 transition-all duration-300 hover:bg-indigo-50/40 {onRowClick
-								? 'cursor-pointer active:scale-[0.995] active:bg-indigo-100/50'
+							class="group border-b border-white/10 transition-all duration-300 {onRowClick
+								? 'cursor-pointer active:scale-[0.995]'
 								: ''}"
 							onclick={() => onRowClick?.(row)}
 						>
@@ -133,7 +133,7 @@
 							{:else}
 								{#each columns as col}
 									<TableCell
-										class="px-6 py-4 text-sm font-medium text-slate-600 transition-colors group-hover:text-slate-900 {col.class ??
+										class="px-6 py-4 text-sm font-bold text-slate-600 transition-colors group-hover:text-slate-900 {col.class ??
 											''}"
 									>
 										{#if col.accessorKey}
@@ -164,23 +164,23 @@
 					<Pagination.Content class="gap-2">
 						<Pagination.Item>
 							<Pagination.PrevButton
-								class="h-9 w-9 rounded-xl border border-white/60 bg-white/50 shadow-sm backdrop-blur transition-all hover:border-indigo-200 hover:bg-white hover:text-indigo-600 hover:shadow-md disabled:opacity-30"
+								class="h-10 w-10 rounded-xl border border-white/60 bg-white/50 shadow-sm backdrop-blur transition-all hover:bg-white hover:text-slate-900 hover:shadow-md disabled:opacity-30"
 							/>
 						</Pagination.Item>
 						{#each pages as page (page.key)}
 							{#if page.type === 'ellipsis'}
 								<Pagination.Item>
-									<Pagination.Ellipsis class="text-indigo-300" />
+									<Pagination.Ellipsis class="text-slate-400" />
 								</Pagination.Item>
 							{:else}
 								<Pagination.Item>
 									<Pagination.Link
 										{page}
 										isActive={currentPage === page.value}
-										class="h-9 w-9 rounded-xl border text-sm font-medium transition-all duration-300 {currentPage ===
+										class="h-10 w-10 rounded-xl border text-sm font-bold transition-all duration-300 {currentPage ===
 										page.value
-											? 'scale-105 border-indigo-500 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30'
-											: 'border-white/60 bg-white/50 text-slate-600 hover:border-indigo-200 hover:bg-white hover:text-indigo-600 hover:shadow-md'}"
+											? 'scale-105 border-slate-900 bg-slate-900 text-white shadow-lg'
+											: 'border-white/60 bg-white/50 text-slate-600 hover:bg-white hover:text-slate-900 hover:shadow-md'}"
 									>
 										{page.value}
 									</Pagination.Link>
@@ -189,7 +189,7 @@
 						{/each}
 						<Pagination.Item>
 							<Pagination.NextButton
-								class="h-9 w-9 rounded-xl border border-white/60 bg-white/50 shadow-sm backdrop-blur transition-all hover:border-indigo-200 hover:bg-white hover:text-indigo-600 hover:shadow-md disabled:opacity-30"
+								class="h-10 w-10 rounded-xl border border-white/60 bg-white/50 shadow-sm backdrop-blur transition-all hover:bg-white hover:text-slate-900 hover:shadow-md disabled:opacity-30"
 							/>
 						</Pagination.Item>
 					</Pagination.Content>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import api from '$lib/api';
 	import { formatDate, formatCurrency } from '$lib/utils';
 	import { fade, fly, slide } from 'svelte/transition';
@@ -147,7 +148,9 @@
 	// Data Loading
 	async function loadData() {
 		if (!auth.hasPermission('pos.view') && !auth.hasPermission('inventory.view')) {
-			toast.error($t('orders.errors.access_denied'), { description: $t('orders.errors.access_denied_desc') });
+			toast.error($t('orders.errors.access_denied'), {
+				description: $t('orders.errors.access_denied_desc')
+			});
 			goto('/');
 			return;
 		}
@@ -328,83 +331,35 @@
 
 			<div class="flex flex-col gap-2">
 				<!-- Main Tabs -->
-				<div
-					class="liquid-panel flex items-center gap-3 self-start rounded-xl p-1.5 backdrop-blur-md md:self-auto"
-				>
-					<Button
-						variant="ghost"
-						class={cn(
-							'gap-2 rounded-lg font-semibold transition-all',
-							activeTab === 'sales'
-								? 'bg-gradient-to-r from-blue-500/90 to-indigo-500/90 text-white shadow-lg'
-								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
-						)}
-						onclick={() => (activeTab = 'sales')}
-					>
-						<TrendingUp class="h-4 w-4" /> {$t('orders.tabs.sales')}
-					</Button>
-					<Button
-						variant="ghost"
-						class={cn(
-							'gap-2 rounded-lg font-semibold transition-all',
-							activeTab === 'purchases'
-								? 'bg-gradient-to-r from-purple-500/90 to-fuchsia-500/90 text-white shadow-lg'
-								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
-						)}
-						onclick={() => (activeTab = 'purchases')}
-					>
-						<Factory class="h-4 w-4" /> {$t('orders.tabs.purchases')}
-					</Button>
-				</div>
+				<!-- Main Tabs -->
+				<GlassTabs
+					bind:value={activeTab}
+					tabs={[
+						{ value: 'sales', label: $t('orders.tabs.sales') },
+						{ value: 'purchases', label: $t('orders.tabs.purchases') }
+					]}
+					class="self-start md:self-auto"
+				/>
 
+				<!-- Sub Tabs -->
 				<!-- Sub Tabs -->
 				<div in:slide={{ axis: 'y', duration: 200 }} class="flex gap-2 self-start md:self-end">
 					{#if activeTab === 'sales'}
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'orders'
-									? 'bg-blue-100 text-blue-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'orders')}
-						>
-							{$t('orders.subtabs.sales_orders')}
-						</button>
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'returns'
-									? 'bg-blue-100 text-blue-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'returns')}
-						>
-							{$t('orders.subtabs.customer_returns')}
-						</button>
+						<GlassTabs
+							bind:value={subTab}
+							tabs={[
+								{ value: 'orders', label: $t('orders.subtabs.sales_orders') },
+								{ value: 'returns', label: $t('orders.subtabs.customer_returns') }
+							]}
+						/>
 					{:else}
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'orders'
-									? 'bg-purple-100 text-purple-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'orders')}
-						>
-							{$t('orders.subtabs.purchase_orders')}
-						</button>
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'returns'
-									? 'bg-purple-100 text-purple-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'returns')}
-						>
-							{$t('orders.subtabs.vendor_returns')}
-						</button>
+						<GlassTabs
+							bind:value={subTab}
+							tabs={[
+								{ value: 'orders', label: $t('orders.subtabs.purchase_orders') },
+								{ value: 'returns', label: $t('orders.subtabs.vendor_returns') }
+							]}
+						/>
 					{/if}
 				</div>
 			</div>
@@ -502,7 +457,8 @@
 										{/each}
 										{#if order.OrderItems.length > 2}
 											<div class="text-[10px] italic text-slate-400">
-												+{order.OrderItems.length - 2} {$t('orders.labels.more')}
+												+{order.OrderItems.length - 2}
+												{$t('orders.labels.more')}
 											</div>
 										{/if}
 									</div>
@@ -529,7 +485,8 @@
 										size="sm"
 										class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
 									>
-										{$t('orders.actions.view_details')} <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.view_details')}
+										<ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
@@ -569,7 +526,9 @@
 										<span class="font-medium text-slate-700">{ret.Reason}</span>
 									</div>
 									<div class="space-y-1 rounded-lg bg-orange-50/50 p-2 text-xs text-slate-600">
-										<p class="mb-1 font-semibold text-orange-800">{$t('orders.status.items_returned')}</p>
+										<p class="mb-1 font-semibold text-orange-800">
+											{$t('orders.status.items_returned')}
+										</p>
 										{#if ret.ReturnItems && ret.ReturnItems.length > 0}
 											{#each ret.ReturnItems.slice(0, 2) as item}
 												<div class="flex justify-between">
@@ -592,7 +551,8 @@
 										size="sm"
 										class="w-full text-orange-600 hover:bg-orange-50 hover:text-orange-700"
 									>
-										{$t('orders.actions.view_details')} <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.view_details')}
+										<ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
@@ -625,18 +585,23 @@
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
-										<span class="font-medium text-slate-700">{po.Supplier?.Name || $t('orders.labels.unknown')}</span>
+										<span class="font-medium text-slate-700"
+											>{po.Supplier?.Name || $t('orders.labels.unknown')}</span
+										>
 									</div>
 									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
 										{#each po.PurchaseOrderItems.slice(0, 2) as item}
 											<div class="flex justify-between">
 												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-purple-600">{$t('orders.status.qty')}: {item.OrderedQuantity}</span>
+												<span class="font-medium text-purple-600"
+													>{$t('orders.status.qty')}: {item.OrderedQuantity}</span
+												>
 											</div>
 										{/each}
 										{#if po.PurchaseOrderItems.length > 2}
 											<div class="text-[10px] italic text-slate-400">
-												+{po.PurchaseOrderItems.length - 2} {$t('orders.labels.more')}
+												+{po.PurchaseOrderItems.length - 2}
+												{$t('orders.labels.more')}
 											</div>
 										{/if}
 									</div>
@@ -659,7 +624,8 @@
 										size="sm"
 										class="text-purple-600 hover:bg-purple-50 hover:text-purple-700"
 									>
-										{$t('orders.actions.manage_po')} <ArrowRight class="ml-1 h-3 w-3" />
+										{$t('orders.actions.manage_po')}
+										<ArrowRight class="ml-1 h-3 w-3" />
 									</Button>
 								</div>
 							</div>
@@ -692,7 +658,8 @@
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
-										<span class="font-medium text-slate-700">{ret.Supplier?.Name || $t('orders.labels.unknown')}</span
+										<span class="font-medium text-slate-700"
+											>{ret.Supplier?.Name || $t('orders.labels.unknown')}</span
 										>
 									</div>
 									<div class="flex items-center justify-between text-sm">
@@ -704,7 +671,9 @@
 										{#each ret.PurchaseReturnItems.slice(0, 2) as item}
 											<div class="flex justify-between">
 												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-red-600">{$t('orders.status.qty')}: -{item.Quantity}</span>
+												<span class="font-medium text-red-600"
+													>{$t('orders.status.qty')}: -{item.Quantity}</span
+												>
 											</div>
 										{/each}
 									</div>
@@ -712,7 +681,9 @@
 
 								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
 									<p class="text-lg font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</p>
-									<span class="text-xs font-semibold text-slate-400">{$t('orders.status.refund_value')}</span>
+									<span class="text-xs font-semibold text-slate-400"
+										>{$t('orders.status.refund_value')}</span
+									>
 								</div>
 							</div>
 						{:else}
