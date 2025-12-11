@@ -331,7 +331,6 @@
 
 			<div class="flex flex-col gap-2">
 				<!-- Main Tabs -->
-				<!-- Main Tabs -->
 				<GlassTabs
 					bind:value={activeTab}
 					tabs={[
