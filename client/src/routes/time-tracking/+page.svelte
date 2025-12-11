@@ -2,6 +2,7 @@
 	import StaffDashboard from '$lib/components/time-tracking/StaffDashboard.svelte';
 	import ManagerDashboard from '$lib/components/time-tracking/ManagerDashboard.svelte';
 	import { Button } from '$lib/components/ui/button';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import { Clock } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -53,50 +54,14 @@
 </section>
 
 <div class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div
-		class="mb-8 flex flex-wrap items-center justify-center gap-3 rounded-[28px] border border-white/40 bg-white/70 px-3 py-2 text-slate-600 shadow-[0_25px_80px_-40px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:justify-between"
-	>
-		<div class="relative flex items-center gap-3">
-			<Button
-				size="lg"
-				variant="ghost"
-				onclick={() => (currentRole = 'Staff')}
-				class="relative isolate rounded-2xl border border-transparent px-6 py-2 text-sm font-semibold transition-colors duration-200 hover:text-slate-900 {currentRole ===
-				'Staff'
-					? 'text-slate-900'
-					: 'text-slate-500'}"
-			>
-				{#if currentRole === 'Staff'}
-					<div
-						class="glass-toggle-active absolute inset-0 -z-10 rounded-2xl"
-						in:fade={{ duration: 200 }}
-						out:fade={{ duration: 200 }}
-					></div>
-				{/if}
-				<span class="relative z-10">Staff View</span>
-			</Button>
-
-			<Button
-				size="lg"
-				variant="ghost"
-				onclick={() => (currentRole = 'Manager')}
-				class="relative isolate rounded-2xl border border-transparent px-6 py-2 text-sm font-semibold transition-colors duration-200 hover:text-slate-900 {currentRole ===
-				'Manager'
-					? 'text-slate-900'
-					: 'text-slate-500'}"
-			>
-				{#if currentRole === 'Manager'}
-					<div
-						class="glass-toggle-active absolute inset-0 -z-10 rounded-2xl"
-						in:fade={{ duration: 200 }}
-						out:fade={{ duration: 200 }}
-					></div>
-				{/if}
-				<span class="relative z-10">Manager View</span>
-			</Button>
-		</div>
-		<p class="text-xs uppercase tracking-[0.3em] text-slate-400">Select dashboard</p>
-	</div>
+	<GlassTabs
+		bind:value={currentRole}
+		tabs={[
+			{ value: 'Staff', label: 'Staff View' },
+			{ value: 'Manager', label: 'Manager View' }
+		]}
+		class="mx-auto mb-8"
+	/>
 
 	{#if currentRole === 'Staff'}
 		<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }}>

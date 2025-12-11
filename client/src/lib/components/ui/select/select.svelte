@@ -1,3 +1,4 @@
+<!-- client/src/lib/components/ui/select/select.svelte -->
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { fly } from 'svelte/transition';
@@ -88,8 +89,10 @@
 	{#if label}
 		<label
 			class={cn(
-				'absolute left-3 text-gray-600 transition-all duration-200 ease-in-out',
-				value || isOpen ? '-top-2 bg-white px-1 text-xs' : 'top-1/2 -translate-y-1/2 text-base',
+				'absolute left-3 z-10 font-bold text-slate-800 transition-all duration-200 ease-in-out',
+				value || isOpen
+					? '-top-2 rounded-full bg-white/80 px-1 text-xs backdrop-blur-sm'
+					: 'top-1/2 -translate-y-1/2 text-lg',
 				disabled && 'opacity-50'
 			)}
 		>
@@ -102,28 +105,24 @@
 		bind:this={triggerRef}
 		type="button"
 		class={cn(
-			'flex h-12 w-full items-center justify-between rounded-md border bg-white px-4 py-2 text-left',
-			'focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500',
-			'transition-all duration-200 ease-in-out',
-			'shadow-sm', // Material UI-like shadow
-			'appearance-none', // Reset default button styles for cross-browser consistency
-			'-webkit-appearance: none;', // For Safari
-			'background-color: transparent;', // Ensure background is controlled by Tailwind
-			'border: none;', // Ensure border is controlled by Tailwind
-			'cursor: pointer;', // Explicitly set cursor
+			'flex h-12 w-full items-center justify-between rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-left text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] outline-none ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all',
+			'focus:scale-[1.01] focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10',
+			'appearance-none',
+			'-webkit-appearance: none;',
+			'cursor: pointer;',
 			disabled && 'cursor-not-allowed bg-gray-100 opacity-50',
-			value && 'pt-4' // Adjust padding when value is selected and label floats
+			value && label && 'pt-2'
 		)}
 		onclick={toggleDropdown}
 		aria-haspopup="listbox"
 		aria-expanded={isOpen}
 		{disabled}
 	>
-		<span class={cn(value ? 'text-gray-800' : 'text-gray-500')}>
+		<span class={cn(value ? 'text-slate-900' : 'text-slate-500/80')}>
 			{selectedLabel}
 		</span>
 		<svg
-			class={cn('h-4 w-4 transition-transform duration-200', isOpen && 'rotate-180')}
+			class={cn('h-5 w-5 text-slate-600 transition-transform duration-300', isOpen && 'rotate-180')}
 			fill="none"
 			stroke="currentColor"
 			viewBox="0 0 24 24"
@@ -138,17 +137,17 @@
 	{#if isOpen}
 		<ul
 			class={cn(
-				'absolute z-10 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg',
-				dropdownPosition === 'top' ? 'bottom-full mb-1' : 'top-full mt-1'
+				'absolute z-10 max-h-60 w-full overflow-auto rounded-xl border border-white/60 bg-white/90 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] ring-1 ring-white/40 backdrop-blur-2xl',
+				dropdownPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
 			)}
-			transitionfly={{ y: dropdownPosition === 'top' ? 10 : -10, duration: 150 }}
+			transition:fly={{ y: dropdownPosition === 'top' ? 10 : -10, duration: 150 }}
 			role="listbox"
 		>
 			{#each options as option (option.value)}
 				<li
 					class={cn(
-						'cursor-pointer px-4 py-2 hover:bg-blue-50 hover:text-blue-700',
-						value === option.value && 'bg-blue-100 font-medium text-blue-800'
+						'cursor-pointer px-4 py-3 font-bold text-slate-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-700',
+						value === option.value && 'bg-emerald-500/10 text-emerald-800'
 					)}
 					onclick={() => selectOption(option.value)}
 					role="option"

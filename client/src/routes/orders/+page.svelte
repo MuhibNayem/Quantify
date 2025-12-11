@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import api from '$lib/api';
 	import { formatDate, formatCurrency } from '$lib/utils';
 	import { fade, fly, slide } from 'svelte/transition';
@@ -327,83 +328,35 @@
 
 			<div class="flex flex-col gap-2">
 				<!-- Main Tabs -->
-				<div
-					class="liquid-panel flex items-center gap-3 self-start rounded-xl p-1.5 backdrop-blur-md md:self-auto"
-				>
-					<Button
-						variant="ghost"
-						class={cn(
-							'gap-2 rounded-lg font-semibold transition-all',
-							activeTab === 'sales'
-								? 'bg-gradient-to-r from-blue-500/90 to-indigo-500/90 text-white shadow-lg'
-								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
-						)}
-						onclick={() => (activeTab = 'sales')}
-					>
-						<TrendingUp class="h-4 w-4" /> Sales (Invoices)
-					</Button>
-					<Button
-						variant="ghost"
-						class={cn(
-							'gap-2 rounded-lg font-semibold transition-all',
-							activeTab === 'purchases'
-								? 'bg-gradient-to-r from-purple-500/90 to-fuchsia-500/90 text-white shadow-lg'
-								: 'text-slate-500 hover:bg-white/50 hover:text-slate-700'
-						)}
-						onclick={() => (activeTab = 'purchases')}
-					>
-						<Factory class="h-4 w-4" /> Purchases & Returns
-					</Button>
-				</div>
+				<!-- Main Tabs -->
+				<GlassTabs
+					bind:value={activeTab}
+					tabs={[
+						{ value: 'sales', label: 'Sales (Invoices)' },
+						{ value: 'purchases', label: 'Purchases & Returns' }
+					]}
+					class="self-start md:self-auto"
+				/>
 
+				<!-- Sub Tabs -->
 				<!-- Sub Tabs -->
 				<div in:slide={{ axis: 'y', duration: 200 }} class="flex gap-2 self-start md:self-end">
 					{#if activeTab === 'sales'}
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'orders'
-									? 'bg-blue-100 text-blue-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'orders')}
-						>
-							Sales Orders
-						</button>
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'returns'
-									? 'bg-blue-100 text-blue-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'returns')}
-						>
-							Customer Returns
-						</button>
+						<GlassTabs
+							bind:value={subTab}
+							tabs={[
+								{ value: 'orders', label: 'Sales Orders' },
+								{ value: 'returns', label: 'Customer Returns' }
+							]}
+						/>
 					{:else}
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'orders'
-									? 'bg-purple-100 text-purple-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'orders')}
-						>
-							Purchase Orders
-						</button>
-						<button
-							class={cn(
-								'rounded-full px-3 py-1 text-sm font-medium transition-colors',
-								subTab === 'returns'
-									? 'bg-purple-100 text-purple-700'
-									: 'text-slate-500 hover:text-slate-700'
-							)}
-							onclick={() => (subTab = 'returns')}
-						>
-							Vendor Returns
-						</button>
+						<GlassTabs
+							bind:value={subTab}
+							tabs={[
+								{ value: 'orders', label: 'Purchase Orders' },
+								{ value: 'returns', label: 'Vendor Returns' }
+							]}
+						/>
 					{/if}
 				</div>
 			</div>

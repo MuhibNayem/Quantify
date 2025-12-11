@@ -14,6 +14,7 @@
 
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
+	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import type {
 		DetailBuilderContext,
 		DetailExtraFetcher,
@@ -1060,22 +1061,17 @@
 
 <!-- ===== TABS ===== -->
 <div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div
-		class="data-animate='fade-up' mb-8 flex overflow-x-auto rounded-xl border-b border-sky-200 bg-white/60 px-2 backdrop-blur"
-	>
-		{#each ['products', 'categories', 'sub-categories', 'suppliers', 'locations'] as tab, i}
-			<button
-				class="m-1 rounded-t-xl px-5 py-2.5 text-sm font-medium transition-all duration-200
-		           {activeTab === tab
-					? 'border-b-2 border-sky-500 bg-gradient-to-b from-sky-100 to-blue-100 text-sky-800 shadow-sm'
-					: 'text-slate-600 hover:bg-sky-50 hover:text-sky-700'}"
-				onclick={() => (activeTab = tab as TabKey)}
-				style={`animation-delay:${100 + i * 50}ms`}
-			>
-				{tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
-			</button>
-		{/each}
-	</div>
+	<GlassTabs
+		bind:value={activeTab}
+		tabs={[
+			{ value: 'products', label: 'Products' },
+			{ value: 'categories', label: 'Categories' },
+			{ value: 'sub-categories', label: 'Sub Categories' },
+			{ value: 'suppliers', label: 'Suppliers' },
+			{ value: 'locations', label: 'Locations' }
+		]}
+		class="mb-8 overflow-x-auto"
+	/>
 
 	<!-- ===== SECTIONS ===== -->
 	<section class="space-y-10">
