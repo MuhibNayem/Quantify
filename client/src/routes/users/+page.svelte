@@ -59,8 +59,8 @@
 
 	const userStatusBadge = (isActive: boolean) =>
 		isActive
-			? { text: 'users.status.approved', variant: 'success' as const }
-			: { text: 'users.status.pending', variant: 'warning' as const };
+			? { text: $t('users.status.approved'), variant: 'success' as const }
+			: { text: $t('users.status.pending'), variant: 'warning' as const };
 
 	const buildUserSections = ({ data }: DetailBuilderContext): DetailSection[] => {
 		const user = data as unknown as UserSummary;
@@ -91,23 +91,24 @@
 					}
 				]
 			},
+
 			{
 				type: 'description',
-				title: 'users.form.sections.personal',
+				title: $t('users.form.sections.personal'),
 				items: [
-					{ label: 'users.form.fields.username', value: user.Username },
-					{ label: 'users.form.fields.first_name', value: user.FirstName || 'Not set' },
-					{ label: 'users.form.fields.last_name', value: user.LastName || 'Not set' },
-					{ label: 'users.form.fields.email', value: user.Email || 'Not set' },
-					{ label: 'users.form.fields.phone', value: user.PhoneNumber || 'Not set' },
-					{ label: 'users.form.fields.address', value: user.Address || 'Not set' },
-					{ label: 'users.table.role', value: user.Role.Name },
+					{ label: $t('users.form.fields.username'), value: user.Username },
+					{ label: $t('users.form.fields.first_name'), value: user.FirstName || 'Not set' },
+					{ label: $t('users.form.fields.last_name'), value: user.LastName || 'Not set' },
+					{ label: $t('users.form.fields.email'), value: user.Email || 'Not set' },
+					{ label: $t('users.form.fields.phone'), value: user.PhoneNumber || 'Not set' },
+					{ label: $t('users.form.fields.address'), value: user.Address || 'Not set' },
+					{ label: $t('users.table.role'), value: user.Role.Name },
 					{
-						label: 'users.table.status',
-						value: user.IsActive ? 'users.status.approved' : 'users.status.pending',
+						label: $t('users.table.status'),
+						value: user.IsActive ? $t('users.status.approved') : $t('users.status.pending'),
 						badge: userStatusBadge(user.IsActive)
 					},
-					{ label: 'users.table.id', value: `#${user.ID}` }
+					{ label: $t('users.table.id'), value: `#${user.ID}` }
 				]
 			}
 		];
@@ -162,15 +163,18 @@
 
 	// Load users when activeTab changes
 	let initialLoadDone = false;
-	
+
 	onMount(async () => {
 		try {
 			await Promise.all([
 				loadUsers(),
-				rolesApi.list().then(data => roles = data).catch(err => {
-					console.error('Failed to load roles:', err);
-					toast.error('Failed to load roles');
-				})
+				rolesApi
+					.list()
+					.then((data) => (roles = data))
+					.catch((err) => {
+						console.error('Failed to load roles:', err);
+						toast.error('Failed to load roles');
+					})
 			]);
 		} finally {
 			initialLoadDone = true;
@@ -473,9 +477,7 @@
 	>
 		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
 			<CardTitle class="text-slate-800">{$t('users.form.title')}</CardTitle>
-			<CardDescription class="text-slate-600"
-				>{$t('users.form.subtitle')}</CardDescription
-			>
+			<CardDescription class="text-slate-600">{$t('users.form.subtitle')}</CardDescription>
 		</CardHeader>
 		{#if !selectedUser}
 			<CardContent class="p-6">
