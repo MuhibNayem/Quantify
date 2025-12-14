@@ -90,10 +90,11 @@
 	const localeOptions = [
 		{ value: 'en-US', label: 'English (United States)' },
 		{ value: 'bn-BD', label: 'Bengali (Bangladesh)' },
-		{ value: 'en-GB', label: 'English (United Kingdom)' },
 		{ value: 'hi-IN', label: 'Hindi (India)' },
 		{ value: 'ja-JP', label: 'Japanese (Japan)' },
-		{ value: 'fr-FR', label: 'French (France)' }
+		{ value: 'it-IT', label: 'Italian (Italy)' },
+		{ value: 'es-ES', label: 'Spanish (Spain)' },
+		{ value: 'ar-SA', label: 'Arabic (Saudi Arabia)' }
 	];
 
 	onMount(async () => {

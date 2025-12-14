@@ -2,10 +2,20 @@ import { derived } from 'svelte/store';
 import { settings } from '$lib/stores/settings';
 import enUS from './locales/en-US';
 import bnBD from './locales/bn-BD';
+import hiIN from './locales/hi-IN';
+import jaJP from './locales/ja-JP';
+import itIT from './locales/it-IT';
+import esES from './locales/es-ES';
+import arSA from './locales/ar-SA';
 
 const dictionaries: Record<string, any> = {
     'en-US': enUS,
-    'bn-BD': bnBD
+    'bn-BD': bnBD,
+    'hi-IN': hiIN,
+    'ja-JP': jaJP,
+    'it-IT': itIT,
+    'es-ES': esES,
+    'ar-SA': arSA
 };
 
 // Start with English (fallback)
