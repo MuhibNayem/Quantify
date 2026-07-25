@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// GenerateRandomPassword returns a cryptographically random URL-safe password (256-bit entropy).
 func GenerateRandomPassword() string {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
