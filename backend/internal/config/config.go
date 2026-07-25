@@ -29,6 +29,7 @@ type Config struct {
 	RefreshTokenSecret        string
 	SSLCommerzStoreID         string
 	SSLCommerzStorePassword   string
+	SSLCommerzStorePass       string // SSLCOMMERZ_STORE_PASS
 	SSLCommerzAPIHost         string
 	SSLCommerzSuccessURL      string
 	SSLCommerzFailURL         string
@@ -108,6 +109,7 @@ func LoadConfig() *Config {
 		RefreshTokenSecret:        getEnv("REFRESH_TOKEN_SECRET", "my_refresh_secret_key"),
 		SSLCommerzStoreID:         getEnv("SSLCOMMERZ_STORE_ID", ""),
 		SSLCommerzStorePassword:   getEnv("SSLCOMMERZ_STORE_PASSWORD", ""),
+		SSLCommerzStorePass:       getEnv("SSLCOMMERZ_STORE_PASS", ""),
 		SSLCommerzAPIHost:         getEnv("SSLCOMMERZ_API_HOST", "https://sandbox.sslcommerz.com"),
 		SSLCommerzSuccessURL:      getEnv("SSLCOMMERZ_SUCCESS_URL", "http://localhost:8080/payment/success"),
 		SSLCommerzFailURL:         getEnv("SSLCOMMERZ_FAIL_URL", "http://localhost:8080/payment/fail"),

@@ -77,7 +77,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	productHandler := handlers.NewProductHandler(productRepo, db)
 	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
 	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
-	paymentHandler := handlers.NewPaymentHandler(paymentService)
+	paymentHandler := handlers.NewPaymentHandler(cfg, paymentService)
 	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService, purchaseOrderService, vendorReturnService, hub, notificationRepo, emailService)
 	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
 	crmHandler := handlers.NewCRMHandler(crmService)

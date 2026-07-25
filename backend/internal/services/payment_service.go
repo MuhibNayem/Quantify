@@ -2,10 +2,17 @@ package services
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,7 +31,6 @@ const (
 type PaymentService interface {
 	CreatePayment(paymentMethod string, total float64, tranID, currency, cusName, cusEmail, cusPhone string) (string, error)
 	HandleBkashCallback(paymentID, status string) (string, error)
-	ValidateSSLCommerzIPN(formValue map[string][]string) (bool, error)
 }
 
 type paymentService struct {
@@ -286,31 +292,46 @@ func (s *paymentService) HandleBkashCallback(paymentID, status string) (string, 
 	return s.cfg.SSLCommerzFailURL, fmt.Errorf("bKash payment execution failed: %v", executeResult)
 }
 
-func (s *paymentService) ValidateSSLCommerzIPN(formValue map[string][]string) (bool, error) {
-	// This is a simplified validation. A real implementation would involve
-	// verifying the hash and other parameters as per SSLCommerz documentation.
-	status := formValue["status"]
-	if len(status) > 0 {
-		tranID := formValue["tran_id"][0]
-		transaction, err := s.paymentRepo.GetTransactionByTranID(tranID)
-		if err != nil {
-			return false, fmt.Errorf("failed to get transaction: %w", err)
-		}
-
-		if status[0] == "VALID" {
-			transaction.Status = "completed"
-			transaction.GatewayTransactionID = formValue["val_id"][0]
-			if err := s.paymentRepo.UpdateTransaction(transaction); err != nil {
-				return false, fmt.Errorf("failed to update transaction: %w", err)
-			}
-			return true, nil
-		} else {
-			transaction.Status = "failed"
-			if err := s.paymentRepo.UpdateTransaction(transaction); err != nil {
-				return false, fmt.Errorf("failed to update transaction: %w", err)
-			}
-			return false, fmt.Errorf("SSLCommerz IPN validation failed")
+func ValidateSSLCommerzIPN(params map[string]string, storePass string, verify map[string]string) error {
+	sign, ok := verify["verify_sign"]
+	if !ok || sign == "" {
+		return errors.New("missing signature")
+	}
+	keyList := verify["verify_key"]
+	if keyList == "" {
+		return errors.New("missing verify_key")
+	}
+	var parts []string
+	for _, k := range strings.Split(keyList, ",") {
+		k = strings.TrimSpace(k)
+		if v, ok := params[k]; ok && v != "" {
+			parts = append(parts, k+"="+v)
 		}
 	}
-	return false, fmt.Errorf("invalid IPN data")
+	sort.Strings(parts)
+	hashSeq := strings.Join(parts, ",")
+	mac := hmac.New(sha512.New, []byte(storePass))
+	mac.Write([]byte(hashSeq))
+	expected := hex.EncodeToString(mac.Sum(nil))
+	if !hmac.Equal([]byte(sign), []byte(expected)) {
+		return errors.New("signature mismatch")
+	}
+	if params["status"] == "" || !strings.HasPrefix(params["status"], "VALID") {
+		return errors.New("invalid transaction status")
+	}
+	return nil
+}
+
+func ValidateSSLCommerzFromValues(form url.Values, storePass string) error {
+	params := make(map[string]string, len(form))
+	for k, v := range form {
+		if len(v) > 0 {
+			params[k] = v[0]
+		}
+	}
+	verify := map[string]string{
+		"verify_sign": form.Get("verify_sign"),
+		"verify_key":  form.Get("verify_key"),
+	}
+	return ValidateSSLCommerzIPN(params, storePass, verify)
 }
