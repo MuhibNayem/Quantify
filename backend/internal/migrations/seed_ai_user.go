@@ -1,6 +1,8 @@
 package migrations
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 
@@ -8,6 +10,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
+
+func GenerateRandomPassword() string {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand failed: " + err.Error())
+	}
+	return base64.URLEncoding.EncodeToString(b)
+}
 
 // SeedAIUser ensures the AI Agent user exists with Admin privileges.
 func SeedAIUser(db *gorm.DB) error {
@@ -28,7 +38,8 @@ func SeedAIUser(db *gorm.DB) error {
 	}
 
 	// Create AI Agent user
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("rZQ$4Rs!6{QHaR{5Sra{]z_%n"), bcrypt.DefaultCost)
+	password := GenerateRandomPassword()
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
@@ -53,6 +64,6 @@ func SeedAIUser(db *gorm.DB) error {
 		return err
 	}
 
-	logrus.Info("AI Agent user created successfully.")
+	logrus.Infof("AI Agent user created successfully. One-time password (store securely): %s", password)
 	return nil
 }
