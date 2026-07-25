@@ -8,10 +8,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestSeedAIUser_NoHardcodedPassword(t *testing.T) {
-	password := GenerateRandomPassword()
-	assert.GreaterOrEqual(t, len(password), 24, "generated password must be >=24 chars")
-	assert.NotEqual(t, "rZQ$4Rs!6{QHaR{5Sra{]z_%n", password)
+func TestSeedAIUser_RandomPasswordIsUnique(t *testing.T) {
+	p1 := GenerateRandomPassword()
+	p2 := GenerateRandomPassword()
+	assert.NotEqual(t, p1, p2, "two generations must differ")
+	assert.GreaterOrEqual(t, len(p1), 24, "generated password must be >=24 chars")
 }
 
 func TestSeedAIUser_HashIsBcrypt(t *testing.T) {
