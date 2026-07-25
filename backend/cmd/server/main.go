@@ -22,7 +22,10 @@ func main() {
 	logrus.SetLevel(logrus.InfoLevel)
 
 	// Load configuration
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logrus.Fatalf("Failed to load configuration: %v", err)
+	}
 
 	// Initialize App
 	app := bootstrap.NewApp(cfg)

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -54,7 +55,7 @@ type Config struct {
 }
 
 // LoadConfig loads configuration from environment variables.
-func LoadConfig() *Config {
+func LoadConfig() (*Config, error) {
 
 	dbPort, err := strconv.Atoi(getEnv("DB_PORT", "5432")) // Default to 5432 if not set
 	if err != nil {
@@ -139,8 +140,10 @@ func LoadConfig() *Config {
 		RefreshTokenTTL:           refreshTokenTTL,
 	}
 
-	validateCriticalConfig(cfg)
-	return cfg
+	if err := validateCriticalConfig(cfg); err != nil {
+		return nil, fmt.Errorf("config validation failed: %w", err)
+	}
+	return cfg, nil
 }
 
 func loadOrigins(env, def string) []string {
@@ -166,35 +169,39 @@ func getEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-func validateCriticalConfig(cfg *Config) {
-	failIfUnset := map[string]string{
-		"RABBITMQ_URL":              cfg.RabbitMQURL,
-		"JWT_SECRET":                cfg.JWTSecret,
-		"REFRESH_TOKEN_SECRET":      cfg.RefreshTokenSecret,
-		"MINIO_ACCESS_KEY_ID":       cfg.MinioAccessKeyID,
-		"MINIO_SECRET_ACCESS_KEY":   cfg.MinioSecretAccessKey,
-		"SSLCOMMERZ_STORE_PASSWORD": cfg.SSLCommerzStorePassword,
+func validateCriticalConfig(cfg *Config) error {
+	if cfg.RabbitMQURL == "" {
+		return fmt.Errorf("RABBITMQ_URL is required")
 	}
 
-	for key, val := range failIfUnset {
-		if strings.TrimSpace(val) == "" {
-			log.Fatalf("%s must be provided and non-empty", key)
-		}
+	disallowedSecrets := map[string][]string{
+		"JWT_SECRET":              {"my_secret_key", "secret", "changeme", "password", "12345", ""},
+		"REFRESH_TOKEN_SECRET":    {"my_refresh_secret_key", "secret", "changeme", "password", "12345", ""},
+		"MINIO_ACCESS_KEY_ID":     {"minioadmin", "minioadmin4321"},
+		"MINIO_SECRET_ACCESS_KEY": {"minioadmin", "minioadmin4321"},
 	}
 
-	disallowed := map[string][]string{
-		"JWT_SECRET":              {"my_secret_key", "secret", "changeme"},
-		"REFRESH_TOKEN_SECRET":    {"my_refresh_secret_key", "secret", "changeme"},
-		"MINIO_ACCESS_KEY_ID":     {"minioadmin"},
-		"MINIO_SECRET_ACCESS_KEY": {"minioadmin"},
-	}
-
-	for key, badVals := range disallowed {
-		current := failIfUnset[key]
-		for _, bad := range badVals {
-			if current == bad {
-				log.Fatalf("%s must not use the default/weak value %q", key, bad)
+	for field, badValues := range disallowedSecrets {
+		actual := secretValueFor(cfg, field)
+		for _, bad := range badValues {
+			if actual == bad {
+				return fmt.Errorf("%s must not use default value %q (set a strong unique value)", field, bad)
 			}
 		}
 	}
+	return nil
+}
+
+func secretValueFor(c *Config, field string) string {
+	switch field {
+	case "JWT_SECRET":
+		return c.JWTSecret
+	case "REFRESH_TOKEN_SECRET":
+		return c.RefreshTokenSecret
+	case "MINIO_ACCESS_KEY_ID":
+		return c.MinioAccessKeyID
+	case "MINIO_SECRET_ACCESS_KEY":
+		return c.MinioSecretAccessKey
+	}
+	return ""
 }

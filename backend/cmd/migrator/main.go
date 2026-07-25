@@ -18,7 +18,10 @@ func main() {
 	logrus.Info("Starting database migration for search index...")
 
 	// Load configuration
-	cfg := config.LoadConfig()
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		logrus.Fatalf("Failed to load configuration: %v", err)
+	}
 
 	// Initialize database connection
 	repository.InitDB(cfg)
