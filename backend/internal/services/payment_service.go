@@ -2,8 +2,8 @@ package services
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha512"
+	"crypto/md5"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -31,6 +31,7 @@ const (
 type PaymentService interface {
 	CreatePayment(paymentMethod string, total float64, tranID, currency, cusName, cusEmail, cusPhone string) (string, error)
 	HandleBkashCallback(paymentID, status string) (string, error)
+	HandleSSLCommerzIPN(form url.Values) error
 }
 
 type paymentService struct {
@@ -292,36 +293,88 @@ func (s *paymentService) HandleBkashCallback(paymentID, status string) (string, 
 	return s.cfg.SSLCommerzFailURL, fmt.Errorf("bKash payment execution failed: %v", executeResult)
 }
 
+// HandleSSLCommerzIPN validates the SSLCommerz IPN signature and persists the
+// resulting transaction state (marking it completed with the gateway transaction id).
+func (s *paymentService) HandleSSLCommerzIPN(form url.Values) error {
+	if err := ValidateSSLCommerzFromValues(form, s.cfg.SSLCommerzStorePassword); err != nil {
+		return err
+	}
+
+	tranID := form.Get("tran_id")
+	if tranID == "" {
+		return errors.New("missing tran_id in IPN payload")
+	}
+
+	transaction, err := s.paymentRepo.GetTransactionByTranID(tranID)
+	if err != nil {
+		return fmt.Errorf("failed to lookup transaction %q: %w", tranID, err)
+	}
+	transaction.Status = "completed"
+	if bankTranID := form.Get("bank_tran_id"); bankTranID != "" {
+		transaction.GatewayTransactionID = bankTranID
+	}
+	if err := s.paymentRepo.UpdateTransaction(transaction); err != nil {
+		return fmt.Errorf("failed to update transaction: %w", err)
+	}
+	return nil
+}
+
+// ValidateSSLCommerzIPN validates an IPN callback per the SSLCommerz V3.5 protocol.
+//
+// The protocol computes md5_hex of a sorted "k=v&k=v&..." string built from
+// fields named in verify_key plus store_passwd=md5(store_password), then
+// compares to verify_sign constant-time.
+//
+// Reference: https://developer.sslcommerz.com/docs.bkash/SSLCommerz-IPN-Verification
 func ValidateSSLCommerzIPN(params map[string]string, storePass string, verify map[string]string) error {
 	sign, ok := verify["verify_sign"]
 	if !ok || sign == "" {
-		return errors.New("missing signature")
+		return errors.New("missing verify_sign")
 	}
 	keyList := verify["verify_key"]
 	if keyList == "" {
 		return errors.New("missing verify_key")
 	}
-	var parts []string
+
+	// Build map of fields-to-sign: subset of params named in verify_key, plus store_passwd.
+	storePasswdHash := fmt.Sprintf("%x", md5.Sum([]byte(storePass)))
+	signKeys := map[string]string{}
 	for _, k := range strings.Split(keyList, ",") {
 		k = strings.TrimSpace(k)
 		if v, ok := params[k]; ok && v != "" {
-			parts = append(parts, k+"="+v)
+			signKeys[k] = v
 		}
 	}
-	sort.Strings(parts)
-	hashSeq := strings.Join(parts, ",")
-	mac := hmac.New(sha512.New, []byte(storePass))
-	mac.Write([]byte(hashSeq))
-	expected := hex.EncodeToString(mac.Sum(nil))
-	if !hmac.Equal([]byte(sign), []byte(expected)) {
+	signKeys["store_passwd"] = storePasswdHash
+
+	// Sort by key, join with '&'.
+	keys := make([]string, 0, len(signKeys))
+	for k := range signKeys {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var pairs []string
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+signKeys[k])
+	}
+	joined := strings.Join(pairs, "&")
+
+	// md5_hex of joined must equal verify_sign.
+	sum := md5.Sum([]byte(joined))
+	expected := hex.EncodeToString(sum[:])
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(sign)) != 1 {
 		return errors.New("signature mismatch")
 	}
-	if params["status"] == "" || !strings.HasPrefix(params["status"], "VALID") {
-		return errors.New("invalid transaction status")
+
+	// Status check (exact match per spec — "VALID" or "VALIDATED").
+	status := params["status"]
+	if status != "VALID" && status != "VALIDATED" {
+		return errors.New("invalid transaction status: " + status)
 	}
 	return nil
 }
 
+// ValidateSSLCommerzFromValues is a convenience for url.Values inputs.
 func ValidateSSLCommerzFromValues(form url.Values, storePass string) error {
 	params := make(map[string]string, len(form))
 	for k, v := range form {

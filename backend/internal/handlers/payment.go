@@ -3,7 +3,6 @@ package handlers
 import (
 	"net/http"
 
-	"inventory/backend/internal/config"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
@@ -12,12 +11,11 @@ import (
 )
 
 type PaymentHandler struct {
-	cfg            *config.Config
 	paymentService services.PaymentService
 }
 
-func NewPaymentHandler(cfg *config.Config, paymentService services.PaymentService) *PaymentHandler {
-	return &PaymentHandler{cfg: cfg, paymentService: paymentService}
+func NewPaymentHandler(paymentService services.PaymentService) *PaymentHandler {
+	return &PaymentHandler{paymentService: paymentService}
 }
 
 func (h *PaymentHandler) CreatePayment(c *gin.Context) {
@@ -48,17 +46,10 @@ func (h *PaymentHandler) HandleSSLCommerzIPN(c *gin.Context) {
 		return
 	}
 
-	if err := services.ValidateSSLCommerzFromValues(c.Request.PostForm, h.cfg.SSLCommerzStorePass); err != nil {
+	if err := h.paymentService.HandleSSLCommerzIPN(c.Request.PostForm); err != nil {
 		c.Error(appErrors.NewAppError("SSLCommerz IPN validation failed", http.StatusBadRequest, err))
 		return
 	}
-
-	// IPN is valid, now update the transaction status
-	// In a real application, you would have a repository method to update the transaction
-	// Example of getting a value: c.Request.PostForm.Get("tran_id")
-
-	// You would typically update your database here based on the IPN data
-	// e.g., find the transaction by tran_id and update its status
 
 	c.JSON(http.StatusOK, gin.H{"status": "SSLCommerz IPN handled successfully"})
 }

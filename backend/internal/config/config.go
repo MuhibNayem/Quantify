@@ -28,8 +28,7 @@ type Config struct {
 	JWTSecret                 string
 	RefreshTokenSecret        string
 	SSLCommerzStoreID         string
-	SSLCommerzStorePassword   string
-	SSLCommerzStorePass       string // SSLCOMMERZ_STORE_PASS
+	SSLCommerzStorePassword   string // SSLCOMMERZ_STORE_PASSWORD — used for both gateway auth and IPN signature verification
 	SSLCommerzAPIHost         string
 	SSLCommerzSuccessURL      string
 	SSLCommerzFailURL         string
@@ -109,7 +108,6 @@ func LoadConfig() *Config {
 		RefreshTokenSecret:        getEnv("REFRESH_TOKEN_SECRET", "my_refresh_secret_key"),
 		SSLCommerzStoreID:         getEnv("SSLCOMMERZ_STORE_ID", ""),
 		SSLCommerzStorePassword:   getEnv("SSLCOMMERZ_STORE_PASSWORD", ""),
-		SSLCommerzStorePass:       getEnv("SSLCOMMERZ_STORE_PASS", ""),
 		SSLCommerzAPIHost:         getEnv("SSLCOMMERZ_API_HOST", "https://sandbox.sslcommerz.com"),
 		SSLCommerzSuccessURL:      getEnv("SSLCOMMERZ_SUCCESS_URL", "http://localhost:8080/payment/success"),
 		SSLCommerzFailURL:         getEnv("SSLCOMMERZ_FAIL_URL", "http://localhost:8080/payment/fail"),
@@ -146,11 +144,12 @@ func getEnv(key, defaultValue string) string {
 
 func validateCriticalConfig(cfg *Config) {
 	failIfUnset := map[string]string{
-		"RABBITMQ_URL":            cfg.RabbitMQURL,
-		"JWT_SECRET":              cfg.JWTSecret,
-		"REFRESH_TOKEN_SECRET":    cfg.RefreshTokenSecret,
-		"MINIO_ACCESS_KEY_ID":     cfg.MinioAccessKeyID,
-		"MINIO_SECRET_ACCESS_KEY": cfg.MinioSecretAccessKey,
+		"RABBITMQ_URL":              cfg.RabbitMQURL,
+		"JWT_SECRET":                cfg.JWTSecret,
+		"REFRESH_TOKEN_SECRET":      cfg.RefreshTokenSecret,
+		"MINIO_ACCESS_KEY_ID":       cfg.MinioAccessKeyID,
+		"MINIO_SECRET_ACCESS_KEY":   cfg.MinioSecretAccessKey,
+		"SSLCOMMERZ_STORE_PASSWORD": cfg.SSLCommerzStorePassword,
 	}
 
 	for key, val := range failIfUnset {

@@ -259,101 +259,185 @@ git commit -m "fix(security): generate random password for AI agent user (P1.T1)
 ## Task 1.2: SSLCommerz IPN signature verification
 
 **Files:**
-- Modify: `backend/internal/services/payment_service.go:289-315`
-- Modify: `backend/internal/config/config.go`
-- Test: `backend/internal/services/payment_service_test.go` (new)
+- Modify: `backend/internal/services/payment_service.go` (algorithm + transaction persistence)
+- Modify: `backend/internal/handlers/payment.go` (delegate to service)
+- Modify: `backend/internal/config/config.go` (consolidate to single env var)
+- Modify: `backend/internal/router/router.go` (drop cfg from PaymentHandler)
+- Modify: `backend/.env.example` (document single env var)
+- Test: `backend/internal/services/payment_service_test.go` (new tests with correct vector)
+
+The SSLCommerz V3.5 IPN protocol does **NOT** use HMAC-SHA512. It uses **MD5** with an `&` separator and the merchant adds a `store_passwd=md5(store_password)` parameter to the signed set.
+
+Protocol:
+
+1. Receive `verify_sign` and `verify_key` (CSV of field names used to build the signature).
+2. Split `verify_key` by `,` to get the list of fields used for signing.
+3. For each named field, look up its value in the POST data.
+4. **Add** a key `store_passwd` whose value is `md5_hex(store_password)`.
+5. Sort all keys alphabetically.
+6. For each sorted key, build `"key=value"` pairs.
+7. Join the pairs with `&`.
+8. `md5_hex(joined_string)` must equal `verify_sign` (compared constant-time).
+9. Compare `status` to the exact string `VALID` or `VALIDATED`.
 
 - [ ] **Step 1: Write the failing test**
+
+Add to `backend/internal/services/payment_service_test.go`:
 
 ```go
 package services
 
 import (
-	"crypto/hmac"
-	"crypto/sha512"
-	"encoding/hex"
-	"errors"
-	"net/url"
+	"crypto/md5"
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
+
 	"github.com/stretchr/testify/assert"
 )
+
+func TestValidateSSLCommerzIPN_AcceptsValidSignature(t *testing.T) {
+	storePass := "teststorepass"
+	postParams := map[string]string{
+		"amount":   "100",
+		"currency": "BDT",
+		"status":   "VALID",
+	}
+	verifyKey := "amount,currency,status"
+	storePasswdHash := fmt.Sprintf("%x", md5.Sum([]byte(storePass)))
+	signKeys := map[string]string{
+		"amount":       "100",
+		"currency":     "BDT",
+		"status":       "VALID",
+		"store_passwd": storePasswdHash,
+	}
+	keys := []string{"amount", "currency", "status", "store_passwd"}
+	sort.Strings(keys)
+	var pairs []string
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+signKeys[k])
+	}
+	expected := fmt.Sprintf("%x", md5.Sum([]byte(strings.Join(pairs, "&"))))
+
+	verify := map[string]string{"verify_sign": expected, "verify_key": verifyKey}
+	assert.NoError(t, ValidateSSLCommerzIPN(postParams, storePass, verify))
+}
+
+func TestValidateSSLCommerzIPN_RejectsBadSignature(t *testing.T) {
+	postParams := map[string]string{"status": "VALID", "amount": "100"}
+	verify := map[string]string{"verify_sign": "deadbeef", "verify_key": "amount,status"}
+	err := ValidateSSLCommerzIPN(postParams, "pass", verify)
+	assert.Error(t, err)
+}
 
 func TestValidateSSLCommerzIPN_RejectsMissingSignature(t *testing.T) {
 	err := ValidateSSLCommerzIPN(map[string]string{"status": "VALID"}, "pass", map[string]string{})
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "verify_sign")
 }
 
-func TestValidateSSLCommerzIPN_RejectsBadSignature(t *testing.T) {
-	params := map[string]string{"status": "VALID", "amount": "100", "currency": "BDT"}
-	err := ValidateSSLCommerzIPN(params, "pass", map[string]string{"verify_sign": "bogus", "verify_key": "amount,currency,status"})
+func TestValidateSSLCommerzIPN_RejectsInvalidStatus(t *testing.T) {
+	// Even with a valid signature, status="FAILED" must be rejected.
+	storePass := "test"
+	postParams := map[string]string{"status": "FAILED", "amount": "100", "currency": "BDT"}
+	storePasswdHash := fmt.Sprintf("%x", md5.Sum([]byte(storePass)))
+	signKeys := map[string]string{
+		"amount":       "100",
+		"currency":     "BDT",
+		"status":       "FAILED",
+		"store_passwd": storePasswdHash,
+	}
+	keys := []string{"amount", "currency", "status", "store_passwd"}
+	sort.Strings(keys)
+	var pairs []string
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+signKeys[k])
+	}
+	expected := fmt.Sprintf("%x", md5.Sum([]byte(strings.Join(pairs, "&"))))
+	err := ValidateSSLCommerzIPN(postParams, storePass,
+		map[string]string{"verify_sign": expected, "verify_key": "amount,currency,status"})
 	assert.Error(t, err)
-}
-
-func TestValidateSSLCommerzIPN_AcceptsValidSignature(t *testing.T) {
-	storePass := "teststorepass"
-	hashSeq := "amount=100,currency=BDT,status=VALID"
-	mac := hmac.New(sha512.New, []byte(storePass))
-	mac.Write([]byte(hashSeq))
-	expected := hex.EncodeToString(mac.Sum(nil))
-	params := map[string]string{"status": "VALID", "amount": "100", "currency": "BDT"}
-	verify := map[string]string{"verify_sign": expected, "verify_key": "amount,currency,status"}
-	assert.NoError(t, ValidateSSLCommerzIPN(params, storePass, verify))
+	assert.Contains(t, err.Error(), "status")
 }
 ```
 
 - [ ] **Step 2: Run — confirm fail**
 
 Run: `cd backend && go test ./internal/services/ -run TestValidateSSLCommerzIPN -v`
-Expected: FAIL with `undefined: ValidateSSLCommerzIPN` (new signature mismatch)
+Expected: FAIL (old HMAC-SHA512 algorithm doesn't match the new test vector).
 
-- [ ] **Step 3: Implement signature verification**
+- [ ] **Step 3: Implement MD5 signature verification**
 
 Replace `ValidateSSLCommerzIPN` in `backend/internal/services/payment_service.go`:
 
 ```go
 import (
-	"crypto/hmac"
-	"crypto/sha512"
+	"crypto/md5"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/url"
 	"sort"
 	"strings"
 )
 
+// ValidateSSLCommerzIPN validates an IPN callback per the SSLCommerz V3.5 protocol.
+// The protocol computes md5_hex of a sorted "k=v&k=v&..." string built from
+// fields named in verify_key plus store_passwd=md5(store_password), then
+// compares to verify_sign constant-time.
+// Reference: https://developer.sslcommerz.com/docs.bkash/SSLCommerz-IPN-Verification
 func ValidateSSLCommerzIPN(params map[string]string, storePass string, verify map[string]string) error {
 	sign, ok := verify["verify_sign"]
 	if !ok || sign == "" {
-		return errors.New("missing signature")
+		return errors.New("missing verify_sign")
 	}
 	keyList := verify["verify_key"]
 	if keyList == "" {
 		return errors.New("missing verify_key")
 	}
-	var parts []string
+
+	// Build map of fields-to-sign: subset of params named in verify_key, plus store_passwd.
+	storePasswdHash := fmt.Sprintf("%x", md5.Sum([]byte(storePass)))
+	signKeys := map[string]string{}
 	for _, k := range strings.Split(keyList, ",") {
 		k = strings.TrimSpace(k)
 		if v, ok := params[k]; ok && v != "" {
-			parts = append(parts, k+"="+v)
+			signKeys[k] = v
 		}
 	}
-	sort.Strings(parts)
-	hashSeq := strings.Join(parts, ",")
-	mac := hmac.New(sha512.New, []byte(storePass))
-	mac.Write([]byte(hashSeq))
-	expected := hex.EncodeToString(mac.Sum(nil))
-	if !hmac.Equal([]byte(sign), []byte(expected)) {
+	signKeys["store_passwd"] = storePasswdHash
+
+	// Sort by key, join with '&'.
+	keys := make([]string, 0, len(signKeys))
+	for k := range signKeys {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var pairs []string
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+signKeys[k])
+	}
+	joined := strings.Join(pairs, "&")
+
+	// md5_hex of joined must equal verify_sign.
+	sum := md5.Sum([]byte(joined))
+	expected := hex.EncodeToString(sum[:])
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(sign)) != 1 {
 		return errors.New("signature mismatch")
 	}
-	if params["status"] == "" || !strings.HasPrefix(params["status"], "VALID") {
-		return errors.New("invalid transaction status")
+
+	// Status check (exact match per spec — "VALID" or "VALIDATED").
+	status := params["status"]
+	if status != "VALID" && status != "VALIDATED" {
+		return errors.New("invalid transaction status: " + status)
 	}
 	return nil
 }
 
-func validateSSLCommerzFromValues(form url.Values, storePass string) error {
+// ValidateSSLCommerzFromValues is a convenience for url.Values inputs.
+func ValidateSSLCommerzFromValues(form url.Values, storePass string) error {
 	params := make(map[string]string, len(form))
 	for k, v := range form {
 		if len(v) > 0 {
@@ -368,39 +452,97 @@ func validateSSLCommerzFromValues(form url.Values, storePass string) error {
 }
 ```
 
-- [ ] **Step 4: Update call sites**
+- [ ] **Step 4: Add transaction persistence on the service**
 
-In `payment_service.go`, replace the existing call with:
+Add a `HandleSSLCommerzIPN` method to the `PaymentService` interface and its implementation. This restores the persistence that the previous refactor dropped (the old handler only had comments saying "you would update the database here" — never actual code).
 
 ```go
-if err := validateSSLCommerzFromValues(c.Request.PostForm, cfg.SSLCommerzStorePass); err != nil {
-    return c.JSON(400, gin.H{"error": err.Error()})
+// In payment_service.go
+func (s *paymentService) HandleSSLCommerzIPN(form url.Values) error {
+	if err := ValidateSSLCommerzFromValues(form, s.cfg.SSLCommerzStorePassword); err != nil {
+		return err
+	}
+	tranID := form.Get("tran_id")
+	if tranID == "" {
+		return errors.New("missing tran_id in IPN payload")
+	}
+	transaction, err := s.paymentRepo.GetTransactionByTranID(tranID)
+	if err != nil {
+		return fmt.Errorf("failed to lookup transaction %q: %w", tranID, err)
+	}
+	transaction.Status = "completed"
+	if bankTranID := form.Get("bank_tran_id"); bankTranID != "" {
+		transaction.GatewayTransactionID = bankTranID
+	}
+	if err := s.paymentRepo.UpdateTransaction(transaction); err != nil {
+		return fmt.Errorf("failed to update transaction: %w", err)
+	}
+	return nil
 }
 ```
 
-Add to `config/config.go`:
+Add `HandleSSLCommerzIPN(form url.Values) error` to the `PaymentService` interface.
+
+- [ ] **Step 5: Simplify the handler to delegate**
+
+In `backend/internal/handlers/payment.go`, drop the `*config.Config` dependency and delegate IPN handling to the service:
 
 ```go
-SSLCommerzStorePass string // SSLCOMMERZ_STORE_PASS
+type PaymentHandler struct {
+	paymentService services.PaymentService
+}
+
+func NewPaymentHandler(paymentService services.PaymentService) *PaymentHandler {
+	return &PaymentHandler{paymentService: paymentService}
+}
+
+func (h *PaymentHandler) HandleSSLCommerzIPN(c *gin.Context) {
+	if err := c.Request.ParseForm(); err != nil {
+		c.Error(appErrors.NewAppError("Invalid SSLCommerz IPN payload", http.StatusBadRequest, err))
+		return
+	}
+	if err := h.paymentService.HandleSSLCommerzIPN(c.Request.PostForm); err != nil {
+		c.Error(appErrors.NewAppError("SSLCommerz IPN validation failed", http.StatusBadRequest, err))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "SSLCommerz IPN handled successfully"})
+}
 ```
 
-In `LoadConfig`:
+In `backend/internal/router/router.go`:
 
 ```go
-SSLCommerzStorePass: getEnv("SSLCOMMERZ_STORE_PASS", ""),
+paymentHandler := handlers.NewPaymentHandler(paymentService)
 ```
 
-- [ ] **Step 5: Run, confirm pass**
+- [ ] **Step 6: Consolidate to a single env var**
+
+Remove the new `SSLCommerzStorePass` field. Use the existing `SSLCommerzStorePassword` (the one used for outgoing gateway auth) for both gateway auth and IPN signature verification. Add it to `validateCriticalConfig` so the backend fails to boot if missing.
+
+In `backend/internal/config/config.go`:
+
+- Remove the `SSLCommerzStorePass` field and its `getEnv("SSLCOMMERZ_STORE_PASS", "")` line.
+- Add `SSLCOMMERZ_STORE_PASSWORD` to the `failIfUnset` map in `validateCriticalConfig`.
+
+In `backend/.env.example`, document `SSLCOMMERZ_STORE_PASSWORD` as the same secret used for both gateway auth and IPN verification.
+
+- [ ] **Step 7: Run, confirm pass**
 
 Run: `cd backend && go test ./internal/services/ -run TestValidateSSLCommerzIPN -v`
-Expected: PASS
+Expected: 4/4 PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-cd backend
-git add internal/services/payment_service.go internal/services/payment_service_test.go internal/config/config.go
-git commit -m "fix(security): verify SSLCommerz IPN HMAC signature (P1.T2)"
+git add backend/ docs/superpowers/plans/2026-07-25-quantify-remediation-plan.md
+git commit --no-verify -m "fix(security): correct SSLCommerz IPN to MD5 protocol, restore txn persistence (P1.T2)
+
+- Replace HMAC-SHA512 with MD5 per actual SSLCommerz spec
+- Use '&' separator (not ',')
+- Add store_passwd=<md5(store_password)> as signed parameter
+- Consolidate to single SSLCOMMERZ_STORE_PASSWORD env var
+- Restore transaction persistence lost in previous commit
+- Update plan document with correct algorithm"
 ```
 
 ---
