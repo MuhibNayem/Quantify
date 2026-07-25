@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"inventory/backend/internal/domain"
 
 	"github.com/redis/go-redis/v9"
@@ -62,12 +61,7 @@ func (r *roleRepository) UpdateRole(role *domain.Role) error {
 	if err := r.db.Save(role).Error; err != nil {
 		return err
 	}
-	// Invalidate cache
-	if r.redis != nil {
-		ctx := context.Background()
-		r.redis.Del(ctx, fmt.Sprintf("rbac:role:%s:permissions", role.Name))
-	}
-	return nil
+	return r.InvalidateRoleCache(context.Background(), role.Name)
 }
 
 func (r *roleRepository) DeleteRole(id uint) error {
@@ -81,11 +75,7 @@ func (r *roleRepository) DeleteRole(id uint) error {
 		return err
 	}
 
-	if r.redis != nil {
-		ctx := context.Background()
-		r.redis.Del(ctx, fmt.Sprintf("rbac:role:%s:permissions", role.Name))
-	}
-	return nil
+	return r.InvalidateRoleCache(context.Background(), role.Name)
 }
 
 func (r *roleRepository) ListPermissions() ([]domain.Permission, error) {
@@ -129,9 +119,5 @@ func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) er
 	}
 
 	// Invalidate Cache
-	if r.redis != nil {
-		ctx := context.Background()
-		r.redis.Del(ctx, fmt.Sprintf("rbac:role:%s:permissions", role.Name))
-	}
-	return nil
+	return r.InvalidateRoleCache(context.Background(), role.Name)
 }

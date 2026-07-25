@@ -32,9 +32,8 @@ func RequirePermission(roleRepo repository.RoleRepository, requiredPerm string) 
 			return
 		}
 
-		// 3. Fetch Permissions for Role
-		// Optimization: This hits DB on every request. Consider caching role permissions in Redis.
-		// For now, relies on Postgres performance.
+		// 3. Fetch Permissions for Role (cached in Redis with 60s TTL,
+		// invalidated on every role mutation by repository helpers).
 		perms, err := roleRepo.GetPermissionsByRoleName(roleName)
 		if err != nil {
 			c.Error(errors.NewAppError("Failed to verify permissions", http.StatusInternalServerError, err))
