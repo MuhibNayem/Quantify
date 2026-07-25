@@ -50,6 +50,7 @@ type Config struct {
 	ProfitMarginCacheTTL      time.Duration
 	ConsumerConcurrency       int
 	AIServiceURL              string
+	RefreshTokenTTL           time.Duration
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -83,6 +84,11 @@ func LoadConfig() *Config {
 	profitMarginCacheTTL, err := time.ParseDuration(getEnv("PROFIT_MARGIN_CACHE_TTL", "5m"))
 	if err != nil {
 		log.Fatalf("PROFIT_MARGIN_CACHE_TTL must be a valid duration string: %v", err)
+	}
+
+	refreshTokenTTL, err := time.ParseDuration(getEnv("REFRESH_TOKEN_TTL", "720h"))
+	if err != nil {
+		log.Fatalf("REFRESH_TOKEN_TTL must be a valid duration string: %v", err)
 	}
 
 	consumerConcurrency, err := strconv.Atoi(getEnv("CONSUMER_CONCURRENCY", "1"))
@@ -130,6 +136,7 @@ func LoadConfig() *Config {
 		ProfitMarginCacheTTL:      profitMarginCacheTTL,
 		ConsumerConcurrency:       consumerConcurrency,
 		AIServiceURL:              getEnv("AI_SERVICE_URL", "http://localhost:8001"),
+		RefreshTokenTTL:           refreshTokenTTL,
 	}
 
 	validateCriticalConfig(cfg)

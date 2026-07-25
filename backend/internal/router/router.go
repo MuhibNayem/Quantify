@@ -86,7 +86,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
 	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
 	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
-	userHandler := handlers.NewUserHandler(userRepo)
+	userHandler := handlers.NewUserHandler(userRepo, cfg)
 	searchHandler := handlers.NewSearchHandler(searchService)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)

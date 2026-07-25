@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/auth"
+	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/repository"
@@ -20,12 +21,21 @@ import (
 
 type UserHandler struct {
 	userRepo *repository.UserRepository
+	cfg      *config.Config
 }
 
-func NewUserHandler(userRepo *repository.UserRepository) *UserHandler {
+func NewUserHandler(userRepo *repository.UserRepository, cfg *config.Config) *UserHandler {
 	return &UserHandler{
 		userRepo: userRepo,
+		cfg:      cfg,
 	}
+}
+
+func resolveRefreshTTL(cfg *config.Config) time.Duration {
+	if cfg == nil || cfg.RefreshTokenTTL <= 0 {
+		return 720 * time.Hour
+	}
+	return cfg.RefreshTokenTTL
 }
 
 // ListUsers godoc
@@ -214,7 +224,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		return
 	}
 
-	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour) // 10 years
+	refreshTokenExpiresAt := time.Now().Add(resolveRefreshTTL(h.cfg))
 	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, time.Until(refreshTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
 		return
@@ -301,7 +311,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	refreshTokenExpiresAt := time.Now().Add(10 * 365 * 24 * time.Hour)
+	refreshTokenExpiresAt := time.Now().Add(resolveRefreshTTL(h.cfg))
 	if err := repository.SetCache("refresh_token:"+refreshToken, user.ID, time.Until(refreshTokenExpiresAt)); err != nil {
 		c.Error(appErrors.NewAppError("Failed to store refresh token", http.StatusInternalServerError, err))
 		return
