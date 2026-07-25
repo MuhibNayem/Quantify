@@ -16,6 +16,7 @@ type Config struct {
 	DBName                    string
 	DBPort                    string
 	ServerPort                string
+	WSAllowedOrigins          []string // WS_ALLOWED_ORIGINS, CSV
 	SMTPHost                  string
 	SMTPPort                  int
 	SMTPUser                  string
@@ -96,6 +97,7 @@ func LoadConfig() *Config {
 		DBName:                    getEnv("DB_NAME", "inventory_db"),
 		DBPort:                    strconv.Itoa(dbPort),
 		ServerPort:                getEnv("SERVER_PORT", "8080"),
+		WSAllowedOrigins:          loadOrigins("WS_ALLOWED_ORIGINS", "http://localhost:5173"),
 		SMTPHost:                  getEnv("SMTP_HOST", ""),
 		SMTPPort:                  smtpPort,
 		SMTPUser:                  getEnv("SMTP_USER", ""),
@@ -132,6 +134,21 @@ func LoadConfig() *Config {
 
 	validateCriticalConfig(cfg)
 	return cfg
+}
+
+func loadOrigins(env, def string) []string {
+	value := getEnv(env, def)
+	if value == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	origins := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if origin := strings.TrimSpace(part); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
 }
 
 // getEnv gets an environment variable or returns a default value.

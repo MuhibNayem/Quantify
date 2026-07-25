@@ -3,8 +3,10 @@ package handlers
 import (
 	"fmt"
 	"inventory/backend/internal/auth"
+	"inventory/backend/internal/config"
 	"inventory/backend/internal/repository"
 	"net/http"
+	"strings"
 
 	ws "inventory/backend/internal/websocket"
 
@@ -16,13 +18,25 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+}
+
+func buildOriginChecker(allowed []string) func(r *http.Request) bool {
+	set := make(map[string]struct{}, len(allowed))
+	for _, origin := range allowed {
+		set[strings.TrimSpace(origin)] = struct{}{}
+	}
+	return func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return false
+		}
+		_, ok := set[origin]
+		return ok
+	}
 }
 
 // ServeWs handles websocket requests from the peer.
-func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.NotificationRepository, roleRepo repository.RoleRepository) {
+func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.NotificationRepository, roleRepo repository.RoleRepository, cfg *config.Config) {
 	tokenString := c.Query("token")
 	if tokenString == "" {
 		logrus.Error("No token provided for websocket connection")
@@ -50,7 +64,9 @@ func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.Notificati
 		permissions[p.Name] = true
 	}
 
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	requestUpgrader := upgrader
+	requestUpgrader.CheckOrigin = buildOriginChecker(cfg.WSAllowedOrigins)
+	conn, err := requestUpgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		// Log the error if the WebSocket upgrade fails
 		fmt.Printf("Failed to upgrade to websocket: %v\n", err)

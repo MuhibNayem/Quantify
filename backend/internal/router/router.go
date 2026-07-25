@@ -99,7 +99,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
 		publicRoutes.GET("/ws", func(c *gin.Context) {
-			handlers.ServeWs(hub, c, notificationRepo, roleRepo)
+			handlers.ServeWs(hub, c, notificationRepo, roleRepo, cfg)
 		})
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
