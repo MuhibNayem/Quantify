@@ -20,6 +20,23 @@ func GenerateRandomPassword() string {
 	return base64.URLEncoding.EncodeToString(b)
 }
 
+func buildAIUser(hashedPassword string, adminRole domain.Role) domain.User {
+	return domain.User{
+		Username:    "ai-agent",
+		Email:       "ai-agent@quantify.com",
+		Password:    hashedPassword,
+		RoleID:      adminRole.ID,
+		Role:        adminRole, // Explicitly set association
+		RoleName:    adminRole.Name,
+		LegacyRole:  adminRole.Name, // Populate legacy column
+		IsActive:    false,
+		FirstName:   "AI",
+		LastName:    "Agent",
+		PhoneNumber: "000-000-0000",
+		Address:     "System",
+	}
+}
+
 // SeedAIUser ensures the AI Agent user exists with Admin privileges.
 func SeedAIUser(db *gorm.DB) error {
 	var adminRole domain.Role
@@ -45,20 +62,7 @@ func SeedAIUser(db *gorm.DB) error {
 		return err
 	}
 
-	user = domain.User{
-		Username:    "ai-agent",
-		Email:       "ai-agent@quantify.com",
-		Password:    string(hashedPassword),
-		RoleID:      adminRole.ID,
-		Role:        adminRole, // Explicitly set association
-		RoleName:    adminRole.Name,
-		LegacyRole:  adminRole.Name, // Populate legacy column
-		IsActive:    true,
-		FirstName:   "AI",
-		LastName:    "Agent",
-		PhoneNumber: "000-000-0000",
-		Address:     "System",
-	}
+	user = buildAIUser(string(hashedPassword), adminRole)
 
 	if err := repository.NewUserRepository(db).CreateUser(&user); err != nil {
 		logrus.Errorf("Failed to create AI Agent user: %v", err)

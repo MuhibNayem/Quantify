@@ -3,6 +3,8 @@ package migrations
 import (
 	"testing"
 
+	"inventory/backend/internal/domain"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
@@ -21,4 +23,9 @@ func TestSeedAIUser_HashIsBcrypt(t *testing.T) {
 	require.NoError(t, err)
 	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
 	assert.NoError(t, err)
+}
+
+func TestSeedAIUser_DefaultInactive(t *testing.T) {
+	user := buildAIUser("pwhash", domain.Role{})
+	assert.False(t, user.IsActive, "AI agent user must default to inactive")
 }
