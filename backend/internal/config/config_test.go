@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateConfig_RejectsDefaultJWTSecret(t *testing.T) {
-	cfg := &Config{JWTSecret: "my_secret_key", RefreshTokenSecret: "ok", MinioAccessKeyID: "ok", MinioSecretAccessKey: "ok", RabbitMQURL: "amqp://x"}
+	cfg := &Config{JWTSecret: "my_secret_key", RefreshTokenSecret: "unique_refresh", MinioAccessKeyID: "unique_minio", MinioSecretAccessKey: "unique_minio_secret", RabbitMQURL: "amqp://x", SSLCommerzStorePassword: "unique_sslc"}
 	err := validateCriticalConfig(cfg)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "JWT_SECRET")
@@ -27,8 +27,15 @@ func TestValidateConfig_RejectsDockerComposeMinioCreds(t *testing.T) {
 }
 
 func TestValidateConfig_AcceptsUniqueSecrets(t *testing.T) {
-	cfg := &Config{JWTSecret: "u1", RefreshTokenSecret: "u2", MinioAccessKeyID: "u3", MinioSecretAccessKey: "u4", RabbitMQURL: "amqp://x"}
+	cfg := &Config{JWTSecret: "u1", RefreshTokenSecret: "u2", MinioAccessKeyID: "u3", MinioSecretAccessKey: "u4", RabbitMQURL: "amqp://x", SSLCommerzStorePassword: "uniquesslc"}
 	assert.NoError(t, validateCriticalConfig(cfg))
+}
+
+func TestValidateConfig_RejectsEmptySSLCommerzPassword(t *testing.T) {
+	cfg := &Config{JWTSecret: "u1", RefreshTokenSecret: "u2", MinioAccessKeyID: "u3", MinioSecretAccessKey: "u4", RabbitMQURL: "amqp://x", SSLCommerzStorePassword: ""}
+	err := validateCriticalConfig(cfg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "SSLCOMMERZ_STORE_PASSWORD")
 }
 
 func TestValidateConfig_RejectsEmptyJWTSecret(t *testing.T) {

@@ -173,6 +173,9 @@ func validateCriticalConfig(cfg *Config) error {
 	if cfg.RabbitMQURL == "" {
 		return fmt.Errorf("RABBITMQ_URL is required")
 	}
+	if strings.TrimSpace(cfg.SSLCommerzStorePassword) == "" {
+		return fmt.Errorf("SSLCOMMERZ_STORE_PASSWORD is required (set in env or .env)")
+	}
 
 	disallowedSecrets := map[string][]string{
 		"JWT_SECRET":              {"my_secret_key", "secret", "changeme", "password", "12345", ""},
@@ -182,7 +185,7 @@ func validateCriticalConfig(cfg *Config) error {
 	}
 
 	for field, badValues := range disallowedSecrets {
-		actual := secretValueFor(cfg, field)
+		actual := strings.TrimSpace(secretValueFor(cfg, field))
 		for _, bad := range badValues {
 			if actual == bad {
 				return fmt.Errorf("%s must not use default value %q (set a strong unique value)", field, bad)
