@@ -61,7 +61,11 @@ func (r *roleRepository) UpdateRole(role *domain.Role) error {
 	if err := r.db.Save(role).Error; err != nil {
 		return err
 	}
-	return r.InvalidateRoleCache(context.Background(), role.Name)
+	if err := r.InvalidateRoleCache(context.Background(), role.Name); err != nil {
+		return err
+	}
+	r.rotateCSRFForRole(context.Background(), role.ID)
+	return nil
 }
 
 func (r *roleRepository) DeleteRole(id uint) error {
@@ -119,5 +123,9 @@ func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) er
 	}
 
 	// Invalidate Cache
-	return r.InvalidateRoleCache(context.Background(), role.Name)
+	if err := r.InvalidateRoleCache(context.Background(), role.Name); err != nil {
+		return err
+	}
+	r.rotateCSRFForRole(context.Background(), role.ID)
+	return nil
 }
