@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"strings"
 
 	"inventory/backend/internal/domain"
 
@@ -50,8 +49,6 @@ func DeleteFromSearchIndex(tx *gorm.DB, entityType string, entityID uint) error 
 	return tx.Where("entity_type = ? AND entity_id = ?", entityType, entityID).Delete(&domain.GlobalSearchEntry{}).Error
 }
 
-
-
 // SearchResult defines the structure for items returned by the global search.
 type SearchResult struct {
 	EntityType string      `json:"entity_type"`
@@ -75,28 +72,20 @@ func NewSearchRepository(db *gorm.DB) *SearchRepository {
 func (r *SearchRepository) Search(query string) ([]SearchResult, error) {
 	var results []SearchResult
 
-	// Process the search query to make it a valid tsquery.
-	// Replace spaces with '&' for "AND" logic. You can make this more complex (e.g., support OR, prefixes).
-	tsQuery := strings.ReplaceAll(strings.TrimSpace(query), " ", "&")
-
-	// This query searches the global_search_entries table.
-	// It uses `to_tsquery` to match against the `search_vector`.
-	// `ts_rank` is used to score the relevance of each match.
-	// Results are ordered by this rank.
 	err := r.db.Raw(`
-        SELECT 
-            entity_type, 
-            entity_id, 
+        SELECT
+            entity_type,
+            entity_id,
             content,
-            ts_rank(search_vector, to_tsquery('english', ?)) as rank
-        FROM 
+            ts_rank(search_vector, websearch_to_tsquery('english', ?)) as rank
+        FROM
             global_search_entries
-        WHERE 
-            search_vector @@ to_tsquery('english', ?)
-        ORDER BY 
+        WHERE
+            search_vector @@ websearch_to_tsquery('english', ?)
+        ORDER BY
             rank DESC
         LIMIT 50;
-    `, tsQuery, tsQuery).Scan(&results).Error
+    `, query, query).Scan(&results).Error
 
 	if err != nil {
 		logrus.Errorf("Error executing search query: %v", err)
