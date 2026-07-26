@@ -34,6 +34,12 @@ func NewNotificationHandler(repo repository.NotificationRepository) *Notificatio
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{userId}/notifications [get]
 func (h *NotificationHandler) ListNotifications(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
 	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
@@ -41,7 +47,6 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 	}
 
 	// Authorization check
-	authUserID := c.GetUint("user_id")
 	authUserRole := c.GetString("role")
 	fmt.Println("authUserID:", authUserID)
 	fmt.Println("authUserRole:", authUserRole)
@@ -85,6 +90,12 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{userId}/notifications/unread/count [get]
 func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
 	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
@@ -92,7 +103,6 @@ func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
 	}
 
 	// Authorization check
-	authUserID := c.GetUint("user_id")
 	if authUserID != uint(userID) {
 		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
 		return
@@ -120,6 +130,12 @@ func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{userId}/notifications/{notificationId}/read [patch]
 func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
 	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
@@ -132,7 +148,6 @@ func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
 	}
 
 	// Authorization check
-	authUserID := c.GetUint("user_id")
 	if authUserID != uint(userID) {
 		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
 		return
@@ -158,6 +173,12 @@ func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users/{userId}/notifications/read-all [patch]
 func (h *NotificationHandler) MarkAllNotificationsAsRead(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
 	userID, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
@@ -165,7 +186,6 @@ func (h *NotificationHandler) MarkAllNotificationsAsRead(c *gin.Context) {
 	}
 
 	// Authorization check
-	authUserID := c.GetUint("user_id")
 	if authUserID != uint(userID) {
 		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
 		return
