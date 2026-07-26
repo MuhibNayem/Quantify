@@ -35,6 +35,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 
 	r.Use(cors.New(corsConfig))
 
+	r.Use(middleware.SecurityHeaders())
+
 	r.Use(middleware.ErrorHandler())
 
 	// Initialize repositories
