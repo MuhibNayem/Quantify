@@ -3,19 +3,19 @@ package consumers
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/handlers"
+	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/notifications"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/websocket"
-	"time"
 
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-
-	"inventory/backend/internal/handlers"
-	"inventory/backend/internal/message_broker"
 )
 
 type AlertConsumer struct {
@@ -42,6 +42,30 @@ func (c *AlertConsumer) Start(ctx context.Context) context.CancelFunc {
 		cancelStock()
 		cancelAlert()
 	}
+}
+
+// loadSubscribedUsers returns the list of users subscribed to the given alert type,
+// resolved by joining AlertRoleSubscription -> Role -> User via users.role_id.
+func loadSubscribedUsers(ctx context.Context, db *gorm.DB, alertType string) ([]domain.User, error) {
+	var subscriptions []domain.AlertRoleSubscription
+	if err := db.WithContext(ctx).Where("alert_type = ?", alertType).Find(&subscriptions).Error; err != nil {
+		return nil, err
+	}
+	if len(subscriptions) == 0 {
+		return nil, nil
+	}
+
+	roleNames := make([]string, 0, len(subscriptions))
+	for _, s := range subscriptions {
+		roleNames = append(roleNames, s.Role)
+	}
+
+	var users []domain.User
+	err := db.WithContext(ctx).
+		Joins("JOIN roles ON roles.id = users.role_id").
+		Where("roles.name IN ?", roleNames).
+		Find(&users).Error
+	return users, err
 }
 
 func (c *AlertConsumer) handleStockAdjusted(ctx context.Context, deliveries <-chan amqp091.Delivery) {
@@ -100,30 +124,16 @@ func (c *AlertConsumer) processAlertDelivery(d amqp091.Delivery) {
 
 	logrus.Infof("Handling alert delivery for alert type %s", payload.Type)
 
-	// 1. Find roles subscribed to this alert type
-	var subscriptions []domain.AlertRoleSubscription
-	if err := c.DB.Where("alert_type = ?", payload.Type).Find(&subscriptions).Error; err != nil {
-		logrus.Errorf("Failed to fetch alert subscriptions: %v", err)
-		d.Nack(true, true) // Nack and requeue
-		return
-	}
-
-	if len(subscriptions) == 0 {
-		logrus.Infof("No subscriptions found for alert type %s", payload.Type)
-		d.Ack(false) // No one is subscribed, so we're done.
-		return
-	}
-
-	var roles []string
-	for _, sub := range subscriptions {
-		roles = append(roles, sub.Role)
-	}
-
-	// 2. Find users with those roles
-	var users []domain.User
-	if err := c.DB.Where("role IN (?)", roles).Find(&users).Error; err != nil {
-		logrus.Errorf("Failed to fetch users for roles %v: %v", roles, err)
+	users, err := loadSubscribedUsers(context.Background(), c.DB, payload.Type)
+	if err != nil {
+		logrus.Errorf("Failed to load subscribed users for alert type %s: %v", payload.Type, err)
 		d.Nack(true, true)
+		return
+	}
+
+	if len(users) == 0 {
+		logrus.Infof("No subscribed users found for alert type %s", payload.Type)
+		d.Ack(false) // No one is subscribed, so we're done.
 		return
 	}
 
