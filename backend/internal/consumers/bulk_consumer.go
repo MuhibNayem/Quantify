@@ -18,6 +18,7 @@ import (
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type BulkConsumer struct {
@@ -281,6 +282,16 @@ func (c *BulkConsumer) processImportConfirmDelivery(d amqp091.Delivery) {
 
 	}
 
+	if job.Status == "COMPLETED" {
+
+		logrus.WithField("job_id", jobID).Info("bulk confirm already completed; skipping")
+
+		d.Ack(false)
+
+		return
+
+	}
+
 	if job.Status != "PENDING_CONFIRMATION" {
 
 		logrus.Warnf("Job %d is not in PENDING_CONFIRMATION state, skipping confirmation", jobID)
@@ -494,7 +505,7 @@ func (c *BulkConsumer) finalizeImport(job *domain.Job, importResult *services.Bu
 		p.Location = domain.Location{}
 	}
 
-	if err := tx.CreateInBatches(importResult.ValidProducts, 100).Error; err != nil {
+	if err := tx.Clauses(clause.OnConflict{DoNothing: true}).CreateInBatches(importResult.ValidProducts, 100).Error; err != nil {
 		tx.Rollback()
 		c.failJob(job, fmt.Sprintf("failed to bulk insert products: %v", err))
 		return err
