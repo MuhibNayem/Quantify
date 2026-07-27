@@ -253,13 +253,26 @@ func PutUserNotificationSettings(c *gin.Context) {
 func CheckAndTriggerAlerts() {
 	var settings []domain.ProductAlertSettings
 	if err := repository.DB.Find(&settings).Error; err != nil {
-		logrus.Errorf("Failed to fetch product alert settings: %v", err)
+		logrus.WithError(err).Error("alert scan: load settings failed")
 		return
 	}
 
 	for _, s := range settings {
-		checkAndTriggerAlertsForSettings(&s)
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logrus.WithField("product_id", s.ProductID).Errorf("alert scan panicked: %v", r)
+				}
+			}()
+			alertEvalFn(repository.DB, s)
+		}()
 	}
+}
+
+var alertEvalFn = processAlertForProduct
+
+func processAlertForProduct(db *gorm.DB, s domain.ProductAlertSettings) {
+	checkAndTriggerAlertsForSettings(db, &s)
 }
 
 // CheckAndTriggerAlertsForProduct evaluates alert thresholds for a single product.
@@ -272,67 +285,59 @@ func CheckAndTriggerAlertsForProduct(productID uint) {
 		return
 	}
 
-	checkAndTriggerAlertsForSettings(&settings)
+	processAlertForProduct(repository.DB, settings)
 }
 
-func checkAndTriggerAlertsForSettings(s *domain.ProductAlertSettings) {
+func checkAndTriggerAlertsForSettings(db *gorm.DB, s *domain.ProductAlertSettings) {
 	var product domain.Product
-	if err := repository.DB.First(&product, s.ProductID).Error; err != nil {
+	if err := db.First(&product, s.ProductID).Error; err != nil {
 		logrus.Errorf("Failed to fetch product %d for alert check: %v", s.ProductID, err)
 		return
 	}
 
-	// Get current quantity
 	var currentQuantity int
-	repository.DB.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
+	db.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
 
-	// Low Stock Alert
 	if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
-		triggerAlert(s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
+		triggerAlert(db, s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
 	}
 
-	// Out of Stock Alert
 	if currentQuantity == 0 {
-		triggerAlert(s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
+		triggerAlert(db, s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
 	}
 
-	// Overstock Alert
 	if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
-		triggerAlert(s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
+		triggerAlert(db, s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
 	}
 
-	// Expiry Alert
 	if s.ExpiryAlertDays > 0 {
 		var expiringBatches []domain.Batch
 		expiryThreshold := time.Now().AddDate(0, 0, s.ExpiryAlertDays)
-		if err := repository.DB.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
+		if err := db.Where("product_id = ? AND expiry_date IS NOT NULL AND expiry_date <= ?", s.ProductID, expiryThreshold).Find(&expiringBatches).Error; err != nil {
 			logrus.Errorf("Failed to fetch expiring batches for product %d: %v", s.ProductID, err)
 			return
 		}
 
 		for _, batch := range expiringBatches {
-			triggerAlert(s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
+			triggerAlert(db, s.ProductID, "EXPIRY_ALERT", fmt.Sprintf("Batch %s of product %s is expiring soon on %s", batch.BatchNumber, product.Name, batch.ExpiryDate.Format("2006-01-02")), &batch.ID)
 		}
 	}
 }
 
-func triggerAlert(productID uint, alertType, message string, batchID *uint) {
-	// Check if an active alert of this type already exists for this product/batch
+func triggerAlert(db *gorm.DB, productID uint, alertType, message string, batchID *uint) {
 	var existingAlert domain.Alert
-	query := repository.DB.Where("product_id = ? AND type = ? AND status = ?", productID, alertType, "ACTIVE")
+	query := db.Where("product_id = ? AND type = ? AND status = ?", productID, alertType, "ACTIVE")
 	if batchID != nil {
 		query = query.Where("batch_id = ?", *batchID)
 	}
 
 	if err := query.First(&existingAlert).Error; err == nil {
-		// Alert already active, do not re-trigger
 		return
 	} else if err != gorm.ErrRecordNotFound {
 		logrus.Errorf("Database error checking for existing alert: %v", err)
 		return
 	}
 
-	// Create new alert record
 	alert := domain.Alert{
 		ProductID:   productID,
 		Type:        alertType,
@@ -341,12 +346,11 @@ func triggerAlert(productID uint, alertType, message string, batchID *uint) {
 		Status:      "ACTIVE",
 		BatchID:     batchID,
 	}
-	if err := repository.DB.Create(&alert).Error; err != nil {
+	if err := db.Create(&alert).Error; err != nil {
 		logrus.Errorf("Failed to create alert record: %v", err)
 		return
 	}
 
-	// Publish AlertTriggeredEvent
 	payload := AlertTriggeredPayload{
 		ProductID: productID,
 		Type:      alertType,
