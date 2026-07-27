@@ -171,6 +171,8 @@ type User struct {
 func (u *User) AfterFind(tx *gorm.DB) (err error) {
 	if u.Role.ID != 0 {
 		u.RoleName = u.Role.Name
+	} else {
+		u.RoleName = ""
 	}
 	return
 }
