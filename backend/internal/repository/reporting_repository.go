@@ -872,57 +872,14 @@ func (r *ReportsRepository) GetProductPerformanceAnalytics(startDate, endDate ti
 		query = query.Where("suppliers.name ILIKE ?", "%"+supplierName+"%")
 	}
 
-	// Execute to get sales stats
-	rows, err := query.Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var p ProductPerformanceAnalytics
-		if err := rows.Scan(&p.ProductID, &p.ProductName, &p.SupplierName, &p.TotalRevenue, &p.TotalCost, &p.TotalProfit); err != nil {
-			return nil, err
-		}
-
-		// 2. Fetch Current Stock for each product (could be optimized with subquery but this is clearer)
-		var currentStock int64
-		if err := r.DB.Model(&domain.Batch{}).Where("product_id = ?", p.ProductID).Select("COALESCE(SUM(quantity), 0)").Scan(&currentStock).Error; err != nil {
-			return nil, err
-		}
-		p.CurrentStock = int(currentStock)
-
-		// Filter by minStock if requested (optimization: move to HAVING clause if possible, but stock is in separate table)
-		if minStock > 0 && p.CurrentStock > minStock {
-			continue // Skip if we only want low stock items (wait, usually we want < minStock? The prompt said "less than 30 days of stock")
-			// The prompt said "less than 30 days of stock".
-			// The argument 'minStock' here is ambiguous. Let's assume it means "filter items with stock <= minStock" if provided?
-			// Or "filter items with stock >= minStock"?
-			// Let's stick to the prompt: "have less than 30 days of stock".
-			// So we need DaysOfStock first.
-		}
-
-		// 3. Calculate Days of Stock
-		// Sales Velocity = Total Sold / Days in Period
-		// Days of Stock = Current Stock / Sales Velocity
-		daysInPeriod := endDate.Sub(startDate).Hours() / 24
-		if daysInPeriod < 1 {
-			daysInPeriod = 1
-		}
-
-		// We need Total Sold Quantity, not just Revenue.
-		// Let's re-fetch or adjust query.
-		// Actually, TotalCost / PurchasePrice = Quantity (roughly), but PurchasePrice can change.
-		// Better to select SUM(quantity) in the main query.
-
-		// Let's update the main query to include total_sold_quantity.
-	}
-
 	// RE-WRITING QUERY TO INCLUDE QUANTITY
+	// GetProductPerformanceAnalytics returns one row per product with revenue, cost,
+	// profit, current stock and an estimated days-of-stock based on sales velocity.
 	query = r.DB.Table("products").
 		Select(`
-			products.id as product_id, 
-			products.name as product_name, 
+			products.id as product_id,
+			products.name as product_name,
+			suppliers.id as supplier_id,
 			suppliers.name as supplier_name,
 			COALESCE(SUM(sa.quantity), 0) as total_sold_qty,
 			COALESCE(SUM(sa.quantity * products.selling_price), 0) as total_revenue,
@@ -930,19 +887,19 @@ func (r *ReportsRepository) GetProductPerformanceAnalytics(startDate, endDate ti
 		`).
 		Joins("JOIN suppliers ON suppliers.id = products.supplier_id").
 		Joins("LEFT JOIN stock_adjustments sa ON sa.product_id = products.id AND sa.type = 'STOCK_OUT' AND sa.reason_code = 'SALE' AND sa.adjusted_at BETWEEN ? AND ?", startDate, endDate).
-		Group("products.id, products.name, suppliers.name")
+		Group("products.id, products.name, suppliers.id, suppliers.name")
 
 	if supplierName != "" {
 		query = query.Where("suppliers.name ILIKE ?", "%"+supplierName+"%")
 	}
 
-	rows, err = query.Rows()
+	rows, err := query.Rows()
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	results = []ProductPerformanceAnalytics{} // Reset
+	results = []ProductPerformanceAnalytics{}
 
 	for rows.Next() {
 		var p ProductPerformanceAnalytics
