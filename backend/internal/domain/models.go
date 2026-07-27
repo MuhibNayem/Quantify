@@ -360,11 +360,15 @@ type PurchaseReturn struct {
 	PurchaseOrder       PurchaseOrder
 	SupplierID          uint `gorm:"not null;index"`
 	Supplier            Supplier
-	Status              string `gorm:"default:'PENDING'"` // PENDING, APPROVED, COMPLETED
+	Status              string `gorm:"default:'PENDING'"` // PENDING, COMPLETED, CANCELLED
 	Reason              string
 	RefundAmount        float64 // Estimated refund value
 	ReturnedBy          uint    // UserID
 	ReturnedAt          time.Time
+	ApprovedBy          *uint      // UserID of the admin who approved
+	ApprovedAt          *time.Time // Timestamp of approval intent
+	CompletedAt         *time.Time // Timestamp of completion (stock deducted)
+	CancelledAt         *time.Time // Timestamp of cancellation
 	PurchaseReturnItems []PurchaseReturnItem
 }
 

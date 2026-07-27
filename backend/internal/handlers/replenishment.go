@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -505,7 +506,7 @@ func (h *ReplenishmentHandler) ListPurchaseOrders(c *gin.Context) {
 
 // CreatePurchaseReturn godoc
 // @Summary Create a return to supplier (Vendor Return)
-// @Description Creates a return request to a supplier and deducts stock from the specified batch.
+// @Description Creates a PENDING vendor return. Stock is not deducted until an admin approves and completes the return.
 // @Tags replenishment
 // @Accept json
 // @Produce json
@@ -553,4 +554,146 @@ func (h *ReplenishmentHandler) ListPurchaseReturns(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"returns": returns})
+}
+
+// GetPurchaseReturn godoc
+// @Summary Get a single vendor return
+// @Description Retrieves a vendor return by ID, including items, supplier, and audit fields.
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param id path int true "Vendor return ID"
+// @Success 200 {object} domain.PurchaseReturn
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Router /replenishment/returns/{id} [get]
+func (h *ReplenishmentHandler) GetPurchaseReturn(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("invalid return id", http.StatusBadRequest, err))
+		return
+	}
+	ret, err := h.VendorReturnService.GetPurchaseReturn(c.Request.Context(), uint(id))
+	if err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+		} else {
+			c.Error(appErrors.NewAppError("Failed to fetch return", http.StatusInternalServerError, err))
+		}
+		return
+	}
+	c.JSON(http.StatusOK, ret)
+}
+
+// ApprovePurchaseReturn godoc
+// @Summary Approve a vendor return
+// @Description Records admin approval intent on a PENDING vendor return. Status remains PENDING; Complete is required to deduct stock and finalize the return.
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param id path int true "Vendor return ID"
+// @Success 200 {object} domain.PurchaseReturn
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 409 {object} map[string]interface{} "Conflict"
+// @Router /replenishment/returns/{id}/approve [post]
+func (h *ReplenishmentHandler) ApprovePurchaseReturn(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("invalid return id", http.StatusBadRequest, err))
+		return
+	}
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	adminID := authUserID.(uint)
+
+	if err := h.VendorReturnService.ApprovePurchaseReturn(c.Request.Context(), uint(id), adminID); err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+		} else {
+			c.Error(appErrors.NewAppError("Failed to approve return", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	ret, err := h.VendorReturnService.GetPurchaseReturn(c.Request.Context(), uint(id))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to reload return", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, ret)
+}
+
+// CompletePurchaseReturn godoc
+// @Summary Complete a vendor return
+// @Description Transitions an approved PENDING vendor return to COMPLETED. Deducts stock from referenced batches, writes a STOCK_OUT audit row per item, and stamps the refund amount.
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param id path int true "Vendor return ID"
+// @Success 200 {object} domain.PurchaseReturn
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 409 {object} map[string]interface{} "Conflict"
+// @Router /replenishment/returns/{id}/complete [post]
+func (h *ReplenishmentHandler) CompletePurchaseReturn(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("invalid return id", http.StatusBadRequest, err))
+		return
+	}
+
+	if err := h.VendorReturnService.CompletePurchaseReturn(c.Request.Context(), uint(id)); err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+		} else {
+			c.Error(appErrors.NewAppError("Failed to complete return", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	ret, err := h.VendorReturnService.GetPurchaseReturn(c.Request.Context(), uint(id))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to reload return", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, ret)
+}
+
+// CancelPurchaseReturn godoc
+// @Summary Cancel a vendor return
+// @Description Transitions a PENDING vendor return to CANCELLED. No stock changes (PENDING returns have not yet deducted stock).
+// @Tags replenishment
+// @Accept json
+// @Produce json
+// @Param id path int true "Vendor return ID"
+// @Success 200 {object} domain.PurchaseReturn
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 409 {object} map[string]interface{} "Conflict"
+// @Router /replenishment/returns/{id}/cancel [post]
+func (h *ReplenishmentHandler) CancelPurchaseReturn(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("invalid return id", http.StatusBadRequest, err))
+		return
+	}
+
+	if err := h.VendorReturnService.CancelPurchaseReturn(c.Request.Context(), uint(id)); err != nil {
+		if appErr, ok := err.(*appErrors.AppError); ok {
+			c.Error(appErr)
+		} else {
+			c.Error(appErrors.NewAppError("Failed to cancel return", http.StatusInternalServerError, err))
+		}
+		return
+	}
+
+	ret, err := h.VendorReturnService.GetPurchaseReturn(c.Request.Context(), uint(id))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to reload return", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, ret)
 }

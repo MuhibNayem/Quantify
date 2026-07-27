@@ -243,6 +243,10 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			replenishment.GET("/purchase-orders", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseOrders)
 			replenishment.POST("/returns", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePurchaseReturn)
 			replenishment.GET("/returns", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseReturns)
+			replenishment.GET("/returns/:id", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetPurchaseReturn)
+			replenishment.POST("/returns/:id/approve", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.ApprovePurchaseReturn)
+			replenishment.POST("/returns/:id/complete", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CompletePurchaseReturn)
+			replenishment.POST("/returns/:id/cancel", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CancelPurchaseReturn)
 		}
 
 		// Sales
