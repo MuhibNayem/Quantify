@@ -746,11 +746,39 @@ type BasketAnalysisItem struct {
 // GetBasketAnalysisReport finds frequently bought together items.
 // This is a heavy query, usually done offline or via specialized graph DB.
 // Simple SQL approach: Self-join order_items.
-func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time) ([]BasketAnalysisItem, error) {
+//
+// page/limit slice the grouped pair list. The total count is the number of
+// distinct pairs in the date range, not the number of (order, pair) rows,
+// so the caller can render pagination metadata without re-counting.
+func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time, page, limit int) ([]BasketAnalysisItem, int, error) {
 	var items []BasketAnalysisItem
 
+	offset := (page - 1) * limit
+
+	countQuery := `
+		SELECT COUNT(*) FROM (
+			SELECT oi1.product_id, oi2.product_id
+			FROM order_items oi1
+			JOIN order_items oi2 ON oi1.order_id = oi2.order_id AND oi1.product_id < oi2.product_id
+			JOIN products p1 ON p1.id = oi1.product_id
+			JOIN products p2 ON p2.id = oi2.product_id
+			JOIN orders o ON o.id = oi1.order_id
+			WHERE o.order_date BETWEEN ? AND ?
+			AND p1.deleted_at IS NULL
+			AND p2.deleted_at IS NULL
+			AND p1.name != ''
+			AND p2.name != ''
+			GROUP BY oi1.product_id, oi2.product_id
+		) AS pair_counts
+	`
+
+	var total int
+	if err := r.DB.Raw(countQuery, startDate, endDate).Scan(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
 	query := `
-		SELECT 
+		SELECT
 			oi1.product_id as product_a,
 			p1.name as product_a_name,
 			oi2.product_id as product_b,
@@ -768,25 +796,24 @@ func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time
 		AND p2.name != ''
 		GROUP BY oi1.product_id, p1.name, oi2.product_id, p2.name
 		ORDER BY frequency DESC
-		LIMIT 20
+		LIMIT ? OFFSET ?
 	`
 
-	fmt.Println("DEBUG: GetBasketAnalysisReport Executing - Checking for Name != ''")
-	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
+	rows, err := r.DB.Raw(query, startDate, endDate, limit, offset).Rows()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var item BasketAnalysisItem
 		if err := rows.Scan(&item.ProductA, &item.ProductAName, &item.ProductB, &item.ProductBName, &item.Frequency); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		items = append(items, item)
 	}
 
-	return items, nil
+	return items, total, nil
 }
 
 // GetPOAnalysisReport retrieves purchase order statistics.

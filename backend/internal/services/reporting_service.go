@@ -498,28 +498,35 @@ func (s *ReportingService) GetCashDrawerReconciliationReport(startDate, endDate 
 	return s.repo.GetCashDrawerReconciliationReport(startDate, endDate)
 }
 
-func (s *ReportingService) GetBasketAnalysisReport(startDate, endDate time.Time, bypassCache bool) ([]repository.BasketAnalysisItem, error) {
+func (s *ReportingService) GetBasketAnalysisReport(startDate, endDate time.Time, bypassCache bool, page, limit int) ([]repository.BasketAnalysisItem, int, error) {
 	// Basket Analysis is heavy, cache for 24 hours
-	cacheKey := fmt.Sprintf("basket_analysis:%s:%s", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
+	cacheKey := fmt.Sprintf("basket_analysis:%s:%s:%d:%d", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"), page, limit)
 
 	if !bypassCache {
 		if cached, err := repository.GetCache(cacheKey); err == nil && cached != "" {
-			var items []repository.BasketAnalysisItem
-			if err := json.Unmarshal([]byte(cached), &items); err == nil {
-				return items, nil
+			var entry struct {
+				Items []repository.BasketAnalysisItem `json:"items"`
+				Total int                              `json:"total"`
+			}
+			if err := json.Unmarshal([]byte(cached), &entry); err == nil {
+				return entry.Items, entry.Total, nil
 			}
 		}
 	}
 
-	data, err := s.repo.GetBasketAnalysisReport(startDate, endDate)
+	data, total, err := s.repo.GetBasketAnalysisReport(startDate, endDate, page, limit)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	if jsonBytes, err := json.Marshal(data); err == nil {
+	entry := struct {
+		Items []repository.BasketAnalysisItem `json:"items"`
+		Total int                              `json:"total"`
+	}{Items: data, Total: total}
+	if jsonBytes, err := json.Marshal(entry); err == nil {
 		repository.SetCache(cacheKey, string(jsonBytes), 24*time.Hour)
 	}
-	return data, nil
+	return data, total, nil
 }
 
 func (s *ReportingService) GetPOAnalysisReport(startDate, endDate time.Time) ([]domain.PurchaseOrder, error) {

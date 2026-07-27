@@ -75,6 +75,71 @@ func TestHeatmapReport_RejectsMaliciousTimezone(t *testing.T) {
 	}
 }
 
+// seedBaskets creates 4 orders, each containing products Alpha, Beta, and Gamma.
+// With 3 products per order the query produces 3 unique pairs (Alpha-Beta,
+// Alpha-Gamma, Beta-Gamma), each occurring in all 4 orders. Returns the
+// persisted products in insertion order.
+func seedBaskets(t *testing.T, db *gorm.DB) []domain.Product {
+	t.Helper()
+	products := []domain.Product{
+		{SKU: "SKU-A", Name: "Alpha"},
+		{SKU: "SKU-B", Name: "Beta"},
+		{SKU: "SKU-C", Name: "Gamma"},
+	}
+	require.NoError(t, db.Create(&products).Error)
+
+	user := domain.User{Username: "buyer", Password: "x"}
+	require.NoError(t, db.Create(&user).Error)
+
+	now := time.Now()
+	for i := 0; i < 4; i++ {
+		order := domain.Order{
+			OrderNumber:   fmt.Sprintf("ORD-%d", i),
+			UserID:        user.ID,
+			TotalAmount:   30,
+			PaymentMethod: "CASH",
+			Status:        "COMPLETED",
+			OrderDate:     now.Add(time.Duration(-i) * time.Hour),
+		}
+		require.NoError(t, db.Create(&order).Error)
+		for _, p := range products {
+			require.NoError(t, db.Create(&domain.OrderItem{
+				OrderID:    order.ID,
+				ProductID:  p.ID,
+				Quantity:   1,
+				UnitPrice:  10,
+				TotalPrice: 10,
+			}).Error)
+		}
+	}
+	return products
+}
+
+// TestBasketAnalysisReport_Pagination verifies the basket-analysis query
+// returns total pair count and slices the page correctly. 4 orders of A,B,C
+// produce 3 unique pairs (frequency 4 each); page 1 of 2 yields 2 rows,
+// page 2 yields the remaining 1 row.
+func TestBasketAnalysisReport_Pagination(t *testing.T) {
+	db := setupReportingTestDB(t)
+	require.NoError(t, db.AutoMigrate(&domain.Order{}, &domain.OrderItem{}, &domain.User{}))
+
+	seedBaskets(t, db)
+
+	repo := NewReportsRepository(db)
+	start := time.Now().Add(-24 * time.Hour)
+	end := time.Now().Add(time.Hour)
+
+	items, total, err := repo.GetBasketAnalysisReport(start, end, 1, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 3, total, "3 unique pairs across 4 orders of A,B,C")
+	assert.Len(t, items, 2)
+
+	items, total, err = repo.GetBasketAnalysisReport(start, end, 2, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 3, total)
+	assert.Len(t, items, 1)
+}
+
 // TestIsValidTimezone verifies the timezone validator rejects attacker-controlled
 // characters (quotes, spaces, semicolons, SQL comments) and accepts the IANA
 // zone-name alphabet (letters, digits, '/', '_', '+', '-').

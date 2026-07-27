@@ -582,8 +582,10 @@ func (h *ReportHandler) GetCustomerReturnAnalysisReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Number of items per page" default(20)
 // @Param refresh query boolean false "Force refresh cache"
-// @Success 200 {array} repository.BasketAnalysisItem
+// @Success 200 {object} map[string]interface{} "Paginated basket analysis"
 // @Router /reports/basket-analysis [get]
 func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
 	start, end, err := parseDateRange(c)
@@ -592,14 +594,28 @@ func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
 		return
 	}
 
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+
 	refresh := c.Query("refresh") == "true"
 
-	report, err := h.reportingService.GetBasketAnalysisReport(start, end, refresh)
+	items, total, err := h.reportingService.GetBasketAnalysisReport(start, end, refresh, page, limit)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to get basket analysis", http.StatusInternalServerError, err))
 		return
 	}
-	c.JSON(http.StatusOK, report)
+	c.JSON(http.StatusOK, gin.H{
+		"items": items,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
 }
 
 // Helper to parse start/end date query params

@@ -4,6 +4,12 @@ All notable changes to the Quantify backend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Basket analysis response** `GET /reports/basket-analysis` now accepts `page` and `limit` query parameters and returns the pagination envelope `{items, total, page, limit}`. Default limit is 20. This replaces the legacy flat-array response and is a breaking change for existing consumers. (`internal/repository/reporting_repository.go`, `internal/services/reporting_service.go`, `internal/handlers/reports.go`)
+
 ## [Phase 1] 2026-XX-XX — Security hardening
 
 ### Changed
