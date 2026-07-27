@@ -22,8 +22,9 @@ type CheckoutItem struct {
 }
 
 type CheckoutRequest struct {
-	Items          []CheckoutItem `json:"items" binding:"required,dive"`
-	CustomerID     *uint          `json:"customerId"`
-	PaymentMethod  string         `json:"paymentMethod" binding:"required"`
-	PointsToRedeem int            `json:"pointsToRedeem"` // Optional points to redeem
+	Items              []CheckoutItem `json:"items" binding:"required,dive"`
+	CustomerID         *uint          `json:"customerId"`
+	PaymentMethod      string         `json:"paymentMethod" binding:"required"`
+	PointsToRedeem     int            `json:"pointsToRedeem"`    // Optional points to redeem
+	RegisterLocationID *uint          `json:"registerLocationId" binding:"omitempty"` // Register-specific location override for stock deduction
 }

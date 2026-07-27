@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type SalesService struct {
@@ -65,6 +66,15 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 	})
 }
 
+// resolveDeductionLocation decides which location to deduct stock from.
+// When a register overrides the location, use it; otherwise use the product's default location.
+func resolveDeductionLocation(product domain.Product, registerLocationID *uint) uint {
+	if registerLocationID != nil && *registerLocationID != 0 {
+		return *registerLocationID
+	}
+	return product.LocationID
+}
+
 func (s *SalesService) fetchProducts(tx *gorm.DB, items []requests.CheckoutItem) (map[uint]domain.Product, error) {
 	productIDs := make([]uint, len(items))
 	for i, item := range items {
@@ -94,7 +104,11 @@ func (s *SalesService) fetchBatches(tx *gorm.DB, items []requests.CheckoutItem) 
 	}
 
 	var allBatches []domain.Batch
-	if err := tx.Where("product_id IN ? AND quantity > 0", productIDs).Order("expiry_date asc, created_at asc").Find(&allBatches).Error; err != nil {
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("product_id IN ? AND quantity > 0", productIDs).
+		Order("expiry_date ASC NULLS LAST, created_at ASC").
+		Find(&allBatches).Error
+	if err != nil {
 		return nil, fmt.Errorf("failed to fetch batches: %w", err)
 	}
 
@@ -103,6 +117,26 @@ func (s *SalesService) fetchBatches(tx *gorm.DB, items []requests.CheckoutItem) 
 		batchesByProduct[allBatches[i].ProductID] = append(batchesByProduct[allBatches[i].ProductID], &allBatches[i])
 	}
 	return batchesByProduct, nil
+}
+
+// fetchBatchesForLocation returns available batches for a single product at a specific location,
+// locked for update so concurrent checkouts cannot oversell.
+func (s *SalesService) fetchBatchesForLocation(tx *gorm.DB, productID, locationID uint) ([]*domain.Batch, error) {
+	var batches []domain.Batch
+	err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+		Where("product_id = ? AND quantity > 0", productID).
+		Where("location_id = ?", locationID).
+		Order("expiry_date ASC NULLS LAST, created_at ASC").
+		Find(&batches).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch batches: %w", err)
+	}
+
+	out := make([]*domain.Batch, len(batches))
+	for i := range batches {
+		out[i] = &batches[i]
+	}
+	return out, nil
 }
 
 func (s *SalesService) fetchActivePromotions(tx *gorm.DB) ([]domain.Promotion, error) {
@@ -135,15 +169,33 @@ func (s *SalesService) processItems(
 			return 0, 0, nil, fmt.Errorf("product %d not found", item.ProductID)
 		}
 
-		// Stock Deduction
-		batches := batchesByProduct[item.ProductID]
+		// Decide which location to deduct stock from for this line item.
+		deductionLocationID := resolveDeductionLocation(product, req.RegisterLocationID)
+
+		// Prefer batches at the resolved location; fall back to the cached set if nothing is found locally.
+		var batches []*domain.Batch
+		if deductionLocationID != 0 {
+			local, err := s.fetchBatchesForLocation(tx, product.ID, deductionLocationID)
+			if err != nil {
+				return 0, 0, nil, err
+			}
+			batches = local
+		}
+		if len(batches) == 0 {
+			batches = batchesByProduct[item.ProductID]
+		}
+
 		availableStock := 0
 		for _, b := range batches {
 			availableStock += b.Quantity
 		}
 
 		if availableStock < item.Quantity {
-			return 0, 0, nil, fmt.Errorf("insufficient stock for product '%s' (Available: %d, Requested: %d)", product.Name, availableStock, item.Quantity)
+			locLabel := "any location"
+			if deductionLocationID != 0 {
+				locLabel = fmt.Sprintf("location %d", deductionLocationID)
+			}
+			return 0, 0, nil, fmt.Errorf("insufficient stock for product '%s' at %s (Available: %d, Requested: %d)", product.Name, locLabel, availableStock, item.Quantity)
 		}
 
 		qtyToReduce := item.Quantity
@@ -165,7 +217,7 @@ func (s *SalesService) processItems(
 
 		stockAdjustments = append(stockAdjustments, domain.StockAdjustment{
 			ProductID:        product.ID,
-			LocationID:       product.LocationID,
+			LocationID:       deductionLocationID,
 			Type:             "STOCK_OUT",
 			Quantity:         item.Quantity,
 			ReasonCode:       "SALE",
