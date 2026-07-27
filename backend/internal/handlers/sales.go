@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -257,82 +258,34 @@ type ProductSummary struct {
 
 // @Router /sales/history [get]
 func (h *SalesHandler) ListAllOrders(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 50
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	if err := h.DB.Model(&domain.Order{}).Count(&total).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to count orders", http.StatusInternalServerError, err))
+		return
+	}
+
 	var orders []domain.Order
-	// Preload necessary associations.
-	// Note: We preload Returns to calculate AdjustedTotal and Pending status. Preload Customer for display.
-	if err := h.DB.Preload("OrderItems.Product").Preload("User").Preload("Customer").Preload("Returns").Order("created_at desc").Find(&orders).Error; err != nil {
+	if err := h.DB.Order("created_at DESC").Limit(limit).Offset(offset).Find(&orders).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch all orders", http.StatusInternalServerError, err))
 		return
 	}
 
-	response := make([]OrderResponseDTO, 0, len(orders))
-
-	for _, order := range orders {
-		// Calculate Computed Fields
-		adjustedTotal := order.TotalAmount
-		hasPending := false
-
-		for _, r := range order.Returns {
-			if r.Status == "PENDING" {
-				hasPending = true
-			}
-			if r.Status == "APPROVED" || r.Status == "COMPLETED" {
-				adjustedTotal -= r.RefundAmount
-			}
-		}
-
-		// Map OrderItems
-		items := make([]OrderItemDTO, 0, len(order.OrderItems))
-		for _, item := range order.OrderItems {
-			items = append(items, OrderItemDTO{
-				ID:        item.ID,
-				ProductID: item.ProductID,
-				Product: ProductSummary{
-					ID:   item.Product.ID,
-					Name: item.Product.Name,
-					SKU:  item.Product.SKU,
-				},
-				Quantity:   item.Quantity,
-				UnitPrice:  item.UnitPrice,
-				TotalPrice: item.TotalPrice,
-			})
-		}
-
-		// Map User (Staff)
-		userSummary := UserSummaryDTO{
-			ID:        order.User.ID,
-			Username:  order.User.Username,
-			FirstName: order.User.FirstName,
-			LastName:  order.User.LastName,
-		}
-
-		// Map Customer
-		var customerSummary *UserSummaryDTO
-		if order.Customer != nil {
-			customerSummary = &UserSummaryDTO{
-				ID:        order.Customer.ID,
-				Username:  order.Customer.Username,
-				FirstName: order.Customer.FirstName,
-				LastName:  order.Customer.LastName,
-			}
-		}
-
-		response = append(response, OrderResponseDTO{
-			ID:               order.ID,
-			OrderNumber:      order.OrderNumber,
-			OrderDate:        order.OrderDate,
-			TotalAmount:      order.TotalAmount,
-			Status:           order.Status,
-			PaymentMethod:    order.PaymentMethod,
-			User:             userSummary,
-			Customer:         customerSummary,
-			OrderItems:       items,
-			HasPendingReturn: hasPending,
-			AdjustedTotal:    adjustedTotal,
-		})
-	}
-
-	c.JSON(http.StatusOK, gin.H{"orders": response})
+	c.JSON(http.StatusOK, gin.H{
+		"data":  orders,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
 }
 
 // GetOrderByNumber godoc
