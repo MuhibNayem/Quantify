@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -17,6 +18,14 @@ import (
 	"inventory/backend/internal/services"
 	"inventory/backend/internal/websocket"
 )
+
+// computeRefund returns the refund amount with tax added on top of the subtotal
+// (additive, not compounded per-line).
+func computeRefund(unitPrice float64, qty int, taxRate float64) float64 {
+	subtotal := unitPrice * float64(qty)
+	tax := subtotal * taxRate
+	return math.Round((subtotal+tax)*100) / 100
+}
 
 type ReturnHandler struct {
 	DB               *gorm.DB
@@ -154,8 +163,7 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 			})
 
 			// Calculate refund amount for this item (including tax)
-			itemTotal := orderItem.UnitPrice * float64(item.Quantity)
-			totalRefundAmount += itemTotal * (1 + taxRate/100.0)
+			totalRefundAmount += computeRefund(orderItem.UnitPrice, item.Quantity, taxRate/100.0)
 		}
 
 		// Bulk Create Return Items
