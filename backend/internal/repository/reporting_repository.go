@@ -493,6 +493,23 @@ func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, 
 // zone names (e.g. "America/New_York", "Etc/GMT+5"). Anything else — quotes,
 // whitespace, semicolons, comments — is rejected so callers fall back to UTC
 // rather than reaching the database with attacker-controlled input.
+func parseFlexibleTime(s string) (time.Time, error) {
+	layouts := []string{
+		time.RFC3339Nano,
+		time.RFC3339,
+		"2006-01-02 15:04:05.999999999-07:00",
+		"2006-01-02 15:04:05.999999999",
+		"2006-01-02 15:04:05",
+		"2006-01-02",
+	}
+	for _, layout := range layouts {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unrecognized timestamp: %q", s)
+}
+
 func isValidTimezone(tz string) bool {
 	if tz == "" {
 		return false
@@ -833,6 +850,9 @@ type CustomerInsight struct {
 	Username           string
 	FullName           string
 	TotalSpent         float64
+	GrossRevenue       float64
+	TotalRefunded      float64
+	NetRevenue         float64
 	OrderCount         int
 	LastOrderDate      *time.Time
 	DaysSinceLastOrder int
@@ -843,16 +863,39 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 	log.Printf("DEBUG: Executing GetCustomerInsightsReport (New Logic) for range %v to %v", startDate, endDate)
 	var insights []CustomerInsight
 
-	// We join users and orders using customer_id to identify customers
+	// We join users and orders using customer_id to identify customers, and
+	// subtract APPROVED return amounts so the report reflects net revenue
+	// (P3.T6 audit: customers with heavy refunds were being mis-classified
+	// as VIPs by gross-only totals).
 	query := `
-		SELECT 
-			u.id, 
-			u.username, 
-			CASE 
+		SELECT
+			u.id,
+			u.username,
+			CASE
 				WHEN u.first_name IS NOT NULL AND u.first_name != '' THEN u.first_name || ' ' || COALESCE(u.last_name, '')
-				ELSE u.username 
+				ELSE u.username
 			END as full_name,
-			SUM(o.total_amount) as total_spent,
+			COALESCE(SUM(o.total_amount), 0) as gross_revenue,
+			COALESCE((
+				SELECT SUM(ri.quantity * oi.unit_price)
+				FROM returns ret
+				JOIN return_items ri ON ri.return_id = ret.id
+				JOIN order_items oi ON oi.id = ri.order_item_id
+				JOIN orders ro ON ro.id = oi.order_id
+				WHERE ro.customer_id = u.id
+				AND ret.status = 'APPROVED'
+				AND ret.created_at BETWEEN ? AND ?
+			), 0) as total_refunded,
+			COALESCE(SUM(o.total_amount), 0) - COALESCE((
+				SELECT SUM(ri.quantity * oi.unit_price)
+				FROM returns ret
+				JOIN return_items ri ON ri.return_id = ret.id
+				JOIN order_items oi ON oi.id = ri.order_item_id
+				JOIN orders ro ON ro.id = oi.order_id
+				WHERE ro.customer_id = u.id
+				AND ret.status = 'APPROVED'
+				AND ret.created_at BETWEEN ? AND ?
+			), 0) as net_revenue,
 			COUNT(o.id) as order_count,
 			MAX(o.order_date) as last_order_date
 		FROM users u
@@ -860,11 +903,11 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 		WHERE o.status = 'COMPLETED'
 		AND o.order_date BETWEEN ? AND ?
 		GROUP BY u.id, u.username, u.first_name, u.last_name
-		ORDER BY total_spent DESC
+		ORDER BY net_revenue DESC
 		LIMIT 50
 	`
 
-	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
+	rows, err := r.DB.Raw(query, startDate, endDate, startDate, endDate, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -873,15 +916,21 @@ func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Ti
 	now := time.Now()
 	for rows.Next() {
 		var ci CustomerInsight
-		var lastOrder sql.NullTime
+		var lastOrder sql.NullString
 
-		if err := rows.Scan(&ci.UserID, &ci.Username, &ci.FullName, &ci.TotalSpent, &ci.OrderCount, &lastOrder); err != nil {
+		if err := rows.Scan(&ci.UserID, &ci.Username, &ci.FullName, &ci.GrossRevenue, &ci.TotalRefunded, &ci.NetRevenue, &ci.OrderCount, &lastOrder); err != nil {
 			return nil, err
 		}
 
+		ci.TotalSpent = ci.NetRevenue
+
 		if lastOrder.Valid {
-			ci.LastOrderDate = &lastOrder.Time
-			ci.DaysSinceLastOrder = int(now.Sub(lastOrder.Time).Hours() / 24)
+			if t, err := parseFlexibleTime(lastOrder.String); err == nil {
+				ci.LastOrderDate = &t
+				ci.DaysSinceLastOrder = int(now.Sub(t).Hours() / 24)
+			} else {
+				ci.DaysSinceLastOrder = -1
+			}
 		} else {
 			ci.DaysSinceLastOrder = -1
 		}

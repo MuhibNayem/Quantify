@@ -175,3 +175,68 @@ func TestIsValidTimezone(t *testing.T) {
 		})
 	}
 }
+
+func TestCustomerInsights_NetOfReturns(t *testing.T) {
+	db := setupReportingTestDB(t)
+	require.NoError(t, db.AutoMigrate(
+		&domain.User{},
+		&domain.Order{},
+		&domain.OrderItem{},
+		&domain.Return{},
+		&domain.ReturnItem{},
+	))
+
+	customer := domain.User{Username: "alice", Password: "x"}
+	require.NoError(t, db.Create(&customer).Error)
+	product := domain.Product{SKU: "SKU-RETURN", Name: "Returned product"}
+	require.NoError(t, db.Create(&product).Error)
+	customerID := customer.ID
+	order := domain.Order{
+		OrderNumber:   "ORD-RETURN",
+		CustomerID:    &customerID,
+		TotalAmount:   500,
+		Status:        "COMPLETED",
+		PaymentMethod: "CASH",
+		OrderDate:     time.Now(),
+	}
+	require.NoError(t, db.Create(&order).Error)
+	orderItem := domain.OrderItem{
+		OrderID:    order.ID,
+		ProductID:  product.ID,
+		Quantity:   1,
+		UnitPrice:  400,
+		TotalPrice: 400,
+	}
+	require.NoError(t, db.Create(&orderItem).Error)
+	refund := domain.Return{
+		OrderID:      order.ID,
+		UserID:       customer.ID,
+		Status:       "APPROVED",
+		Reason:       "Refund",
+		RefundAmount: 400,
+	}
+	require.NoError(t, db.Create(&refund).Error)
+	require.NoError(t, db.Create(&domain.ReturnItem{
+		ReturnID:    refund.ID,
+		OrderItemID: orderItem.ID,
+		ProductID:   product.ID,
+		Quantity:    1,
+		Reason:      "Refund",
+	}).Error)
+
+	repo := NewReportsRepository(db)
+	report, err := repo.GetCustomerInsightsReport(time.Now().Add(-30*24*time.Hour), time.Now().Add(time.Hour))
+	require.NoError(t, err)
+
+	var alice *CustomerInsight
+	for i := range report {
+		if report[i].UserID == customer.ID {
+			alice = &report[i]
+			break
+		}
+	}
+	require.NotNil(t, alice)
+	assert.InDelta(t, 500, alice.GrossRevenue, 0.01)
+	assert.InDelta(t, 100, alice.NetRevenue, 0.01)
+	assert.InDelta(t, 100, alice.TotalSpent, 0.01)
+}
