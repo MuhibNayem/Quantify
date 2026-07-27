@@ -10,6 +10,7 @@ import (
 	"inventory/backend/internal/services"
 	"inventory/backend/internal/storage"
 	ws "inventory/backend/internal/websocket"
+	"io"
 	"strings"
 	"time"
 
@@ -178,6 +179,17 @@ func (c *BulkConsumer) processImportDelivery(d amqp091.Delivery) {
 	}
 	defer file.Close()
 
+	if err := c.processValidationPass(job, file, d); err != nil {
+		return
+	}
+}
+
+// processValidationPass validates a CSV file for an import job and persists
+// the validation result on the job, transitioning it to PENDING_CONFIRMATION.
+// It does NOT finalize the import — explicit user confirmation is required.
+func (c *BulkConsumer) processValidationPass(job *domain.Job, file io.ReadSeeker, d amqp091.Delivery) error {
+	jobID := job.ID
+
 	result, err := c.BulkImportService.ProcessBulkImport(file)
 	if err != nil {
 		logrus.Errorf("Failed to process bulk import for job %d: %v", jobID, err)
@@ -187,7 +199,7 @@ func (c *BulkConsumer) processImportDelivery(d amqp091.Delivery) {
 			logrus.Errorf("Failed to update job %d after validation error: %v", jobID, err)
 		}
 		d.Nack(false, false)
-		return
+		return err
 	}
 
 	resultBytes, _ := json.Marshal(result)
@@ -200,24 +212,19 @@ func (c *BulkConsumer) processImportDelivery(d amqp091.Delivery) {
 		}
 		logrus.Warnf("Bulk import job %d finished validation with no valid records", jobID)
 		d.Ack(false)
-		return
+		return nil
 	}
 
 	job.Status = "PENDING_CONFIRMATION"
 	if err := c.saveJob(job); err != nil {
 		logrus.Errorf("Failed to update job %d: %v", jobID, err)
 		d.Nack(false, false)
-		return
+		return err
 	}
 
-	if err := c.finalizeImport(job, result); err != nil {
-		logrus.Errorf("Failed to finalize bulk import job %d: %v", jobID, err)
-		d.Nack(false, false)
-		return
-	}
-
-	logrus.Infof("Bulk import job %d completed successfully after auto-confirmation", jobID)
+	logrus.Infof("Bulk import job %d awaiting explicit confirmation", jobID)
 	d.Ack(false)
+	return nil
 }
 
 func (c *BulkConsumer) handleImportConfirm(ctx context.Context, deliveries <-chan amqp091.Delivery) {
