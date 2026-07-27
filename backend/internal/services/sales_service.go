@@ -53,25 +53,26 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 		}
 
 		// 2. Process Items (Stock & Discounts)
-		totalAmount, totalDiscountFromPromotions, orderItems, err := s.processItems(tx, req, products, batchesByProduct, activePromotions, userID)
+		subtotal, totalDiscountFromPromotions, orderItems, err := s.processItems(tx, req, products, batchesByProduct, activePromotions, userID)
 		if err != nil {
 			return err
 		}
 
-		// 3. Apply Tax
-		totalAmount, err = s.applyTax(totalAmount)
+		// 3. Apply Tax (returns post-tax total and the tax portion separately so
+		//    Order.Subtotal and Order.TaxAmount can be persisted alongside TotalAmount)
+		postTaxTotal, taxAmount, err := s.applyTax(subtotal)
 		if err != nil {
 			return err
 		}
 
 		// 4. Loyalty Points
-		discountAmount, pointsRedeemed, err := s.handleLoyalty(tx, req.CustomerID, req.PointsToRedeem, totalAmount)
+		discountAmount, pointsRedeemed, err := s.handleLoyalty(tx, req.CustomerID, req.PointsToRedeem, postTaxTotal)
 		if err != nil {
 			return err
 		}
 
 		// 5. Create Order & Transaction
-		return s.createOrderAndTransaction(tx, req, userID, totalAmount, discountAmount, totalDiscountFromPromotions, pointsRedeemed, orderItems)
+		return s.createOrderAndTransaction(tx, req, userID, subtotal, taxAmount, discountAmount, totalDiscountFromPromotions, pointsRedeemed, orderItems)
 	})
 }
 
@@ -280,14 +281,20 @@ func (s *SalesService) calculateItemDiscount(product domain.Product, quantity in
 	return unitPrice, discountTotal
 }
 
-func (s *SalesService) applyTax(amount float64) (float64, error) {
+// applyTax returns the post-tax total and the tax amount computed from the
+// configured tax_rate_percentage. The pre-tax amount is passed in as `amount`.
+// Per P3.T7 the order row stores both subtotal and tax amount so downstream
+// reports do not need to derive tax from total / (1 + rate).
+func (s *SalesService) applyTax(amount float64) (postTaxTotal, taxAmount float64, err error) {
 	taxRate := 0.0
 	if val, err := s.Settings.GetSetting("tax_rate_percentage"); err == nil {
 		if v, err := strconv.ParseFloat(val, 64); err == nil {
 			taxRate = v / 100.0
 		}
 	}
-	return amount + (amount * taxRate), nil
+	taxAmount = amount * taxRate
+	postTaxTotal = amount + taxAmount
+	return postTaxTotal, taxAmount, nil
 }
 
 func (s *SalesService) handleLoyalty(tx *gorm.DB, customerID *uint, pointsToRedeem int, totalAmount float64) (float64, int, error) {
@@ -400,18 +407,22 @@ func (s *SalesService) createOrderAndTransaction(
 	tx *gorm.DB,
 	req requests.CheckoutRequest,
 	userID uint,
-	totalAmount float64,
+	subtotal float64,
+	taxAmount float64,
 	discountAmount float64,
 	totalDiscountFromPromotions float64,
 	pointsRedeemed int,
 	orderItems []domain.OrderItem,
 ) error {
 	orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
+	finalTotal := subtotal + taxAmount - discountAmount
 	order := domain.Order{
 		OrderNumber:    orderNumber,
 		UserID:         userID,
 		CustomerID:     req.CustomerID,
-		TotalAmount:    totalAmount - discountAmount,
+		Subtotal:       subtotal,
+		TaxAmount:      taxAmount,
+		TotalAmount:    finalTotal,
 		Status:         "COMPLETED",
 		PaymentMethod:  req.PaymentMethod,
 		OrderDate:      time.Now(),
@@ -432,7 +443,7 @@ func (s *SalesService) createOrderAndTransaction(
 
 	saletransaction := domain.Transaction{
 		OrderID:              orderNumber,
-		Amount:               int64((totalAmount - discountAmount) * 100),
+		Amount:               int64(finalTotal * 100),
 		Currency:             "USD",
 		PaymentMethod:        req.PaymentMethod,
 		Status:               "COMPLETED",
@@ -443,7 +454,7 @@ func (s *SalesService) createOrderAndTransaction(
 		return fmt.Errorf("failed to record transaction: %w", err)
 	}
 
-	s.emitDiscountAuditIfSignificant(tx, orderNumber, userID, totalAmount, discountAmount, totalDiscountFromPromotions)
+	s.emitDiscountAuditIfSignificant(tx, orderNumber, userID, subtotal, discountAmount, totalDiscountFromPromotions)
 
 	return nil
 }
@@ -453,26 +464,29 @@ func (s *SalesService) createOrderAndTransaction(
 // pre-discount subtotal. The call is best-effort: any failure is logged
 // inside WriteAudit and the function returns without surfacing an error, so
 // an audit-write failure never aborts a successful checkout.
+//
+// `subtotalAfterPromo` is the pre-tax, post-promo-discount amount. The
+// pre-discount subtotal is reconstructed by adding `promotionDiscount` back.
 func (s *SalesService) emitDiscountAuditIfSignificant(
 	tx *gorm.DB,
 	orderNumber string,
 	userID uint,
-	totalAmountAfterPromo float64,
+	subtotalAfterPromo float64,
 	loyaltyDiscount float64,
 	promotionDiscount float64,
 ) {
-	subtotal := totalAmountAfterPromo + promotionDiscount
-	if subtotal <= 0 {
+	preDiscountSubtotal := subtotalAfterPromo + promotionDiscount
+	if preDiscountSubtotal <= 0 {
 		return
 	}
 	totalDiscount := loyaltyDiscount + promotionDiscount
-	discountPct := (totalDiscount / subtotal) * 100.0
+	discountPct := (totalDiscount / preDiscountSubtotal) * 100.0
 	if discountPct < discountAuditThresholdPct {
 		return
 	}
 
 	changes, err := json.Marshal(map[string]float64{
-		"subtotal":              round2(subtotal),
+		"subtotal":              round2(preDiscountSubtotal),
 		"total_discount":        round2(totalDiscount),
 		"discount_pct":          round2(discountPct),
 		"promotion_discount":    round2(promotionDiscount),

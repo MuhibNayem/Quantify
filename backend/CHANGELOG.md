@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Per-order tax amount** `Order` now persists `Subtotal` (pre-tax, post-promo-discount) and `TaxAmount` (the tax portion captured at checkout) alongside `TotalAmount` (post-tax, post-loyalty-discount). `applyTax` returns the post-tax total and the tax amount separately so the order row can store both. Downstream reporting no longer has to derive tax from `total / (1 + rate)`. The discount audit hook now uses the pre-tax subtotal instead of the post-tax total, which previously caused the recorded pre-discount subtotal to include tax. (`internal/domain/orders.go`, `internal/services/sales_service.go`)
 - **Basket analysis response** `GET /reports/basket-analysis` now accepts `page` and `limit` query parameters and returns the pagination envelope `{items, total, page, limit}`. Default limit is 20. This replaces the legacy flat-array response and is a breaking change for existing consumers. (`internal/repository/reporting_repository.go`, `internal/services/reporting_service.go`, `internal/handlers/reports.go`)
 
 ## [Phase 1] 2026-XX-XX — Security hardening

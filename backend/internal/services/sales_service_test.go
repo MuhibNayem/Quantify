@@ -52,6 +52,27 @@ func (stubSettingsService) UpdateSetting(key, value string, _ uint) error {
 	return assert.AnError
 }
 
+type mapSettingsService struct {
+	values map[string]string
+}
+
+func (m mapSettingsService) GetAllSettings() (map[string][]domain.SystemSetting, error) {
+	return nil, nil
+}
+func (m mapSettingsService) GetSetting(key string) (string, error) {
+	v, ok := m.values[key]
+	if !ok {
+		return "", assert.AnError
+	}
+	return v, nil
+}
+func (m mapSettingsService) GetPublicSettings() (map[string]string, error) {
+	return nil, nil
+}
+func (m mapSettingsService) UpdateSetting(key, value string, _ uint) error {
+	return nil
+}
+
 func seedProductWithLocation(t *testing.T, db *gorm.DB, sku string, defaultLocationID uint) domain.Product {
 	t.Helper()
 	p := domain.Product{
@@ -200,4 +221,65 @@ func TestCheckout_NoAuditRowForSmallDiscount(t *testing.T) {
 	var count int64
 	require.NoError(t, db.Model(&domain.AuditLog{}).Count(&count).Error)
 	assert.Equal(t, int64(0), count, "no audit row expected for a 5%% discount (below threshold)")
+}
+
+// TestCheckout_PersistsTaxAmount verifies that a checkout with a configured
+// tax rate writes Subtotal, TaxAmount, and TotalAmount on the Order row.
+// Per P3.T7, the per-order tax amount is captured at checkout so reports
+// no longer have to derive tax from total/(1+rate).
+func TestCheckout_PersistsTaxAmount(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU5", 1)
+
+	expiry := time.Now().Add(180 * 24 * time.Hour)
+	seedBatch(t, db, prod.ID, 1, 100, expiry)
+
+	settings := mapSettingsService{values: map[string]string{
+		"tax_rate_percentage": "10",
+	}}
+	svc := NewSalesService(db, settings, nil)
+
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items: []requests.CheckoutItem{
+			{ProductID: prod.ID, Quantity: 1},
+		},
+		PaymentMethod: "cash",
+	}, 1))
+
+	var orders []domain.Order
+	require.NoError(t, db.Find(&orders).Error)
+	require.Len(t, orders, 1)
+
+	o := orders[0]
+	assert.InDelta(t, 10.0, o.Subtotal, 0.01, "Subtotal must equal pre-tax total")
+	assert.InDelta(t, 1.0, o.TaxAmount, 0.01, "TaxAmount must equal 10%% of subtotal")
+	assert.InDelta(t, 11.0, o.TotalAmount, 0.01, "TotalAmount must equal subtotal + tax")
+}
+
+// TestCheckout_PersistsTaxAmount_NoTaxConfigured verifies the new fields
+// default correctly when no tax rate is set (zero tax).
+func TestCheckout_PersistsTaxAmount_NoTaxConfigured(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU6", 1)
+
+	expiry := time.Now().Add(180 * 24 * time.Hour)
+	seedBatch(t, db, prod.ID, 1, 100, expiry)
+
+	svc := NewSalesService(db, mapSettingsService{}, nil)
+
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items: []requests.CheckoutItem{
+			{ProductID: prod.ID, Quantity: 1},
+		},
+		PaymentMethod: "cash",
+	}, 1))
+
+	var orders []domain.Order
+	require.NoError(t, db.Find(&orders).Error)
+	require.Len(t, orders, 1)
+
+	o := orders[0]
+	assert.InDelta(t, 10.0, o.Subtotal, 0.01)
+	assert.InDelta(t, 0.0, o.TaxAmount, 0.01)
+	assert.InDelta(t, 10.0, o.TotalAmount, 0.01)
 }

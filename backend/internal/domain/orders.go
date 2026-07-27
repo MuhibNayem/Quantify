@@ -14,8 +14,10 @@ type Order struct {
 	User             User
 	CustomerID       *uint     `gorm:"index"` // Customer ID (nullable)
 	Customer         *User     `gorm:"foreignKey:CustomerID"`
-	TotalAmount      float64   `gorm:"not null"`
-	Status           string    `gorm:"default:'COMPLETED';index"` // PENDING, COMPLETED, CANCELLED, RETURNED
+	Subtotal         float64   `gorm:"type:decimal(12,2);default:0"` // Pre-tax, post-promo-discount
+	TaxAmount        float64   `gorm:"type:decimal(10,2);default:0"` // Tax portion captured at checkout (P3.T7)
+	TotalAmount      float64   `gorm:"not null"`                      // Post-tax, post-loyalty-discount
+	Status           string    `gorm:"default:'COMPLETED';index"`     // PENDING, COMPLETED, CANCELLED, RETURNED
 	PaymentMethod    string    `gorm:"not null"`
 	OrderDate        time.Time `gorm:"index"`
 	PointsRedeemed   int       `gorm:"default:0"`
