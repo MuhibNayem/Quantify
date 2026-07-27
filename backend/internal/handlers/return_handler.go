@@ -383,25 +383,25 @@ func (h *ReturnHandler) ProcessReturn(c *gin.Context) {
 			return fmt.Errorf("failed to create refund transaction")
 		}
 
-		// 4. Deduct Loyalty Points
-		// Get earning rate from settings (to know how many points to deduct per dollar refunded)
-		// Assuming 1 point per $1 spent originally, we reverse that.
-		// But wait, we should use the same rate as earning.
-		earningRate := 1.0
-		if val, err := h.Settings.GetSetting("loyalty_points_earning_rate"); err == nil {
-			if v, err := strconv.ParseFloat(val, 64); err == nil {
-				earningRate = v
+		// 4. Deduct Loyalty Points (proportional to points redeemed on returned items)
+		var orderForPoints domain.Order
+		orderPointsRedeemed := 0
+		if err := tx.First(&orderForPoints, returnRecord.OrderID).Error; err == nil {
+			orderPointsRedeemed = orderForPoints.PointsRedeemed
+		}
+		totalPointsToDeduct := 0
+		for _, item := range returnRecord.ReturnItems {
+			var orderItem domain.OrderItem
+			if err := tx.First(&orderItem, item.OrderItemID).Error; err == nil {
+				totalPointsToDeduct += computeLoyaltyReversal(orderPointsRedeemed, orderItem.Quantity, item.Quantity)
 			}
 		}
-
-		pointsToDeduct := int(returnRecord.RefundAmount * earningRate)
 		var loyalty domain.LoyaltyAccount
 		if err := tx.Where("user_id = ?", returnRecord.UserID).First(&loyalty).Error; err == nil {
-			if loyalty.Points >= pointsToDeduct {
-				loyalty.Points -= pointsToDeduct
-			} else {
-				loyalty.Points = 0
+			if loyalty.Points < totalPointsToDeduct {
+				return fmt.Errorf("insufficient loyalty points balance to reverse")
 			}
+			loyalty.Points -= totalPointsToDeduct
 			if err := tx.Save(&loyalty).Error; err != nil {
 				return fmt.Errorf("failed to update loyalty points")
 			}
@@ -514,4 +514,13 @@ func (h *ReturnHandler) GetReturn(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"return": returnRecord})
+}
+
+// computeLoyaltyReversal returns the points to deduct from a user when returning
+// an order line item. Pro-rates by quantity returned vs. quantity ordered.
+func computeLoyaltyReversal(pointsRedeemed, itemQty, returnQty int) int {
+	if pointsRedeemed == 0 || itemQty == 0 {
+		return 0
+	}
+	return pointsRedeemed * returnQty / itemQty
 }
