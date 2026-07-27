@@ -34,3 +34,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The hard-coded AI agent password (literal `rZQ$4Rs!6{QHaR{5Sra{]z_%n`) previously committed to source is no longer valid. The AI service (`ai-service/backend_client.py`) now reads the password from the `AI_AGENT_PASSWORD` env var, which the operator must set to the value logged on first backend boot. The value is **intentionally left empty** in `.env.example`.
 - Operators upgrading an existing deployment must set all required secrets (`JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `MINIO_ACCESS_KEY_ID`, `MINIO_SECRET_ACCESS_KEY`, `SSLCOMMERZ_STORE_PASSWORD`, `RABBITMQ_URL`) to non-default values, otherwise the backend will refuse to start.
 - The committed `backend/server` and `backend/cmd/server/server` binaries still contain the old AI agent password hash and should be rebuilt (`go build ./cmd/server`) before deployment.
+
+## [Phase 2] 2026-XX-XX — Data integrity
+
+### Changed
+
+- **P2.T1** Stock transfer now updates batch quantities inside a single transaction: FEFO deduction from the source batches with `FOR UPDATE` row lock, increment-or-create at the destination, plus the existing audit and transfer-record rows. The previous implementation wrote audit rows but never touched `batches`, so aggregate stock was unchanged after a transfer. (`internal/services/stock_transfer_service.go`, `internal/handlers/inventory.go`)
+- **P2.T2** Refund computation now uses additive tax on the subtotal: `(unitPrice × qty) + (unitPrice × qty × taxRate)`, rounded to cents. Replaces the multiplicative `× (1 + taxRate/100)` formula. (`internal/handlers/return_handler.go`)
+- **P2.T3** Loyalty point reversal on a return is now proportional to `(returnedQty / orderedQty)` rather than `int(refundAmount × earningRate)`. A `PointsRedeemed` of 50 on a 10-qty line reverses 5 points on a 1-qty return, not 5 × earningRate × refund. (`internal/handlers/return_handler.go`)
+- **P2.T5** PO receive now inserts a `StockAdjustment(Type=STOCK_IN, ReasonCode=PURCHASE)` row per received item, inside the same transaction as the Batch creation. Previously only a `Batch` was written, leaving the audit trail incomplete. (`internal/services/purchase_order_service.go`)
+- **P2.T6** `CreateFromSuggestion` re-fetches the product with `FOR UPDATE` inside the same transaction and uses the current `PurchasePrice` (not the suggestion's snapshot). When the price has drifted since the suggestion was generated, a `logrus.Warn` records the delta. `ReorderSuggestion.SnapshotPrice` is captured at suggestion creation for the audit trail. (`internal/services/replenishment_service.go`, `internal/services/purchase_order_service.go`, `internal/domain/models.go`)
+- **P2.T7** Vendor returns now validate that every `BatchID` in the request belongs to the claimed `ProductID`. A mismatched BatchID returns an error before any state mutation. (`internal/services/vendor_return_service.go`)
+- **P2.T10** Stock adjustment reads (`currentQuantity` sum and `batchesToUpdate`) now use `SELECT … FOR UPDATE` row locks inside the transaction. A concurrency test fires 50 simultaneous -5 adjustments against a single batch and asserts the final quantity is exactly 750. (`internal/handlers/stock.go`)
+- **P2.T11** `UpdatePurchaseOrder` now diffs and reconciles items in place inside a transaction, preserving `ReceivedQuantity` for already-received lines. The previous implementation deleted all items and recreated them, silently losing received quantities. (`internal/services/purchase_order_service.go`)
+- **P2.T12** Cron alert scan now wraps each product's processing in a `recover()` block. A panic for one product no longer blocks subsequent products. Failures are logged via `logrus.WithField("product_id", …).Errorf`. (`internal/handlers/alerts.go`)
+- **P2.T13** `GetCustomer` now returns a uniform `404 {"error":"customer not found"}` for every missing identifier (id, email, phone, username). The previous behavior stopped at the first match and varied the response shape per lookup path, enabling account enumeration via phone-number probes. (`internal/handlers/crm.go`)
+- **P2.T14** `GetChurnRisk` now accepts email, phone, or username in the `:identifier` path param, not just numeric IDs. (`internal/handlers/crm.go`)
+- **P2.T15** `PUT /settings` now validates the value against a typed descriptor map (`tax_rate_percentage` must be 0–100, `currency` must be a 3-letter code, etc.) and rejects unknown setting keys. Previously any string was accepted, even for numeric settings. (`internal/handlers/settings.go`)
+- **P2.T16** Dead first pass in `GetProductPerformanceAnalytics` removed (had a typo that would have made the function fail if it had been reached). The second pass is now correct — the missing `suppliers.id as supplier_id` column was restored to its `SELECT` and `GROUP BY` clauses. (`internal/repository/reporting_repository.go`)
+
+### Added
+
+- **P2.T4** Vendor return state machine: `Create` defaults to `PENDING` (no stock movement); `Approve` records `ApprovedBy`/`ApprovedAt`; `Complete` transitions PENDING → COMPLETED with stock deduction and `STOCK_OUT` audit; `Cancel` transitions PENDING → CANCELLED without stock changes. Invalid transitions return 409. New routes: `POST /replenishment/returns/:id/{approve,complete,cancel}`. (`internal/services/vendor_return_service.go`, `internal/handlers/replenishment.go`)
+- **P2.T8** `ResolvePromotion()` extracted from `calculateItemDiscount` into `internal/services/promotion_resolver.go`. Pinned by 4 property tests: product scope beats subcategory beats category; ties broken by `Priority`, then `DiscountValue`. Empty list returns `nil`. (`internal/services/promotion_resolver.go`, `internal/services/sales_service.go`)
+- **P2.T9** `CheckoutRequest.RegisterLocationID *uint` field added. When set, stock is deducted from that location's batches instead of the product's default location. FEFO allocation and `FOR UPDATE` locking now apply per-location. Falls back to the product's `LocationID` when unset. (`internal/requests/stock_request.go`, `internal/services/sales_service.go`)
+
+### Migration notes
+
+- The new `ReorderSuggestion.SnapshotPrice` column is added by `AutoMigrate` on next boot (Phase 4 will switch to versioned SQL migrations).
+- New vendor-return state requires existing rows to have a valid status. If `PurchaseReturn.Status` is `COMPLETED` from before this change, the new transitions still work (COMPLETED is a valid terminal state).
