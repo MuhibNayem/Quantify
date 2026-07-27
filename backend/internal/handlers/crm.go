@@ -249,13 +249,14 @@ func (h *CRMHandler) RedeemLoyaltyPoints(c *gin.Context) {
 }
 
 func (h *CRMHandler) GetChurnRisk(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
+	identifier := c.Param("identifier")
+	user, err := h.lookupCustomer(c.Request.Context(), identifier)
 	if err != nil {
-		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
+		c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
 		return
 	}
 
-	risk, err := h.crmService.GetChurnRisk(uint(userID))
+	risk, err := h.crmService.GetChurnRisk(user.ID)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to analyze churn risk", http.StatusInternalServerError, err))
 		return

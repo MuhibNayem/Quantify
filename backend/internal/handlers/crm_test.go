@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/services"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
@@ -75,4 +76,61 @@ func TestGetCustomer_ValidLookupsStillWork(t *testing.T) {
 		assert.Equal(t, 200, w.Code, "identifier %s should be 200", id)
 		assert.NotContains(t, w.Body.String(), alice.Password)
 	}
+}
+
+type stubCRMService struct {
+	services.CRMService
+	risk *domain.ChurnRisk
+}
+
+func (s *stubCRMService) GetChurnRisk(customerID uint) (*domain.ChurnRisk, error) {
+	return s.risk, nil
+}
+
+func newChurnRiskRouter(t *testing.T, db *gorm.DB, mock services.CRMService) *gin.Engine {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	h := &CRMHandler{db: db, crmService: mock}
+	r.GET("/crm/customers/:identifier/churn-risk", h.GetChurnRisk)
+	return r
+}
+
+func TestGetChurnRisk_AcceptsEmail(t *testing.T) {
+	db := setupTestDB(t)
+	seedUser(t, db, "alice", "a@x.com", "555-1234")
+	mock := &stubCRMService{risk: &domain.ChurnRisk{RiskLevel: "low"}}
+
+	r := newChurnRiskRouter(t, db, mock)
+	req := httptest.NewRequest("GET", "/crm/customers/a@x.com/churn-risk", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code, "email identifier should work, got body: %s", w.Body.String())
+	assert.Contains(t, w.Body.String(), `"risk_level":"low"`, "should return the churn risk body")
+}
+
+func TestGetChurnRisk_AcceptsPhone(t *testing.T) {
+	db := setupTestDB(t)
+	seedUser(t, db, "alice", "a@x.com", "555-1234")
+	mock := &stubCRMService{risk: &domain.ChurnRisk{RiskLevel: "low"}}
+
+	r := newChurnRiskRouter(t, db, mock)
+	req := httptest.NewRequest("GET", "/crm/customers/555-1234/churn-risk", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code, "phone identifier should work, got body: %s", w.Body.String())
+	assert.Contains(t, w.Body.String(), `"risk_level":"low"`, "should return the churn risk body")
+}
+
+func TestGetChurnRisk_AcceptsUsername(t *testing.T) {
+	db := setupTestDB(t)
+	seedUser(t, db, "alice", "a@x.com", "555-1234")
+	mock := &stubCRMService{risk: &domain.ChurnRisk{RiskLevel: "low"}}
+
+	r := newChurnRiskRouter(t, db, mock)
+	req := httptest.NewRequest("GET", "/crm/customers/alice/churn-risk", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code, "username identifier should work, got body: %s", w.Body.String())
+	assert.Contains(t, w.Body.String(), `"risk_level":"low"`, "should return the churn risk body")
 }
