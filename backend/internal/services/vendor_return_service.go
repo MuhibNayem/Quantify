@@ -57,6 +57,16 @@ func (s *vendorReturnService) CreatePurchaseReturn(req CreatePurchaseReturnReque
 	var returnRecord domain.PurchaseReturn
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
+		for _, item := range req.Items {
+			var batch domain.Batch
+			if err := tx.First(&batch, item.BatchID).Error; err != nil {
+				return fmt.Errorf("batch %d lookup: %w", item.BatchID, err)
+			}
+			if batch.ProductID != item.ProductID {
+				return fmt.Errorf("batch does not belong to product %d (batch %d)", item.ProductID, item.BatchID)
+			}
+		}
+
 		returnRecord = domain.PurchaseReturn{
 			PurchaseOrderID: req.PurchaseOrderID,
 			SupplierID:      req.SupplierID,

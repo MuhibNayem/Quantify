@@ -93,6 +93,35 @@ func TestVendorReturn_DefaultsPending(t *testing.T) {
 	assert.Equal(t, int64(0), adjCount, "no stock adjustment should be recorded at create")
 }
 
+func TestVendorReturn_RejectsMismatchedBatch(t *testing.T) {
+	db := setupVendorReturnTestDB(t)
+	svc := NewVendorReturnService(db)
+
+	supplierID, productID, _ := seedVendorReturnFixtures(t, db)
+	product2 := domain.Product{
+		SKU:           "SKU-VR-2",
+		Name:          "Gadget",
+		PurchasePrice: 20.0,
+		SellingPrice:  30.0,
+		LocationID:    1,
+	}
+	require.NoError(t, db.Create(&product2).Error)
+
+	batch2 := domain.Batch{
+		ProductID:   product2.ID,
+		LocationID:  1,
+		BatchNumber: "B-VR-2",
+		Quantity:    50,
+		ExpiryDate:  ptrTime(time.Now().Add(30 * 24 * time.Hour)),
+	}
+	require.NoError(t, db.Create(&batch2).Error)
+
+	req := validVendorReturnRequest(supplierID, productID, batch2.ID)
+	_, err := svc.CreatePurchaseReturn(req, 42)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "batch does not belong")
+}
+
 func TestVendorReturn_CompleteAfterApprove(t *testing.T) {
 	db := setupVendorReturnTestDB(t)
 	svc := NewVendorReturnService(db)
