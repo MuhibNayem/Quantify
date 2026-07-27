@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -45,7 +46,7 @@ func (s *purchaseOrderService) CreatePOFromSuggestion(suggestionID string, userI
 	var po domain.PurchaseOrder
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 		var suggestion domain.ReorderSuggestion
-		if err := tx.Preload("Product").Preload("Supplier").Clauses(clause.Locking{Strength: "UPDATE"}).First(&suggestion, suggestionID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&suggestion, suggestionID).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return appErrors.NewAppError("Reorder suggestion not found", http.StatusNotFound, err)
 			}
@@ -56,6 +57,24 @@ func (s *purchaseOrderService) CreatePOFromSuggestion(suggestionID string, userI
 			return appErrors.NewAppError("Suggestion is not in PENDING state", http.StatusBadRequest, nil)
 		}
 
+		var product domain.Product
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&product, suggestion.ProductID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return appErrors.NewAppError("Product for suggestion not found", http.StatusNotFound, err)
+			}
+			return appErrors.NewAppError("Failed to fetch product for suggestion", http.StatusInternalServerError, err)
+		}
+
+		if suggestion.SnapshotPrice != product.PurchasePrice {
+			logrus.WithFields(logrus.Fields{
+				"suggestion_id":   suggestion.ID,
+				"product_id":      product.ID,
+				"snapshot_price":  suggestion.SnapshotPrice,
+				"current_price":   product.PurchasePrice,
+				"price_drift":     product.PurchasePrice - suggestion.SnapshotPrice,
+			}).Warn("product purchase_price changed since reorder suggestion was generated; PO uses current price")
+		}
+
 		po = domain.PurchaseOrder{
 			SupplierID: suggestion.SupplierID,
 			Status:     "DRAFT",
@@ -63,9 +82,9 @@ func (s *purchaseOrderService) CreatePOFromSuggestion(suggestionID string, userI
 			CreatedBy:  userID,
 			PurchaseOrderItems: []domain.PurchaseOrderItem{
 				{
-					ProductID:       suggestion.ProductID,
+					ProductID:       product.ID,
 					OrderedQuantity: suggestion.SuggestedOrderQuantity,
-					UnitPrice:       suggestion.Product.PurchasePrice,
+					UnitPrice:       product.PurchasePrice,
 				},
 			},
 		}

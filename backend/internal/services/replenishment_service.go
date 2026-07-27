@@ -101,6 +101,7 @@ func (s *replenishmentService) GenerateReorderSuggestions() error {
 				PredictedDemand:        0, // TODO: Integrate with forecasting
 				SuggestedOrderQuantity: suggestedQty,
 				LeadTimeDays:           7, // Default
+				SnapshotPrice:          setting.Product.PurchasePrice,
 				Status:                 "PENDING",
 				SuggestedAt:            time.Now(),
 			}

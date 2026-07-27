@@ -232,9 +232,10 @@ type ReorderSuggestion struct {
 	Supplier               Supplier
 	CurrentStock           int
 	PredictedDemand        int
-	SuggestedOrderQuantity int `gorm:"not null"`
+	SuggestedOrderQuantity int     `gorm:"not null"`
 	LeadTimeDays           int
-	Status                 string `gorm:"default:'PENDING'"` // PENDING, APPROVED, REJECTED, PO_CREATED
+	SnapshotPrice          float64 `gorm:"type:decimal(12,2);default:0"` // Product.PurchasePrice at the time the suggestion was generated; used to detect price drift when the PO is created
+	Status                 string  `gorm:"default:'PENDING'"`             // PENDING, APPROVED, REJECTED, PO_CREATED
 	SuggestedAt            time.Time
 }
 

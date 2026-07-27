@@ -30,6 +30,7 @@ func setupPOTestDB(t *testing.T) *gorm.DB {
 		&domain.StockAdjustment{},
 		&domain.PurchaseOrder{},
 		&domain.PurchaseOrderItem{},
+		&domain.ReorderSuggestion{},
 	))
 	return db
 }
@@ -112,4 +113,46 @@ func TestPOReceive_PartialReceive_CreatesAdjustment(t *testing.T) {
 		Where("reason_code = ? AND product_id = ? AND quantity = ?", "PURCHASE", 1, 30).
 		Count(&count).Error)
 	assert.Equal(t, int64(1), count, "partial receive must still write one adjustment per item")
+}
+
+func TestPOFromSuggestion_UsesLatestPurchasePrice(t *testing.T) {
+	db := setupPOTestDB(t)
+
+	supplier := domain.Supplier{Name: "Acme"}
+	require.NoError(t, db.Create(&supplier).Error)
+
+	prod := domain.Product{
+		SKU:           "SKU1",
+		Name:          "Widget",
+		SupplierID:    supplier.ID,
+		PurchasePrice: 10.0,
+		SellingPrice:  15.0,
+	}
+	require.NoError(t, db.Create(&prod).Error)
+
+	sugg := domain.ReorderSuggestion{
+		ProductID:              prod.ID,
+		SupplierID:             supplier.ID,
+		CurrentStock:           0,
+		SuggestedOrderQuantity: 10,
+		LeadTimeDays:           7,
+		Status:                 "PENDING",
+		SuggestedAt:            time.Now(),
+		SnapshotPrice:          10.0,
+	}
+	require.NoError(t, db.Create(&sugg).Error)
+
+	require.NoError(t, db.Model(&prod).Update("purchase_price", 12.5).Error)
+
+	svc := NewPurchaseOrderService(db, nil)
+	po, err := svc.CreatePOFromSuggestion(formatID(sugg.ID), 1)
+	require.NoError(t, err)
+	require.NotNil(t, po)
+	require.Len(t, po.PurchaseOrderItems, 1)
+	assert.Equal(t, 12.5, po.PurchaseOrderItems[0].UnitPrice, "PO must use latest product price, not the suggestion's snapshot")
+
+	var still domain.ReorderSuggestion
+	require.NoError(t, db.First(&still, sugg.ID).Error)
+	assert.Equal(t, 10.0, still.SnapshotPrice, "snapshot must be preserved for audit")
+	assert.Equal(t, "PO_CREATED", still.Status, "suggestion must be marked PO_CREATED")
 }
