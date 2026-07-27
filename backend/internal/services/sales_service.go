@@ -200,32 +200,7 @@ func (s *SalesService) processItems(
 }
 
 func (s *SalesService) calculateItemDiscount(product domain.Product, quantity int, activePromotions []domain.Promotion) (float64, float64) {
-	var bestPromo *domain.Promotion
-	bestScore := -1
-
-	for i := range activePromotions {
-		p := &activePromotions[i]
-		score := -1
-
-		if p.ProductID != nil && *p.ProductID == product.ID {
-			score = 2
-		} else if p.SubCategoryID != nil && product.SubCategoryID > 0 && *p.SubCategoryID == product.SubCategoryID {
-			score = 1
-		} else if p.CategoryID != nil && product.CategoryID > 0 && *p.CategoryID == product.CategoryID {
-			score = 0
-		}
-
-		if score > -1 {
-			if score > bestScore {
-				bestScore = score
-				bestPromo = p
-			} else if score == bestScore {
-				if bestPromo != nil && p.Priority > bestPromo.Priority {
-					bestPromo = p
-				}
-			}
-		}
-	}
+	bestPromo := ResolvePromotion(activePromotions, product.ID, product.SubCategoryID, product.CategoryID)
 
 	unitPrice := product.SellingPrice
 	discountTotal := 0.0
