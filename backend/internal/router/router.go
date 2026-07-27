@@ -82,7 +82,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	paymentHandler := handlers.NewPaymentHandler(paymentService)
 	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService, purchaseOrderService, vendorReturnService, hub, notificationRepo, emailService)
 	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
-	crmHandler := handlers.NewCRMHandler(crmService)
+	crmHandler := handlers.NewCRMHandler(crmService, db)
 	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
 	webhookHandler := handlers.NewWebhookHandler(integrationService)
 	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)

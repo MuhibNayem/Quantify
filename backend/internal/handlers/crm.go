@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/requests"
@@ -10,14 +11,16 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type CRMHandler struct {
 	crmService services.CRMService
+	db         *gorm.DB
 }
 
-func NewCRMHandler(crmService services.CRMService) *CRMHandler {
-	return &CRMHandler{crmService: crmService}
+func NewCRMHandler(crmService services.CRMService, db *gorm.DB) *CRMHandler {
+	return &CRMHandler{crmService: crmService, db: db}
 }
 
 func (h *CRMHandler) ListCustomers(c *gin.Context) {
@@ -67,50 +70,50 @@ func (h *CRMHandler) CreateCustomer(c *gin.Context) {
 
 func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	identifier := c.Param("identifier")
-	var user *domain.User
-	var err error
-
-	// Try parsing as numeric ID first (most common case)
-	if userID, parseErr := strconv.ParseUint(identifier, 10, 32); parseErr == nil {
-		user, err = h.crmService.GetCustomerByID(uint(userID))
-		if err == nil {
-			user.Password = ""
-			c.JSON(http.StatusOK, user)
-			return
-		}
-		// If not found by ID, continue to other methods
-	}
-
-	// Check if identifier contains '@' (email)
-	if strings.Contains(identifier, "@") && strings.Contains(identifier, ".") {
-		user, err = h.crmService.GetCustomerByEmail(identifier)
-		if err == nil {
-			user.Password = ""
-			c.JSON(http.StatusOK, user)
-			return
-		}
-	}
-
-	// Try phone number (digits with possible +, -, or spaces)
-	cleanedPhone := strings.ReplaceAll(strings.ReplaceAll(identifier, "-", ""), " ", "")
-	if len(cleanedPhone) >= 10 && (cleanedPhone[0] == '+' || (cleanedPhone[0] >= '0' && cleanedPhone[0] <= '9')) {
-		user, err = h.crmService.GetCustomerByPhone(identifier)
-		if err == nil {
-			user.Password = ""
-			c.JSON(http.StatusOK, user)
-			return
-		}
-	}
-
-	// Finally, try username
-	user, err = h.crmService.GetCustomerByUsername(identifier)
+	user, err := h.lookupCustomer(c.Request.Context(), identifier)
 	if err != nil {
-		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
+		// Always 404 for missing — no leak of which field matched
+		c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
 		return
 	}
-
 	user.Password = ""
 	c.JSON(http.StatusOK, user)
+}
+
+func (h *CRMHandler) lookupCustomer(ctx context.Context, identifier string) (*domain.User, error) {
+	var u domain.User
+	// Try ID first
+	if id, err := strconv.ParseUint(identifier, 10, 64); err == nil {
+		if err := h.db.WithContext(ctx).First(&u, id).Error; err == nil {
+			return &u, nil
+		}
+	}
+	// Email (contains @ and .)
+	if strings.Contains(identifier, "@") {
+		if err := h.db.WithContext(ctx).Where("email = ?", identifier).First(&u).Error; err == nil {
+			return &u, nil
+		}
+	}
+	// Phone (digits and separators)
+	if isPhone(identifier) {
+		if err := h.db.WithContext(ctx).Where("phone_number = ?", identifier).First(&u).Error; err == nil {
+			return &u, nil
+		}
+	}
+	// Username
+	if err := h.db.WithContext(ctx).Where("username = ?", identifier).First(&u).Error; err == nil {
+		return &u, nil
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+func isPhone(s string) bool {
+	for _, r := range s {
+		if !(r >= '0' && r <= '9') && r != '-' && r != '+' && r != ' ' && r != '(' && r != ')' {
+			return false
+		}
+	}
+	return len(s) >= 7 && len(s) <= 20
 }
 
 func (h *CRMHandler) GetCustomerByUsername(c *gin.Context) {
