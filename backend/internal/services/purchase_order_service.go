@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
@@ -17,7 +18,7 @@ type PurchaseOrderService interface {
 	ApprovePurchaseOrder(poID string, userID uint) (*domain.PurchaseOrder, error)
 	GetPurchaseOrder(poID string) (*domain.PurchaseOrder, error)
 	UpdatePurchaseOrder(poID string, updates map[string]interface{}, items []domain.PurchaseOrderItem) (*domain.PurchaseOrder, error)
-	ReceivePurchaseOrder(poID string, receivedItems []struct {
+	ReceivePurchaseOrder(ctx context.Context, poID string, userID uint, receivedItems []struct {
 		PurchaseOrderItemID uint
 		ReceivedQuantity    int
 		BatchNumber         string
@@ -187,7 +188,7 @@ func (s *purchaseOrderService) UpdatePurchaseOrder(poID string, updates map[stri
 	return &po, nil
 }
 
-func (s *purchaseOrderService) ReceivePurchaseOrder(poID string, receivedItems []struct {
+func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID string, userID uint, receivedItems []struct {
 	PurchaseOrderItemID uint
 	ReceivedQuantity    int
 	BatchNumber         string
@@ -233,6 +234,18 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(poID string, receivedItems [
 			}
 			if err := tx.Create(&batch).Error; err != nil {
 				return appErrors.NewAppError(fmt.Sprintf("Failed to create batch for product %d", poItem.ProductID), http.StatusInternalServerError, err)
+			}
+
+			adj := domain.StockAdjustment{
+				ProductID:  poItem.ProductID,
+				Type:       "STOCK_IN",
+				ReasonCode: "PURCHASE",
+				Quantity:   receivedItem.ReceivedQuantity,
+				AdjustedBy: userID,
+				AdjustedAt: time.Now(),
+			}
+			if err := tx.Create(&adj).Error; err != nil {
+				return appErrors.NewAppError(fmt.Sprintf("Failed to create stock adjustment for product %d", poItem.ProductID), http.StatusInternalServerError, err)
 			}
 		}
 

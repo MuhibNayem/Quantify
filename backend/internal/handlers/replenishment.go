@@ -363,6 +363,8 @@ func (h *ReplenishmentHandler) UpdatePurchaseOrder(c *gin.Context) {
 // @Router /purchase-orders/{poId}/receive [post]
 func (h *ReplenishmentHandler) ReceivePurchaseOrder(c *gin.Context) {
 	poID := c.Param("poId")
+	userIDVal, _ := c.Get("user_id")
+	userID, _ := userIDVal.(uint)
 	var req requests.ReceivePORequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
@@ -390,7 +392,7 @@ func (h *ReplenishmentHandler) ReceivePurchaseOrder(c *gin.Context) {
 		})
 	}
 
-	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(poID, serviceItems)
+	po, err := h.PurchaseOrderService.ReceivePurchaseOrder(c.Request.Context(), poID, userID, serviceItems)
 	if err != nil {
 		if appErr, ok := err.(*appErrors.AppError); ok {
 			c.Error(appErr)
