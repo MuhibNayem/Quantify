@@ -174,33 +174,81 @@ func (s *purchaseOrderService) GetPurchaseOrder(poID string) (*domain.PurchaseOr
 
 func (s *purchaseOrderService) UpdatePurchaseOrder(poID string, updates map[string]interface{}, items []domain.PurchaseOrderItem) (*domain.PurchaseOrder, error) {
 	var po domain.PurchaseOrder
-	if err := s.db.First(&po, poID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err)
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&po, poID).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return appErrors.NewAppError("Purchase Order not found", http.StatusNotFound, err)
+			}
+			return appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err)
 		}
-		return nil, appErrors.NewAppError("Failed to fetch purchase order", http.StatusInternalServerError, err)
-	}
 
-	if po.Status != "DRAFT" {
-		return nil, appErrors.NewAppError(fmt.Sprintf("Cannot update Purchase Order in %s status", po.Status), http.StatusConflict, nil)
-	}
-
-	if len(updates) > 0 {
-		if err := s.db.Model(&po).Updates(updates).Error; err != nil {
-			return nil, appErrors.NewAppError("Failed to update purchase order", http.StatusInternalServerError, err)
+		if po.Status != "DRAFT" {
+			return appErrors.NewAppError(fmt.Sprintf("Cannot update Purchase Order in %s status", po.Status), http.StatusConflict, nil)
 		}
-	}
 
-	if len(items) > 0 {
-		if err := s.db.Where("purchase_order_id = ?", po.ID).Delete(&domain.PurchaseOrderItem{}).Error; err != nil {
-			return nil, appErrors.NewAppError("Failed to clear existing PO items", http.StatusInternalServerError, err)
-		}
-		for _, item := range items {
-			item.PurchaseOrderID = po.ID
-			if err := s.db.Create(&item).Error; err != nil {
-				return nil, appErrors.NewAppError("Failed to create PO item", http.StatusInternalServerError, err)
+		if len(updates) > 0 {
+			if err := tx.Model(&po).Updates(updates).Error; err != nil {
+				return appErrors.NewAppError("Failed to update purchase order", http.StatusInternalServerError, err)
 			}
 		}
+
+		if len(items) > 0 {
+			var existingItems []domain.PurchaseOrderItem
+			if err := tx.Where("purchase_order_id = ?", po.ID).Find(&existingItems).Error; err != nil {
+				return appErrors.NewAppError("Failed to load existing PO items", http.StatusInternalServerError, err)
+			}
+
+			existingByProduct := make(map[uint]domain.PurchaseOrderItem, len(existingItems))
+			for _, ex := range existingItems {
+				existingByProduct[ex.ProductID] = ex
+			}
+
+			wantedByProduct := make(map[uint]domain.PurchaseOrderItem, len(items))
+			for _, it := range items {
+				if _, dup := wantedByProduct[it.ProductID]; dup {
+					return appErrors.NewAppError(fmt.Sprintf("Duplicate product %d in PO items", it.ProductID), http.StatusBadRequest, nil)
+				}
+				wantedByProduct[it.ProductID] = it
+			}
+
+			for prodID, ex := range existingByProduct {
+				if _, kept := wantedByProduct[prodID]; kept {
+					continue
+				}
+				if ex.ReceivedQuantity > 0 {
+					return appErrors.NewAppError(fmt.Sprintf("Cannot remove product %d from PO: %d already received", prodID, ex.ReceivedQuantity), http.StatusConflict, nil)
+				}
+				if err := tx.Delete(&ex).Error; err != nil {
+					return appErrors.NewAppError("Failed to remove old PO item", http.StatusInternalServerError, err)
+				}
+			}
+
+			for prodID, it := range wantedByProduct {
+				if ex, ok := existingByProduct[prodID]; ok {
+					ex.OrderedQuantity = it.OrderedQuantity
+					ex.UnitPrice = it.UnitPrice
+					if err := tx.Save(&ex).Error; err != nil {
+						return appErrors.NewAppError("Failed to update PO item", http.StatusInternalServerError, err)
+					}
+					continue
+				}
+				newItem := domain.PurchaseOrderItem{
+					PurchaseOrderID: po.ID,
+					ProductID:       prodID,
+					OrderedQuantity: it.OrderedQuantity,
+					UnitPrice:       it.UnitPrice,
+				}
+				if err := tx.Create(&newItem).Error; err != nil {
+					return appErrors.NewAppError("Failed to create PO item", http.StatusInternalServerError, err)
+				}
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	s.db.Preload("Supplier").Preload("PurchaseOrderItems.Product").First(&po, poID)

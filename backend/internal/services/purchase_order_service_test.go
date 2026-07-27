@@ -115,6 +115,71 @@ func TestPOReceive_PartialReceive_CreatesAdjustment(t *testing.T) {
 	assert.Equal(t, int64(1), count, "partial receive must still write one adjustment per item")
 }
 
+func TestUpdatePO_RejectsNonDraftStatus(t *testing.T) {
+	db := setupPOTestDB(t)
+	po := seedPurchaseOrderForReceive(t, db, "APPROVED", []domain.PurchaseOrderItem{
+		{ProductID: 1, OrderedQuantity: 100, UnitPrice: 10.0},
+	})
+
+	svc := NewPurchaseOrderService(db, nil)
+	_, err := svc.UpdatePurchaseOrder(
+		formatID(po.ID),
+		nil,
+		[]domain.PurchaseOrderItem{
+			{ProductID: 1, OrderedQuantity: 150, UnitPrice: 10.0},
+		},
+	)
+	require.Error(t, err, "non-DRAFT PO must not be editable")
+
+	var item domain.PurchaseOrderItem
+	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item).Error)
+	assert.Equal(t, 100, item.OrderedQuantity, "APPROVED PO ordered qty must remain unchanged")
+}
+
+func TestUpdatePO_PreservesReceivedQuantity(t *testing.T) {
+	db := setupPOTestDB(t)
+	po := seedPurchaseOrderForReceive(t, db, "DRAFT", []domain.PurchaseOrderItem{
+		{ProductID: 1, OrderedQuantity: 100, ReceivedQuantity: 30, UnitPrice: 10.0},
+	})
+
+	svc := NewPurchaseOrderService(db, nil)
+	_, err := svc.UpdatePurchaseOrder(
+		formatID(po.ID),
+		nil,
+		[]domain.PurchaseOrderItem{
+			{ProductID: 1, OrderedQuantity: 120, UnitPrice: 10.0},
+		},
+	)
+	require.NoError(t, err)
+
+	var item domain.PurchaseOrderItem
+	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item).Error)
+	assert.Equal(t, 30, item.ReceivedQuantity, "received qty must be preserved")
+	assert.Equal(t, 120, item.OrderedQuantity, "ordered qty updated")
+}
+
+func TestUpdatePO_RejectsDeleteOfReceivedItem(t *testing.T) {
+	db := setupPOTestDB(t)
+	po := seedPurchaseOrderForReceive(t, db, "DRAFT", []domain.PurchaseOrderItem{
+		{ProductID: 1, OrderedQuantity: 100, ReceivedQuantity: 30, UnitPrice: 10.0},
+		{ProductID: 2, OrderedQuantity: 50, ReceivedQuantity: 0, UnitPrice: 5.0},
+	})
+
+	svc := NewPurchaseOrderService(db, nil)
+	_, err := svc.UpdatePurchaseOrder(
+		formatID(po.ID),
+		nil,
+		[]domain.PurchaseOrderItem{
+			{ProductID: 2, OrderedQuantity: 60, UnitPrice: 5.0},
+		},
+	)
+	require.Error(t, err, "must refuse to drop product 1 which has received qty")
+
+	var item1 domain.PurchaseOrderItem
+	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item1).Error)
+	assert.Equal(t, 30, item1.ReceivedQuantity, "received product must remain intact")
+}
+
 func TestPOFromSuggestion_UsesLatestPurchasePrice(t *testing.T) {
 	db := setupPOTestDB(t)
 
