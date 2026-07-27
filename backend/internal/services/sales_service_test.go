@@ -32,6 +32,7 @@ func setupSalesTestDB(t *testing.T) *gorm.DB {
 		&domain.Promotion{},
 		&domain.Role{},
 		&domain.User{},
+		&domain.AuditLog{},
 	))
 	return db
 }
@@ -47,7 +48,7 @@ func (stubSettingsService) GetSetting(key string) (string, error) {
 func (stubSettingsService) GetPublicSettings() (map[string]string, error) {
 	return nil, assert.AnError
 }
-func (stubSettingsService) UpdateSetting(key, value string) error {
+func (stubSettingsService) UpdateSetting(key, value string, _ uint) error {
 	return assert.AnError
 }
 
@@ -118,4 +119,85 @@ func TestCheckout_FallsBackToProductLocationWhenRegisterLocationUnset(t *testing
 	// Only location 1's batch should be deducted; location 2 untouched.
 	assertBatchQty(t, db, batchLoc1.ID, 70)
 	assertBatchQty(t, db, batchLoc2.ID, 50)
+}
+
+// TestCheckout_EmitsAuditRowForLargeDiscount verifies that a checkout whose
+// combined promotion+loyalty discount exceeds 10% of the pre-discount subtotal
+// writes an audit_log row. This is the compliance hook for "manager-priced"
+// transactions.
+func TestCheckout_EmitsAuditRowForLargeDiscount(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU3", 1)
+
+	expiry := time.Now().Add(180 * 24 * time.Hour)
+	seedBatch(t, db, prod.ID, 1, 100, expiry)
+
+	// 15% off the product. SellingPrice is 10, so unit price drops to 8.50;
+	// discount = 1.50 × qty(2) = 3.00, subtotal before discount = 20.00,
+	// discount share = 15% > 10% threshold.
+	now := time.Now()
+	require.NoError(t, db.Create(&domain.Promotion{
+		Name:         "Big",
+		DiscountType: "PERCENTAGE",
+		DiscountValue: 15,
+		StartDate:    now.Add(-time.Hour),
+		EndDate:      now.Add(time.Hour),
+		IsActive:     true,
+		ProductID:    &prod.ID,
+		Priority:     1,
+	}).Error)
+
+	svc := NewSalesService(db, stubSettingsService{}, nil)
+
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items: []requests.CheckoutItem{
+			{ProductID: prod.ID, Quantity: 2},
+		},
+		PaymentMethod: "cash",
+	}, 42))
+
+	var logs []domain.AuditLog
+	require.NoError(t, db.Find(&logs).Error)
+	require.Len(t, logs, 1, "exactly one audit row expected for a 15%% discount")
+	assert.Equal(t, "DISCOUNT", logs[0].Action)
+	assert.Equal(t, "Order", logs[0].Entity)
+	assert.Equal(t, uint(42), logs[0].UserID)
+	assert.NotEmpty(t, logs[0].EntityID, "order number should be recorded")
+	assert.NotEmpty(t, logs[0].Changes, "changes JSON should describe the discount")
+	assert.False(t, logs[0].Timestamp.IsZero())
+}
+
+// TestCheckout_NoAuditRowForSmallDiscount verifies that the audit emission is
+// gated on the 10% threshold: a 5% promotion must NOT write an audit row.
+func TestCheckout_NoAuditRowForSmallDiscount(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU4", 1)
+
+	expiry := time.Now().Add(180 * 24 * time.Hour)
+	seedBatch(t, db, prod.ID, 1, 100, expiry)
+
+	now := time.Now()
+	require.NoError(t, db.Create(&domain.Promotion{
+		Name:         "Small",
+		DiscountType: "PERCENTAGE",
+		DiscountValue: 5,
+		StartDate:    now.Add(-time.Hour),
+		EndDate:      now.Add(time.Hour),
+		IsActive:     true,
+		ProductID:    &prod.ID,
+		Priority:     1,
+	}).Error)
+
+	svc := NewSalesService(db, stubSettingsService{}, nil)
+
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items: []requests.CheckoutItem{
+			{ProductID: prod.ID, Quantity: 2},
+		},
+		PaymentMethod: "cash",
+	}, 42))
+
+	var count int64
+	require.NoError(t, db.Model(&domain.AuditLog{}).Count(&count).Error)
+	assert.Equal(t, int64(0), count, "no audit row expected for a 5%% discount (below threshold)")
 }

@@ -13,7 +13,7 @@ type RoleService interface {
 	UpdateRole(id uint, name, description string) (*domain.Role, error)
 	DeleteRole(id uint) error
 	ListPermissions() ([]domain.Permission, error)
-	UpdateRolePermissions(roleID uint, permissionIDs []uint) error
+	UpdateRolePermissions(roleID uint, permissionIDs []uint, userID uint) error
 }
 
 type roleService struct {
@@ -85,7 +85,7 @@ func (s *roleService) ListPermissions() ([]domain.Permission, error) {
 	return s.repo.ListPermissions()
 }
 
-func (s *roleService) UpdateRolePermissions(roleID uint, permissionIDs []uint) error {
+func (s *roleService) UpdateRolePermissions(roleID uint, permissionIDs []uint, userID uint) error {
 	// Admin role should always have all permissions, but for now we enforce manual assignment.
 	// Or we can block stripping admins.
 	role, err := s.repo.GetRoleByID(roleID)
@@ -98,5 +98,5 @@ func (s *roleService) UpdateRolePermissions(roleID uint, permissionIDs []uint) e
 		// Let's allow it but warn? Or just allow.
 	}
 
-	return s.repo.AssignPermissions(roleID, permissionIDs)
+	return s.repo.AssignPermissions(roleID, permissionIDs, userID)
 }

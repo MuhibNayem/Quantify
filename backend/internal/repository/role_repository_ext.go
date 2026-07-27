@@ -156,3 +156,27 @@ func (r *roleRepository) rotateCSRFForRole(ctx context.Context, roleID uint) {
 			Warn("CSRF rotation: delete failed")
 	}
 }
+
+// writeRolePermissionsAudit persists an audit_log row recording the
+// old→new permission set for a role grant. Failures are swallowed and
+// logged by WriteAudit; the grant itself is not blocked by audit issues.
+func (r *roleRepository) writeRolePermissionsAudit(ctx context.Context, roleID, userID uint, oldNames, newNames []string) {
+	changes, err := json.Marshal(map[string][]string{
+		"old": oldNames,
+		"new": newNames,
+	})
+	if err != nil {
+		logrus.WithError(err).WithField("role_id", roleID).
+			Warn("role permission audit: failed to marshal changes")
+		return
+	}
+	entry := &domain.AuditLog{
+		Action:    "UPDATE",
+		Entity:    "Role",
+		EntityID:  strconv.FormatUint(uint64(roleID), 10),
+		UserID:    userID,
+		Changes:   string(changes),
+		Timestamp: time.Now(),
+	}
+	_ = WriteAudit(ctx, r.db, entry)
+}

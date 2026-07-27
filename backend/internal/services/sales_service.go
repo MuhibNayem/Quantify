@@ -1,15 +1,24 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
-	"inventory/backend/internal/domain"
-	"inventory/backend/internal/requests"
 	"strconv"
 	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+
+	"inventory/backend/internal/domain"
+	"inventory/backend/internal/repository"
+	"inventory/backend/internal/requests"
 )
+
+// discountAuditThresholdPct is the minimum combined discount share (promotions
+// + loyalty points) of the pre-discount subtotal that triggers an audit row.
+// Transactions at or above this threshold are written to audit_log so that
+// "manager-priced" sales leave a compliance trail.
+const discountAuditThresholdPct = 10.0
 
 type SalesService struct {
 	DB               *gorm.DB
@@ -434,5 +443,57 @@ func (s *SalesService) createOrderAndTransaction(
 		return fmt.Errorf("failed to record transaction: %w", err)
 	}
 
+	s.emitDiscountAuditIfSignificant(tx, orderNumber, userID, totalAmount, discountAmount, totalDiscountFromPromotions)
+
 	return nil
+}
+
+// emitDiscountAuditIfSignificant writes an audit_log row when the combined
+// promotion + loyalty discount is at least discountAuditThresholdPct of the
+// pre-discount subtotal. The call is best-effort: any failure is logged
+// inside WriteAudit and the function returns without surfacing an error, so
+// an audit-write failure never aborts a successful checkout.
+func (s *SalesService) emitDiscountAuditIfSignificant(
+	tx *gorm.DB,
+	orderNumber string,
+	userID uint,
+	totalAmountAfterPromo float64,
+	loyaltyDiscount float64,
+	promotionDiscount float64,
+) {
+	subtotal := totalAmountAfterPromo + promotionDiscount
+	if subtotal <= 0 {
+		return
+	}
+	totalDiscount := loyaltyDiscount + promotionDiscount
+	discountPct := (totalDiscount / subtotal) * 100.0
+	if discountPct < discountAuditThresholdPct {
+		return
+	}
+
+	changes, err := json.Marshal(map[string]float64{
+		"subtotal":              round2(subtotal),
+		"total_discount":        round2(totalDiscount),
+		"discount_pct":          round2(discountPct),
+		"promotion_discount":    round2(promotionDiscount),
+		"loyalty_discount":      round2(loyaltyDiscount),
+	})
+	if err != nil {
+		// Should not happen for plain float64; fall through with empty Changes.
+		changes = []byte(`{}`)
+	}
+
+	entry := &domain.AuditLog{
+		Action:    "DISCOUNT",
+		Entity:    "Order",
+		EntityID:  orderNumber,
+		UserID:    userID,
+		Changes:   string(changes),
+		Timestamp: time.Now(),
+	}
+	_ = repository.WriteAudit(tx.Statement.Context, tx, entry)
+}
+
+func round2(v float64) float64 {
+	return float64(int64(v*100+0.5)) / 100
 }

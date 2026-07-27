@@ -18,7 +18,7 @@ type RoleRepository interface {
 	ListPermissions() ([]domain.Permission, error)
 	GetPermissionsByRoleID(roleID uint) ([]domain.Permission, error)
 	GetPermissionsByRoleName(roleName string) ([]domain.Permission, error)
-	AssignPermissions(roleID uint, permissionIDs []uint) error
+	AssignPermissions(roleID uint, permissionIDs []uint, userID uint) error
 }
 
 type roleRepository struct {
@@ -97,10 +97,20 @@ func (r *roleRepository) GetPermissionsByRoleID(roleID uint) ([]domain.Permissio
 	return role.Permissions, nil
 }
 
-func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) error {
+func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint, userID uint) error {
 	var role domain.Role
 	if err := r.db.First(&role, roleID).Error; err != nil {
 		return err
+	}
+
+	// Capture the pre-change permission names for the audit row.
+	oldPerms, err := r.GetPermissionsByRoleID(roleID)
+	if err != nil {
+		return err
+	}
+	oldNames := make([]string, 0, len(oldPerms))
+	for _, p := range oldPerms {
+		oldNames = append(oldNames, p.Name)
 	}
 
 	var perms []domain.Permission
@@ -127,5 +137,14 @@ func (r *roleRepository) AssignPermissions(roleID uint, permissionIDs []uint) er
 		return err
 	}
 	r.rotateCSRFForRole(context.Background(), role.ID)
+
+	// Emit the audit row AFTER the change is committed, with the diff
+	// (old vs new permission names). Best-effort: WriteAudit returns nil
+	// on failure and logs internally.
+	newNames := make([]string, 0, len(perms))
+	for _, p := range perms {
+		newNames = append(newNames, p.Name)
+	}
+	r.writeRolePermissionsAudit(context.Background(), roleID, userID, oldNames, newNames)
 	return nil
 }

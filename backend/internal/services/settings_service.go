@@ -9,7 +9,7 @@ type SettingsService interface {
 	GetAllSettings() (map[string][]domain.SystemSetting, error)
 	GetSetting(key string) (string, error)
 	GetPublicSettings() (map[string]string, error)
-	UpdateSetting(key, value string) error
+	UpdateSetting(key, value string, userID uint) error
 }
 
 type settingsService struct {
@@ -33,8 +33,8 @@ func (s *settingsService) GetAllSettings() (map[string][]domain.SystemSetting, e
 	return grouped, nil
 }
 
-func (s *settingsService) UpdateSetting(key, value string) error {
-	return s.repo.UpdateSetting(key, value)
+func (s *settingsService) UpdateSetting(key, value string, userID uint) error {
+	return s.repo.UpdateSetting(key, value, userID)
 }
 
 func (s *settingsService) GetSetting(key string) (string, error) {

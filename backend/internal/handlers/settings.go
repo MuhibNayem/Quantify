@@ -104,7 +104,13 @@ func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 			return
 		}
 	}
-	if err := h.service.UpdateSetting(req.Key, valueStr); err != nil {
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authenticated user not found"})
+		return
+	}
+	userID := authUserID.(uint)
+	if err := h.service.UpdateSetting(req.Key, valueStr, userID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update setting"})
 		return
 	}

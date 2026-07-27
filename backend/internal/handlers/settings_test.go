@@ -34,7 +34,7 @@ func (s *stubSettingsService) GetSetting(key string) (string, error) {
 func (s *stubSettingsService) GetPublicSettings() (map[string]string, error) {
 	return nil, nil
 }
-func (s *stubSettingsService) UpdateSetting(key, value string) error {
+func (s *stubSettingsService) UpdateSetting(key, value string, _ uint) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.updateOK {
@@ -55,6 +55,10 @@ func putSettingJSON(t *testing.T, h *SettingsHandler, body string) *httptest.Res
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(func(c *gin.Context) {
+		c.Set("user_id", uint(1))
+		c.Next()
+	})
 	r.PUT("/settings", h.UpdateSetting)
 	req := httptest.NewRequest("PUT", "/settings", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")

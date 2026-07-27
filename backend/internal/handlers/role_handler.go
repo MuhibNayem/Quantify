@@ -135,7 +135,14 @@ func (h *RoleHandler) UpdateRolePermissions(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.UpdateRolePermissions(uint(id), req.PermissionIDs); err != nil {
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.Error(errors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	userID := authUserID.(uint)
+
+	if err := h.service.UpdateRolePermissions(uint(id), req.PermissionIDs, userID); err != nil {
 		c.Error(errors.NewAppError("Failed to update permissions", http.StatusBadRequest, err))
 		return
 	}
