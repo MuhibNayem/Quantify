@@ -4,9 +4,29 @@ All notable changes to the Quantify backend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [Phase 3] 2026-XX-XX — Correctness fixes
+
+### Breaking
+
+- **P3.T11** WebSocket `?token=<jwt>` query parameter is now ignored. Clients **must** send `{"type":"auth","token":"<JWT>"}` as the first message within 5 seconds of connection, or the connection is closed. Frontend must update before deploy. (`internal/handlers/websocket.go`)
 
 ### Changed
+
+- **P3.T1** Bulk import consumer no longer auto-finalizes. After validating a CSV, the job is set to `PENDING_CONFIRMATION`. The `POST /bulk/products/import/:jobId/confirm` endpoint is now the only path that creates products. (`internal/consumers/bulk_consumer.go`)
+- **P3.T2** Bulk confirm is idempotent: a second confirm call on a `COMPLETED` job is a no-op, and `finalizeImport` uses `ON CONFLICT DO NOTHING` so re-running can't trip unique-constraint errors on `products.sku`. (`internal/consumers/bulk_consumer.go`)
+- **P3.T3** Heatmap report's timezone is now read into a Go variable and bound as a query parameter (`?`) instead of being interpolated via `fmt.Sprintf`. Added `isValidTimezone` defense-in-depth: only `[A-Za-z0-9/_+-]` allowed; invalid values fall back to `UTC`. (`internal/repository/reporting_repository.go`)
+- **P3.T4** `repository.WriteAudit(ctx, db, entry)` added. Audit rows now emitted (best-effort, logged on failure) for: checkout discounts ≥ 10%, settings updates (with `{old, new}` JSON details), role permission grants. `GetVoidDiscountAuditReport` will now return data. (`internal/repository/audit_log.go`, `internal/services/sales_service.go`, `internal/repository/settings.go`, `internal/repository/role_repository.go`)
+- **P3.T5** `GetBasketAnalysisReport(start, end, page, limit)` now paginates. Response envelope: `{items, total, page, limit}`. Default limit 20, max 100. The cache key includes page/limit. (`internal/repository/reporting_repository.go`, `internal/handlers/reports.go`)
+- **P3.T6** Customer-insights report now reports `GrossRevenue`, `TotalRefunded`, and `NetRevenue` (the last subtracting APPROVED returns). A customer with $50k sales and $40k refunds is no longer shown as a VIP. (`internal/repository/reporting_repository.go`)
+- **P3.T7** `Order.Subtotal`, `Order.TaxAmount`, `Order.TotalAmount` persisted at checkout. Tax-rate drift across the order's lifetime is no longer a problem; reports can sum per-order tax directly. (`internal/domain/orders.go`, `internal/services/sales_service.go`)
+- **P3.T8** `GetSalesTrends` now supports explicit `iso_week` (default, Monday-start) and `calendar_week` (Sunday-start) modes in addition to legacy `weekly`/`daily`/`monthly`. Unknown values return `unsupported groupBy: %s`. The same timezone-injection defense as P3.T3 is applied. (`internal/repository/reporting_repository.go`, `internal/requests/report_request.go`)
+- **P3.T9** `ListAllOrders` paginated. Response: `{data, total, page, limit}`. Default limit 50, max 200. No longer reads the entire `orders` table into memory. (`internal/handlers/sales.go`)
+- **P3.T10** `User.AfterFind` now explicitly clears `RoleName` when the `Role` association isn't preloaded, instead of leaving a stale value. (`internal/domain/models.go`)
+- **P3.T12** Per-user alert opt-out. New `UserNotificationSubscription(user_id, type, enabled)` model. Endpoints `PUT/GET /users/:id/notifications/subscriptions[/:type]`. The alert consumer's `loadSubscribedUsers` excludes users with `enabled=false` for the alert type. (`internal/domain/models.go`, `internal/handlers/notifications.go`, `internal/consumers/alert_consumer.go`)
+
+### Notes
+
+- P3.T13 (CRM identifier-leak fix) was already addressed in P2.T13.
 
 - **Per-order tax amount** `Order` now persists `Subtotal` (pre-tax, post-promo-discount) and `TaxAmount` (the tax portion captured at checkout) alongside `TotalAmount` (post-tax, post-loyalty-discount). `applyTax` returns the post-tax total and the tax amount separately so the order row can store both. Downstream reporting no longer has to derive tax from `total / (1 + rate)`. The discount audit hook now uses the pre-tax subtotal instead of the post-tax total, which previously caused the recorded pre-discount subtotal to include tax. (`internal/domain/orders.go`, `internal/services/sales_service.go`)
 - **Basket analysis response** `GET /reports/basket-analysis` now accepts `page` and `limit` query parameters and returns the pagination envelope `{items, total, page, limit}`. Default limit is 20. This replaces the legacy flat-array response and is a breaking change for existing consumers. (`internal/repository/reporting_repository.go`, `internal/services/reporting_service.go`, `internal/handlers/reports.go`)
