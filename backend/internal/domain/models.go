@@ -343,6 +343,16 @@ type AlertRoleSubscription struct {
 	Role      string `gorm:"not null;uniqueIndex:idx_alert_role"`
 }
 
+// UserNotificationSubscription tracks per-user opt-in/out for a specific alert
+// type. When no row exists for (UserID, Type) the user is treated as opted-in;
+// an explicit row with Enabled=false records an opt-out.
+type UserNotificationSubscription struct {
+	gorm.Model
+	UserID  uint   `gorm:"not null;uniqueIndex:idx_user_type,priority:1" json:"userId"`
+	Type    string `gorm:"not null;uniqueIndex:idx_user_type,priority:2" json:"type"`
+	Enabled bool   `gorm:"not null" json:"enabled"`
+}
+
 // TimeClock represents an employee's time clock entry.
 type TimeClock struct {
 	gorm.Model

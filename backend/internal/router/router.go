@@ -87,7 +87,7 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 	webhookHandler := handlers.NewWebhookHandler(integrationService)
 	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
 	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
-	notificationHandler := handlers.NewNotificationHandler(notificationRepo)
+	notificationHandler := handlers.NewNotificationHandler(notificationRepo).WithDB(db)
 	userHandler := handlers.NewUserHandler(userRepo, cfg)
 	searchHandler := handlers.NewSearchHandler(searchService)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
@@ -362,6 +362,8 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 				notifications.GET("/unread/count", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.GetUnreadNotificationCount)
 				notifications.PATCH("/:notificationId/read", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkNotificationAsRead)
 				notifications.PATCH("/read-all", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkAllNotificationsAsRead)
+				notifications.PUT("/subscriptions/:type", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.UpdateSubscription)
+				notifications.GET("/subscriptions", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.ListSubscriptions)
 			}
 		}
 

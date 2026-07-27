@@ -2,7 +2,9 @@ package consumers
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"inventory/backend/internal/domain"
 
@@ -14,12 +16,14 @@ import (
 
 func setupAlertConsumerTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	dsn := fmt.Sprintf("file:alerts-consumer-%d?mode=memory&cache=shared", time.Now().UnixNano())
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(
 		&domain.Role{},
 		&domain.User{},
 		&domain.AlertRoleSubscription{},
+		&domain.UserNotificationSubscription{},
 	))
 	return db
 }
@@ -77,4 +81,50 @@ func TestLoadSubscribedUsers_NoSubscriptionsReturnsNil(t *testing.T) {
 	users, err := loadSubscribedUsers(context.Background(), db, "UNSUBSCRIBED_TYPE")
 	require.NoError(t, err)
 	assert.Empty(t, users)
+}
+
+func TestLoadSubscribedUsers_ExcludesOptedOutUsers(t *testing.T) {
+	db := setupAlertConsumerTestDB(t)
+
+	managerRole := domain.Role{Name: "Manager"}
+	require.NoError(t, db.Create(&managerRole).Error)
+
+	alice := domain.User{
+		Username:    "alice",
+		Password:    "x",
+		Email:       "alice@example.com",
+		PhoneNumber: "1111111111",
+		RoleID:      managerRole.ID,
+	}
+	require.NoError(t, db.Create(&alice).Error)
+
+	bob := domain.User{
+		Username:    "bob",
+		Password:    "x",
+		Email:       "bob@example.com",
+		PhoneNumber: "2222222222",
+		RoleID:      managerRole.ID,
+	}
+	require.NoError(t, db.Create(&bob).Error)
+
+	require.NoError(t, db.Create(&domain.UserNotificationSubscription{
+		UserID:  alice.ID,
+		Type:    "LOW_STOCK",
+		Enabled: false,
+	}).Error)
+
+	require.NoError(t, db.Create(&domain.AlertRoleSubscription{
+		AlertType: "LOW_STOCK",
+		Role:      "Manager",
+	}).Error)
+
+	users, err := loadSubscribedUsers(context.Background(), db, "LOW_STOCK")
+	require.NoError(t, err)
+
+	usernames := make([]string, 0, len(users))
+	for _, u := range users {
+		usernames = append(usernames, u.Username)
+	}
+	assert.ElementsMatch(t, []string{"bob"}, usernames,
+		"opted-out 'alice' must be excluded; only 'bob' should remain")
 }

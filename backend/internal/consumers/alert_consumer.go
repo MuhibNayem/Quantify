@@ -45,7 +45,9 @@ func (c *AlertConsumer) Start(ctx context.Context) context.CancelFunc {
 }
 
 // loadSubscribedUsers returns the list of users subscribed to the given alert type,
-// resolved by joining AlertRoleSubscription -> Role -> User via users.role_id.
+// resolved by joining AlertRoleSubscription -> Role -> User via users.role_id,
+// and excluding any user who has explicitly opted out via
+// UserNotificationSubscription(Enabled = false).
 func loadSubscribedUsers(ctx context.Context, db *gorm.DB, alertType string) ([]domain.User, error) {
 	var subscriptions []domain.AlertRoleSubscription
 	if err := db.WithContext(ctx).Where("alert_type = ?", alertType).Find(&subscriptions).Error; err != nil {
@@ -64,6 +66,7 @@ func loadSubscribedUsers(ctx context.Context, db *gorm.DB, alertType string) ([]
 	err := db.WithContext(ctx).
 		Joins("JOIN roles ON roles.id = users.role_id").
 		Where("roles.name IN ?", roleNames).
+		Where("NOT EXISTS (SELECT 1 FROM user_notification_subscriptions s WHERE s.user_id = users.id AND s.type = ? AND s.enabled = false)", alertType).
 		Find(&users).Error
 	return users, err
 }

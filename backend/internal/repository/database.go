@@ -98,6 +98,7 @@ func AutoMigrate() {
 		&domain.Notification{},
 
 		&domain.AlertRoleSubscription{},
+		&domain.UserNotificationSubscription{},
 
 		&domain.GlobalSearchEntry{},
 		&domain.SystemSetting{},

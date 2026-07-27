@@ -9,14 +9,25 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type NotificationHandler struct {
 	repo repository.NotificationRepository
+	db   *gorm.DB
 }
 
 func NewNotificationHandler(repo repository.NotificationRepository) *NotificationHandler {
 	return &NotificationHandler{repo: repo}
+}
+
+// WithDB injects a *gorm.DB into the handler for endpoints that need direct
+// access (e.g. user-facing subscription management that has no repository
+// layer yet). Returns the receiver for chaining.
+func (h *NotificationHandler) WithDB(db *gorm.DB) *NotificationHandler {
+	h.db = db
+	return h
 }
 
 // ListNotifications godoc
@@ -239,4 +250,116 @@ func (h *NotificationHandler) BroadcastNotification(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Notification broadcasted successfully"})
+}
+
+// UpdateSubscription godoc
+// @Summary Set a user's opt-in/out for a specific alert type
+// @Description Upserts the user's subscription for the given alert type. When
+// @Description `enabled` is false the user will no longer receive alerts of
+// @Description that type from the alert consumer.
+// @Tags notifications
+// @Accept json
+// @Produce json
+// @Param id path int true "User ID"
+// @Param type path string true "Alert type (e.g. LOW_STOCK, OUT_OF_STOCK)"
+// @Param request body object{enabled=bool} true "Subscription payload"
+// @Success 200 {object} domain.UserNotificationSubscription
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /users/{id}/notifications/subscriptions/{type} [put]
+func (h *NotificationHandler) UpdateSubscription(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pathUserID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
+		return
+	}
+
+	// Authorization: users may only manage their own subscriptions. Admins
+	// can override (consistent with other notification endpoints).
+	if authUserID != uint(pathUserID) && c.GetString("role") != "Admin" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	var req struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+		return
+	}
+
+	if h.db == nil {
+		c.Error(appErrors.NewAppError("Database not configured", http.StatusInternalServerError, nil))
+		return
+	}
+
+	alertType := c.Param("type")
+	sub := domain.UserNotificationSubscription{
+		UserID:  uint(pathUserID),
+		Type:    alertType,
+		Enabled: req.Enabled,
+	}
+	if err := h.db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "user_id"}, {Name: "type"}},
+		DoUpdates: clause.AssignmentColumns([]string{"enabled", "updated_at"}),
+	}).Create(&sub).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to save subscription", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, sub)
+}
+
+// ListSubscriptions godoc
+// @Summary List a user's notification subscriptions
+// @Description Returns all subscription rows for the user (one per alert type).
+// @Tags notifications
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {array} domain.UserNotificationSubscription
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /users/{id}/notifications/subscriptions [get]
+func (h *NotificationHandler) ListSubscriptions(c *gin.Context) {
+	authUserID := c.GetUint("user_id")
+	if authUserID == 0 {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		return
+	}
+
+	pathUserID, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
+		return
+	}
+
+	if authUserID != uint(pathUserID) && c.GetString("role") != "Admin" {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		return
+	}
+
+	if h.db == nil {
+		c.Error(appErrors.NewAppError("Database not configured", http.StatusInternalServerError, nil))
+		return
+	}
+
+	var subs []domain.UserNotificationSubscription
+	if err := h.db.Where("user_id = ?", uint(pathUserID)).
+		Order("type ASC").
+		Find(&subs).Error; err != nil {
+		c.Error(appErrors.NewAppError("Failed to fetch subscriptions", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, subs)
 }
