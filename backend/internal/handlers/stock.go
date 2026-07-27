@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
@@ -187,9 +188,15 @@ func CreateStockAdjustment(c *gin.Context) {
 
 	// Start a database transaction
 	err = repository.DB.Transaction(func(tx *gorm.DB) error {
-		// Get current quantity before adjustment within the transaction
+		// Lock the batch rows for this product so concurrent stock
+		// adjustments serialize on the row-level lock instead of racing
+		// on a stale SUM read. The lock is honored by PostgreSQL/MySQL;
+		// SQLite ignores it, which is why this handler's correctness
+		// must additionally be verified on the production DB.
 		var currentQuantity int
-		tx.Model(&domain.Batch{}).Where("product_id = ?", productID).Select("sum(quantity)").Row().Scan(&currentQuantity)
+		tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Model(&domain.Batch{}).Where("product_id = ?", productID).
+			Select("COALESCE(SUM(quantity), 0)").Row().Scan(&currentQuantity)
 
 		adjustment = domain.StockAdjustment{
 			ProductID:        uint(productID),
@@ -227,7 +234,9 @@ func CreateStockAdjustment(c *gin.Context) {
 			quantityToReduce := req.Quantity
 			var batchesToUpdate []domain.Batch
 			// Fetch batches ordered by creation date (FIFO) or expiry date (FEFO)
-			if err := tx.Where("product_id = ? AND location_id = ?", productID, product.LocationID).Order("created_at asc").Find(&batchesToUpdate).Error; err != nil {
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("product_id = ? AND location_id = ?", productID, product.LocationID).
+				Order("created_at asc").Find(&batchesToUpdate).Error; err != nil {
 				return fmt.Errorf("failed to fetch batches for adjustment: %w", err)
 			}
 
