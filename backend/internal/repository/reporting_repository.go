@@ -449,22 +449,29 @@ type HeatmapPoint struct {
 func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, timezone string) ([]HeatmapPoint, error) {
 	var points []HeatmapPoint
 
-	// Postgres-specific date functions with timezone
-	query := fmt.Sprintf(`
-		SELECT 
-			EXTRACT(DOW FROM adjusted_at AT TIME ZONE '%s') as day_of_week,
-			EXTRACT(HOUR FROM adjusted_at AT TIME ZONE '%s') as hour_of_day,
+	// The timezone originates from a SystemSetting that an operator can edit,
+	// so it must be treated as untrusted input: validate against a safe charset
+	// and bind as a parameter rather than interpolating into the SQL string.
+	if !isValidTimezone(timezone) {
+		timezone = "UTC"
+	}
+
+	// Postgres-specific date functions with timezone (parameterized).
+	query := `
+		SELECT
+			EXTRACT(DOW FROM adjusted_at AT TIME ZONE ?) as day_of_week,
+			EXTRACT(HOUR FROM adjusted_at AT TIME ZONE ?) as hour_of_day,
 			SUM(quantity * p.selling_price) as total_sales
 		FROM stock_adjustments sa
 		JOIN products p ON p.id = sa.product_id
-		WHERE sa.type = 'STOCK_OUT' 
+		WHERE sa.type = 'STOCK_OUT'
 		AND sa.reason_code = 'SALE'
 		AND sa.adjusted_at BETWEEN ? AND ?
 		GROUP BY day_of_week, hour_of_day
 		ORDER BY day_of_week, hour_of_day
-	`, timezone, timezone)
+	`
 
-	rows, err := r.DB.Raw(query, startDate, endDate).Rows()
+	rows, err := r.DB.Raw(query, timezone, timezone, startDate, endDate).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -479,6 +486,28 @@ func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, 
 	}
 
 	return points, nil
+}
+
+// isValidTimezone restricts a timezone string to a safe character set: ASCII
+// letters, digits, and the separators ('/', '_', '+', '-') that appear in IANA
+// zone names (e.g. "America/New_York", "Etc/GMT+5"). Anything else — quotes,
+// whitespace, semicolons, comments — is rejected so callers fall back to UTC
+// rather than reaching the database with attacker-controlled input.
+func isValidTimezone(tz string) bool {
+	if tz == "" {
+		return false
+	}
+	for _, r := range tz {
+		switch {
+		case r >= 'A' && r <= 'Z':
+		case r >= 'a' && r <= 'z':
+		case r >= '0' && r <= '9':
+		case r == '/' || r == '_' || r == '+' || r == '-':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 type EmployeeSalesStats struct {
