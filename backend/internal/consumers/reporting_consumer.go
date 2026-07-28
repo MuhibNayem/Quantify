@@ -25,7 +25,7 @@ func NewReportingConsumer(reportingService *services.ReportingService, jobRepo *
 }
 
 func (c *ReportingConsumer) Start(ctx context.Context) context.CancelFunc {
-	return message_broker.Subscribe(ctx, "inventory", "reporting", "report.generate", c.handleReportingDelivery)
+	return message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueReporting, message_broker.RoutingReportGenerate, c.handleReportingDelivery)
 }
 
 func (c *ReportingConsumer) handleReportingDelivery(ctx context.Context, deliveries <-chan amqp091.Delivery) {

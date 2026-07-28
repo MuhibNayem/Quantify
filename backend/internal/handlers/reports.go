@@ -106,7 +106,7 @@ func (h *ReportHandler) ExportSalesTrendsReport(c *gin.Context) {
 		return
 	}
 
-	err = message_broker.Publish(c.Request.Context(), "inventory", "reporting", job)
+	err = message_broker.Publish(c.Request.Context(), message_broker.ExchangeName, message_broker.RoutingReportGenerate, job)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to publish job", http.StatusInternalServerError, err))
 		return

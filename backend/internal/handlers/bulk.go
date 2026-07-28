@@ -97,7 +97,7 @@ func (h *BulkHandler) UploadProductImport(c *gin.Context) {
 
 	// Publish message to RabbitMQ
 	msgPayload := gin.H{"jobId": job.ID}
-	if err := message_broker.Publish(c.Request.Context(), "inventory", "bulk.import", msgPayload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), message_broker.ExchangeName, message_broker.RoutingBulkImport, msgPayload); err != nil {
 		c.Error(appErrors.NewAppError("Failed to publish bulk import event", http.StatusInternalServerError, err))
 		return
 	}
@@ -165,7 +165,7 @@ func (h *BulkHandler) ConfirmBulkImport(c *gin.Context) {
 
 	// Publish confirmation event
 	msgPayload := gin.H{"jobId": job.ID}
-	if err := message_broker.Publish(c.Request.Context(), "inventory", "bulk.import.confirm", msgPayload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), message_broker.ExchangeName, message_broker.RoutingBulkImportConfirm, msgPayload); err != nil {
 		c.Error(appErrors.NewAppError("Failed to publish bulk import confirmation event", http.StatusInternalServerError, err))
 		return
 	}
@@ -217,7 +217,7 @@ func (h *BulkHandler) ExportProducts(c *gin.Context) {
 
 	// Publish message to RabbitMQ
 	msgPayload := gin.H{"jobId": job.ID}
-	if err := message_broker.Publish(c.Request.Context(), "inventory", "bulk.export", msgPayload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), message_broker.ExchangeName, message_broker.RoutingBulkExport, msgPayload); err != nil {
 		c.Error(appErrors.NewAppError("Failed to publish bulk export event", http.StatusInternalServerError, err))
 		return
 	}

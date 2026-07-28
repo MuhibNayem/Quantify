@@ -357,7 +357,7 @@ func triggerAlert(db *gorm.DB, productID uint, alertType, message string, batchI
 		Message:   message,
 		Route:     fmt.Sprintf("/products/%d", productID),
 	}
-	if err := message_broker.Publish(context.Background(), "inventory", "alert.triggered", payload); err != nil {
+	if err := message_broker.Publish(context.Background(), message_broker.ExchangeName, message_broker.RoutingAlertTriggered, payload); err != nil {
 		logrus.Errorf("Failed to publish alert triggered event: %v", err)
 	}
 	logrus.Infof("Alert triggered and published: %s for product %d", alertType, productID)

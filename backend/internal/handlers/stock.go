@@ -277,7 +277,7 @@ func CreateStockAdjustment(c *gin.Context) {
 		Type:      req.Type,
 		Reason:    req.ReasonCode,
 	}
-	if err := message_broker.Publish(c.Request.Context(), "inventory", "stock.adjusted", payload); err != nil {
+	if err := message_broker.Publish(c.Request.Context(), message_broker.ExchangeName, message_broker.RoutingStockAdjusted, payload); err != nil {
 		logrus.Errorf("Failed to publish stock adjusted event: %v", err)
 	}
 

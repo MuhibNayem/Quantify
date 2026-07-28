@@ -77,9 +77,9 @@ func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo
 func (c *BulkConsumer) Start(ctx context.Context, workers int) context.CancelFunc {
 	cancelFuncs := make([]context.CancelFunc, 0, workers*3)
 	for i := 0; i < workers; i++ {
-		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, "inventory", "bulk-import-queue", "bulk.import", c.handleImport))
-		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, "inventory", "bulk-import-confirm-queue", "bulk.import.confirm", c.handleImportConfirm))
-		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, "inventory", "bulk-export-queue", "bulk.export", c.handleExport))
+		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueBulkImport, message_broker.RoutingBulkImport, c.handleImport))
+		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueBulkImportConfirm, message_broker.RoutingBulkImportConfirm, c.handleImportConfirm))
+		cancelFuncs = append(cancelFuncs, message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueBulkExport, message_broker.RoutingBulkExport, c.handleExport))
 	}
 	logrus.Infof("Bulk consumer started with %d worker(s)", workers)
 

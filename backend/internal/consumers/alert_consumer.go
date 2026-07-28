@@ -35,8 +35,8 @@ func NewAlertConsumer(db *gorm.DB, notificationRepo repository.NotificationRepos
 }
 
 func (c *AlertConsumer) Start(ctx context.Context) context.CancelFunc {
-	cancelStock := message_broker.Subscribe(ctx, "inventory", "stock-alerts-queue", "stock.adjusted", c.handleStockAdjusted)
-	cancelAlert := message_broker.Subscribe(ctx, "inventory", "alerts", "alert.triggered", c.handleAlertDelivery)
+	cancelStock := message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueStockAlerts, message_broker.RoutingStockAdjusted, c.handleStockAdjusted)
+	cancelAlert := message_broker.Subscribe(ctx, message_broker.ExchangeName, message_broker.QueueAlerts, message_broker.RoutingAlertTriggered, c.handleAlertDelivery)
 
 	return func() {
 		cancelStock()
