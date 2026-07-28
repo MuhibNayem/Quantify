@@ -2,8 +2,10 @@
 	import { createEventDispatcher } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Menu, RefreshCcw, Search } from 'lucide-svelte';
+	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import { goto } from '$app/navigation';
+	import { searchApi } from '$lib/api/resources';
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 
 	const { user = null } = $props<{ user?: { Username?: string } | null }>();
@@ -11,13 +13,67 @@
 
 	let search = $state('');
 	let searchFocused = $state(false);
+	let searchResults = $state<any[]>([]);
+	let searching = $state(false);
+	let hasSearched = $state(false);
 
-	const runGlobalSearch = () => {
-		if (!search.trim()) return;
-		toast.message('Quick search', {
-			description: `Filtering resources for "${search}"`
-		});
+	let debounceTimer: ReturnType<typeof setTimeout>;
+
+	const typeConfig: Record<string, { label: string; icon: typeof Package; route: (id: any) => string }> = {
+		product: { label: 'Products', icon: Package, route: (id) => `/products/${id}` },
+		user: { label: 'Users', icon: Users, route: (id) => `/users` },
+		supplier: { label: 'Suppliers', icon: Truck, route: (id) => `/suppliers` },
+		category: { label: 'Categories', icon: FolderTree, route: (id) => `/catalog` },
 	};
+
+	const groupedResults = $derived.by(() => {
+		const groups: Record<string, any[]> = {};
+		for (const hit of searchResults) {
+			const type = (hit.type || hit.entityType || 'other').toLowerCase();
+			if (!groups[type]) groups[type] = [];
+			groups[type].push(hit);
+		}
+		return groups;
+	});
+
+	const runGlobalSearch = async () => {
+		const q = search.trim();
+		if (!q) {
+			searchResults = [];
+			hasSearched = false;
+			return;
+		}
+		searching = true;
+		hasSearched = true;
+		try {
+			const data = await searchApi.query(q);
+			searchResults = Array.isArray(data) ? data : data.results || data.hits || [];
+		} catch {
+			searchResults = [];
+		} finally {
+			searching = false;
+		}
+	};
+
+	const onInput = (event: Event) => {
+		search = (event.currentTarget as HTMLInputElement).value;
+		clearTimeout(debounceTimer);
+		debounceTimer = setTimeout(runGlobalSearch, 300);
+	};
+
+	const navigateToResult = (hit: any) => {
+		const type = (hit.type || hit.entityType || '').toLowerCase();
+		const config = typeConfig[type];
+		const id = hit.id || hit.ID || hit.entityId;
+		if (config && id) {
+			goto(config.route(id));
+		}
+		searchResults = [];
+		searchFocused = false;
+		search = '';
+	};
+
+	const getDisplayName = (hit: any) => hit.name || hit.Name || hit.title || hit.matchedContent || `#${hit.id || hit.ID || hit.entityId}`;
 </script>
 
 <header
@@ -32,18 +88,58 @@
 				placeholder="Search inventory"
 				value={search}
 				onfocus={() => (searchFocused = true)}
-				onblur={() => (searchFocused = false)}
-				oninput={(event) => (search = event.currentTarget.value)}
+				onblur={() => setTimeout(() => (searchFocused = false), 150)}
+				oninput={onInput}
 				onkeydown={(event) => event.key === 'Enter' && runGlobalSearch()}
 			/>
 			<div class="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
-				<Search
-					class="h-4 w-4 text-slate-500 drop-shadow-[0_2px_8px_rgba(255,255,255,0.65)] transition-colors group-focus-within:text-emerald-500"
-				/>
+				{#if searching}
+					<Loader2 class="h-4 w-4 animate-spin text-emerald-500" />
+				{:else}
+					<Search
+						class="h-4 w-4 text-slate-500 drop-shadow-[0_2px_8px_rgba(255,255,255,0.65)] transition-colors group-focus-within:text-emerald-500"
+					/>
+				{/if}
 				{#if !search && !searchFocused}
 					<span class="text-sm text-slate-500">Search inventory</span>
 				{/if}
 			</div>
+
+			{#if searchFocused && hasSearched && !searching}
+				<div class="absolute left-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
+					{#if searchResults.length === 0}
+						<div class="px-4 py-6 text-center text-sm text-slate-500">
+							No results found for "{search}"
+						</div>
+					{:else}
+						<div class="max-h-80 overflow-y-auto p-2">
+							{#each Object.entries(groupedResults) as [type, hits]}
+								{@const config = typeConfig[type]}
+								<div class="mb-1">
+									<div class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+									{#if config}
+										{@const Icon = config.icon}
+										<Icon class="h-3 w-3" />
+									{/if}
+										{config?.label || type}
+									</div>
+									{#each hits as hit}
+										<button
+											class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
+											onmousedown={() => navigateToResult(hit)}
+										>
+											<span class="truncate font-medium">{getDisplayName(hit)}</span>
+											{#if hit.matchedContent}
+												<span class="ml-auto truncate text-xs text-slate-400">{hit.matchedContent}</span>
+											{/if}
+										</button>
+									{/each}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 

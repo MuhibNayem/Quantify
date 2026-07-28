@@ -23,7 +23,7 @@
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
-	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw } from 'lucide-svelte';
+	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw, FileSpreadsheet, FileText, Loader2 } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
     import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
@@ -77,6 +77,51 @@
 		margin: null
 	});
 	let reportsLoading = $state(false);
+
+	let exportFormat = $state<'csv' | 'pdf' | 'excel'>('csv');
+	let exportJobId = $state<string | null>(null);
+	let exportStatus = $state<'idle' | 'pending' | 'processing' | 'complete' | 'failed'>('idle');
+	let exportPollTimer: ReturnType<typeof setInterval>;
+
+	const startExport = async () => {
+		exportStatus = 'pending';
+		try {
+			const job = await reportsApi.exportReport({ format: exportFormat });
+			exportJobId = job.jobId || job.id || job.ID;
+			exportStatus = 'processing';
+			toast.success('Export started', { description: `Generating ${exportFormat.toUpperCase()} report...` });
+			pollExportStatus();
+		} catch (error: any) {
+			exportStatus = 'failed';
+			toast.error('Export failed', { description: error.response?.data?.error || 'Could not start export job' });
+		}
+	};
+
+	const pollExportStatus = () => {
+		clearInterval(exportPollTimer);
+		exportPollTimer = setInterval(async () => {
+			if (!exportJobId) return;
+			try {
+				const status = await reportsApi.getJobStatus(exportJobId);
+				const state = (status.status || status.state || '').toLowerCase();
+				if (state === 'complete' || state === 'completed' || state === 'done') {
+					clearInterval(exportPollTimer);
+					exportStatus = 'complete';
+					toast.success('Export ready', { description: 'Your report is ready to download.' });
+					const url = reportsApi.getDownloadUrl(exportJobId);
+					window.open(url, '_blank');
+				} else if (state === 'failed' || state === 'error') {
+					clearInterval(exportPollTimer);
+					exportStatus = 'failed';
+					toast.error('Export failed', { description: status.error || 'The export job failed.' });
+				}
+			} catch {
+				clearInterval(exportPollTimer);
+				exportStatus = 'failed';
+				toast.error('Export failed', { description: 'Could not check export status.' });
+			}
+		}, 2000);
+	};
 
 	const exportJSON = (data: unknown, filename: string) => {
 		const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -263,6 +308,47 @@
 					>
 						{$t('intelligence.report_range.margin')}
 					</Button>
+				</div>
+
+				<div class="flex items-center gap-3 border-t border-cyan-100 pt-4">
+					<div class="flex items-center gap-1 rounded-xl border border-cyan-200 bg-white/80 p-1">
+						<button
+							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'csv' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							onclick={() => (exportFormat = 'csv')}
+						>
+							<FileText class="h-3.5 w-3.5" /> CSV
+						</button>
+						<button
+							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'pdf' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							onclick={() => (exportFormat = 'pdf')}
+						>
+							<FileText class="h-3.5 w-3.5" /> PDF
+						</button>
+						<button
+							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'excel' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							onclick={() => (exportFormat = 'excel')}
+						>
+							<FileSpreadsheet class="h-3.5 w-3.5" /> Excel
+						</button>
+					</div>
+					<Button
+						class="rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 font-medium text-white shadow-md transition-all hover:scale-105 hover:from-cyan-500 hover:to-teal-500"
+						onclick={startExport}
+						disabled={exportStatus === 'pending' || exportStatus === 'processing'}
+					>
+						{#if exportStatus === 'pending' || exportStatus === 'processing'}
+							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							Exporting...
+						{:else}
+							<Download class="mr-2 h-4 w-4" />
+							Export
+						{/if}
+					</Button>
+					{#if exportStatus === 'complete'}
+						<span class="text-xs font-medium text-emerald-600">Ready</span>
+					{:else if exportStatus === 'failed'}
+						<span class="text-xs font-medium text-red-500">Failed</span>
+					{/if}
 				</div>
 			</CardContent>
 		</Card>

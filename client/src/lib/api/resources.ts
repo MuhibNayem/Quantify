@@ -1,4 +1,4 @@
-import api from '$lib/api';
+import api, { API_BASE_URL } from '$lib/api';
 import type {
 	Alert,
 	Batch,
@@ -24,6 +24,10 @@ import type {
 	TimeClock,
 	BasketAnalysisItem,
 } from '$lib/types';
+
+export const searchApi = {
+	query: async (q: string) => (await api.get('/search', { params: { q } })).data,
+};
 
 export const dashboardApi = {
 	getSummary: async () => (await api.get<DashboardSummary>('/dashboard/summary')).data,
@@ -166,6 +170,11 @@ export const reportsApi = {
 		(await api.get('/reports/returns-analysis', { params })).data,
 	basketAnalysis: async (params?: Record<string, unknown>) =>
 		(await api.get<PaginatedResponse<BasketAnalysisItem>>('/reports/basket-analysis', { params })).data,
+	exportReport: async (params: { format: string }) =>
+		(await api.post('/reports/sales-trends/export', null, { params })).data,
+	getJobStatus: async (jobId: string) =>
+		(await api.get(`/reports/jobs/${jobId}`)).data,
+	getDownloadUrl: (jobId: string) => `${API_BASE_URL}/reports/download/${jobId}`,
 };
 
 export const alertsApi = {
