@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import '../app.css';
+	import { ModeWatcher } from 'mode-watcher';
 	import { Toaster } from '$lib/components/ui/sonner';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import Topbar from '$lib/components/layout/Topbar.svelte';
@@ -25,6 +26,8 @@
 	});
 </script>
 
+<ModeWatcher />
+
 {#if isPublicRoute}
 	{@render children?.()}
 {:else}
@@ -41,9 +44,11 @@
 		></div>
 	</div>
 
+	<a href="#main-content" class="skip-link">Skip to main content</a>
+
 	<!-- Fixed Height Layout -->
 	<div
-		class="relative z-0 flex h-screen overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100/40 text-slate-800"
+		class="relative z-0 flex h-screen overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100/40 text-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950 dark:text-slate-200"
 	>
 		<!-- Sidebar (fixed height, non-scrolling page) -->
 		<Sidebar bind:open={sidebarOpen} user={authState.user ?? data?.user} />
@@ -63,18 +68,39 @@
 				on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)}
 			/>
 
-			<main
-				class="flex-1 overflow-y-auto scroll-smooth px-3 pb-12 pt-4 sm:px-6 sm:pt-6 lg:px-8 xl:px-12"
-			>
+		<main
+			id="main-content"
+			class="flex-1 overflow-y-auto scroll-smooth px-3 pb-12 pt-4 sm:px-6 sm:pt-6 lg:px-8 xl:px-12"
+		>
 				{@render children?.()}
 			</main>
 		</div>
 	</div>
 {/if}
 
-<Toaster />
+<div aria-live="polite" aria-atomic="true">
+	<Toaster />
+</div>
 
 <style lang="postcss">
+	.skip-link {
+		position: absolute;
+		top: -100%;
+		left: 1rem;
+		z-index: 9999;
+		padding: 0.75rem 1.5rem;
+		border-radius: 0 0 1rem 1rem;
+		background: hsl(var(--primary));
+		color: white;
+		font-weight: 600;
+		text-decoration: none;
+		transition: top 0.2s ease;
+	}
+
+	.skip-link:focus {
+		top: 0;
+	}
+
 	/* Smooth transitions for all layout elements */
 	* {
 		transition-property:

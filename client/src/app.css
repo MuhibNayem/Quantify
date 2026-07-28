@@ -53,6 +53,54 @@
         rgba(168, 85, 247, 0.5));
   }
 
+  :root.dark {
+    --background: 230 25% 7%;
+    --foreground: 210 40% 98%;
+
+    --card: 230 25% 10%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 230 25% 10%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 230 25% 14%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 230 25% 14%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 230 25% 14%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 230 20% 20%;
+    --input: 230 20% 20%;
+    --ring: 142.1 76.2% 36.3%;
+
+    --glass-light: rgba(30, 30, 46, 0.82);
+    --glass-light-soft: rgba(30, 30, 46, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 40px 80px -48px rgba(0, 0, 0, 0.7);
+    --glow-sky: rgba(14, 165, 233, 0.15);
+    --glow-violet: rgba(147, 51, 234, 0.12);
+    --glow-emerald: rgba(16, 185, 129, 0.12);
+    --edge-highlight: linear-gradient(125deg,
+        rgba(14, 165, 233, 0.2),
+        rgba(59, 130, 246, 0.2),
+        rgba(99, 102, 241, 0.15),
+        rgba(168, 85, 247, 0.18));
+    --edge-highlight-strong: linear-gradient(125deg,
+        rgba(14, 165, 233, 0.35),
+        rgba(59, 130, 246, 0.35),
+        rgba(99, 102, 241, 0.3),
+        rgba(168, 85, 247, 0.32));
+  }
+
   html,
   body {
     min-height: 100%;
@@ -95,6 +143,12 @@
     mix-blend-mode: screen;
   }
 
+  :root.dark body::after {
+    background: linear-gradient(135deg, rgba(30, 30, 46, 0.4), rgba(0, 0, 0, 0));
+    mix-blend-mode: normal;
+    opacity: 0.3;
+  }
+
   *:focus-visible {
     outline: 2px solid hsl(var(--primary));
     outline-offset: 2px;
@@ -132,6 +186,10 @@
 
   .select-wrapper:focus-within::after {
     transform: rotate(-225deg) translateY(-50%);
+  }
+
+  :root.dark select {
+    @apply border-white/10 bg-slate-800/70 text-slate-200;
   }
 }
 

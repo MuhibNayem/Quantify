@@ -2,7 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree } from 'lucide-svelte';
+	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree, Sun, Moon } from 'lucide-svelte';
+	import { toggleMode } from 'mode-watcher';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { searchApi } from '$lib/api/resources';
@@ -77,7 +78,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/40 bg-gradient-to-r from-white/80 via-indigo-50/70 to-sky-50/80 px-3 backdrop-blur-2xl transition-all duration-500 sm:px-6"
+	class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/40 bg-gradient-to-r from-white/80 via-indigo-50/70 to-sky-50/80 px-3 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-slate-800/80 sm:px-6"
 >
 	<!-- Left section -->
 	<div class="lg:ml-16">
@@ -148,11 +149,22 @@
 		<Button
 			variant="ghost"
 			size="icon"
-			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 sm:flex"
+			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200 sm:flex"
 			onclick={() => window.location.reload()}
 			aria-label="Refresh data"
 		>
 			<RefreshCcw class="h-4 w-4" />
+		</Button>
+
+		<Button
+			variant="ghost"
+			size="icon"
+			class="h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"
+			onclick={toggleMode}
+			aria-label="Toggle dark mode"
+		>
+			<Sun class="h-4 w-4 dark:hidden" />
+			<Moon class="hidden h-4 w-4 dark:block" />
 		</Button>
 
 		<NotificationBell />
