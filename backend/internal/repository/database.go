@@ -43,9 +43,11 @@ func InitDB(cfg *config.Config) {
 
 	logrus.Info("Database connection established")
 
-	// Temporarily Auto-migrate the schema to apply the unique index
-
-	AutoMigrate()
+	if cfg.AppEnv == "dev" {
+		AutoMigrate()
+	} else {
+		logrus.Info("AutoMigrate skipped (APP_ENV != dev); run cmd/migrator to apply migrations")
+	}
 	ensureBarcodeUniqueIndex()
 
 	ensureDefaultAlertSubscriptions()

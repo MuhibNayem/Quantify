@@ -53,6 +53,7 @@ type Config struct {
 	ConsumerConcurrency       int
 	AIServiceURL              string
 	RefreshTokenTTL           time.Duration
+	AppEnv                    string // APP_ENV: dev | prod (or anything else; default dev)
 }
 
 // LoadConfig loads configuration from environment variables.
@@ -140,6 +141,7 @@ func LoadConfig() (*Config, error) {
 		ConsumerConcurrency:       consumerConcurrency,
 		AIServiceURL:              getEnv("AI_SERVICE_URL", "http://localhost:8001"),
 		RefreshTokenTTL:           refreshTokenTTL,
+		AppEnv:                    getEnv("APP_ENV", "dev"),
 	}
 
 	if err := validateCriticalConfig(cfg); err != nil {
