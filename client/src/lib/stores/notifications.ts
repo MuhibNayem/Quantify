@@ -95,57 +95,57 @@ function createNotificationStore() {
 		}
 	};
 
-	const buildWsUrl = () => {
-		if (!browser || !token) return null;
-		try {
-			const url = new URL(WS_BASE_URL, WS_BASE_URL.startsWith('ws') ? undefined : window.location.origin);
-			url.searchParams.set('token', token);
-			return url.toString();
-		} catch {
-			const separator = WS_BASE_URL.includes('?') ? '&' : '?';
-			return `${WS_BASE_URL}${separator}token=${encodeURIComponent(token)}`;
-		}
-	};
-
 	const connectSocket = () => {
 		if (!browser || !currentUserId || !token) return;
-		const wsUrl = buildWsUrl();
-		console.log({ wsUrl })
-		if (!wsUrl) return;
 
 		cleanupSocket();
 
-		socket = new WebSocket(wsUrl);
-		socket.onopen = (e) => {
-			console.log('opened ws connection', e)
-			update((state) => ({ ...state, connected: true }));
+		let authTimeout: ReturnType<typeof setTimeout> | null = null;
+
+		socket = new WebSocket(WS_BASE_URL);
+
+		socket.onopen = () => {
+			socket?.send(JSON.stringify({ type: 'auth', token }));
+			authTimeout = setTimeout(() => {
+				socket?.close();
+			}, 5000);
 		};
-		socket.onclose = (e) => {
-			console.log('closed ws connection', e)
+
+		socket.onclose = () => {
+			if (authTimeout) clearTimeout(authTimeout);
 			update((state) => ({ ...state, connected: false }));
 			if (browser && currentUserId && token) {
 				reconnectHandle = setTimeout(connectSocket, 5000);
 			}
 		};
-		socket.onerror = (e) => {
-			console.log('error on ws connection', e)
+
+		socket.onerror = () => {
 			update((state) => ({ ...state, connected: false }));
 		};
+
 		socket.onmessage = (event) => {
 			try {
 				const payload = JSON.parse(event.data);
+
+				if (payload?.type === 'auth_ok') {
+					if (authTimeout) clearTimeout(authTimeout);
+					update((state) => ({ ...state, connected: true }));
+					return;
+				}
+
+				if (payload?.type === 'auth_error') {
+					if (authTimeout) clearTimeout(authTimeout);
+					socket?.close();
+					return;
+				}
+
 				if (browser && payload?.event === 'BULK_JOB_STATUS') {
 					window.dispatchEvent(new CustomEvent('bulk-job-status', { detail: payload }));
 					return;
 				}
-				// Handle Return Updates (Real-time sync)
+
 				if (browser && (payload?.event === 'RETURN_UPDATED' || payload?.event === 'RETURN_REQUESTED')) {
 					window.dispatchEvent(new CustomEvent('return-updated', { detail: payload }));
-					// We might also want to notify the user via a toast/notification, 
-					// but let's assume the event dispatch is enough for the page to refresh.
-					// If it's a notification object too, we fall through?
-					// The payload from backend is simple gin.H, so it lacks Notification fields.
-					// So we should return here.
 					return;
 				}
 
@@ -156,7 +156,6 @@ function createNotificationStore() {
 						MAX_NOTIFICATIONS
 					);
 					const unreadCount = notification.IsRead ? state.unreadCount : state.unreadCount + 1;
-					console.log({ nextItems, unreadCount })
 					return { ...state, items: nextItems, unreadCount };
 				});
 			} catch (error) {

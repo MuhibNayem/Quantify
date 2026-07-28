@@ -11,8 +11,8 @@
 		open?: boolean;
 	}>();
 
-	const handleLogout = () => {
-		auth.logout();
+	const handleLogout = async () => {
+		await auth.logout();
 		window.location.href = '/login';
 	};
 

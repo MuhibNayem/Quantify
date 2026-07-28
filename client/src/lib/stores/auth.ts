@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store';
+import api from '$lib/api';
 
 interface User {
   ID: number;
@@ -105,7 +106,15 @@ const createAuthStore = () => {
   return {
     subscribe,
     login: (accessToken: string, refreshToken: string, csrfToken: string, user: User, permissions: string[]) => setAuthData(accessToken, refreshToken, csrfToken, user, permissions),
-    logout: () => clearAuthData(),
+    logout: async () => {
+      try {
+        await api.post('/users/logout');
+      } catch (error) {
+        console.error('Logout API call failed:', error);
+      } finally {
+        clearAuthData();
+      }
+    },
     hasPermission,
     refreshTokens: async (currentRefreshToken: string): Promise<{ accessToken: string, refreshToken: string, csrfToken: string } | null> => {
       // This will be implemented later when we create the API client
