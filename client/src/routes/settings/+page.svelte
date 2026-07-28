@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { settingsApi } from '$lib/api/settings';
+	import { notificationsApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
@@ -10,6 +11,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select } from '$lib/components/ui/select';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import {
 		Settings,
 		Shield,
@@ -25,7 +27,10 @@
 		Sparkles,
 		Coins,
 		Percent,
-		Zap
+		Zap,
+		Megaphone,
+		Send,
+		Loader2
 	} from 'lucide-svelte';
 	import RoleManager from '$lib/components/settings/RoleManager.svelte';
 	import { fade, fly } from 'svelte/transition';
@@ -60,6 +65,76 @@
 		tax_rate_percentage: '0'
 	});
 	let activeTab = $state('general');
+
+	const ALERT_TYPES = [
+		{ value: 'LOW_STOCK', label: 'Low Stock' },
+		{ value: 'OUT_OF_STOCK', label: 'Out of Stock' },
+		{ value: 'OVERSTOCK', label: 'Overstock' },
+		{ value: 'EXPIRY_ALERT', label: 'Expiry Alert' }
+	];
+
+	let subscriptions = $state<Record<string, boolean>>({});
+	let subscriptionsLoading = $state(false);
+
+	let broadcastOpen = $state(false);
+	let broadcastForm = $state({ title: '', message: '', type: 'SYSTEM' });
+	let broadcastSending = $state(false);
+
+	const loadSubscriptions = async () => {
+		if (!$auth.user) return;
+		subscriptionsLoading = true;
+		try {
+			const data = await notificationsApi.getSubscriptions($auth.user.ID);
+			const subs: Record<string, boolean> = {};
+			if (Array.isArray(data)) {
+				data.forEach((s: any) => {
+					subs[s.Type || s.type] = s.Enabled ?? s.enabled ?? true;
+				});
+			} else if (data && typeof data === 'object') {
+				Object.entries(data).forEach(([k, v]) => {
+					subs[k] = Boolean(v);
+				});
+			}
+			ALERT_TYPES.forEach((t) => {
+				if (!(t.value in subs)) subs[t.value] = true;
+			});
+			subscriptions = subs;
+		} catch (e) {
+			toast.error('Failed to load subscriptions');
+		} finally {
+			subscriptionsLoading = false;
+		}
+	};
+
+	const toggleSubscription = async (type: string, enabled: boolean) => {
+		if (!$auth.user) return;
+		try {
+			await notificationsApi.updateSubscription($auth.user.ID, type, enabled);
+			subscriptions[type] = enabled;
+			toast.success('Subscription updated');
+		} catch (e) {
+			subscriptions[type] = !enabled;
+			toast.error('Failed to update subscription');
+		}
+	};
+
+	const sendBroadcast = async () => {
+		if (!broadcastForm.title || !broadcastForm.message) {
+			toast.warning('Title and message are required');
+			return;
+		}
+		broadcastSending = true;
+		try {
+			await notificationsApi.broadcast(broadcastForm);
+			toast.success('Broadcast sent to all users');
+			broadcastOpen = false;
+			broadcastForm = { title: '', message: '', type: 'SYSTEM' };
+		} catch (e: any) {
+			toast.error('Broadcast failed', { description: e?.response?.data?.error || 'Unknown error' });
+		} finally {
+			broadcastSending = false;
+		}
+	};
 
 	const currencyOptions = [
 		{ value: 'USD', label: 'USD - United States Dollar', symbol: '$' },
@@ -105,7 +180,6 @@
 					.forEach((s: any) => {
 						settings[s.Key] = s.Value;
 					});
-				// Ensure defaults if missing
 				if (!settings['currency_symbol']) settings['currency_symbol'] = '$';
 				if (!settings['currency_code']) settings['currency_code'] = 'USD';
 				if (!settings['timezone']) settings['timezone'] = 'UTC';
@@ -116,6 +190,7 @@
 			console.error('Error loading settings', e);
 			toast.error('Failed to load settings');
 		}
+		loadSubscriptions();
 	});
 
 	async function saveSetting(key: string, value: string) {
@@ -802,27 +877,121 @@
 			</Tabs.Content>
 
 			<!-- Notifications -->
-			<Tabs.Content value="notifications" class="pt-2 outline-none">
-				<div
-					in:fly={{ y: 20, duration: 300 }}
-					class="flex h-80 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/40 text-center backdrop-blur-xl"
-				>
+			<Tabs.Content value="notifications" class="space-y-6 pt-2 outline-none">
+				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<div
-						class="mb-6 animate-pulse rounded-full bg-amber-50 p-6 text-amber-500 ring-1 ring-amber-100"
+						class={cn(
+							liquidGlass.radius.medium,
+							liquidGlass.border.medium,
+							liquidGlass.background.medium,
+							liquidGlass.blur.heavy,
+							liquidGlass.saturate,
+							liquidGlass.shadow.medium,
+							liquidGlass.innerGlow.medium,
+							'p-8'
+						)}
 					>
-						<Bell size={40} />
+						<div class="mb-8 flex items-start justify-between gap-5">
+							<div class="flex items-start gap-5">
+								<div
+									class="rounded-2xl border border-white bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-amber-600 shadow-sm"
+								>
+									<Bell size={32} />
+								</div>
+								<div>
+									<h3 class={cn('text-xl', adaptiveText.heading)}>Notification Subscriptions</h3>
+									<p class={adaptiveText.onGlass.secondary}>
+										Choose which alert types you want to receive notifications for.
+									</p>
+								</div>
+							</div>
+							{#if auth.hasPermission('notifications.broadcast')}
+								<Button
+									class="rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 text-white shadow-lg transition-all hover:from-purple-700 hover:to-pink-700 active:scale-95"
+									onclick={() => (broadcastOpen = true)}
+								>
+									<Megaphone size={18} class="mr-2" />
+									Broadcast
+								</Button>
+							{/if}
+						</div>
+
+						{#if subscriptionsLoading}
+							<div class="flex items-center justify-center py-12">
+								<Loader2 class="h-8 w-8 animate-spin text-amber-500" />
+							</div>
+						{:else}
+							<div class="grid gap-4 sm:grid-cols-2">
+								{#each ALERT_TYPES as alertType}
+									<div
+										class="flex items-center justify-between rounded-xl border border-slate-200/60 bg-white/50 px-5 py-4 shadow-sm transition-all hover:bg-white/80"
+									>
+										<div>
+											<p class="font-semibold text-slate-800">{alertType.label}</p>
+											<p class="text-xs text-slate-500">{alertType.value}</p>
+										</div>
+										<Switch
+											checked={subscriptions[alertType.value] ?? true}
+											onCheckedChange={(checked) => toggleSubscription(alertType.value, checked)}
+										/>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
-					<h3 class="text-2xl font-bold text-slate-800">
-						{$t('settings.notifications.global_alerts_center')}
-					</h3>
-					<p class="mt-2 max-w-sm text-slate-500">
-						{$t('settings.notifications.coming_soon')}
-					</p>
 				</div>
 			</Tabs.Content>
 		</Tabs.Root>
 	</div>
 </div>
+
+<Dialog.Root bind:open={broadcastOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<Megaphone class="h-5 w-5 text-purple-600" />
+				Broadcast Notification
+			</Dialog.Title>
+			<Dialog.Description>Send a notification to all users.</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4 py-4">
+			<div class="space-y-2">
+				<Label>Title</Label>
+				<Input bind:value={broadcastForm.title} placeholder="Notification title" />
+			</div>
+			<div class="space-y-2">
+				<Label>Message</Label>
+				<Textarea bind:value={broadcastForm.message} placeholder="Notification message" rows={4} />
+			</div>
+			<div class="space-y-2">
+				<Label>Type</Label>
+				<Select
+					options={[
+						{ value: 'SYSTEM', label: 'System' },
+						{ value: 'ALERT', label: 'Alert' },
+						{ value: 'INFO', label: 'Info' }
+					]}
+					bind:value={broadcastForm.type}
+				/>
+			</div>
+		</div>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (broadcastOpen = false)}>Cancel</Button>
+			<Button
+				class="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+				onclick={sendBroadcast}
+				disabled={broadcastSending}
+			>
+				{#if broadcastSending}
+					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				{:else}
+					<Send class="mr-2 h-4 w-4" />
+				{/if}
+				Send
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <style>
 	@keyframes blob {

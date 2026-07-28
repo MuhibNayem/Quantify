@@ -7,7 +7,6 @@
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
 
-	// UI components
 	import {
 		Card,
 		CardContent,
@@ -26,19 +25,26 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { cn } from '$lib/utils';
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import UserSelector from '$lib/components/ui/user-selector.svelte';
 
-	// Icon
-	import { Bell, Activity, CalendarClock, Package, AlertTriangle } from 'lucide-svelte';
+	import { Bell, Activity, CalendarClock, Package, AlertTriangle, Plus, Trash2, Loader2, Users } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 
-	// --- State ---
 	const filters = $state({ type: '', status: 'ACTIVE' });
 	let alerts = $state<Alert[]>([]);
 	let loading = $state(false);
+
+	let roleSubscriptions = $state<any[]>([]);
+	let roleSubsLoading = $state(false);
+	let addSubOpen = $state(false);
+	let newSub = $state({ alertType: 'LOW_STOCK', roleName: '' });
+	let creatingSub = $state(false);
+
+	const ALERT_TYPES = ['LOW_STOCK', 'OUT_OF_STOCK', 'OVERSTOCK', 'EXPIRY_ALERT'];
 
 	$effect(() => {
 		if (!auth.hasPermission('alerts.view')) {
@@ -215,8 +221,10 @@
 
 	onMount(() => {
 		loadAlerts();
+		if (auth.hasPermission('alerts.manage')) {
+			loadRoleSubscriptions();
+		}
 
-		// Parallax for hero (scoped & cleaned up)
 		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
 		if (!hero) return;
 		const handleScroll = () => {
@@ -226,6 +234,47 @@
 		window.addEventListener('scroll', handleScroll, { passive: true });
 		return () => window.removeEventListener('scroll', handleScroll);
 	});
+
+	const loadRoleSubscriptions = async () => {
+		roleSubsLoading = true;
+		try {
+			const data = await alertsApi.getRoleSubscriptions();
+			roleSubscriptions = Array.isArray(data) ? data : data?.subscriptions || [];
+		} catch (e) {
+			toast.error('Failed to load role subscriptions');
+		} finally {
+			roleSubsLoading = false;
+		}
+	};
+
+	const createRoleSubscription = async () => {
+		if (!newSub.roleName) {
+			toast.warning('Role name is required');
+			return;
+		}
+		creatingSub = true;
+		try {
+			await alertsApi.createRoleSubscription(newSub);
+			toast.success('Role subscription created');
+			addSubOpen = false;
+			newSub = { alertType: 'LOW_STOCK', roleName: '' };
+			await loadRoleSubscriptions();
+		} catch (e: any) {
+			toast.error('Failed to create subscription', { description: e?.response?.data?.error || 'Unknown error' });
+		} finally {
+			creatingSub = false;
+		}
+	};
+
+	const deleteRoleSubscription = async (id: number) => {
+		try {
+			await alertsApi.deleteRoleSubscription(id);
+			toast.success('Role subscription deleted');
+			await loadRoleSubscriptions();
+		} catch (e: any) {
+			toast.error('Failed to delete subscription', { description: e?.response?.data?.error || 'Unknown error' });
+		}
+	};
 </script>
 
 <!-- HERO -->
@@ -518,7 +567,133 @@
 			</Card>
 		</div>
 	{/if}
+
+	{#if auth.hasPermission('alerts.manage')}
+		<Card
+			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-lg transition-all hover:shadow-xl"
+		>
+			<CardHeader
+				class="flex flex-col gap-4 border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+			>
+				<div>
+					<CardTitle class="flex items-center gap-2 text-slate-800">
+						<Users class="h-5 w-5 text-indigo-600" />
+						Alert Role Subscriptions
+					</CardTitle>
+					<CardDescription class="text-slate-600">
+						Configure which roles receive which alert types.
+					</CardDescription>
+				</div>
+				<Button
+					class="rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md transition-all hover:scale-105 hover:from-indigo-600 hover:to-blue-700"
+					onclick={() => (addSubOpen = true)}
+				>
+					<Plus class="mr-2 h-4 w-4" />
+					Add Subscription
+				</Button>
+			</CardHeader>
+			<CardContent class="p-0">
+				<Table>
+					<TableHeader class="bg-gradient-to-r from-indigo-100/85 to-blue-100/85 backdrop-blur">
+						<TableRow class="border-y border-indigo-200/70">
+							<TableHead class="px-4 py-3 text-slate-700">Alert Type</TableHead>
+							<TableHead class="px-4 py-3 text-slate-700">Role</TableHead>
+							<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+						{#if roleSubsLoading}
+							{#each Array(3) as _}
+								<TableRow>
+									<TableCell colspan={3} class="px-4 py-3">
+										<Skeleton class="h-6 w-full bg-white/70" />
+									</TableCell>
+								</TableRow>
+							{/each}
+						{:else if roleSubscriptions.length === 0}
+							<TableRow>
+								<TableCell colspan={3} class="py-6 text-center text-sm text-slate-500">
+									No role subscriptions configured.
+								</TableCell>
+							</TableRow>
+						{:else}
+							{#each roleSubscriptions as sub}
+								<TableRow class="transition-colors hover:bg-white/90">
+									<TableCell class="px-4 py-3">
+										<span class="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+											{sub.AlertType || sub.alertType}
+										</span>
+									</TableCell>
+									<TableCell class="px-4 py-3 text-slate-800">
+										{sub.RoleName || sub.roleName || sub.Role?.Name || '—'}
+									</TableCell>
+									<TableCell class="px-4 py-3 text-right">
+										<Button
+											size="sm"
+											variant="ghost"
+											class="rounded-lg px-3 py-1.5 text-rose-600 hover:bg-rose-50"
+											onclick={() => deleteRoleSubscription(sub.ID || sub.id)}
+										>
+											<Trash2 class="h-4 w-4" />
+										</Button>
+									</TableCell>
+								</TableRow>
+							{/each}
+						{/if}
+					</TableBody>
+				</Table>
+			</CardContent>
+		</Card>
+	{/if}
 </section>
+
+<Dialog.Root bind:open={addSubOpen}>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title class="flex items-center gap-2">
+				<Users class="h-5 w-5 text-indigo-600" />
+				Add Role Subscription
+			</Dialog.Title>
+			<Dialog.Description>Assign an alert type to a role.</Dialog.Description>
+		</Dialog.Header>
+		<div class="space-y-4 py-4">
+			<div class="space-y-2">
+				<label class="text-sm font-medium text-slate-700">Alert Type</label>
+				<div class="select-wrapper">
+					<select
+						class="w-full rounded-xl border border-indigo-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+						bind:value={newSub.alertType}
+					>
+						{#each ALERT_TYPES as type}
+							<option value={type}>{type}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+			<div class="space-y-2">
+				<label class="text-sm font-medium text-slate-700">Role Name</label>
+				<Input
+					bind:value={newSub.roleName}
+					placeholder="e.g. Admin, Manager, Staff"
+					class="rounded-xl border-indigo-200 bg-white/90 focus:ring-2 focus:ring-indigo-400"
+				/>
+			</div>
+		</div>
+		<Dialog.Footer>
+			<Button variant="outline" onclick={() => (addSubOpen = false)}>Cancel</Button>
+			<Button
+				class="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700"
+				onclick={createRoleSubscription}
+				disabled={creatingSub}
+			>
+				{#if creatingSub}
+					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+				{/if}
+				Create
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
 
 <style lang="postcss">
 	@keyframes gradientShift {

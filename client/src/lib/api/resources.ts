@@ -134,6 +134,7 @@ export const replenishmentApi = {
 	receivePO: async (poId: number, payload: Record<string, unknown>) =>
 		(await api.post(`/replenishment/purchase-orders/${poId}/receive`, payload)).data,
 	cancelPO: async (poId: number) => (await api.post(`/replenishment/purchase-orders/${poId}/cancel`)).data,
+	getDashboard: async () => (await api.get('/replenishment/dashboard')).data,
 };
 
 export const reportsApi = {
@@ -189,6 +190,10 @@ export const alertsApi = {
 	updateUserNotifications: async (userId: number, payload: Record<string, unknown>) =>
 		(await api.put(`/alerts/users/${userId}/notification-settings`, payload)).data,
 	triggerCheck: async () => (await api.post('/alerts/check')).data,
+	getRoleSubscriptions: async () => (await api.get('/alerts/subscriptions')).data,
+	createRoleSubscription: async (data: { alertType: string; roleName: string }) =>
+		(await api.post('/alerts/subscriptions', data)).data,
+	deleteRoleSubscription: async (id: number) => (await api.delete(`/alerts/subscriptions/${id}`)).data,
 };
 
 export const notificationsApi = {
@@ -200,6 +205,12 @@ export const notificationsApi = {
 		(await api.patch(`/users/${userId}/notifications/${notificationId}/read`)).data,
 	markAllRead: async (userId: number) =>
 		(await api.patch(`/users/${userId}/notifications/read-all`)).data,
+	getSubscriptions: async (userId: number) =>
+		(await api.get(`/users/${userId}/notifications/subscriptions`)).data,
+	updateSubscription: async (userId: number, type: string, enabled: boolean) =>
+		(await api.put(`/users/${userId}/notifications/subscriptions/${type}`, { enabled })).data,
+	broadcast: async (data: { title: string; message: string; type: string }) =>
+		(await api.post('/notifications/broadcast', data)).data,
 };
 
 export const bulkApi = {

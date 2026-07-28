@@ -23,7 +23,7 @@
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
-	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw, FileSpreadsheet, FileText, Loader2 } from 'lucide-svelte';
+	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw, FileSpreadsheet, FileText, Loader2, Package, ClipboardList, AlertTriangle, ArrowRight } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
     import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
@@ -35,6 +35,20 @@
 			goto('/');
 		}
 	});
+
+	let replenishmentDashboard = $state<any>(null);
+	let replenishmentLoading = $state(false);
+
+	const loadReplenishmentDashboard = async () => {
+		replenishmentLoading = true;
+		try {
+			replenishmentDashboard = await replenishmentApi.getDashboard();
+		} catch (e) {
+			console.error('Failed to load replenishment dashboard', e);
+		} finally {
+			replenishmentLoading = false;
+		}
+	};
 
 
     
@@ -167,7 +181,10 @@
 			suggestionsLoading = false;
 		}
 	};
-	onMount(loadSuggestions);
+	onMount(() => {
+		loadSuggestions();
+		loadReplenishmentDashboard();
+	});
 
 
 
@@ -246,6 +263,64 @@
 
 <!-- MAIN -->
 <section class="mx-auto max-w-7xl space-y-10 bg-white px-6 py-14">
+	<!-- Replenishment Dashboard -->
+	<Card class="rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-teal-100 shadow-lg transition-all duration-300 hover:shadow-xl">
+		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
+			<CardTitle class="flex items-center gap-2 text-slate-800">
+				<Package class="h-5 w-5 text-emerald-600" />
+				Replenishment Overview
+			</CardTitle>
+			<CardDescription class="text-slate-600">Quick stats for your replenishment pipeline</CardDescription>
+		</CardHeader>
+		<CardContent class="p-6">
+			{#if replenishmentLoading}
+				<div class="grid gap-4 sm:grid-cols-3">
+					{#each Array(3) as _}
+						<Skeleton class="h-24 w-full rounded-xl bg-white/70" />
+					{/each}
+				</div>
+			{:else if replenishmentDashboard}
+				<div class="grid gap-4 sm:grid-cols-3">
+					<div class="rounded-xl border border-emerald-200/60 bg-white/60 p-5 text-center shadow-sm">
+						<ClipboardList class="mx-auto mb-2 h-6 w-6 text-emerald-600" />
+						<p class="text-3xl font-bold text-slate-800">
+							{replenishmentDashboard.pendingSuggestions ?? replenishmentDashboard.PendingSuggestions ?? 0}
+						</p>
+						<p class="text-sm text-slate-500">Pending Suggestions</p>
+					</div>
+					<div class="rounded-xl border border-teal-200/60 bg-white/60 p-5 text-center shadow-sm">
+						<ShoppingCart class="mx-auto mb-2 h-6 w-6 text-teal-600" />
+						<p class="text-3xl font-bold text-slate-800">
+							{replenishmentDashboard.openPOs ?? replenishmentDashboard.OpenPOs ?? 0}
+						</p>
+						<p class="text-sm text-slate-500">Open Purchase Orders</p>
+					</div>
+					<div class="rounded-xl border border-amber-200/60 bg-white/60 p-5 text-center shadow-sm">
+						<AlertTriangle class="mx-auto mb-2 h-6 w-6 text-amber-600" />
+						<p class="text-3xl font-bold text-slate-800">
+							{replenishmentDashboard.lowStockItems ?? replenishmentDashboard.LowStockItems ?? 0}
+						</p>
+						<p class="text-sm text-slate-500">Low Stock Items</p>
+					</div>
+				</div>
+				<div class="mt-4 flex flex-wrap gap-3">
+					<a href="/intelligence" class="no-underline">
+						<Button variant="outline" size="sm" class="gap-1 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+							View Suggestions <ArrowRight class="h-3.5 w-3.5" />
+						</Button>
+					</a>
+					<a href="/purchase-orders" class="no-underline">
+						<Button variant="outline" size="sm" class="gap-1 rounded-lg border-teal-200 text-teal-700 hover:bg-teal-50">
+							View Purchase Orders <ArrowRight class="h-3.5 w-3.5" />
+						</Button>
+					</a>
+				</div>
+			{:else}
+				<p class="py-4 text-center text-sm text-slate-500">Unable to load replenishment data.</p>
+			{/if}
+		</CardContent>
+	</Card>
+
 	<!-- Forecast + Churn Risk -->
 	<div class="grid gap-8 lg:grid-cols-2">
 		<!-- Demand forecast -->
