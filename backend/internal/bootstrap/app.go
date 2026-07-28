@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"context"
+	"inventory/backend/internal/app"
 	"inventory/backend/internal/auth"
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/consumers"
@@ -23,6 +24,7 @@ import (
 
 // App holds all application-wide dependencies.
 type App struct {
+	Container        *app.Container
 	Cfg              *config.Config
 	ReportingService *services.ReportingService
 	Hub              *websocket.Hub
@@ -78,13 +80,41 @@ func NewApp(cfg *config.Config) *App {
 
 	// Initialize Repositories
 	jobRepo := repository.NewJobRepository(repository.DB)
+	c := &app.Container{
+		Cfg:      cfg,
+		DB:       repository.DB,
+		Redis:    repository.GetClient(),
+		Hub:      hub,
+		Uploader: minioUploader,
+		Jobs:     jobRepo,
+	}
 	reportsRepo := repository.NewReportsRepository(repository.DB)
 	notificationRepo := repository.NewNotificationRepository(repository.DB)
 	settingsRepo := repository.NewSettingsRepository(repository.DB)
 
 	// Initialize Services
 	settingsService := services.NewSettingsService(settingsRepo)
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
+	c.SettingsRepo = settingsRepo
+	c.SettingsSvc = settingsService
+	c.Reports = reportsRepo
+	c.Notifications = notificationRepo
+	c.Reporting = services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
+	reportingService := c.Reporting
+	c.Sales = services.NewSalesService(repository.DB, settingsService, reportingService)
+	c.Users = repository.NewUserRepository(repository.DB)
+	c.Products = repository.NewProductRepository(repository.DB)
+	c.Categories = repository.NewCategoryRepository(repository.DB)
+	c.Suppliers = repository.NewSupplierRepository(repository.DB)
+	c.Locations = repository.NewLocationRepository(repository.DB)
+	c.User = handlers.NewUserHandler(c.Users, cfg)
+	c.Product = handlers.NewProductHandler(c.Products, repository.DB)
+	c.Category = handlers.NewCategoryHandler(c.Categories, repository.DB)
+	c.Supplier = handlers.NewSupplierHandler(c.Suppliers, repository.DB)
+	c.Report = handlers.NewReportHandler(reportingService, jobRepo)
+	c.Notification = handlers.NewNotificationHandler(notificationRepo)
+	c.SettingsHandler = handlers.NewSettingsHandler(settingsService)
+	c.SalesHandler = handlers.NewSalesHandler(repository.DB, settingsService, reportingService, c.Sales)
+
 	// Wait, SettingsService is an interface in handlers. Let's see how it was passed before.
 	// In original main.go:
 	// It wasn't explicitly initialized in the snippet I saw, but handlers.NewSalesHandler took it.
@@ -97,13 +127,13 @@ func NewApp(cfg *config.Config) *App {
 	// We will start consumers in Run()
 
 	// Initialize Cron Scheduler
-	c := cron.New()
-	c.AddFunc("@every 5m", func() {
+	scheduler := cron.New()
+	scheduler.AddFunc("@every 5m", func() {
 		logrus.Info("Running alert check...")
 		handlers.CheckAndTriggerAlerts()
 	})
 
-	c.AddFunc("@daily", func() {
+	scheduler.AddFunc("@daily", func() {
 		logrus.Info("Running daily sales summary generation...")
 		reportingService.GenerateDailySalesSummary()
 	})
@@ -117,13 +147,14 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	app := &App{
+		Container:        c,
 		Cfg:              cfg,
 		ReportingService: reportingService,
 		Hub:              hub,
 		JobRepo:          jobRepo,
 		NotificationRepo: notificationRepo,
 		Server:           server,
-		Cron:             c,
+		Cron:             scheduler,
 		MinIOUploader:    minioUploader,
 	}
 
