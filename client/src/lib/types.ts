@@ -48,6 +48,22 @@ export interface Promotion {
 	UpdatedAt: string;
 }
 
+export interface CreatePromotionRequest {
+	name: string;
+	description?: string;
+	discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+	discountValue: number;
+	startDate: string;
+	endDate: string;
+	priority?: number;
+	isActive?: boolean;
+	productId?: number;
+	categoryId?: number;
+	subCategoryId?: number;
+}
+
+export type UpdatePromotionRequest = Partial<CreatePromotionRequest>;
+
 // Your existing Product type
 export interface Product extends BaseEntity {
 	SKU: string;
@@ -205,12 +221,19 @@ export interface LoyaltyAccount extends BaseEntity {
 	Tier: string;
 }
 
+export interface Permission {
+	ID: number;
+	Name: string;
+	Description: string;
+	Group: string;
+}
+
 export interface Role {
 	ID: number;
 	Name: string;
 	Description: string;
 	IsSystem: boolean;
-	Permissions?: any[];
+	Permissions?: Permission[];
 }
 
 export interface UserSummary extends BaseEntity {
@@ -277,6 +300,34 @@ export interface TimeClock extends BaseEntity {
 	BreakEnd?: string | null;
 	Status: string;
 	Notes?: string;
+}
+
+export interface TeamStatus {
+	avatar: string;
+	name: string;
+	role: string;
+	status: 'active' | 'break' | 'offline';
+	hours: string;
+}
+
+export interface AttendanceDay {
+	day: string;
+	present: number;
+	absent: number;
+	late: number;
+}
+
+export interface TeamOverview {
+	totalHours: string;
+	progress: number;
+	attendance: AttendanceDay[];
+}
+
+export interface WeeklySummary {
+	todayHours: string;
+	weeklyHours: string;
+	weeklyProgress: number;
+	todayProgress?: number;
 }
 
 // New Report Interfaces

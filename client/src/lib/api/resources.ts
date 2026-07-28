@@ -26,6 +26,11 @@ import type {
 	PaymentRequest,
 	PaymentResponse,
 	PurchaseReturn,
+	CreatePromotionRequest,
+	UpdatePromotionRequest,
+	TeamStatus,
+	TeamOverview,
+	WeeklySummary,
 } from '$lib/types';
 
 export const searchApi = {
@@ -57,11 +62,11 @@ export const promotionsApi = {
 		const response = await api.get<{ promotions: Promotion[] }>('/promotions', { params });
 		return response.data.promotions;
 	},
-	create: async (data: any) => {
+	create: async (data: CreatePromotionRequest) => {
 		const response = await api.post<Promotion>('/promotions', data);
 		return response.data;
 	},
-	update: async (id: number, data: any) => {
+	update: async (id: number, data: UpdatePromotionRequest) => {
 		const response = await api.put<Promotion>(`/promotions/${id}`, data);
 		return response.data;
 	},
@@ -272,11 +277,11 @@ export const timeTrackingApi = {
 	getLastEntry: async (userId: number) => (await api.get<TimeClock>(`/time-tracking/last-entry/${userId}`)).data,
 	getHistory: async (userId: number) =>
 		(await api.get<{ history: TimeClock[] }>(`/time-tracking/history/${userId}`)).data.history,
-	getTeamStatus: async () => (await api.get<any[]>('/time-tracking/team-status')).data,
+	getTeamStatus: async () => (await api.get<TeamStatus[]>('/time-tracking/team-status')).data,
 	getRecentActivities: async () => (await api.get<TimeClock[]>('/time-tracking/activities')).data,
 	getWeeklySummary: async (userId: number) =>
-		(await api.get<any>(`/time-tracking/weekly-summary/${userId}`)).data,
-	getTeamOverview: async () => (await api.get<any>('/time-tracking/team-overview')).data
+		(await api.get<WeeklySummary>(`/time-tracking/weekly-summary/${userId}`)).data,
+	getTeamOverview: async () => (await api.get<TeamOverview>('/time-tracking/team-overview')).data
 };
 
 export const paymentApi = {

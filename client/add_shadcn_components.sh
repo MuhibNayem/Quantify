@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Navigate to the client directory
-cd /Users/a.k.mmuhibullahnayem/Developer/Quantify/client
+# Navigate to the client directory (the directory containing this script)
+cd "$(dirname "$0")"
 
 # Function to add a shadcn-svelte component
 add_component() {
