@@ -57,6 +57,8 @@ type Config struct {
 	AIServiceURL              string        `koanf:"AI_SERVICE_URL"`
 	RefreshTokenTTL           time.Duration `koanf:"REFRESH_TOKEN_TTL"`
 	AppEnv                    string        `koanf:"APP_ENV"`
+	OTLPEndpoint              string        `koanf:"OTLP_ENDPOINT"`
+	ServiceName               string        `koanf:"SERVICE_NAME"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -139,6 +141,8 @@ func defaults() map[string]any {
 		"AI_SERVICE_URL":               "http://localhost:8001",
 		"REFRESH_TOKEN_TTL":            "720h",
 		"APP_ENV":                      "dev",
+		"OTLP_ENDPOINT":                "",
+		"SERVICE_NAME":                 "quantify-backend",
 	}
 }
 

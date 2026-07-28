@@ -14,6 +14,7 @@ import (
 	"inventory/backend/internal/router"
 	"inventory/backend/internal/services"
 	"inventory/backend/internal/storage"
+	"inventory/backend/internal/telemetry"
 	"inventory/backend/internal/websocket"
 	"net/http"
 	"os"
@@ -35,6 +36,8 @@ type App struct {
 	Cron             *cron.Cron
 	MinIOUploader    storage.Uploader
 
+	shutdownTracer func(context.Context) error
+
 	// cancelFuncs holds the cancel funcs returned by each consumer's
 	// Start(). Stop() invokes them so the AMQP Subscribe goroutines exit
 	// before we tear down the message-broker connection.
@@ -43,6 +46,16 @@ type App struct {
 
 // NewApp initializes the application and its dependencies.
 func NewApp(cfg *config.Config) *App {
+	var shutdownTracer func(context.Context) error
+	if cfg.OTLPEndpoint != "" {
+		var err error
+		shutdownTracer, err = telemetry.InitTracer(context.Background(), cfg.ServiceName, cfg.OTLPEndpoint)
+		if err != nil {
+			logrus.Fatalf("Failed to initialize tracer: %v", err)
+		}
+		logrus.Infof("OpenTelemetry tracing enabled, exporting to %s", cfg.OTLPEndpoint)
+	}
+
 	// Initialize database connection
 	repository.InitDB(cfg)
 	gormDB := repository.DB()
@@ -190,6 +203,7 @@ func NewApp(cfg *config.Config) *App {
 		Server:           server,
 		Cron:             scheduler,
 		MinIOUploader:    minioUploader,
+		shutdownTracer:   shutdownTracer,
 	}
 
 	return app
@@ -233,6 +247,11 @@ func (app *App) Stop() {
 	}
 
 	app.Cron.Stop()
+	if app.shutdownTracer != nil {
+		if err := app.shutdownTracer(shutdownCtx); err != nil {
+			logrus.Errorf("Failed to shutdown tracer: %v", err)
+		}
+	}
 	repository.CloseDB()
 	repository.CloseRedis()
 	message_broker.Close()

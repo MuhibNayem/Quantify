@@ -21,13 +21,18 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /inventory-backend ./cmd/server/main.go
 # Stage 2: Create the production image
 FROM alpine:latest
 
-WORKDIR /root/
+RUN adduser -D -g '' nonroot
+
+WORKDIR /app
 
 # Copy the binary from the builder stage
-COPY --from=builder /inventory-backend .
+COPY --from=builder /inventory-backend /app/inventory-backend
+
+USER nonroot
 
 # Expose port 8080
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./inventory-backend"]
+HEALTHCHECK --interval=30s --timeout=5s CMD wget -qO- http://localhost:8080/health || exit 1
+
+ENTRYPOINT ["/app/inventory-backend"]

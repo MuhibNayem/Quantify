@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	_ "inventory/backend/api"
 )
@@ -30,6 +31,8 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	}
 
 	r.Use(middleware.RequestID())
+
+	r.Use(otelgin.Middleware("quantify-backend"))
 
 	r.Use(middleware.Metrics())
 
