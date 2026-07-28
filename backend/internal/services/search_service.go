@@ -9,23 +9,23 @@ import (
 
 // SearchService orchestrates the global search functionality.
 type SearchService struct {
-	db             *gorm.DB
-	searchRepo     *repository.SearchRepository
-	productRepo    *repository.ProductRepository
-	userRepo       *repository.UserRepository
-	supplierRepo   *repository.SupplierRepository
-	categoryRepo   *repository.CategoryRepository
+	db           *gorm.DB
+	searchRepo   repository.SearchRepository
+	productRepo  repository.ProductRepository
+	userRepo     repository.UserRepository
+	supplierRepo repository.SupplierRepository
+	categoryRepo repository.CategoryRepository
 }
 
 // NewSearchService creates a new SearchService.
-func NewSearchService(db *gorm.DB, searchRepo *repository.SearchRepository, productRepo *repository.ProductRepository, userRepo *repository.UserRepository, supplierRepo *repository.SupplierRepository, categoryRepo *repository.CategoryRepository) *SearchService {
+func NewSearchService(db *gorm.DB, searchRepo repository.SearchRepository, productRepo repository.ProductRepository, userRepo repository.UserRepository, supplierRepo repository.SupplierRepository, categoryRepo repository.CategoryRepository) *SearchService {
 	return &SearchService{
-		db:             db,
-		searchRepo:     searchRepo,
-		productRepo:    productRepo,
-		userRepo:       userRepo,
-		supplierRepo:   supplierRepo,
-		categoryRepo:   categoryRepo,
+		db:           db,
+		searchRepo:   searchRepo,
+		productRepo:  productRepo,
+		userRepo:     userRepo,
+		supplierRepo: supplierRepo,
+		categoryRepo: categoryRepo,
 	}
 }
 

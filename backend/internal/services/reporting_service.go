@@ -21,9 +21,9 @@ import (
 )
 
 type ReportingService struct {
-	repo                 *repository.ReportsRepository
+	repo                 repository.ReportsRepository
 	uploader             storage.Uploader
-	jobRepo              *repository.JobRepository
+	jobRepo              repository.JobRepository
 	hub                  *websocket.Hub
 	settings             SettingsService
 	salesTrendsTTL       time.Duration
@@ -31,7 +31,7 @@ type ReportingService struct {
 	profitMarginTTL      time.Duration
 }
 
-func NewReportingService(repo *repository.ReportsRepository, uploader storage.Uploader, jobRepo *repository.JobRepository, hub *websocket.Hub, cfg *config.Config, settings SettingsService) *ReportingService {
+func NewReportingService(repo repository.ReportsRepository, uploader storage.Uploader, jobRepo repository.JobRepository, hub *websocket.Hub, cfg *config.Config, settings SettingsService) *ReportingService {
 	return &ReportingService{
 		repo:                 repo,
 		uploader:             uploader,

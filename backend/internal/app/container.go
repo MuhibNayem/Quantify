@@ -25,23 +25,23 @@ type Container struct {
 	Uploader storage.Uploader
 
 	Roles         repository.RoleRepository
-	Users         *repository.UserRepository
-	Products      *repository.ProductRepository
-	Categories    *repository.CategoryRepository
-	Suppliers     *repository.SupplierRepository
-	Locations     *repository.LocationRepository
-	Jobs          *repository.JobRepository
-	Reports       *repository.ReportsRepository
+	Users         repository.UserRepository
+	Products      repository.ProductRepository
+	Categories    repository.CategoryRepository
+	Suppliers     repository.SupplierRepository
+	Locations     repository.LocationRepository
+	Jobs          repository.JobRepository
+	Reports       repository.ReportsRepository
 	Notifications repository.NotificationRepository
 	SettingsRepo  repository.SettingsRepository
 	Payments      repository.PaymentRepository
 	TimeTracking  repository.TimeTrackingRepository
 	Barcode       repository.BarcodeRepository
-	Search        *repository.SearchRepository
+	Search        repository.SearchRepository
 	CRM           repository.CRMRepository
 	Replenishment repository.ReplenishmentRepository
 	Forecasting   repository.ForecastingRepository
-	Dashboard     *repository.DashboardRepository
+	Dashboard     repository.DashboardRepository
 
 	Role             services.RoleService
 	SettingsSvc      services.SettingsService

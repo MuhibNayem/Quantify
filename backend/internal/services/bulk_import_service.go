@@ -12,13 +12,13 @@ import (
 
 // BulkImportService handles the logic of processing a bulk import file.
 type BulkImportService struct {
-	categoryRepo *repository.CategoryRepository
-	supplierRepo *repository.SupplierRepository
-	locationRepo *repository.LocationRepository
+	categoryRepo repository.CategoryRepository
+	supplierRepo repository.SupplierRepository
+	locationRepo repository.LocationRepository
 }
 
 // NewBulkImportService creates a new BulkImportService.
-func NewBulkImportService(categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository) *BulkImportService {
+func NewBulkImportService(categoryRepo repository.CategoryRepository, supplierRepo repository.SupplierRepository, locationRepo repository.LocationRepository) *BulkImportService {
 	return &BulkImportService{
 		categoryRepo: categoryRepo,
 		supplierRepo: supplierRepo,

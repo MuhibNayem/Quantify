@@ -20,12 +20,12 @@ import (
 
 // ProductHandler holds the repository dependencies for product-related handlers.
 type ProductHandler struct {
-	productRepo *repository.ProductRepository
+	productRepo repository.ProductRepository
 	db          *gorm.DB // Keep db for now for existing functions
 }
 
 // NewProductHandler creates a new ProductHandler with the given repository.
-func NewProductHandler(productRepo *repository.ProductRepository, db *gorm.DB) *ProductHandler {
+func NewProductHandler(productRepo repository.ProductRepository, db *gorm.DB) *ProductHandler {
 	return &ProductHandler{
 		productRepo: productRepo,
 		db:          db,

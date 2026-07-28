@@ -11,12 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type ReportsRepository struct {
+type reportsRepository struct {
 	DB *gorm.DB
 }
 
-func NewReportsRepository(db *gorm.DB) *ReportsRepository {
-	return &ReportsRepository{DB: db}
+func NewReportsRepository(db *gorm.DB) ReportsRepository {
+	return &reportsRepository{DB: db}
 }
 
 type SalesTrend struct {
@@ -30,7 +30,7 @@ type TopSellingProduct struct {
 	TotalSold float64
 }
 
-func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy, timezone string) ([]SalesTrend, []TopSellingProduct, error) {
+func (r *reportsRepository) GetSalesTrends(startDate, endDate time.Time, categoryID, locationID, productID *uint, groupBy, timezone string) ([]SalesTrend, []TopSellingProduct, error) {
 	var salesTrends []SalesTrend
 	var topSellingProducts []TopSellingProduct
 
@@ -120,7 +120,7 @@ func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categor
 	return salesTrends, topSellingProducts, nil
 }
 
-func (r *ReportsRepository) GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
+func (r *reportsRepository) GetInventoryTurnover(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
 	var costOfGoodsSold sql.NullFloat64
 
 	// Calculate Cost of Goods Sold (COGS)
@@ -163,7 +163,7 @@ func (r *ReportsRepository) GetInventoryTurnover(startDate, endDate time.Time, c
 	return cogsValue, averageInventoryValue, nil
 }
 
-func (r *ReportsRepository) getInventoryValueAt(date time.Time, categoryID, locationID *uint) (float64, error) {
+func (r *reportsRepository) getInventoryValueAt(date time.Time, categoryID, locationID *uint) (float64, error) {
 	var totalValue sql.NullFloat64
 
 	// Get total stock value up to the given date
@@ -192,7 +192,7 @@ func (r *ReportsRepository) getInventoryValueAt(date time.Time, categoryID, loca
 	return value, nil
 }
 
-func (r *ReportsRepository) GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
+func (r *reportsRepository) GetProfitMargin(startDate, endDate time.Time, categoryID, locationID *uint) (float64, float64, error) {
 	var totalRevenue sql.NullFloat64
 	var totalCost sql.NullFloat64
 
@@ -249,7 +249,7 @@ func (r *ReportsRepository) GetProfitMargin(startDate, endDate time.Time, catego
 	return revenueValue, costValue, nil
 }
 
-func (r *ReportsRepository) GetDailySalesSummary(date time.Time) (float64, error) {
+func (r *reportsRepository) GetDailySalesSummary(date time.Time) (float64, error) {
 	var totalSales sql.NullFloat64
 
 	query := r.DB.Model(&domain.StockAdjustment{}).
@@ -283,7 +283,7 @@ type StockAgingItem struct {
 
 // GetStockAgingReport groups inventory by age buckets (0-30, 31-60, 61-90, 90+ days).
 // It assumes FIFO: oldest batches are sold first.
-func (r *ReportsRepository) GetStockAgingReport() (map[string][]StockAgingItem, error) {
+func (r *reportsRepository) GetStockAgingReport() (map[string][]StockAgingItem, error) {
 	var batches []domain.Batch
 	// Fetch all batches with positive quantity, ordered by creation date (oldest first)
 	// Preload product to get name/sku/price
@@ -335,7 +335,7 @@ type DeadStockItem struct {
 }
 
 // GetDeadStockReport identifies products with stock > 0 but no sales in the last X days.
-func (r *ReportsRepository) GetDeadStockReport(daysThreshold int) ([]DeadStockItem, error) {
+func (r *reportsRepository) GetDeadStockReport(daysThreshold int) ([]DeadStockItem, error) {
 	var items []DeadStockItem
 	thresholdDate := time.Now().AddDate(0, 0, -daysThreshold)
 
@@ -399,7 +399,7 @@ type SupplierScorecard struct {
 }
 
 // GetSupplierPerformanceReport calculates metrics for suppliers based on PO history.
-func (r *ReportsRepository) GetSupplierPerformanceReport(startDate, endDate time.Time) ([]SupplierScorecard, error) {
+func (r *reportsRepository) GetSupplierPerformanceReport(startDate, endDate time.Time) ([]SupplierScorecard, error) {
 	scorecards := []SupplierScorecard{}
 
 	// Logic:
@@ -466,7 +466,7 @@ type HeatmapPoint struct {
 }
 
 // GetHourlySalesHeatmap aggregates sales by hour and day of week.
-func (r *ReportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, timezone string) ([]HeatmapPoint, error) {
+func (r *reportsRepository) GetHourlySalesHeatmap(startDate, endDate time.Time, timezone string) ([]HeatmapPoint, error) {
 	var points []HeatmapPoint
 
 	// The timezone originates from a SystemSetting that an operator can edit,
@@ -555,7 +555,7 @@ type EmployeeSalesStats struct {
 }
 
 // GetSalesByEmployeeReport aggregates sales by the user who processed the order.
-func (r *ReportsRepository) GetSalesByEmployeeReport(startDate, endDate time.Time) ([]EmployeeSalesStats, error) {
+func (r *reportsRepository) GetSalesByEmployeeReport(startDate, endDate time.Time) ([]EmployeeSalesStats, error) {
 	var stats []EmployeeSalesStats
 
 	// We use the 'orders' table which links to 'users'
@@ -604,7 +604,7 @@ type CategoryPerformance struct {
 }
 
 // GetCategoryDrillDownReport provides sales and margin performance by category.
-func (r *ReportsRepository) GetCategoryDrillDownReport(startDate, endDate time.Time) ([]CategoryPerformance, error) {
+func (r *reportsRepository) GetCategoryDrillDownReport(startDate, endDate time.Time) ([]CategoryPerformance, error) {
 	var results []CategoryPerformance
 
 	query := `
@@ -657,7 +657,7 @@ type GMROIStats struct {
 
 // GetCOGSAndGMROIReport calculates Gross Margin Return on Investment.
 // GMROI = Gross Margin / Average Inventory Cost
-func (r *ReportsRepository) GetCOGSAndGMROIReport(startDate, endDate time.Time) (GMROIStats, error) {
+func (r *reportsRepository) GetCOGSAndGMROIReport(startDate, endDate time.Time) (GMROIStats, error) {
 	var stats GMROIStats
 
 	// 1. Calculate Revenue and COGS
@@ -688,7 +688,7 @@ func (r *ReportsRepository) GetCOGSAndGMROIReport(startDate, endDate time.Time) 
 }
 
 // GetVoidDiscountAuditReport retrieves audit logs for voids and discounts.
-func (r *ReportsRepository) GetVoidDiscountAuditReport(startDate, endDate time.Time) ([]domain.AuditLog, error) {
+func (r *reportsRepository) GetVoidDiscountAuditReport(startDate, endDate time.Time) ([]domain.AuditLog, error) {
 	var logs []domain.AuditLog
 
 	err := r.DB.Where("action IN (?)", []string{"VOID", "DISCOUNT"}).
@@ -712,7 +712,7 @@ type TaxLiabilityStats struct {
 // For now, we'll estimate based on Order totals and implied tax.
 // Ideally, Order table should have 'TaxAmount' column.
 // GetTaxLiabilityReport calculates tax collected.
-func (r *ReportsRepository) GetTaxLiabilityReport(startDate, endDate time.Time) ([]TaxLiabilityStats, error) {
+func (r *reportsRepository) GetTaxLiabilityReport(startDate, endDate time.Time) ([]TaxLiabilityStats, error) {
 	var stats []TaxLiabilityStats
 
 	// Fetch current tax rate from settings
@@ -761,7 +761,7 @@ func (r *ReportsRepository) GetTaxLiabilityReport(startDate, endDate time.Time) 
 }
 
 // GetCashDrawerReconciliationReport retrieves cash drawer sessions.
-func (r *ReportsRepository) GetCashDrawerReconciliationReport(startDate, endDate time.Time) ([]domain.CashDrawerSession, error) {
+func (r *reportsRepository) GetCashDrawerReconciliationReport(startDate, endDate time.Time) ([]domain.CashDrawerSession, error) {
 	var sessions []domain.CashDrawerSession
 
 	err := r.DB.Preload("User").Preload("Location").
@@ -787,7 +787,7 @@ type BasketAnalysisItem struct {
 // page/limit slice the grouped pair list. The total count is the number of
 // distinct pairs in the date range, not the number of (order, pair) rows,
 // so the caller can render pagination metadata without re-counting.
-func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time, page, limit int) ([]BasketAnalysisItem, int, error) {
+func (r *reportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time, page, limit int) ([]BasketAnalysisItem, int, error) {
 	var items []BasketAnalysisItem
 
 	offset := (page - 1) * limit
@@ -854,7 +854,7 @@ func (r *ReportsRepository) GetBasketAnalysisReport(startDate, endDate time.Time
 }
 
 // GetPOAnalysisReport retrieves purchase order statistics.
-func (r *ReportsRepository) GetPOAnalysisReport(startDate, endDate time.Time) ([]domain.PurchaseOrder, error) {
+func (r *reportsRepository) GetPOAnalysisReport(startDate, endDate time.Time) ([]domain.PurchaseOrder, error) {
 	var pos []domain.PurchaseOrder
 
 	err := r.DB.Preload("Supplier").Preload("Items").
@@ -879,7 +879,7 @@ type CustomerInsight struct {
 }
 
 // GetCustomerInsightsReport identifies top spenders and churn risk.
-func (r *ReportsRepository) GetCustomerInsightsReport(startDate, endDate time.Time) ([]CustomerInsight, error) {
+func (r *reportsRepository) GetCustomerInsightsReport(startDate, endDate time.Time) ([]CustomerInsight, error) {
 	log.Printf("DEBUG: Executing GetCustomerInsightsReport (New Logic) for range %v to %v", startDate, endDate)
 	var insights []CustomerInsight
 
@@ -974,7 +974,7 @@ type ProductPerformanceAnalytics struct {
 }
 
 // GetProductPerformanceAnalytics provides detailed metrics for agent reasoning.
-func (r *ReportsRepository) GetProductPerformanceAnalytics(startDate, endDate time.Time, supplierName string, minStock int) ([]ProductPerformanceAnalytics, error) {
+func (r *reportsRepository) GetProductPerformanceAnalytics(startDate, endDate time.Time, supplierName string, minStock int) ([]ProductPerformanceAnalytics, error) {
 	var results []ProductPerformanceAnalytics
 
 	// 1. Base Query for Sales Performance
@@ -1070,7 +1070,7 @@ type ShrinkageItem struct {
 }
 
 // GetShrinkageReport tracks inventory loss (Theft, Damage, Expiry).
-func (r *ReportsRepository) GetShrinkageReport(startDate, endDate time.Time) ([]ShrinkageItem, error) {
+func (r *reportsRepository) GetShrinkageReport(startDate, endDate time.Time) ([]ShrinkageItem, error) {
 	var items []ShrinkageItem
 
 	query := `
@@ -1115,7 +1115,7 @@ type ReturnAnalysisItem struct {
 }
 
 // GetCustomerReturnAnalysisReport analyzes why customers are returning items.
-func (r *ReportsRepository) GetCustomerReturnAnalysisReport(startDate, endDate time.Time) ([]ReturnAnalysisItem, error) {
+func (r *reportsRepository) GetCustomerReturnAnalysisReport(startDate, endDate time.Time) ([]ReturnAnalysisItem, error) {
 	var items []ReturnAnalysisItem
 
 	// Assuming 'returns' and 'return_items' tables exist (based on return_test.go)

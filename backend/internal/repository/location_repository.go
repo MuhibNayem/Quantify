@@ -6,15 +6,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type LocationRepository struct {
+type locationRepository struct {
 	db *gorm.DB
 }
 
-func NewLocationRepository(db *gorm.DB) *LocationRepository {
-	return &LocationRepository{db: db}
+func NewLocationRepository(db *gorm.DB) LocationRepository {
+	return &locationRepository{db: db}
 }
 
-func (r *LocationRepository) GetAll() ([]domain.Location, error) {
+func (r *locationRepository) GetAll() ([]domain.Location, error) {
 	var locations []domain.Location
 	if err := r.db.Find(&locations).Error; err != nil {
 		return nil, err
@@ -22,6 +22,6 @@ func (r *LocationRepository) GetAll() ([]domain.Location, error) {
 	return locations, nil
 }
 
-func (r *LocationRepository) GetByNames(names []string, locations *[]domain.Location) error {
+func (r *locationRepository) GetByNames(names []string, locations *[]domain.Location) error {
 	return r.db.Where("name IN ?", names).Find(locations).Error
 }

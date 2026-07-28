@@ -14,10 +14,10 @@ import (
 
 type ReportingConsumer struct {
 	ReportingService *services.ReportingService
-	JobRepo          *repository.JobRepository
+	JobRepo          repository.JobRepository
 }
 
-func NewReportingConsumer(reportingService *services.ReportingService, jobRepo *repository.JobRepository) *ReportingConsumer {
+func NewReportingConsumer(reportingService *services.ReportingService, jobRepo repository.JobRepository) *ReportingConsumer {
 	return &ReportingConsumer{
 		ReportingService: reportingService,
 		JobRepo:          jobRepo,

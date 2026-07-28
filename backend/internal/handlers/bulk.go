@@ -17,11 +17,11 @@ import (
 )
 
 type BulkHandler struct {
-	JobRepo  *repository.JobRepository
+	JobRepo  repository.JobRepository
 	Uploader storage.Uploader
 }
 
-func NewBulkHandler(jobRepo *repository.JobRepository, uploader storage.Uploader) *BulkHandler {
+func NewBulkHandler(jobRepo repository.JobRepository, uploader storage.Uploader) *BulkHandler {
 	return &BulkHandler{
 		JobRepo:  jobRepo,
 		Uploader: uploader,

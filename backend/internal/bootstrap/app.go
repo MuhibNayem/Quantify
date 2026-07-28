@@ -29,7 +29,7 @@ type App struct {
 	Cfg              *config.Config
 	ReportingService *services.ReportingService
 	Hub              *websocket.Hub
-	JobRepo          *repository.JobRepository
+	JobRepo          repository.JobRepository
 	NotificationRepo repository.NotificationRepository
 	Server           *http.Server
 	Cron             *cron.Cron

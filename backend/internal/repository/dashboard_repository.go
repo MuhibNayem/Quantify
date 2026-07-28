@@ -7,12 +7,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type DashboardRepository struct {
+type dashboardRepository struct {
 	DB *gorm.DB
 }
 
-func NewDashboardRepository(db *gorm.DB) *DashboardRepository {
-	return &DashboardRepository{DB: db}
+func NewDashboardRepository(db *gorm.DB) DashboardRepository {
+	return &dashboardRepository{DB: db}
 }
 
 type DashboardStats struct {
@@ -22,7 +22,7 @@ type DashboardStats struct {
 	ActiveAlertCount int64
 }
 
-func (r *DashboardRepository) GetStats() (*DashboardStats, error) {
+func (r *dashboardRepository) GetStats() (*DashboardStats, error) {
 	var stats DashboardStats
 
 	if err := r.DB.Model(&domain.Product{}).Count(&stats.ProductCount).Error; err != nil {
@@ -41,7 +41,7 @@ func (r *DashboardRepository) GetStats() (*DashboardStats, error) {
 	return &stats, nil
 }
 
-func (r *DashboardRepository) GetRecentProducts(limit int) ([]domain.Product, error) {
+func (r *dashboardRepository) GetRecentProducts(limit int) ([]domain.Product, error) {
 	var products []domain.Product
 	if err := r.DB.Order("created_at DESC").Limit(limit).Find(&products).Error; err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *DashboardRepository) GetRecentProducts(limit int) ([]domain.Product, er
 	return products, nil
 }
 
-func (r *DashboardRepository) GetRecentAlerts(limit int) ([]domain.Alert, error) {
+func (r *dashboardRepository) GetRecentAlerts(limit int) ([]domain.Alert, error) {
 	var alerts []domain.Alert
 	if err := r.DB.Preload("Product").Where("status = ?", "ACTIVE").Order("created_at DESC").Limit(limit).Find(&alerts).Error; err != nil {
 		return nil, err
@@ -57,7 +57,7 @@ func (r *DashboardRepository) GetRecentAlerts(limit int) ([]domain.Alert, error)
 	return alerts, nil
 }
 
-func (r *DashboardRepository) GetRecentReorderSuggestions(limit int) ([]domain.ReorderSuggestion, error) {
+func (r *dashboardRepository) GetRecentReorderSuggestions(limit int) ([]domain.ReorderSuggestion, error) {
 	var suggestions []domain.ReorderSuggestion
 	if err := r.DB.Preload("Product").Preload("Supplier").Where("status = ?", "PENDING").Order("created_at DESC").Limit(limit).Find(&suggestions).Error; err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ type ChartDataPoint struct {
 	Value float64
 }
 
-func (r *DashboardRepository) GetSalesChartData() ([]float64, error) {
+func (r *dashboardRepository) GetSalesChartData() ([]float64, error) {
 	// Get last 7 days
 	endDate := time.Now()
 	startDate := endDate.AddDate(0, 0, -6) // 7 days including today
@@ -141,7 +141,7 @@ type SalesTrendData struct {
 	Percentage float64 `json:"percentage"`
 }
 
-func (r *DashboardRepository) GetSalesTrend() (*SalesTrendData, error) {
+func (r *dashboardRepository) GetSalesTrend() (*SalesTrendData, error) {
 	now := time.Now()
 	currentPeriodStart := now.AddDate(0, 0, -6)                 // Last 7 days
 	previousPeriodStart := currentPeriodStart.AddDate(0, 0, -7) // 7 days before that

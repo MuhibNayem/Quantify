@@ -10,10 +10,10 @@ import (
 )
 
 type DashboardHandler struct {
-	repo *repository.DashboardRepository
+	repo repository.DashboardRepository
 }
 
-func NewDashboardHandler(repo *repository.DashboardRepository) *DashboardHandler {
+func NewDashboardHandler(repo repository.DashboardRepository) *DashboardHandler {
 	return &DashboardHandler{repo: repo}
 }
 

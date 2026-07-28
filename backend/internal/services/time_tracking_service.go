@@ -24,10 +24,10 @@ type TimeTrackingService interface {
 
 type timeTrackingService struct {
 	repo     repository.TimeTrackingRepository
-	userRepo *repository.UserRepository
+	userRepo repository.UserRepository
 }
 
-func NewTimeTrackingService(repo repository.TimeTrackingRepository, userRepo *repository.UserRepository) TimeTrackingService {
+func NewTimeTrackingService(repo repository.TimeTrackingRepository, userRepo repository.UserRepository) TimeTrackingService {
 	return &timeTrackingService{
 		repo:     repo,
 		userRepo: userRepo,

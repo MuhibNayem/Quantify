@@ -58,18 +58,18 @@ type SearchResult struct {
 	Entity     interface{} `json:"entity"`
 }
 
-// SearchRepository performs search operations.
-type SearchRepository struct {
+// searchRepository performs search operations.
+type searchRepository struct {
 	db *gorm.DB
 }
 
 // NewSearchRepository creates a new search repository.
-func NewSearchRepository(db *gorm.DB) *SearchRepository {
-	return &SearchRepository{db: db}
+func NewSearchRepository(db *gorm.DB) SearchRepository {
+	return &searchRepository{db: db}
 }
 
 // Search performs a full-text search across all indexed entities.
-func (r *SearchRepository) Search(query string) ([]SearchResult, error) {
+func (r *searchRepository) Search(query string) ([]SearchResult, error) {
 	var results []SearchResult
 
 	err := r.db.Raw(`

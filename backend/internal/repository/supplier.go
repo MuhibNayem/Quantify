@@ -7,15 +7,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type SupplierRepository struct {
+type supplierRepository struct {
 	db *gorm.DB
 }
 
-func NewSupplierRepository(db *gorm.DB) *SupplierRepository {
-	return &SupplierRepository{db: db}
+func NewSupplierRepository(db *gorm.DB) SupplierRepository {
+	return &supplierRepository{db: db}
 }
 
-func (r *SupplierRepository) CreateSupplier(supplier *domain.Supplier) error {
+func (r *supplierRepository) CreateSupplier(supplier *domain.Supplier) error {
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 
@@ -31,7 +31,7 @@ func (r *SupplierRepository) CreateSupplier(supplier *domain.Supplier) error {
 
 }
 
-func (r *SupplierRepository) UpdateSupplier(supplier *domain.Supplier, updates map[string]interface{}) error {
+func (r *supplierRepository) UpdateSupplier(supplier *domain.Supplier, updates map[string]interface{}) error {
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 
@@ -53,7 +53,7 @@ func (r *SupplierRepository) UpdateSupplier(supplier *domain.Supplier, updates m
 
 }
 
-func (r *SupplierRepository) DeleteSupplier(supplier *domain.Supplier) error {
+func (r *supplierRepository) DeleteSupplier(supplier *domain.Supplier) error {
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
 
@@ -69,7 +69,7 @@ func (r *SupplierRepository) DeleteSupplier(supplier *domain.Supplier) error {
 
 }
 
-func (r *SupplierRepository) GetAll() ([]domain.Supplier, error) {
+func (r *supplierRepository) GetAll() ([]domain.Supplier, error) {
 	var suppliers []domain.Supplier
 	if err := r.db.Find(&suppliers).Error; err != nil {
 		return nil, err
@@ -77,11 +77,11 @@ func (r *SupplierRepository) GetAll() ([]domain.Supplier, error) {
 	return suppliers, nil
 }
 
-func (r *SupplierRepository) GetByNames(names []string, suppliers *[]domain.Supplier) error {
+func (r *supplierRepository) GetByNames(names []string, suppliers *[]domain.Supplier) error {
 	return r.db.Where("name IN ?", names).Find(suppliers).Error
 }
 
-func (r *SupplierRepository) GetSupplierByName(name string) (*domain.Supplier, error) {
+func (r *supplierRepository) GetSupplierByName(name string) (*domain.Supplier, error) {
 
 	var supplier domain.Supplier
 
@@ -95,7 +95,7 @@ func (r *SupplierRepository) GetSupplierByName(name string) (*domain.Supplier, e
 
 }
 
-func (r *SupplierRepository) GetSupplierPerformance(supplierID uint) (float64, float64, error) {
+func (r *supplierRepository) GetSupplierPerformance(supplierID uint) (float64, float64, error) {
 
 	var purchaseOrders []domain.PurchaseOrder
 

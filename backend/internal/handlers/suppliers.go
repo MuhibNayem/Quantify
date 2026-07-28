@@ -14,11 +14,11 @@ import (
 )
 
 type SupplierHandler struct {
-	supplierRepo *repository.SupplierRepository
+	supplierRepo repository.SupplierRepository
 	db           *gorm.DB // Keep db for now for existing functions
 }
 
-func NewSupplierHandler(supplierRepo *repository.SupplierRepository, db *gorm.DB) *SupplierHandler {
+func NewSupplierHandler(supplierRepo repository.SupplierRepository, db *gorm.DB) *SupplierHandler {
 	return &SupplierHandler{
 		supplierRepo: supplierRepo,
 		db:           db,

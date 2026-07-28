@@ -6,15 +6,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepository struct {
+type userRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(db *gorm.DB) UserRepository {
+	return &userRepository{db: db}
 }
 
-func (r *UserRepository) CreateUser(user *domain.User) error {
+func (r *userRepository) CreateUser(user *domain.User) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(user).Error; err != nil {
 			return err
@@ -23,7 +23,7 @@ func (r *UserRepository) CreateUser(user *domain.User) error {
 	})
 }
 
-func (r *UserRepository) UpdateUser(user *domain.User) error {
+func (r *userRepository) UpdateUser(user *domain.User) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Save(user).Error; err != nil {
 			return err
@@ -36,7 +36,7 @@ func (r *UserRepository) UpdateUser(user *domain.User) error {
 	})
 }
 
-func (r *UserRepository) DeleteUser(user *domain.User) error {
+func (r *userRepository) DeleteUser(user *domain.User) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(user).Error; err != nil {
 			return err
@@ -45,7 +45,7 @@ func (r *UserRepository) DeleteUser(user *domain.User) error {
 	})
 }
 
-func (r *UserRepository) GetAllUsers() ([]domain.User, error) {
+func (r *userRepository) GetAllUsers() ([]domain.User, error) {
 	var users []domain.User
 	if err := r.db.Find(&users).Error; err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (r *UserRepository) GetAllUsers() ([]domain.User, error) {
 	return users, nil
 }
 
-func (r *UserRepository) ListUsers(page, limit int, status, search string) ([]domain.User, int64, error) {
+func (r *userRepository) ListUsers(page, limit int, status, search string) ([]domain.User, int64, error) {
 	var users []domain.User
 	var total int64
 	offset := (page - 1) * limit
@@ -82,7 +82,7 @@ func (r *UserRepository) ListUsers(page, limit int, status, search string) ([]do
 	return users, total, nil
 }
 
-func (r *UserRepository) GetUserByID(id string) (*domain.User, error) {
+func (r *userRepository) GetUserByID(id string) (*domain.User, error) {
 	var user domain.User
 	if err := r.db.Preload("Role").First(&user, id).Error; err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (r *UserRepository) GetUserByID(id string) (*domain.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) GetUserByUsername(username string) (*domain.User, error) {
+func (r *userRepository) GetUserByUsername(username string) (*domain.User, error) {
 	var user domain.User
 	if err := r.db.Preload("Role.Permissions").Where("username = ?", username).First(&user).Error; err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (r *UserRepository) GetUserByUsername(username string) (*domain.User, error
 	return &user, nil
 }
 
-func (r *UserRepository) CountUsers() (int64, error) {
+func (r *userRepository) CountUsers() (int64, error) {
 	var count int64
 	if err := r.db.Model(&domain.User{}).Count(&count).Error; err != nil {
 		return 0, err
@@ -106,7 +106,7 @@ func (r *UserRepository) CountUsers() (int64, error) {
 	return count, nil
 }
 
-func (r *UserRepository) GetRoleByName(name string) (*domain.Role, error) {
+func (r *userRepository) GetRoleByName(name string) (*domain.Role, error) {
 	var role domain.Role
 	if err := r.db.Where("name = ?", name).First(&role).Error; err != nil {
 		return nil, err
@@ -114,7 +114,7 @@ func (r *UserRepository) GetRoleByName(name string) (*domain.Role, error) {
 	return &role, nil
 }
 
-func (r *UserRepository) GetRoleByID(id uint) (*domain.Role, error) {
+func (r *userRepository) GetRoleByID(id uint) (*domain.Role, error) {
 	var role domain.Role
 	if err := r.db.Preload("Permissions").First(&role, id).Error; err != nil {
 		return nil, err

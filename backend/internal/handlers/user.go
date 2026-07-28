@@ -20,11 +20,11 @@ import (
 )
 
 type UserHandler struct {
-	userRepo *repository.UserRepository
+	userRepo repository.UserRepository
 	cfg      *config.Config
 }
 
-func NewUserHandler(userRepo *repository.UserRepository, cfg *config.Config) *UserHandler {
+func NewUserHandler(userRepo repository.UserRepository, cfg *config.Config) *UserHandler {
 	return &UserHandler{
 		userRepo: userRepo,
 		cfg:      cfg,

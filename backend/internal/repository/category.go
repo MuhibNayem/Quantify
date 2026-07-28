@@ -6,15 +6,15 @@ import (
 	"gorm.io/gorm"
 )
 
-type CategoryRepository struct {
+type categoryRepository struct {
 	db *gorm.DB
 }
 
-func NewCategoryRepository(db *gorm.DB) *CategoryRepository {
-	return &CategoryRepository{db: db}
+func NewCategoryRepository(db *gorm.DB) CategoryRepository {
+	return &categoryRepository{db: db}
 }
 
-func (r *CategoryRepository) CreateCategory(category *domain.Category) error {
+func (r *categoryRepository) CreateCategory(category *domain.Category) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(category).Error; err != nil {
 			return err
@@ -23,7 +23,7 @@ func (r *CategoryRepository) CreateCategory(category *domain.Category) error {
 	})
 }
 
-func (r *CategoryRepository) UpdateCategory(category *domain.Category, updates map[string]interface{}) error {
+func (r *categoryRepository) UpdateCategory(category *domain.Category, updates map[string]interface{}) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(category).Updates(updates).Error; err != nil {
 			return err
@@ -35,7 +35,7 @@ func (r *CategoryRepository) UpdateCategory(category *domain.Category, updates m
 	})
 }
 
-func (r *CategoryRepository) DeleteCategory(category *domain.Category) error {
+func (r *categoryRepository) DeleteCategory(category *domain.Category) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(category).Error; err != nil {
 			return err
@@ -44,11 +44,11 @@ func (r *CategoryRepository) DeleteCategory(category *domain.Category) error {
 	})
 }
 
-func (r *CategoryRepository) CreateSubCategory(subCategory *domain.SubCategory) error {
+func (r *categoryRepository) CreateSubCategory(subCategory *domain.SubCategory) error {
 	return r.db.Create(subCategory).Error
 }
 
-func (r *CategoryRepository) GetAll() ([]domain.Category, error) {
+func (r *categoryRepository) GetAll() ([]domain.Category, error) {
 	var categories []domain.Category
 	if err := r.db.Find(&categories).Error; err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func (r *CategoryRepository) GetAll() ([]domain.Category, error) {
 	return categories, nil
 }
 
-func (r *CategoryRepository) GetAllSubCategories() ([]domain.SubCategory, error) {
+func (r *categoryRepository) GetAllSubCategories() ([]domain.SubCategory, error) {
 	var subCategories []domain.SubCategory
 	if err := r.db.Find(&subCategories).Error; err != nil {
 		return nil, err
@@ -64,15 +64,15 @@ func (r *CategoryRepository) GetAllSubCategories() ([]domain.SubCategory, error)
 	return subCategories, nil
 }
 
-func (r *CategoryRepository) GetByNames(names []string, categories *[]domain.Category) error {
+func (r *categoryRepository) GetByNames(names []string, categories *[]domain.Category) error {
 	return r.db.Where("name IN ?", names).Find(categories).Error
 }
 
-func (r *CategoryRepository) GetSubCategoriesByNames(names []string, subCategories *[]domain.SubCategory) error {
+func (r *categoryRepository) GetSubCategoriesByNames(names []string, subCategories *[]domain.SubCategory) error {
 	return r.db.Where("name IN ?", names).Find(subCategories).Error
 }
 
-func (r *CategoryRepository) GetCategoryByName(name string) (*domain.Category, error) {
+func (r *categoryRepository) GetCategoryByName(name string) (*domain.Category, error) {
 	var category domain.Category
 	if err := r.db.Where("name = ?", name).First(&category).Error; err != nil {
 		return nil, err

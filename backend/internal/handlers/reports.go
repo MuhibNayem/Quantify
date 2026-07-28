@@ -19,10 +19,10 @@ import (
 
 type ReportHandler struct {
 	reportingService *services.ReportingService
-	jobRepo          *repository.JobRepository
+	jobRepo          repository.JobRepository
 }
 
-func NewReportHandler(reportingService *services.ReportingService, jobRepo *repository.JobRepository) *ReportHandler {
+func NewReportHandler(reportingService *services.ReportingService, jobRepo repository.JobRepository) *ReportHandler {
 	return &ReportHandler{reportingService: reportingService, jobRepo: jobRepo}
 }
 

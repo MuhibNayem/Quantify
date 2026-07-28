@@ -14,11 +14,11 @@ import (
 )
 
 type CategoryHandler struct {
-	categoryRepo *repository.CategoryRepository
+	categoryRepo repository.CategoryRepository
 	db           *gorm.DB // Keep db for now for existing functions
 }
 
-func NewCategoryHandler(categoryRepo *repository.CategoryRepository, db *gorm.DB) *CategoryHandler {
+func NewCategoryHandler(categoryRepo repository.CategoryRepository, db *gorm.DB) *CategoryHandler {
 	return &CategoryHandler{
 		categoryRepo: categoryRepo,
 		db:           db,

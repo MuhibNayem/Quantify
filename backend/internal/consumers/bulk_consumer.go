@@ -24,15 +24,15 @@ import (
 type BulkConsumer struct {
 	DB *gorm.DB
 
-	JobRepo *repository.JobRepository
+	JobRepo repository.JobRepository
 
-	ProductRepo *repository.ProductRepository
+	ProductRepo repository.ProductRepository
 
-	CategoryRepo *repository.CategoryRepository
+	CategoryRepo repository.CategoryRepository
 
-	SupplierRepo *repository.SupplierRepository
+	SupplierRepo repository.SupplierRepository
 
-	LocationRepo *repository.LocationRepository
+	LocationRepo repository.LocationRepository
 
 	Uploader storage.Uploader
 
@@ -45,7 +45,7 @@ type BulkConsumer struct {
 	NotificationRepo repository.NotificationRepository
 }
 
-func NewBulkConsumer(db *gorm.DB, jobRepo *repository.JobRepository, productRepo *repository.ProductRepository, categoryRepo *repository.CategoryRepository, supplierRepo *repository.SupplierRepository, locationRepo *repository.LocationRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub, notificationRepo repository.NotificationRepository) *BulkConsumer {
+func NewBulkConsumer(db *gorm.DB, jobRepo repository.JobRepository, productRepo repository.ProductRepository, categoryRepo repository.CategoryRepository, supplierRepo repository.SupplierRepository, locationRepo repository.LocationRepository, uploader storage.Uploader, bulkImportSvc *services.BulkImportService, bulkExportSvc *services.BulkExportService, hub *ws.Hub, notificationRepo repository.NotificationRepository) *BulkConsumer {
 
 	return &BulkConsumer{
 
