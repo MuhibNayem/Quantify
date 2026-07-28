@@ -273,9 +273,246 @@ consumers reconnect to the broker on startup.
 
 ---
 
-## 5. Related documents
+## 5. Cloud operations
+
+### 5.1 Scaling up/down
+
+**Kubernetes (HPA)**
+
+```bash
+kubectl get hpa -n quantify
+kubectl describe hpa quantify-backend -n quantify
+```
+
+The backend HPA scales 3 → 10 replicas based on CPU (70%), memory (80%), and
+custom `http_requests_per_second` (target 100/pod). To adjust:
+
+```bash
+helm upgrade quantify-backend deploy/helm/quantify-backend -n quantify \
+  --reuse-values \
+  --set autoscaling.maxReplicas=15
+```
+
+**Manual override**
+
+```bash
+kubectl scale deployment quantify-backend -n quantify --replicas=5
+```
+
+> Disable HPA first if you need a fixed replica count:
+> `--set autoscaling.enabled=false`
+
+**Cloud-managed services**
+
+| Cloud | Database | Redis | Broker |
+| :--- | :--- | :--- | :--- |
+| AWS | Modify RDS instance class via Terraform (`db_instance_class`) | Modify ElastiCache node type (`redis_node_type`) | Modify Amazon MQ instance (`mq_instance_type`) |
+| GCP | Change Cloud SQL tier (`db_tier`) | Change Memorystore shard count (`redis_shard_count`) | Scale Pub/Sub throughput (automatic) |
+| Azure | Change PostgreSQL SKU (`db_sku_name`) | Change Redis capacity (`redis_sku_capacity`) | Scale Service Bus tier |
+
+Apply via `terraform plan` / `terraform apply` in the relevant
+`infrastructure/<cloud>/` directory.
+
+---
+
+### 5.2 Database failover
+
+**AWS RDS (Multi-AZ)**
+
+Failover is automatic. To trigger manually:
+
+```bash
+aws rds failover-db-cluster --db-cluster-identifier quantify-prod-postgres
+```
+
+Monitor: `aws rds describe-db-instances --query 'DBInstances[0].DBInstanceStatus'`
+
+**GCP Cloud SQL (HA)**
+
+Automatic regional failover. To test:
+
+```bash
+gcloud sql instances failover quantify-prod-cloudsql
+```
+
+**Azure PostgreSQL (zone-redundant HA)**
+
+Automatic. To trigger:
+
+```bash
+az postgres flexible-server restart \
+  --resource-group quantify-prod \
+  --name quantify-prod-pg
+```
+
+**Post-failover checklist**
+
+1. Verify `/ready` reports healthy DB.
+2. Check backend logs for reconnection (automatic via GORM).
+3. Confirm no stuck transactions: `SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction';`
+4. In-flight transactions are rolled back by PostgreSQL on disconnect.
+
+---
+
+### 5.3 Redis cluster recovery
+
+**In-cluster (Bitnami)**
+
+```bash
+kubectl exec -n quantify quantify-infrastructure-redis-cluster-0 -- \
+  redis-cli -a <password> cluster info
+```
+
+If `cluster_state:fail`:
+
+```bash
+kubectl scale statefulset quantify-infrastructure-redis-cluster -n quantify --replicas=0
+kubectl scale statefulset quantify-infrastructure-redis-cluster -n quantify --replicas=6
+```
+
+**AWS ElastiCache**
+
+```bash
+aws elasticache describe-cache-clusters --cluster-id quantify-prod-redis
+```
+
+ElastiCache handles node replacement automatically. For shard rebalancing:
+
+```bash
+aws elasticache rebalance-slots --replication-group-id quantify-prod-redis
+```
+
+**Impact**: Redis restart logs out all users (tokens stored in Redis).
+Permission and report caches rebuild lazily.
+
+---
+
+### 5.4 RabbitMQ cluster recovery
+
+**In-cluster (Bitnami)**
+
+```bash
+kubectl exec -n quantify quantify-infrastructure-rabbitmq-0 -- \
+  rabbitmq-diagnostics cluster_status
+```
+
+For a full cluster restart:
+
+```bash
+kubectl scale statefulset quantify-infrastructure-rabbitmq -n quantify --replicas=0
+kubectl scale statefulset quantify-infrastructure-rabbitmq -n quantify --replicas=3
+```
+
+**AWS Amazon MQ**
+
+Amazon MQ manages broker HA. Check status:
+
+```bash
+aws mq describe-broker --broker-id <broker-id> --query 'BrokerState'
+```
+
+**Post-recovery**: restart the backend to re-establish consumer subscriptions.
+Messages published during the outage may be lost — re-trigger affected jobs.
+
+---
+
+### 5.5 Certificate renewal
+
+cert-manager auto-renews Let's Encrypt certificates 30 days before expiry.
+
+**Check certificate status**
+
+```bash
+kubectl get certificates -n quantify
+kubectl describe certificate quantify-backend-prod-tls -n quantify
+```
+
+**Force renewal**
+
+```bash
+kubectl cert-manager renew quantify-backend-prod-tls -n quantify
+```
+
+**Verify**
+
+```bash
+echo | openssl s_client -connect api.quantify.com:443 2>/dev/null | \
+  openssl x509 -noout -dates
+```
+
+If cert-manager is failing, check the ClusterIssuer and ACME challenge:
+
+```bash
+kubectl describe clusterissuer letsencrypt-prod
+kubectl get challenges -A
+kubectl get orders -A
+```
+
+---
+
+### 5.6 Terraform drift detection
+
+Run a plan to detect drift (no changes applied):
+
+```bash
+cd infrastructure/aws   # or gcp/ azure/
+terraform plan -detailed-exitcode
+```
+
+Exit codes: `0` = no drift, `1` = error, `2` = drift detected.
+
+**Scheduled drift detection** (recommended):
+
+```bash
+# Add to cron or CI schedule
+terraform plan -detailed-exitcode -out=/dev/null || \
+  echo "DRIFT DETECTED — investigate"
+```
+
+**Remediation**
+
+- If drift is intentional (manual console change), import the resource:
+  `terraform import <resource> <id>`
+- If drift is unintentional, re-apply: `terraform apply`
+- Review `terraform state show <resource>` before any action.
+
+---
+
+### 5.7 Cost anomaly response
+
+**Detection**
+
+| Cloud | Tool |
+| :--- | :--- |
+| AWS | Cost Explorer + Budgets (alert at 80% of budget) |
+| GCP | Cost Management + Budget alerts |
+| Azure | Cost Management + Budget alerts |
+
+**Immediate response**
+
+1. Identify the anomalous resource (compute, storage, data transfer).
+2. Check for runaway scaling: `kubectl get hpa -n quantify`
+3. Check for orphaned resources: `terraform plan` (destroyed resources show as drift).
+4. Review recent deploys that may have increased resource requests.
+
+**Common causes**
+
+| Cause | Fix |
+| :--- | :--- |
+| HPA scaled to max and stayed | Investigate traffic spike; adjust `maxReplicas` |
+| Orphaned PVCs / LBs | `terraform destroy -target=<resource>` or manual cleanup |
+| NAT gateway data transfer | Reduce egress; use VPC endpoints for AWS services |
+| Log storage growth | Reduce Loki/Prometheus retention; add lifecycle rules |
+| Over-provisioned instances | Right-size via Terraform variables |
+
+---
+
+## 6. Related documents
 
 - [architecture.md](./architecture.md)
 - [security.md](./security.md)
 - [business_logic.md](./business_logic.md)
+- [deployment/README.md](./deployment/README.md)
+- [deployment/monitoring.md](./deployment/monitoring.md)
+- [deployment/troubleshooting.md](./deployment/troubleshooting.md)
 - `backend/CHANGELOG.md`
