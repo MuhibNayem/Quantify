@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# Quantify Azure infrastructure - example variable values
+#
+# Usage:
+#   cp terraform.tfvars.example terraform.tfvars
+#   terraform init -backend-config=backend.hcl
+#   terraform plan
+#   terraform apply
+#
+# backend.hcl (remote state in an Azure storage account):
+#   resource_group_name  = "quantify-terraform"
+#   storage_account_name = "quantifytfstate"
+#   container_name       = "tfstate"
+#   key                  = "azure/prod/terraform.tfstate"
+#   use_azuread_auth     = true
+# ---------------------------------------------------------------------------
+
+environment = "prod"
+location    = "eastus"
+# subscription_id = "00000000-0000-0000-0000-000000000000"
+
+vnet_cidr = "10.0.0.0/16"
+
+aks_kubernetes_version = "1.30"
+aks_private_cluster     = true
+
+db_sku_name            = "GP_Standard_D2ds_v4"
+db_storage_size_gb     = 128
+db_high_availability   = true
+db_create_read_replica = true
+
+redis_sku_capacity  = 2
+redis_shard_count   = 3
+redis_replica_count = 1
+
+alert_email_endpoints = ["oncall@example.com"]
+
+tags = {
+  CostCenter = "engineering"
+}

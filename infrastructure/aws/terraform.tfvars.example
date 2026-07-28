@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# Quantify AWS infrastructure - example variable values
+#
+# Usage:
+#   cp terraform.tfvars.example terraform.tfvars
+#   # edit values, then:
+#   terraform init -backend-config=backend.hcl
+#   terraform plan
+#   terraform apply
+#
+# backend.hcl (remote state with encryption + locking):
+#   bucket         = "quantify-terraform-state"
+#   key            = "aws/prod/terraform.tfstate"
+#   region         = "us-east-1"
+#   encrypt        = true
+#   dynamodb_table = "quantify-terraform-locks"
+# ---------------------------------------------------------------------------
+
+project_name = "quantify"
+environment  = "prod"
+region       = "us-east-1"
+owner        = "platform"
+
+vpc_cidr               = "10.0.0.0/16"
+enable_nat_gateway     = true
+single_nat_gateway     = false # true = cheaper, false = per-AZ HA
+enable_vpc_flow_logs   = true
+
+eks_cluster_version = "1.30"
+eks_public_endpoint = false
+
+db_instance_class        = "db.m6g.large"
+db_allocated_storage     = 100
+db_multi_az              = true
+db_create_read_replica   = true
+db_backup_retention_period = 7
+db_use_aurora            = false
+# db_password            = null  # leave null to auto-generate into Secrets Manager
+
+redis_node_type              = "cache.m6g.large"
+redis_num_node_groups        = 3
+redis_replicas_per_node_group = 1
+
+mq_instance_type = "mq.m5.large"
+
+s3_versioning_enabled = true
+
+ecr_repositories    = ["backend", "ai-service"]
+ecr_max_image_count = 30
+
+alert_email_endpoints     = ["oncall@example.com"]
+enable_managed_prometheus = false
+
+tags = {
+  CostCenter = "engineering"
+}

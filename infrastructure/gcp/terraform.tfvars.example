@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# Quantify GCP infrastructure - example variable values
+#
+# Usage:
+#   cp terraform.tfvars.example terraform.tfvars
+#   terraform init -backend-config=backend.hcl
+#   terraform plan
+#   terraform apply
+#
+# backend.hcl (remote state in a GCS bucket):
+#   bucket = "quantify-terraform-state"
+#   prefix = "gcp/prod/terraform.tfstate"
+# ---------------------------------------------------------------------------
+
+project_id  = "quantify-prod"
+environment = "prod"
+region      = "us-central1"
+
+network_cidr = "10.0.0.0/16"
+
+gke_release_channel = "REGULAR"
+
+db_tier                = "db-custom-2-8192"
+db_ha                  = true
+db_create_read_replica = true
+db_disk_size_gb        = 100
+
+redis_shard_count   = 3
+redis_replica_count = 1
+
+alert_email_endpoints = ["oncall@example.com"]
+
+labels = {
+  cost_center = "engineering"
+}
