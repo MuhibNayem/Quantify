@@ -40,7 +40,7 @@ func TestValidateConfig_RejectsEmptySSLCommerzPassword(t *testing.T) {
 }
 
 func TestValidateConfig_RejectsEmptyJWTSecret(t *testing.T) {
-	cfg := &Config{JWTSecret: "", RefreshTokenSecret: "u", MinioAccessKeyID: "u", MinioSecretAccessKey: "u", RabbitMQURL: "amqp://x"}
+	cfg := &Config{JWTSecret: "", RefreshTokenSecret: "u", MinioAccessKeyID: "u", MinioSecretAccessKey: "u", RabbitMQURL: "amqp://x", SSLCommerzStorePassword: "uniquesslc"}
 	err := validateCriticalConfig(cfg)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "JWT_SECRET")
@@ -55,7 +55,7 @@ func TestLoadConfig_AppEnvDefaultsToDev(t *testing.T) {
 	t.Setenv("MINIO_ACCESS_KEY_ID", "u3")
 	t.Setenv("MINIO_SECRET_ACCESS_KEY", "u4")
 
-	cfg, err := LoadConfig()
+	cfg, err := LoadConfig("")
 	assert.NoError(t, err)
 	assert.Equal(t, "dev", cfg.AppEnv)
 }
@@ -69,7 +69,7 @@ func TestLoadConfig_AppEnvHonoredFromEnv(t *testing.T) {
 	t.Setenv("MINIO_ACCESS_KEY_ID", "u3")
 	t.Setenv("MINIO_SECRET_ACCESS_KEY", "u4")
 
-	cfg, err := LoadConfig()
+	cfg, err := LoadConfig("")
 	assert.NoError(t, err)
 	assert.Equal(t, "production", cfg.AppEnv)
 }
