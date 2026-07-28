@@ -70,7 +70,7 @@ func (h *ReplenishmentHandler) GenerateDemandForecast(c *gin.Context) {
 
 	forecast, err := h.ForecastingService.GenerateDemandForecast(req.ProductID, req.PeriodInDays)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Error(appErrors.NewAppError("Failed to generate demand forecast", http.StatusInternalServerError, err))
 		return
 	}
 

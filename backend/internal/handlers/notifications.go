@@ -47,7 +47,7 @@ func (h *NotificationHandler) WithDB(db *gorm.DB) *NotificationHandler {
 func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -143,7 +143,7 @@ func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
 func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -186,7 +186,7 @@ func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
 func (h *NotificationHandler) MarkAllNotificationsAsRead(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -272,7 +272,7 @@ func (h *NotificationHandler) BroadcastNotification(c *gin.Context) {
 func (h *NotificationHandler) UpdateSubscription(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -285,7 +285,7 @@ func (h *NotificationHandler) UpdateSubscription(c *gin.Context) {
 	// Authorization: users may only manage their own subscriptions. Admins
 	// can override (consistent with other notification endpoints).
 	if authUserID != uint(pathUserID) && c.GetString("role") != "Admin" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
 		return
 	}
 
@@ -333,7 +333,7 @@ func (h *NotificationHandler) UpdateSubscription(c *gin.Context) {
 func (h *NotificationHandler) ListSubscriptions(c *gin.Context) {
 	authUserID := c.GetUint("user_id")
 	if authUserID == 0 {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+		c.Error(appErrors.NewAppError("Unauthenticated", http.StatusUnauthorized, nil))
 		return
 	}
 
@@ -344,7 +344,7 @@ func (h *NotificationHandler) ListSubscriptions(c *gin.Context) {
 	}
 
 	if authUserID != uint(pathUserID) && c.GetString("role") != "Admin" {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "forbidden"})
+		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))
 		return
 	}
 

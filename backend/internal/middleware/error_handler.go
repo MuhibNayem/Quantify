@@ -9,6 +9,18 @@ import (
 	appErrors "inventory/backend/internal/errors"
 )
 
+type errorResponse struct {
+	Error string `json:"error"`
+}
+
+func RespondError(c *gin.Context, appErr *appErrors.AppError) {
+	c.JSON(appErr.StatusCode, errorResponse{Error: appErr.Message})
+}
+
+func respondInternalError(c *gin.Context) {
+	c.JSON(http.StatusInternalServerError, errorResponse{Error: "An unexpected error occurred"})
+}
+
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
@@ -31,12 +43,12 @@ func ErrorHandler() gin.HandlerFunc {
 
 			if appErr, ok := e.Err.(*appErrors.AppError); ok {
 				logrus.WithFields(fields).WithError(appErr.Err).Error(appErr.Message)
-				c.JSON(appErr.StatusCode, gin.H{"error": appErr.Message})
+				RespondError(c, appErr)
 				return
 			}
 
 			logrus.WithFields(fields).WithError(e.Err).Error("Unhandled error")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "An unexpected error occurred"})
+			respondInternalError(c)
 			return
 		}
 	}

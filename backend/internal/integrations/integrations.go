@@ -1,6 +1,13 @@
 package integrations
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	appErrors "inventory/backend/internal/errors"
+	"inventory/backend/internal/middleware"
+)
 
 // Integration is the contract every third-party webhook provider must
 // satisfy. The registry uses Name() to dispatch incoming HTTP webhooks
@@ -33,12 +40,12 @@ func (r *Registry) HandleWebhook(c *gin.Context) {
 	name := c.Param("name")
 	i, ok := r.integrations[name]
 	if !ok {
-		c.JSON(404, gin.H{"error": "unknown integration"})
+		middleware.RespondError(c, appErrors.NewAppError("Unknown integration", http.StatusNotFound, nil))
 		return
 	}
 	if err := i.HandleWebhook(c); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		middleware.RespondError(c, appErrors.NewAppError("Integration handler failed", http.StatusInternalServerError, err))
 		return
 	}
-	c.JSON(200, gin.H{"status": "ok"})
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }

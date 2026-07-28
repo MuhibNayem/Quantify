@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -77,7 +78,7 @@ func numericRange(min, max float64) func(string) error {
 func (h *SettingsHandler) GetSettings(c *gin.Context) {
 	settings, err := h.service.GetAllSettings()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch settings"})
+		c.Error(appErrors.NewAppError("Failed to fetch settings", http.StatusInternalServerError, err))
 		return
 	}
 	c.JSON(http.StatusOK, settings)
@@ -89,29 +90,29 @@ func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 		Value interface{} `json:"value"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid payload"})
+		c.Error(appErrors.NewAppError("Invalid payload", http.StatusBadRequest, err))
 		return
 	}
 	descriptor, ok := settingDescriptors[req.Key]
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "unknown setting: " + req.Key})
+		c.Error(appErrors.NewAppError("Unknown setting: "+req.Key, http.StatusBadRequest, nil))
 		return
 	}
 	valueStr := fmt.Sprintf("%v", req.Value)
 	if descriptor.Validate != nil {
 		if err := descriptor.Validate(valueStr); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid value: " + err.Error()})
+			c.Error(appErrors.NewAppError("Invalid value: "+err.Error(), http.StatusBadRequest, err))
 			return
 		}
 	}
 	authUserID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authenticated user not found"})
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
 		return
 	}
 	userID := authUserID.(uint)
 	if err := h.service.UpdateSetting(req.Key, valueStr, userID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update setting"})
+		c.Error(appErrors.NewAppError("Failed to update setting", http.StatusInternalServerError, err))
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Setting updated"})
@@ -120,7 +121,7 @@ func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 func (h *SettingsHandler) GetPublicConfigurations(c *gin.Context) {
 	settings, err := h.service.GetPublicSettings()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch configurations"})
+		c.Error(appErrors.NewAppError("Failed to fetch configurations", http.StatusInternalServerError, err))
 		return
 	}
 	c.JSON(http.StatusOK, settings)

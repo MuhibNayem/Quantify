@@ -73,7 +73,7 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	user, err := h.lookupCustomer(c.Request.Context(), identifier)
 	if err != nil {
 		// Always 404 for missing — no leak of which field matched
-		c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
+		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
 	}
 	user.Password = ""
@@ -252,7 +252,7 @@ func (h *CRMHandler) GetChurnRisk(c *gin.Context) {
 	identifier := c.Param("identifier")
 	user, err := h.lookupCustomer(c.Request.Context(), identifier)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "customer not found"})
+		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
 		return
 	}
 
