@@ -48,6 +48,7 @@ func NewReturnHandler(db *gorm.DB, cfg *config.Config, settings services.Setting
 // @Accept json
 // @Produce json
 // @Param status query string false "Filter by status (PENDING, APPROVED, REJECTED)"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "List of returns"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /returns [get]
@@ -75,6 +76,7 @@ func (h *ReturnHandler) ListReturns(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Return ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Return details"
 // @Failure 404 {object} map[string]interface{} "Return not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

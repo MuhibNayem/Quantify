@@ -27,6 +27,7 @@ func NewPromotionHandler(db *gorm.DB) *PromotionHandler {
 // @Accept json
 // @Produce json
 // @Param promotion body requests.PromotionCreateRequest true "Promotion creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Promotion
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -68,6 +69,7 @@ func (h *PromotionHandler) CreatePromotion(c *gin.Context) {
 // @Tags promotions
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Promotion
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /promotions [get]
@@ -97,6 +99,7 @@ func (h *PromotionHandler) ListPromotions(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Promotion ID"
 // @Param promotion body requests.PromotionUpdateRequest true "Promotion update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.Promotion
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Not Found"
@@ -162,6 +165,7 @@ func (h *PromotionHandler) UpdatePromotion(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Promotion ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /promotions/{id} [delete]

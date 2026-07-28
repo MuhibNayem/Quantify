@@ -18,6 +18,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param subscription body requests.CreateAlertRoleSubscriptionRequest true "Subscription details"
+// @Security BearerAuth
 // @Success 201 {object} domain.AlertRoleSubscription
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 409 {object} map[string]interface{} "Conflict"
@@ -52,6 +53,7 @@ func CreateAlertRoleSubscription(c *gin.Context) {
 // @Description Retrieves a list of all current alert-role subscriptions.
 // @Tags alerts
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.AlertRoleSubscription
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /alerts/subscriptions [get]
@@ -70,6 +72,7 @@ func ListAlertRoleSubscriptions(c *gin.Context) {
 // @Description Deletes a subscription by its ID.
 // @Tags alerts
 // @Param id path int true "Subscription ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Not Found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

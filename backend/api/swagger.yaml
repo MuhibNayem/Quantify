@@ -1,4 +1,7203 @@
+basePath: /api/v1
+definitions:
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  internal_handlers.BroadcastNotificationRequest:
+    properties:
+      message:
+        type: string
+      payload:
+        type: string
+      permission:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+    required:
+    - message
+    - permission
+    - title
+    - type
+    type: object
+  internal_handlers.ReturnRequest:
+    properties:
+      items:
+        items:
+          properties:
+            condition:
+              type: string
+            order_item_id:
+              type: integer
+            quantity:
+              type: integer
+            reason:
+              type: string
+          required:
+          - order_item_id
+          - quantity
+          - reason
+          type: object
+        type: array
+      order_number:
+        type: string
+    required:
+    - items
+    - order_number
+    type: object
+  inventory_backend_internal_domain.Alert:
+    properties:
+      batch:
+        $ref: '#/definitions/inventory_backend_internal_domain.Batch'
+      batchID:
+        description: Optional, for expiry alerts
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      message:
+        type: string
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        description: Composite index for product + status queries
+        type: integer
+      status:
+        description: ACTIVE, RESOLVED
+        type: string
+      triggeredAt:
+        description: Index for date range queries
+        type: string
+      type:
+        description: Index for filtering by alert type
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.AlertRoleSubscription:
+    properties:
+      alertType:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      role:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.AuditLog:
+    properties:
+      action:
+        description: e.g., "CREATE", "UPDATE", "DELETE", "VOID", "DISCOUNT"
+        type: string
+      changes:
+        description: JSON string describing the changes (old vs new values)
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      entity:
+        description: e.g., "Product", "Order", "User", "Settings"
+        type: string
+      entityID:
+        description: ID of the affected entity
+        type: string
+      id:
+        type: integer
+      ipaddress:
+        description: 'Optional: IP address of the user'
+        type: string
+      timestamp:
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userAgent:
+        description: 'Optional: User agent string'
+        type: string
+      userID:
+        description: Who performed the action
+        type: integer
+    type: object
+  inventory_backend_internal_domain.Batch:
+    properties:
+      batchNumber:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      expiryDate:
+        description: Pointer to allow null for non-perishable
+        type: string
+      id:
+        type: integer
+      location:
+        $ref: '#/definitions/inventory_backend_internal_domain.Location'
+      locationID:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      quantity:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.CashDrawerSession:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      endTime:
+        type: string
+      endingCash:
+        description: Actual cash counted by cashier at closing
+        format: float64
+        type: number
+      id:
+        type: integer
+      location:
+        $ref: '#/definitions/inventory_backend_internal_domain.Location'
+      locationID:
+        type: integer
+      notes:
+        type: string
+      startTime:
+        type: string
+      startingCash:
+        type: number
+      status:
+        description: OPEN, CLOSED
+        type: string
+      systemCash:
+        description: Expected cash calculated by system (Starting + Sales - Returns
+          - Drops)
+        format: float64
+        type: number
+      totalDrops:
+        description: Cash removed during the shift (e.g., safe drops)
+        format: float64
+        type: number
+      totalRefunds:
+        format: float64
+        type: number
+      totalSales:
+        format: float64
+        type: number
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        description: The cashier responsible
+        type: integer
+      variance:
+        description: EndingCash - SystemCash
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_domain.Category:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        type: string
+      subCategories:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.DemandForecast:
+    properties:
+      confidenceScore:
+        format: float64
+        type: number
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      forecastPeriod:
+        description: e.g., "30_DAYS", "90_DAYS"
+        type: string
+      generatedAt:
+        type: string
+      id:
+        type: integer
+      predictedDemand:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      reasoning:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Job:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      lastAttemptAt:
+        type: string
+      lastError:
+        type: string
+      maxRetries:
+        type: integer
+      payload:
+        type: string
+      result:
+        type: string
+      retryCount:
+        type: integer
+      status:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Location:
+    properties:
+      address:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.LoyaltyAccount:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      points:
+        type: integer
+      tier:
+        description: e.g., Bronze, Silver, Gold
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        type: integer
+    type: object
+  inventory_backend_internal_domain.Notification:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      isRead:
+        description: Part of composite index
+        type: boolean
+      message:
+        type: string
+      payload:
+        description: JSON string for additional data (e.g., productID, orderID)
+        type: string
+      readAt:
+        type: string
+      title:
+        type: string
+      triggeredAt:
+        description: Index for date sorting
+        type: string
+      type:
+        description: Index for filtering by type
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        description: Composite index for user + read status
+        type: integer
+    type: object
+  inventory_backend_internal_domain.Order:
+    properties:
+      AdjustedTotal:
+        type: number
+      HasPendingReturn:
+        type: boolean
+      Returns:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.Return'
+        type: array
+      createdAt:
+        type: string
+      customer:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      customerID:
+        description: Customer ID (nullable)
+        type: integer
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      discountAmount:
+        type: number
+      id:
+        type: integer
+      orderDate:
+        type: string
+      orderItems:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.OrderItem'
+        type: array
+      orderNumber:
+        type: string
+      paymentMethod:
+        type: string
+      pointsRedeemed:
+        type: integer
+      status:
+        description: PENDING, COMPLETED, CANCELLED, RETURNED
+        type: string
+      subtotal:
+        description: Pre-tax, post-promo-discount
+        type: number
+      taxAmount:
+        description: Tax portion captured at checkout (P3.T7)
+        type: number
+      totalAmount:
+        description: Post-tax, post-loyalty-discount
+        type: number
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        description: Staff ID (logged in user)
+        type: integer
+    type: object
+  inventory_backend_internal_domain.OrderItem:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      isReturned:
+        type: boolean
+      order:
+        $ref: '#/definitions/inventory_backend_internal_domain.Order'
+      orderID:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      quantity:
+        type: integer
+      returnedQty:
+        type: integer
+      totalPrice:
+        type: number
+      unitPrice:
+        type: number
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Permission:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      group:
+        description: e.g., "Inventory", "CRM"
+        type: string
+      id:
+        type: integer
+      name:
+        description: e.g., "inventory.read"
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Product:
+    properties:
+      barcodeUPC:
+        description: Index for barcode lookups
+        type: string
+      brand:
+        description: Index for brand filters
+        type: string
+      category:
+        $ref: '#/definitions/inventory_backend_internal_domain.Category'
+      categoryID:
+        description: Index for category filters
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      imageURLs:
+        description: Storing as comma-separated string or JSON string for simplicity
+        type: string
+      location:
+        $ref: '#/definitions/inventory_backend_internal_domain.Location'
+      locationID:
+        description: Index for location filters
+        type: integer
+      name:
+        description: Index for name searches
+        type: string
+      purchasePrice:
+        format: float64
+        type: number
+      sellingPrice:
+        format: float64
+        type: number
+      sku:
+        type: string
+      status:
+        description: Index for status filters (Active, Archived, Discontinued)
+        type: string
+      subCategory:
+        $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+      subCategoryID:
+        description: Index for subcategory filters
+        type: integer
+      supplier:
+        $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+      supplierID:
+        description: Index for supplier filters
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.ProductAlertSettings:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      expiryAlertDays:
+        type: integer
+      id:
+        type: integer
+      lowStockLevel:
+        type: integer
+      overStockLevel:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Promotion:
+    properties:
+      category:
+        $ref: '#/definitions/inventory_backend_internal_domain.Category'
+      categoryID:
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      discountType:
+        description: '"PERCENTAGE" or "FIXED_AMOUNT"'
+        type: string
+      discountValue:
+        type: number
+      endDate:
+        type: string
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      name:
+        type: string
+      priority:
+        description: Higher number = higher priority
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        description: Targets (Nullable, only one should be set ideally, or hierarchical)
+        type: integer
+      startDate:
+        type: string
+      subCategory:
+        $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+      subCategoryID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.PurchaseOrder:
+    properties:
+      actualDeliveryDate:
+        type: string
+      approvedAt:
+        type: string
+      approvedBy:
+        description: UserID of the approver
+        type: integer
+      createdAt:
+        type: string
+      createdBy:
+        description: UserID of the creator
+        type: integer
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      expectedDeliveryDate:
+        type: string
+      id:
+        type: integer
+      orderDate:
+        type: string
+      purchaseOrderItems:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrderItem'
+        type: array
+      status:
+        description: DRAFT, APPROVED, SENT, PARTIALLY_RECEIVED, RECEIVED, CANCELLED
+        type: string
+      supplier:
+        $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+      supplierID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.PurchaseOrderItem:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      orderedQuantity:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      purchaseOrder:
+        $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+      purchaseOrderID:
+        type: integer
+      receivedQuantity:
+        description: Quantity actually received
+        type: integer
+      unitPrice:
+        type: number
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.PurchaseReturn:
+    properties:
+      approvedAt:
+        description: Timestamp of approval intent
+        type: string
+      approvedBy:
+        description: UserID of the admin who approved
+        type: integer
+      cancelledAt:
+        description: Timestamp of cancellation
+        type: string
+      completedAt:
+        description: Timestamp of completion (stock deducted)
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      purchaseOrder:
+        $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+      purchaseOrderID:
+        description: Optional link to original PO
+        type: integer
+      purchaseReturnItems:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturnItem'
+        type: array
+      reason:
+        type: string
+      refundAmount:
+        description: Estimated refund value
+        format: float64
+        type: number
+      returnedAt:
+        type: string
+      returnedBy:
+        description: UserID
+        type: integer
+      status:
+        description: PENDING, COMPLETED, CANCELLED
+        type: string
+      supplier:
+        $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+      supplierID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.PurchaseReturnItem:
+    properties:
+      batch:
+        $ref: '#/definitions/inventory_backend_internal_domain.Batch'
+      batchID:
+        description: Specific batch being returned (critical for stock deduction)
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      purchaseReturn:
+        $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+      purchaseReturnID:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.ReorderSuggestion:
+    properties:
+      createdAt:
+        type: string
+      currentStock:
+        type: integer
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      leadTimeDays:
+        type: integer
+      predictedDemand:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      snapshotPrice:
+        description: Product.PurchasePrice at the time the suggestion was generated;
+          used to detect price drift when the PO is created
+        type: number
+      status:
+        description: PENDING, APPROVED, REJECTED, PO_CREATED
+        type: string
+      suggestedAt:
+        type: string
+      suggestedOrderQuantity:
+        type: integer
+      supplier:
+        $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+      supplierID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Return:
+    properties:
+      approvedAt:
+        type: string
+      approvedBy:
+        description: UserID of the approver (Staff/Manager)
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      order:
+        $ref: '#/definitions/inventory_backend_internal_domain.Order'
+      orderID:
+        type: integer
+      reason:
+        type: string
+      refundAmount:
+        type: number
+      returnItems:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.ReturnItem'
+        type: array
+      status:
+        description: PENDING, APPROVED, REJECTED, COMPLETED
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        description: User who requested the return (Customer)
+        type: integer
+    type: object
+  inventory_backend_internal_domain.ReturnItem:
+    properties:
+      condition:
+        description: GOOD, DAMAGED, OPENED
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      orderItem:
+        $ref: '#/definitions/inventory_backend_internal_domain.OrderItem'
+      orderItemID:
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      quantity:
+        type: integer
+      reason:
+        type: string
+      return:
+        $ref: '#/definitions/inventory_backend_internal_domain.Return'
+      returnID:
+        type: integer
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Role:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      description:
+        type: string
+      id:
+        type: integer
+      isSystem:
+        description: System roles (Admin, Manager) cannot be deleted
+        type: boolean
+      name:
+        type: string
+      permissions:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_domain.Permission'
+        type: array
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.StockAdjustment:
+    properties:
+      adjustedAt:
+        type: string
+      adjustedBy:
+        description: UserID of the person who made the adjustment
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      location:
+        $ref: '#/definitions/inventory_backend_internal_domain.Location'
+      locationID:
+        type: integer
+      newQuantity:
+        description: Snapshot of quantity after adjustment
+        type: integer
+      notes:
+        type: string
+      previousQuantity:
+        description: Snapshot of quantity before adjustment
+        type: integer
+      product:
+        $ref: '#/definitions/inventory_backend_internal_domain.Product'
+      productID:
+        type: integer
+      quantity:
+        type: integer
+      reasonCode:
+        description: e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
+        type: string
+      type:
+        description: e.g., "STOCK_IN", "STOCK_OUT"
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.SubCategory:
+    properties:
+      category:
+        $ref: '#/definitions/inventory_backend_internal_domain.Category'
+      categoryID:
+        description: Index for category lookups
+        type: integer
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.Supplier:
+    properties:
+      address:
+        type: string
+      contactPerson:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        description: Index for email lookups
+        type: string
+      id:
+        type: integer
+      name:
+        description: Index for name searches
+        type: string
+      phone:
+        description: Index for phone lookups
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  inventory_backend_internal_domain.User:
+    properties:
+      address:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      email:
+        type: string
+      firstName:
+        type: string
+      id:
+        type: integer
+      isActive:
+        type: boolean
+      lastName:
+        type: string
+      legacyRole:
+        description: Role           string `gorm:"not null"` // Deprecated in favor
+          of RoleID
+        type: string
+      loyalty:
+        $ref: '#/definitions/inventory_backend_internal_domain.LoyaltyAccount'
+      password:
+        type: string
+      phoneNumber:
+        type: string
+      role:
+        description: Computed field for API compatibility
+        type: string
+      roleID:
+        description: Foreign key to roles table
+        type: integer
+      updatedAt:
+        type: string
+      username:
+        type: string
+    type: object
+  inventory_backend_internal_domain.UserNotificationSettings:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      emailAddress:
+        type: string
+      emailNotificationsEnabled:
+        type: boolean
+      id:
+        type: integer
+      phoneNumber:
+        type: string
+      smsnotificationsEnabled:
+        type: boolean
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/inventory_backend_internal_domain.User'
+      userID:
+        type: integer
+    type: object
+  inventory_backend_internal_domain.UserNotificationSubscription:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      type:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: integer
+    type: object
+  inventory_backend_internal_repository.CategoryPerformance:
+    properties:
+      categoryID:
+        type: integer
+      categoryName:
+        type: string
+      grossMargin:
+        format: float64
+        type: number
+      itemCount:
+        type: integer
+      marginPercent:
+        format: float64
+        type: number
+      totalCost:
+        format: float64
+        type: number
+      totalSales:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.CustomerInsight:
+    properties:
+      daysSinceLastOrder:
+        type: integer
+      fullName:
+        type: string
+      grossRevenue:
+        format: float64
+        type: number
+      lastOrderDate:
+        type: string
+      netRevenue:
+        format: float64
+        type: number
+      orderCount:
+        type: integer
+      totalRefunded:
+        format: float64
+        type: number
+      totalSpent:
+        format: float64
+        type: number
+      userID:
+        type: integer
+      username:
+        type: string
+    type: object
+  inventory_backend_internal_repository.DeadStockItem:
+    properties:
+      currentStock:
+        type: integer
+      daysSinceSale:
+        type: integer
+      lastSaleDate:
+        type: string
+      productID:
+        type: integer
+      productName:
+        type: string
+      sku:
+        type: string
+      value:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.EmployeeSalesStats:
+    properties:
+      totalOrders:
+        type: integer
+      totalSales:
+        format: float64
+        type: number
+      userID:
+        type: integer
+      username:
+        type: string
+    type: object
+  inventory_backend_internal_repository.GMROIStats:
+    properties:
+      averageInventoryVal:
+        format: float64
+        type: number
+      cogs:
+        format: float64
+        type: number
+      gmroi:
+        format: float64
+        type: number
+      grossMargin:
+        format: float64
+        type: number
+      totalRevenue:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.HeatmapPoint:
+    properties:
+      dayOfWeek:
+        type: integer
+      hourOfDay:
+        type: integer
+      totalSales:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.ProductPerformanceAnalytics:
+    properties:
+      currentStock:
+        type: integer
+      daysOfStock:
+        format: float64
+        type: number
+      productID:
+        type: integer
+      productName:
+        type: string
+      supplierID:
+        type: integer
+      supplierName:
+        type: string
+      totalCost:
+        format: float64
+        type: number
+      totalProfit:
+        format: float64
+        type: number
+      totalRevenue:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.ReturnAnalysisItem:
+    properties:
+      productID:
+        type: integer
+      productName:
+        type: string
+      reason:
+        type: string
+      returnCount:
+        type: integer
+      totalRefunded:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_repository.ShrinkageItem:
+    properties:
+      lostValue:
+        format: float64
+        type: number
+      productID:
+        type: integer
+      productName:
+        type: string
+      quantity:
+        type: integer
+      reason:
+        type: string
+    type: object
+  inventory_backend_internal_repository.SupplierScorecard:
+    properties:
+      avgLeadTime:
+        format: float64
+        type: number
+      fillRate:
+        format: float64
+        type: number
+      returnRate:
+        format: float64
+        type: number
+      supplierID:
+        type: integer
+      supplierName:
+        type: string
+      totalPOs:
+        type: integer
+    type: object
+  inventory_backend_internal_repository.TaxLiabilityStats:
+    properties:
+      taxAmount:
+        format: float64
+        type: number
+      taxRate:
+        format: float64
+        type: number
+      taxableAmount:
+        format: float64
+        type: number
+    type: object
+  inventory_backend_internal_requests.CategoryCreateRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.CategoryUpdateRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.CheckoutItem:
+    properties:
+      productId:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+    required:
+    - productId
+    - quantity
+    type: object
+  inventory_backend_internal_requests.CheckoutRequest:
+    properties:
+      customerId:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_requests.CheckoutItem'
+        type: array
+      paymentMethod:
+        type: string
+      pointsToRedeem:
+        description: Optional points to redeem
+        type: integer
+      registerLocationId:
+        description: Register-specific location override for stock deduction
+        type: integer
+    required:
+    - items
+    - paymentMethod
+    type: object
+  inventory_backend_internal_requests.CreateAlertRoleSubscriptionRequest:
+    properties:
+      alertType:
+        type: string
+      role:
+        type: string
+    required:
+    - alertType
+    - role
+    type: object
+  inventory_backend_internal_requests.CreateCustomerRequest:
+    properties:
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phoneNumber:
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - email
+    - firstName
+    - lastName
+    - password
+    - phoneNumber
+    - username
+    type: object
+  inventory_backend_internal_requests.CreatePORequest:
+    properties:
+      expectedDeliveryDate:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_requests.POItemRequest'
+        minItems: 1
+        type: array
+      orderDate:
+        type: string
+      supplierId:
+        type: integer
+    required:
+    - items
+    - orderDate
+    - supplierId
+    type: object
+  inventory_backend_internal_requests.ForecastGenerationRequest:
+    properties:
+      periodInDays:
+        type: integer
+      productId:
+        description: Optional, for specific product forecast
+        type: integer
+    required:
+    - periodInDays
+    type: object
+  inventory_backend_internal_requests.InventoryTurnoverReportRequest:
+    properties:
+      categoryId:
+        type: integer
+      endDate:
+        type: string
+      locationId:
+        type: integer
+      startDate:
+        type: string
+    required:
+    - endDate
+    - startDate
+    type: object
+  inventory_backend_internal_requests.LocationCreateRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.LocationUpdateRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    type: object
+  inventory_backend_internal_requests.POItemRequest:
+    properties:
+      orderedQuantity:
+        type: integer
+      productId:
+        type: integer
+      unitPrice:
+        type: number
+    required:
+    - orderedQuantity
+    - productId
+    - unitPrice
+    type: object
+  inventory_backend_internal_requests.PaymentRequest:
+    properties:
+      amount:
+        type: number
+      order_id:
+        type: string
+      payment_method:
+        enum:
+        - bkash
+        - card
+        - cash
+        type: string
+    required:
+    - amount
+    - order_id
+    - payment_method
+    type: object
+  inventory_backend_internal_requests.ProductAlertSettingsRequest:
+    properties:
+      expiryAlertDays:
+        type: integer
+      lowStockLevel:
+        type: integer
+      overStockLevel:
+        type: integer
+    type: object
+  inventory_backend_internal_requests.ProductCreateRequest:
+    properties:
+      barcodeUpc:
+        type: string
+      brand:
+        type: string
+      categoryId:
+        type: integer
+      description:
+        type: string
+      imageUrls:
+        type: string
+      locationId:
+        type: integer
+      name:
+        type: string
+      purchasePrice:
+        type: number
+      sellingPrice:
+        type: number
+      sku:
+        type: string
+      status:
+        type: string
+      subCategoryId:
+        type: integer
+      supplierId:
+        type: integer
+    required:
+    - categoryId
+    - locationId
+    - name
+    - sellingPrice
+    - sku
+    - supplierId
+    type: object
+  inventory_backend_internal_requests.ProductUpdateRequest:
+    properties:
+      barcodeUpc:
+        type: string
+      brand:
+        type: string
+      categoryId:
+        type: integer
+      description:
+        type: string
+      imageUrls:
+        description: Comma-separated or JSON array string
+        type: string
+      locationId:
+        type: integer
+      name:
+        type: string
+      purchasePrice:
+        type: number
+      sellingPrice:
+        type: number
+      status:
+        type: string
+      subCategoryId:
+        type: integer
+      supplierId:
+        type: integer
+    type: object
+  inventory_backend_internal_requests.ProfitMarginReportRequest:
+    properties:
+      categoryId:
+        type: integer
+      endDate:
+        type: string
+      locationId:
+        type: integer
+      startDate:
+        type: string
+    required:
+    - endDate
+    - startDate
+    type: object
+  inventory_backend_internal_requests.PromotionCreateRequest:
+    properties:
+      categoryId:
+        type: integer
+      description:
+        type: string
+      discountType:
+        enum:
+        - PERCENTAGE
+        - FIXED_AMOUNT
+        type: string
+      discountValue:
+        type: number
+      endDate:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      productId:
+        type: integer
+      startDate:
+        type: string
+      subCategoryId:
+        type: integer
+    required:
+    - discountType
+    - discountValue
+    - endDate
+    - name
+    - startDate
+    type: object
+  inventory_backend_internal_requests.PromotionUpdateRequest:
+    properties:
+      description:
+        type: string
+      discountType:
+        enum:
+        - PERCENTAGE
+        - FIXED_AMOUNT
+        type: string
+      discountValue:
+        type: number
+      endDate:
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      priority:
+        type: integer
+      startDate:
+        type: string
+    type: object
+  inventory_backend_internal_requests.ReceivePOItemRequest:
+    properties:
+      batchNumber:
+        type: string
+      expiryDate:
+        type: string
+      purchaseOrderItemId:
+        type: integer
+      receivedQuantity:
+        type: integer
+    required:
+    - batchNumber
+    - purchaseOrderItemId
+    - receivedQuantity
+    type: object
+  inventory_backend_internal_requests.ReceivePORequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_requests.ReceivePOItemRequest'
+        minItems: 1
+        type: array
+    required:
+    - items
+    type: object
+  inventory_backend_internal_requests.RefreshTokenRequest:
+    properties:
+      refreshToken:
+        type: string
+    required:
+    - refreshToken
+    type: object
+  inventory_backend_internal_requests.SalesTrendsReportRequest:
+    properties:
+      categoryId:
+        type: integer
+      endDate:
+        type: string
+      groupBy:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        - iso_week
+        - calendar_week
+        type: string
+      locationId:
+        type: integer
+      productId:
+        type: integer
+      startDate:
+        type: string
+    required:
+    - endDate
+    - groupBy
+    - startDate
+    type: object
+  inventory_backend_internal_requests.StockAdjustmentRequest:
+    properties:
+      notes:
+        type: string
+      quantity:
+        type: integer
+      reasonCode:
+        type: string
+      type:
+        description: '"STOCK_IN" or "STOCK_OUT"'
+        enum:
+        - STOCK_IN
+        - STOCK_OUT
+        type: string
+    required:
+    - quantity
+    - reasonCode
+    - type
+    type: object
+  inventory_backend_internal_requests.StockInBatchRequest:
+    properties:
+      batchNumber:
+        type: string
+      expiryDate:
+        description: Optional for non-perishable
+        type: string
+      quantity:
+        type: integer
+    required:
+    - batchNumber
+    - quantity
+    type: object
+  inventory_backend_internal_requests.StockTransferRequest:
+    properties:
+      destLocationId:
+        type: integer
+      productId:
+        type: integer
+      quantity:
+        type: integer
+      sourceLocationId:
+        type: integer
+    required:
+    - destLocationId
+    - productId
+    - quantity
+    - sourceLocationId
+    type: object
+  inventory_backend_internal_requests.SubCategoryCreateRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.SubCategoryUpdateRequest:
+    properties:
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.SupplierCreateRequest:
+    properties:
+      address:
+        type: string
+      contactPerson:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    required:
+    - name
+    type: object
+  inventory_backend_internal_requests.SupplierUpdateRequest:
+    properties:
+      address:
+        type: string
+      contactPerson:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+    type: object
+  inventory_backend_internal_requests.UpdateCustomerRequest:
+    properties:
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      phoneNumber:
+        type: string
+    type: object
+  inventory_backend_internal_requests.UpdatePORequest:
+    properties:
+      expectedDeliveryDate:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/inventory_backend_internal_requests.POItemRequest'
+        type: array
+      orderDate:
+        type: string
+      status:
+        enum:
+        - DRAFT
+        - APPROVED
+        - SENT
+        - RECEIVED
+        - CANCELLED
+        type: string
+      supplierId:
+        type: integer
+    type: object
+  inventory_backend_internal_requests.UserLoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  inventory_backend_internal_requests.UserNotificationSettingsRequest:
+    properties:
+      emailAddress:
+        type: string
+      emailNotificationsEnabled:
+        type: boolean
+      phoneNumber:
+        type: string
+      smsNotificationsEnabled:
+        type: boolean
+    type: object
+  inventory_backend_internal_requests.UserRegisterRequest:
+    properties:
+      address:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phoneNumber:
+        type: string
+      role:
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
+  inventory_backend_internal_requests.UserUpdateRequest:
+    properties:
+      address:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      password:
+        minLength: 6
+        type: string
+      phoneNumber:
+        type: string
+      role:
+        type: string
+      username:
+        maxLength: 50
+        minLength: 3
+        type: string
+    type: object
+  inventory_backend_internal_services.CreatePurchaseReturnRequest:
+    properties:
+      items:
+        items:
+          properties:
+            batch_id:
+              type: integer
+            product_id:
+              type: integer
+            quantity:
+              type: integer
+            reason:
+              type: string
+          type: object
+        type: array
+      purchase_order_id:
+        type: integer
+      reason:
+        type: string
+      supplier_id:
+        type: integer
+    type: object
+host: localhost:8080
 info:
   contact: {}
-paths: {}
+  description: Inventory management and POS system API
+  title: Quantify API
+  version: "1.0"
+paths:
+  /alerts:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of all active stock-related alerts
+      parameters:
+      - description: Filter by alert type (LOW_STOCK, OUT_OF_STOCK, OVERSTOCK, EXPIRY_ALERT)
+        in: query
+        name: type
+        type: string
+      - description: Filter by alert status (ACTIVE, RESOLVED)
+        in: query
+        name: status
+        type: string
+      - description: Filter by Product ID
+        in: query
+        name: productId
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Alert'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of all active alerts
+      tags:
+      - alerts
+  /alerts/{alertId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific alert by its ID
+      parameters:
+      - description: Alert ID
+        in: path
+        name: alertId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Alert'
+        "404":
+          description: Alert not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get an alert by ID
+      tags:
+      - alerts
+  /alerts/{alertId}/resolve:
+    patch:
+      consumes:
+      - application/json
+      description: Marks a specific alert as resolved
+      parameters:
+      - description: Alert ID
+        in: path
+        name: alertId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Alert'
+        "404":
+          description: Alert not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resolve an alert
+      tags:
+      - alerts
+  /alerts/subscriptions:
+    get:
+      description: Retrieves a list of all current alert-role subscriptions.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.AlertRoleSubscription'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all alert role subscriptions
+      tags:
+      - alerts
+    post:
+      consumes:
+      - application/json
+      description: Creates a new subscription to link a role with an alert type.
+      parameters:
+      - description: Subscription details
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CreateAlertRoleSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.AlertRoleSubscription'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an alert role subscription
+      tags:
+      - alerts
+  /alerts/subscriptions/{id}:
+    delete:
+      description: Deletes a subscription by its ID.
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an alert role subscription
+      tags:
+      - alerts
+  /barcodes/generate:
+    get:
+      consumes:
+      - application/json
+      description: Generates a barcode image (PNG) for a given product SKU or ID
+      parameters:
+      - description: Product SKU
+        in: query
+        name: sku
+        type: string
+      - description: Product ID
+        in: query
+        name: productId
+        type: integer
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate a barcode image for a product
+      tags:
+      - barcodes
+  /bulk/files/{bucket}/{object}:
+    get:
+      consumes:
+      - application/json
+      description: Downloads a file (import/export) from the bulk storage bucket
+      parameters:
+      - description: Bucket Name
+        in: path
+        name: bucket
+        required: true
+        type: string
+      - description: Object Name
+        in: path
+        name: object
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "404":
+          description: File not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download a file from bulk storage
+      tags:
+      - bulk
+  /bulk/jobs:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of the most recent bulk import/export jobs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of recent jobs
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Job'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List recent bulk jobs
+      tags:
+      - bulk
+  /bulk/products/export:
+    get:
+      consumes:
+      - application/json
+      description: Exports the entire product catalog or a filtered list of products
+        to a CSV/Excel file
+      parameters:
+      - default: csv
+        description: Export format (csv, excel)
+        in: query
+        name: format
+        type: string
+      - description: Filter by Category ID
+        in: query
+        name: category
+        type: integer
+      - description: Filter by Supplier ID
+        in: query
+        name: supplier
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Export job started
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Job'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export product catalog
+      tags:
+      - bulk
+  /bulk/products/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a CSV/Excel file for bulk product creation/update. Returns
+        a job ID for status tracking.
+      parameters:
+      - description: CSV/Excel file to upload
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Bulk import job started
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Job'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Upload a file for bulk product import
+      tags:
+      - bulk
+  /bulk/products/import/{jobId}/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Confirms and executes the bulk import after preview
+      parameters:
+      - description: Bulk Import Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Bulk import confirmation status
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Job not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Confirm and execute bulk import
+      tags:
+      - bulk
+  /bulk/products/import/{jobId}/status:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the status and validation results of a bulk import job
+      parameters:
+      - description: Bulk Import Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Bulk import job status
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Job'
+        "404":
+          description: Job not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get bulk import job status
+      tags:
+      - bulk
+  /bulk/products/template:
+    get:
+      consumes:
+      - application/json
+      description: Downloads a CSV/Excel template file with required headers for product
+        creation
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Download product import template
+      tags:
+      - bulk
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all product categories
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Category'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new product category
+      parameters:
+      - description: Category creation request
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CategoryCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Category'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Category with this name already exists'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - categories
+  /categories/{categoryId}/subcategories:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of sub-categories for a specific category
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+            type: array
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get sub-categories for a category
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new sub-category for a specific category
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: integer
+      - description: Sub-category creation request
+        in: body
+        name: subCategory
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SubCategoryCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new sub-category
+      tags:
+      - categories
+  /categories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a product category by its ID. Cannot delete if products
+        or subcategories are associated.
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Category has associated data'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a category
+      tags:
+      - categories
+    get:
+      consumes:
+      - application/json
+      description: Get a single category by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Category'
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a category by ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product category
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Category update request
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CategoryUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Category'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing category
+      tags:
+      - categories
+  /categories/name/{name}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single category by its Name
+      parameters:
+      - description: Category Name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Category'
+        "404":
+          description: Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a category by Name
+      tags:
+      - categories
+  /crm/customers:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of customers with optional search
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List customers
+      tags:
+      - crm
+    post:
+      consumes:
+      - application/json
+      description: Create a new customer account
+      parameters:
+      - description: Customer creation request
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CreateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new customer
+      tags:
+      - crm
+  /crm/customers/{identifier}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a customer by user ID
+      parameters:
+      - description: Customer user ID
+        in: path
+        name: identifier
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a customer
+      tags:
+      - crm
+    get:
+      consumes:
+      - application/json
+      description: Get a customer by ID, email, phone, or username
+      parameters:
+      - description: Customer identifier (ID, email, phone, or username)
+        in: path
+        name: identifier
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer by identifier
+      tags:
+      - crm
+    put:
+      consumes:
+      - application/json
+      description: Update customer details by user ID
+      parameters:
+      - description: Customer user ID
+        in: path
+        name: identifier
+        required: true
+        type: string
+      - description: Customer update request
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UpdateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a customer
+      tags:
+      - crm
+  /crm/customers/{identifier}/churn-risk:
+    get:
+      consumes:
+      - application/json
+      description: Analyze and return churn risk assessment for a customer
+      parameters:
+      - description: Customer identifier
+        in: path
+        name: identifier
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer churn risk
+      tags:
+      - crm
+  /crm/customers/email/{email}:
+    get:
+      consumes:
+      - application/json
+      description: Get a customer by their email address
+      parameters:
+      - description: Email address
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer by email
+      tags:
+      - crm
+  /crm/customers/phone/{phone}:
+    get:
+      consumes:
+      - application/json
+      description: Get a customer by their phone number
+      parameters:
+      - description: Phone number
+        in: path
+        name: phone
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer by phone
+      tags:
+      - crm
+  /crm/customers/username/{username}:
+    get:
+      consumes:
+      - application/json
+      description: Get a customer by their username
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "404":
+          description: Customer not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get customer by username
+      tags:
+      - crm
+  /crm/loyalty/{userId}:
+    get:
+      consumes:
+      - application/json
+      description: Get loyalty account details for a customer
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.LoyaltyAccount'
+        "404":
+          description: Loyalty account not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get loyalty account
+      tags:
+      - crm
+  /crm/loyalty/{userId}/points:
+    post:
+      consumes:
+      - application/json
+      description: Add loyalty points to a customer's account
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Points to add
+        in: body
+        name: points
+        required: true
+        schema:
+          properties:
+            points:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.LoyaltyAccount'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add loyalty points
+      tags:
+      - crm
+  /crm/loyalty/{userId}/redeem:
+    post:
+      consumes:
+      - application/json
+      description: Redeem loyalty points from a customer's account
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Points to redeem
+        in: body
+        name: points
+        required: true
+        schema:
+          properties:
+            points:
+              type: integer
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.LoyaltyAccount'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Redeem loyalty points
+      tags:
+      - crm
+  /dashboard/summary:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves aggregated statistics and recent items for the dashboard
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get dashboard summary data
+      tags:
+      - dashboard
+  /health:
+    get:
+      consumes:
+      - '*/*'
+      description: get the status of the server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Show the status of the server
+      tags:
+      - health
+  /inventory/transfers:
+    post:
+      consumes:
+      - application/json
+      description: Create a new stock transfer between two locations
+      parameters:
+      - description: Stock transfer request
+        in: body
+        name: transfer
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.StockTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a stock transfer
+      tags:
+      - inventory
+  /jobs/{jobId}/cancel:
+    post:
+      description: Cancels a pending or queued report generation job.
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a report job
+      tags:
+      - reports
+  /locations:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all inventory locations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Location'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of locations
+      tags:
+      - locations
+    post:
+      consumes:
+      - application/json
+      description: Create a new inventory location
+      parameters:
+      - description: Location creation request
+        in: body
+        name: location
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.LocationCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Location'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Location with this name already exists'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new location
+      tags:
+      - locations
+  /locations/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an inventory location by its ID. Cannot delete if products,
+        batches, or stock adjustments are associated.
+      parameters:
+      - description: Location ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Location not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Location has associated data'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a location
+      tags:
+      - locations
+    get:
+      consumes:
+      - application/json
+      description: Get a single location by its ID
+      parameters:
+      - description: Location ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Location'
+        "404":
+          description: Location not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a location by ID
+      tags:
+      - locations
+    put:
+      consumes:
+      - application/json
+      description: Update an existing inventory location
+      parameters:
+      - description: Location ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Location update request
+        in: body
+        name: location
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.LocationUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Location'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Location not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Location with this name already exists'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing location
+      tags:
+      - locations
+  /notifications/broadcast:
+    post:
+      consumes:
+      - application/json
+      description: Sends a notification to all users who have the specified permission.
+      parameters:
+      - description: Broadcast request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.BroadcastNotificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Broadcast a notification to users with a specific permission
+      tags:
+      - notifications
+  /payment/bkash/callback:
+    get:
+      description: Processes bKash payment callback
+      parameters:
+      - description: Payment ID
+        in: query
+        name: paymentID
+        required: true
+        type: string
+      - description: Payment status
+        in: query
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Redirect
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Handle bKash callback
+      tags:
+      - payments
+  /payment/cancel:
+    post:
+      description: Handles cancelled payment
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Payment cancellation callback
+      tags:
+      - payments
+  /payment/create:
+    post:
+      consumes:
+      - application/json
+      description: Initiates a payment session for an order
+      parameters:
+      - description: Payment request
+        in: body
+        name: payment
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.PaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a payment session
+      tags:
+      - payments
+  /payment/fail:
+    post:
+      description: Handles failed payment
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Payment failure callback
+      tags:
+      - payments
+  /payment/ipn:
+    post:
+      consumes:
+      - application/x-www-form-urlencoded
+      description: Processes SSLCommerz Instant Payment Notification
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Handle SSLCommerz IPN
+      tags:
+      - payments
+  /payment/success:
+    post:
+      description: Handles successful payment confirmation
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Payment success callback
+      tags:
+      - payments
+  /permissions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all available system permissions
+      tags:
+      - roles
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated, searchable, and filterable list of products
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search term for Product Name, SKU, or Barcode
+        in: query
+        name: search
+        type: string
+      - description: Filter by Category ID
+        in: query
+        name: category
+        type: integer
+      - description: Filter by Supplier ID
+        in: query
+        name: supplier
+        type: integer
+      - description: Filter by Status (Active, Archived, Discontinued)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of products
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of products
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      description: Create a new product with the provided details
+      parameters:
+      - description: Product creation request
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ProductCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new product
+      tags:
+      - products
+  /products/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a product by its ID. Restricted if product has associated
+        sales or stock history.
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Product has associated data'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a product
+      tags:
+      - products
+    get:
+      consumes:
+      - application/json
+      description: Get a single product by its ID
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a product by ID
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product with the provided details
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Product update request
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ProductUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing product
+      tags:
+      - products
+  /products/{id}/archive:
+    patch:
+      consumes:
+      - application/json
+      description: Archive a product by setting its status to 'Archived'
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Archive a product
+      tags:
+      - products
+  /products/{productId}/alert-settings:
+    put:
+      consumes:
+      - application/json
+      description: Configures low-stock, overstock, and expiry alert thresholds for
+        a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      - description: Product alert settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ProductAlertSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.ProductAlertSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Configure alert thresholds for a product
+      tags:
+      - alerts
+  /products/{productId}/stock:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves current stock levels and batch breakdown for a specific
+        product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Product stock details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current stock levels for a product
+      tags:
+      - stock
+  /products/{productId}/stock/adjustments:
+    post:
+      consumes:
+      - application/json
+      description: Performs a manual stock adjustment (stock-in or stock-out) for
+        a product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      - description: Stock adjustment request
+        in: body
+        name: adjustment
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.StockAdjustmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.StockAdjustment'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Perform a manual stock adjustment
+      tags:
+      - stock
+  /products/{productId}/stock/batches:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new batch of stock for a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      - description: Batch creation request
+        in: body
+        name: batch
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.StockInBatchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Batch'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Add new stock with batch information
+      tags:
+      - stock
+  /products/{productId}/stock/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the stock adjustment history for a specific product
+      parameters:
+      - description: Product ID
+        in: path
+        name: productId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.StockAdjustment'
+            type: array
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get stock adjustment history for a product
+      tags:
+      - stock
+  /products/barcode/{barcode}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single product by its Barcode
+      parameters:
+      - description: Product Barcode
+        in: path
+        name: barcode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a product by Barcode
+      tags:
+      - products
+  /products/lookup:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves product details by scanning its barcode or UPC
+      parameters:
+      - description: Barcode or UPC value
+        in: query
+        name: barcode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lookup a product by barcode/UPC
+      tags:
+      - barcodes
+  /products/sku/{sku}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single product by its SKU
+      parameters:
+      - description: Product SKU
+        in: path
+        name: sku
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Product'
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a product by SKU
+      tags:
+      - products
+  /promotions:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all promotions
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Promotion'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List promotions
+      tags:
+      - promotions
+    post:
+      consumes:
+      - application/json
+      description: Create a new discount rule
+      parameters:
+      - description: Promotion creation request
+        in: body
+        name: promotion
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.PromotionCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Promotion'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new promotion
+      tags:
+      - promotions
+  /promotions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft delete a promotion
+      parameters:
+      - description: Promotion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a promotion
+      tags:
+      - promotions
+    put:
+      consumes:
+      - application/json
+      description: Update an existing promotion
+      parameters:
+      - description: Promotion ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Promotion update request
+        in: body
+        name: promotion
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.PromotionUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Promotion'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a promotion
+      tags:
+      - promotions
+  /purchase-orders/{poId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific Purchase Order by its ID
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a Purchase Order by ID
+      tags:
+      - replenishment
+    put:
+      consumes:
+      - application/json
+      description: Updates details of a specific Purchase Order
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      - description: Purchase Order update request
+        in: body
+        name: po
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UpdatePORequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a Purchase Order
+      tags:
+      - replenishment
+  /purchase-orders/{poId}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Approves a draft Purchase Order, changing its status to APPROVED
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve a draft Purchase Order
+      tags:
+      - replenishment
+  /purchase-orders/{poId}/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Cancels a Purchase Order if it's in DRAFT or APPROVED status
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a Purchase Order
+      tags:
+      - replenishment
+  /purchase-orders/{poId}/receive:
+    post:
+      consumes:
+      - application/json
+      description: Records received quantities for items in a Purchase Order and updates
+        stock levels
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      - description: Received items details
+        in: body
+        name: receivedItems
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ReceivePORequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: PO not in SENT status or items already fully received'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Record received goods for a Purchase Order
+      tags:
+      - replenishment
+  /purchase-orders/{poId}/send:
+    post:
+      consumes:
+      - application/json
+      description: Marks an approved Purchase Order as SENT
+      parameters:
+      - description: Purchase Order ID
+        in: path
+        name: poId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Purchase Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Send a Purchase Order to the supplier
+      tags:
+      - replenishment
+  /ready:
+    get:
+      consumes:
+      - '*/*'
+      description: Reports whether the server and its dependencies (DB, Redis, AMQP,
+        MinIO) are ready
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Readiness probe
+      tags:
+      - health
+  /replenishment/dashboard:
+    get:
+      description: Retrieves aggregated forecasting data including top predicted demand
+        and low stock warnings.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get forecasting dashboard data
+      tags:
+      - replenishment
+  /replenishment/forecast/{forecastId}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a specific demand forecast by its ID
+      parameters:
+      - description: Forecast ID
+        in: path
+        name: forecastId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.DemandForecast'
+        "404":
+          description: Forecast not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific demand forecast
+      tags:
+      - replenishment
+  /replenishment/forecast/generate:
+    post:
+      consumes:
+      - application/json
+      description: Triggers a demand forecasting process for a product or all products
+      parameters:
+      - description: Forecast generation request
+        in: body
+        name: forecast
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ForecastGenerationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Forecast generation status
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Trigger demand forecast generation
+      tags:
+      - replenishment
+  /replenishment/purchase-orders:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all purchase orders
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all purchase orders
+      tags:
+      - replenishment
+    post:
+      consumes:
+      - application/json
+      description: Creates a new Purchase Order manually
+      parameters:
+      - description: Create PO request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CreatePORequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new Purchase Order
+      tags:
+      - replenishment
+  /replenishment/returns:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all returns to suppliers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List vendor returns
+      tags:
+      - replenishment
+    post:
+      consumes:
+      - application/json
+      description: Creates a PENDING vendor return. Stock is not deducted until an
+        admin approves and completes the return.
+      parameters:
+      - description: Return request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_services.CreatePurchaseReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a return to supplier (Vendor Return)
+      tags:
+      - replenishment
+  /replenishment/returns/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a vendor return by ID, including items, supplier, and
+        audit fields.
+      parameters:
+      - description: Vendor return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a single vendor return
+      tags:
+      - replenishment
+  /replenishment/returns/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: Records admin approval intent on a PENDING vendor return. Status
+        remains PENDING; Complete is required to deduct stock and finalize the return.
+      parameters:
+      - description: Vendor return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve a vendor return
+      tags:
+      - replenishment
+  /replenishment/returns/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      description: Transitions a PENDING vendor return to CANCELLED. No stock changes
+        (PENDING returns have not yet deducted stock).
+      parameters:
+      - description: Vendor return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a vendor return
+      tags:
+      - replenishment
+  /replenishment/returns/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      description: Transitions an approved PENDING vendor return to COMPLETED. Deducts
+        stock from referenced batches, writes a STOCK_OUT audit row per item, and
+        stamps the refund amount.
+      parameters:
+      - description: Vendor return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseReturn'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Complete a vendor return
+      tags:
+      - replenishment
+  /replenishment/suggestions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of suggested reorders based on forecast and stock
+        levels
+      parameters:
+      - description: Filter by suggestion status (PENDING, APPROVED)
+        in: query
+        name: status
+        type: string
+      - description: Filter by Supplier ID
+        in: query
+        name: supplierId
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.ReorderSuggestion'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of reorder suggestions
+      tags:
+      - replenishment
+  /replenishment/suggestions/{suggestionId}/create-po:
+    post:
+      consumes:
+      - application/json
+      description: Creates a draft Purchase Order based on a selected reorder suggestion
+      parameters:
+      - description: Reorder Suggestion ID
+        in: path
+        name: suggestionId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.PurchaseOrder'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Suggestion not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a draft Purchase Order from a reorder suggestion
+      tags:
+      - replenishment
+  /replenishment/suggestions/generate:
+    post:
+      consumes:
+      - application/json
+      description: Triggers the generation of reorder suggestions based on current
+        stock levels
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Generation status
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate reorder suggestions
+      tags:
+      - replenishment
+  /reports/audit/voids:
+    get:
+      description: Audit log for sensitive POS actions.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.AuditLog'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get void/discount audit log
+      tags:
+      - reports
+  /reports/basket-analysis:
+    get:
+      description: Identifies product pairs often bought in the same order.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Number of items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Force refresh cache
+        in: query
+        name: refresh
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated basket analysis
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get basket analysis (frequently bought together)
+      tags:
+      - reports
+  /reports/cash-reconciliation:
+    get:
+      description: Cash drawer sessions.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.CashDrawerSession'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get cash drawer reconciliation
+      tags:
+      - reports
+  /reports/category-drilldown:
+    get:
+      description: Sales and margin by category.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.CategoryPerformance'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get category drill-down
+      tags:
+      - reports
+  /reports/customer-insights:
+    get:
+      description: Top spenders and churn risk.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.CustomerInsight'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get customer insights
+      tags:
+      - reports
+  /reports/dead-stock:
+    get:
+      description: Identifies products with no sales in X days.
+      parameters:
+      - description: Days threshold (default 90)
+        in: query
+        name: days
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.DeadStockItem'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get dead stock report
+      tags:
+      - reports
+  /reports/download/{jobId}:
+    get:
+      description: Download a generated report file.
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: Report file
+          schema:
+            type: file
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download report file
+      tags:
+      - reports
+  /reports/employee-sales:
+    get:
+      description: Sales totals by user.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.EmployeeSalesStats'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get sales by employee
+      tags:
+      - reports
+  /reports/gmroi:
+    get:
+      description: GMROI analysis.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_repository.GMROIStats'
+      security:
+      - BearerAuth: []
+      summary: Get COGS and GMROI
+      tags:
+      - reports
+  /reports/heatmap:
+    get:
+      description: Sales by hour and day of week.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.HeatmapPoint'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get hourly sales heatmap
+      tags:
+      - reports
+  /reports/inventory-turnover:
+    post:
+      consumes:
+      - application/json
+      description: Generates a report on inventory turnover rate over a specified
+        period.
+      parameters:
+      - description: Inventory turnover report parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.InventoryTurnoverReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory turnover data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get inventory turnover report
+      tags:
+      - reports
+  /reports/jobs/{jobId}:
+    get:
+      description: Get the status of a report generation job.
+      parameters:
+      - description: Job ID
+        in: path
+        name: jobId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Job status
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Job'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get report job status
+      tags:
+      - reports
+  /reports/product-performance:
+    get:
+      description: Detailed metrics for agent reasoning (profit, stock, days of coverage).
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      - description: Filter by Supplier Name
+        in: query
+        name: supplierName
+        type: string
+      - description: Filter by Min Stock
+        in: query
+        name: minStock
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.ProductPerformanceAnalytics'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get product performance analytics
+      tags:
+      - reports
+  /reports/profit-margin:
+    post:
+      consumes:
+      - application/json
+      description: Generates a report on profit margins for products or categories
+        over a specified period.
+      parameters:
+      - description: Profit margin report parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.ProfitMarginReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profit margin data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get profit margin report
+      tags:
+      - reports
+  /reports/returns-analysis:
+    get:
+      description: Analysis of customer returns.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.ReturnAnalysisItem'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get returns analysis
+      tags:
+      - reports
+  /reports/sales-trends:
+    post:
+      consumes:
+      - application/json
+      description: Generates a report on sales trends over a specified period, with
+        optional filters.
+      parameters:
+      - description: Sales trends report parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SalesTrendsReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sales trends data
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get sales trends report
+      tags:
+      - reports
+  /reports/sales-trends/export:
+    post:
+      consumes:
+      - application/json
+      description: Exports a sales trends report as a CSV file.
+      parameters:
+      - description: Sales trends report parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SalesTrendsReportRequest'
+      produces:
+      - text/csv
+      responses:
+        "202":
+          description: Job ID
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Export sales trends report
+      tags:
+      - reports
+  /reports/shrinkage:
+    get:
+      description: Inventory loss analysis.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.ShrinkageItem'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get shrinkage report
+      tags:
+      - reports
+  /reports/stock-aging:
+    get:
+      description: Groups inventory by age buckets.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get stock aging report
+      tags:
+      - reports
+  /reports/supplier-performance:
+    get:
+      description: Metrics for suppliers.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.SupplierScorecard'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get supplier performance scorecard
+      tags:
+      - reports
+  /reports/tax-liability:
+    get:
+      description: Tax collected.
+      parameters:
+      - description: Start Date (RFC3339)
+        in: query
+        name: startDate
+        required: true
+        type: string
+      - description: End Date (RFC3339)
+        in: query
+        name: endDate
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_repository.TaxLiabilityStats'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Get tax liability report
+      tags:
+      - reports
+  /returns:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a list of returns, optionally filtered by status
+      parameters:
+      - description: Filter by status (PENDING, APPROVED, REJECTED)
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of returns
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List returns
+      tags:
+      - returns
+  /returns/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetch details of a specific return request
+      parameters:
+      - description: Return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return details
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Return not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get return details
+      tags:
+      - returns
+  /returns/{id}/process:
+    post:
+      consumes:
+      - application/json
+      description: Approves or rejects a return request. If approved, updates stock
+        and refunds.
+      parameters:
+      - description: Return ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Action (approve/reject)
+        in: body
+        name: action
+        required: true
+        schema:
+          additionalProperties:
+            type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Return processed
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Process a return request (Approve/Reject)
+      tags:
+      - returns
+  /returns/request:
+    post:
+      consumes:
+      - application/json
+      description: Creates a return request for specific items in an order
+      parameters:
+      - description: Return request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handlers.ReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Return requested
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Request a return for an order
+      tags:
+      - returns
+  /roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List all roles
+      tags:
+      - roles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role data
+        in: body
+        name: role
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new role
+      tags:
+      - roles
+  /roles/{id}:
+    delete:
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No content
+      security:
+      - BearerAuth: []
+      summary: Delete a custom role
+      tags:
+      - roles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Role data
+        in: body
+        name: role
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update role details
+      tags:
+      - roles
+  /roles/{id}/permissions:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Permission IDs
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Assign permissions to a role
+      tags:
+      - roles
+  /sales/checkout:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new sale transaction and deducts stock atomically
+      parameters:
+      - description: Checkout request
+        in: body
+        name: checkout
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.CheckoutRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Sale completed
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Process a sales checkout
+      tags:
+      - sales
+  /sales/orders:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all orders placed by the current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Order'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List orders for the authenticated user
+      tags:
+      - sales
+  /sales/orders/{orderNumber}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a specific order by its unique order number
+      parameters:
+      - description: Order Number
+        in: path
+        name: orderNumber
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Order'
+        "404":
+          description: Order not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get order details by order number
+      tags:
+      - sales
+  /sales/products:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all products with their current aggregated stock quantity
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              additionalProperties: true
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List products with stock for POS
+      tags:
+      - sales
+  /search:
+    get:
+      consumes:
+      - application/json
+      description: Searches across products, users, suppliers, and categories.
+      parameters:
+      - description: Search query
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "400":
+          description: 'Bad Request: Query parameter ''q'' is required'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Perform a global search
+      tags:
+      - search
+  /settings:
+    get:
+      description: Retrieves all system settings
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get all settings
+      tags:
+      - settings
+    put:
+      consumes:
+      - application/json
+      description: Updates a system setting value
+      parameters:
+      - description: Setting key and value
+        in: body
+        name: setting
+        required: true
+        schema:
+          properties:
+            key:
+              type: string
+            value:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a setting
+      tags:
+      - settings
+  /settings/configurations:
+    get:
+      description: Retrieves publicly accessible system configurations
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get public configurations
+      tags:
+      - settings
+  /subcategories/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a sub-category by its ID. Cannot delete if products are
+        associated.
+      parameters:
+      - description: Sub-Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Sub-Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Sub-Category has associated products'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a sub-category
+      tags:
+      - categories
+    get:
+      consumes:
+      - application/json
+      description: Get a single sub-category by its ID
+      parameters:
+      - description: Sub-Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+        "404":
+          description: Sub-Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a sub-category by ID
+      tags:
+      - categories
+    put:
+      consumes:
+      - application/json
+      description: Update an existing sub-category
+      parameters:
+      - description: Sub-Category ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Sub-category update request
+        in: body
+        name: subCategory
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SubCategoryUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.SubCategory'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Sub-Category not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing sub-category
+      tags:
+      - categories
+  /suppliers:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all product suppliers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of suppliers
+      tags:
+      - suppliers
+    post:
+      consumes:
+      - application/json
+      description: Create a new product supplier
+      parameters:
+      - description: Supplier creation request
+        in: body
+        name: supplier
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SupplierCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Supplier with this name already exists'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new supplier
+      tags:
+      - suppliers
+  /suppliers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a product supplier by its ID. Cannot delete if products
+        are associated.
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "404":
+          description: Supplier not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: 'Conflict: Supplier has associated products'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a supplier
+      tags:
+      - suppliers
+    get:
+      consumes:
+      - application/json
+      description: Get a single supplier by its ID
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+        "404":
+          description: Supplier not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a supplier by ID
+      tags:
+      - suppliers
+    put:
+      consumes:
+      - application/json
+      description: Update an existing product supplier
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Supplier update request
+        in: body
+        name: supplier
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.SupplierUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Supplier not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an existing supplier
+      tags:
+      - suppliers
+  /suppliers/{id}/performance:
+    get:
+      consumes:
+      - application/json
+      description: Generates a mock report on supplier performance (e.g., on-time
+        delivery, quality).
+      parameters:
+      - description: Supplier ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Supplier performance data
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Supplier not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get supplier performance report
+      tags:
+      - suppliers
+  /suppliers/name/{name}:
+    get:
+      consumes:
+      - application/json
+      description: Get a single supplier by its Name
+      parameters:
+      - description: Supplier Name
+        in: path
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.Supplier'
+        "404":
+          description: Supplier not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a supplier by Name
+      tags:
+      - suppliers
+  /time-tracking/activities:
+    get:
+      description: Retrieves recent time tracking activities across all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get recent activities
+      tags:
+      - time-tracking
+  /time-tracking/break-end/{userId}:
+    post:
+      description: Records a break end for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: End a break
+      tags:
+      - time-tracking
+  /time-tracking/break-start/{userId}:
+    post:
+      description: Records a break start for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Start a break
+      tags:
+      - time-tracking
+  /time-tracking/clock-in/{userId}:
+    post:
+      consumes:
+      - application/json
+      description: Records a clock-in event for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Optional notes
+        in: body
+        name: notes
+        schema:
+          properties:
+            notes:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clock in
+      tags:
+      - time-tracking
+  /time-tracking/clock-out/{userId}:
+    post:
+      consumes:
+      - application/json
+      description: Records a clock-out event for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Optional notes
+        in: body
+        name: notes
+        schema:
+          properties:
+            notes:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clock out
+      tags:
+      - time-tracking
+  /time-tracking/history/{userId}:
+    get:
+      description: Retrieves recent time tracking history for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get time tracking history
+      tags:
+      - time-tracking
+  /time-tracking/last-entry/{userId}:
+    get:
+      description: Retrieves the most recent time clock entry for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get last time clock entry
+      tags:
+      - time-tracking
+  /time-tracking/last-entry/username/{username}:
+    get:
+      description: Retrieves the most recent time clock entry by username
+      parameters:
+      - description: Username
+        in: path
+        name: username
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get last time clock by username
+      tags:
+      - time-tracking
+  /time-tracking/team-overview:
+    get:
+      description: Retrieves comprehensive team time tracking overview
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get team overview
+      tags:
+      - time-tracking
+  /time-tracking/team-status:
+    get:
+      description: Retrieves current clock-in/out status for all team members
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get team status
+      tags:
+      - time-tracking
+  /time-tracking/weekly-summary/{userId}:
+    get:
+      description: Retrieves weekly time tracking summary for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get weekly summary
+      tags:
+      - time-tracking
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all users, optionally filtered by status (approved/pending)
+        and search query (username or ID). Supports pagination.
+      parameters:
+      - description: Filter by user status (approved, pending)
+        in: query
+        name: status
+        type: string
+      - description: Search by username or ID
+        in: query
+        name: q
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      - description: 'Items per page (default: 50, max: 200)'
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Paginated list of users
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users with optional status and search filters
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a specific user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      consumes:
+      - application/json
+      description: Get details of a specific user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user details by ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Update details of a specific user by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: User update request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UserUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user details
+      tags:
+      - users
+  /users/{id}/approve:
+    put:
+      consumes:
+      - application/json
+      description: Activate a user's account by setting IsActive to true
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve a user
+      tags:
+      - users
+  /users/{id}/notifications/subscriptions:
+    get:
+      description: Returns all subscription rows for the user (one per alert type).
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.UserNotificationSubscription'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List a user's notification subscriptions
+      tags:
+      - notifications
+  /users/{id}/notifications/subscriptions/{type}:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Upserts the user's subscription for the given alert type. When
+        `enabled` is false the user will no longer receive alerts of
+        that type from the alert consumer.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Alert type (e.g. LOW_STOCK, OUT_OF_STOCK)
+        in: path
+        name: type
+        required: true
+        type: string
+      - description: Subscription payload
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            enabled:
+              type: boolean
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.UserNotificationSubscription'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set a user's opt-in/out for a specific alert type
+      tags:
+      - notifications
+  /users/{userId}/notification-settings:
+    put:
+      consumes:
+      - application/json
+      description: Configures email and SMS notification preferences for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: User notification settings
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UserNotificationSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.UserNotificationSettings'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Configure user notification preferences
+      tags:
+      - users
+  /users/{userId}/notifications:
+    get:
+      description: Retrieves a list of notifications for a specific user, with optional
+        filtering by read status.
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Filter by read status
+        in: query
+        name: isRead
+        type: boolean
+      - description: Limit number of notifications
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/inventory_backend_internal_domain.Notification'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a list of notifications for a user
+      tags:
+      - notifications
+  /users/{userId}/notifications/{notificationId}/read:
+    patch:
+      description: Marks a specific notification as read for the authenticated user.
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      - description: Notification ID
+        in: path
+        name: notificationId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark a notification as read
+      tags:
+      - notifications
+  /users/{userId}/notifications/read-all:
+    patch:
+      description: Marks all unread notifications as read for the authenticated user.
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Mark all notifications as read
+      tags:
+      - notifications
+  /users/{userId}/notifications/unread/count:
+    get:
+      description: Retrieves the count of unread notifications for the authenticated
+        user.
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get the count of unread notifications for a user
+      tags:
+      - notifications
+  /users/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and return a JWT token
+      parameters:
+      - description: User login request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UserLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Login successful, returns JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'Unauthorized: Invalid credentials'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Log in a user
+      tags:
+      - users
+  /users/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate both the access and refresh tokens
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Log out a user
+      tags:
+      - users
+  /users/refresh-token:
+    post:
+      consumes:
+      - application/json
+      description: Get a new access token using a refresh token
+      parameters:
+      - description: Refresh token request
+        in: body
+        name: token
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.RefreshTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: New access token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: 'Unauthorized: Invalid refresh token'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Refresh access token
+      tags:
+      - users
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: Create a new user account
+      parameters:
+      - description: User registration request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/inventory_backend_internal_requests.UserRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventory_backend_internal_domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    description: 'JWT Bearer token. Format: "Bearer {token}"'
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

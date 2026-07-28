@@ -20,6 +20,7 @@ import (
 // @Produce json
 // @Param id path int true "Return ID"
 // @Param action body map[string]string true "Action (approve/reject)"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Return processed"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

@@ -33,6 +33,7 @@ func NewReportHandler(reportingService *services.ReportingService, jobRepo repos
 // @Accept json
 // @Produce json
 // @Param request body requests.SalesTrendsReportRequest true "Sales trends report parameters"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Sales trends data"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -67,6 +68,7 @@ func (h *ReportHandler) GetSalesTrendsReport(c *gin.Context) {
 // @Accept json
 // @Produce text/csv
 // @Param request body requests.SalesTrendsReportRequest true "Sales trends report parameters"
+// @Security BearerAuth
 // @Success 202 {object} map[string]interface{} "Job ID"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -121,6 +123,7 @@ func (h *ReportHandler) ExportSalesTrendsReport(c *gin.Context) {
 // @Tags reports
 // @Produce json
 // @Param jobId path int true "Job ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Job "Job status"
 // @Failure 404 {object} map[string]interface{} "Not Found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -147,6 +150,7 @@ func (h *ReportHandler) GetReportJobStatus(c *gin.Context) {
 // @Tags reports
 // @Produce application/octet-stream
 // @Param jobId path string true "Job ID"
+// @Security BearerAuth
 // @Success 200 {file} file "Report file"
 // @Failure 404 {object} map[string]interface{} "Not Found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -172,6 +176,18 @@ func (h *ReportHandler) DownloadReportFile(c *gin.Context) {
 	c.Redirect(http.StatusFound, job.Result)
 }
 
+// CancelJob godoc
+// @Summary Cancel a report job
+// @Description Cancels a pending or queued report generation job.
+// @Tags reports
+// @Produce json
+// @Param jobId path int true "Job ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Not Found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /jobs/{jobId}/cancel [post]
 func (h *ReportHandler) CancelJob(c *gin.Context) {
 	jobID, err := strconv.Atoi(c.Param("jobId"))
 	if err != nil {
@@ -213,6 +229,7 @@ func validateDateRange(start, end time.Time) *appErrors.AppError {
 // @Accept json
 // @Produce json
 // @Param request body requests.InventoryTurnoverReportRequest true "Inventory turnover report parameters"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Inventory turnover data"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -247,6 +264,7 @@ func (h *ReportHandler) GetInventoryTurnoverReport(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.ProfitMarginReportRequest true "Profit margin report parameters"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Profit margin data"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -279,6 +297,7 @@ func (h *ReportHandler) GetProfitMarginReport(c *gin.Context) {
 // @Description Groups inventory by age buckets.
 // @Tags reports
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Router /reports/stock-aging [get]
 func (h *ReportHandler) GetStockAgingReport(c *gin.Context) {
@@ -296,6 +315,7 @@ func (h *ReportHandler) GetStockAgingReport(c *gin.Context) {
 // @Tags reports
 // @Produce json
 // @Param days query int false "Days threshold (default 90)"
+// @Security BearerAuth
 // @Success 200 {array} repository.DeadStockItem
 // @Router /reports/dead-stock [get]
 func (h *ReportHandler) GetDeadStockReport(c *gin.Context) {
@@ -317,6 +337,7 @@ func (h *ReportHandler) GetDeadStockReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.SupplierScorecard
 // @Router /reports/supplier-performance [get]
 func (h *ReportHandler) GetSupplierPerformanceReport(c *gin.Context) {
@@ -341,6 +362,7 @@ func (h *ReportHandler) GetSupplierPerformanceReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.HeatmapPoint
 // @Router /reports/heatmap [get]
 func (h *ReportHandler) GetHourlySalesHeatmap(c *gin.Context) {
@@ -365,6 +387,7 @@ func (h *ReportHandler) GetHourlySalesHeatmap(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.EmployeeSalesStats
 // @Router /reports/employee-sales [get]
 func (h *ReportHandler) GetSalesByEmployeeReport(c *gin.Context) {
@@ -389,6 +412,7 @@ func (h *ReportHandler) GetSalesByEmployeeReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.CategoryPerformance
 // @Router /reports/category-drilldown [get]
 func (h *ReportHandler) GetCategoryDrillDownReport(c *gin.Context) {
@@ -413,6 +437,7 @@ func (h *ReportHandler) GetCategoryDrillDownReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {object} repository.GMROIStats
 // @Router /reports/gmroi [get]
 func (h *ReportHandler) GetCOGSAndGMROIReport(c *gin.Context) {
@@ -437,6 +462,7 @@ func (h *ReportHandler) GetCOGSAndGMROIReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} domain.AuditLog
 // @Router /reports/audit/voids [get]
 func (h *ReportHandler) GetVoidDiscountAuditReport(c *gin.Context) {
@@ -461,6 +487,7 @@ func (h *ReportHandler) GetVoidDiscountAuditReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.TaxLiabilityStats
 // @Router /reports/tax-liability [get]
 func (h *ReportHandler) GetTaxLiabilityReport(c *gin.Context) {
@@ -485,6 +512,7 @@ func (h *ReportHandler) GetTaxLiabilityReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} domain.CashDrawerSession
 // @Router /reports/cash-reconciliation [get]
 func (h *ReportHandler) GetCashDrawerReconciliationReport(c *gin.Context) {
@@ -509,6 +537,7 @@ func (h *ReportHandler) GetCashDrawerReconciliationReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.CustomerInsight
 // @Router /reports/customer-insights [get]
 func (h *ReportHandler) GetCustomerInsightsReport(c *gin.Context) {
@@ -534,6 +563,7 @@ func (h *ReportHandler) GetCustomerInsightsReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.ShrinkageItem
 // @Router /reports/shrinkage [get]
 func (h *ReportHandler) GetShrinkageReport(c *gin.Context) {
@@ -558,6 +588,7 @@ func (h *ReportHandler) GetShrinkageReport(c *gin.Context) {
 // @Produce json
 // @Param startDate query string true "Start Date (RFC3339)"
 // @Param endDate query string true "End Date (RFC3339)"
+// @Security BearerAuth
 // @Success 200 {array} repository.ReturnAnalysisItem
 // @Router /reports/returns-analysis [get]
 func (h *ReportHandler) GetCustomerReturnAnalysisReport(c *gin.Context) {
@@ -585,6 +616,7 @@ func (h *ReportHandler) GetCustomerReturnAnalysisReport(c *gin.Context) {
 // @Param page query int false "Page number" default(1)
 // @Param limit query int false "Number of items per page" default(20)
 // @Param refresh query boolean false "Force refresh cache"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Paginated basket analysis"
 // @Router /reports/basket-analysis [get]
 func (h *ReportHandler) GetBasketAnalysisReport(c *gin.Context) {
@@ -658,6 +690,7 @@ func parseDateRange(c *gin.Context) (time.Time, time.Time, error) {
 // @Param endDate query string true "End Date (RFC3339)"
 // @Param supplierName query string false "Filter by Supplier Name"
 // @Param minStock query int false "Filter by Min Stock"
+// @Security BearerAuth
 // @Success 200 {array} repository.ProductPerformanceAnalytics
 // @Router /reports/product-performance [get]
 func (h *ReportHandler) GetProductPerformanceAnalytics(c *gin.Context) {

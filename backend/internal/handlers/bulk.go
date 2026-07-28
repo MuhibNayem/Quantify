@@ -34,6 +34,7 @@ func NewBulkHandler(jobRepo repository.JobRepository, uploader storage.Uploader)
 // @Tags bulk
 // @Accept json
 // @Produce text/csv
+// @Security BearerAuth
 // @Success 200 {file} text/csv "CSV template file"
 // @Router /bulk/products/template [get]
 func (h *BulkHandler) GetProductImportTemplate(c *gin.Context) {
@@ -49,6 +50,7 @@ func (h *BulkHandler) GetProductImportTemplate(c *gin.Context) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param file formData file true "CSV/Excel file to upload"
+// @Security BearerAuth
 // @Success 202 {object} domain.Job "Bulk import job started"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -112,6 +114,7 @@ func (h *BulkHandler) UploadProductImport(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param jobId path string true "Bulk Import Job ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Job "Bulk import job status"
 // @Failure 404 {object} map[string]interface{} "Job not found"
 // @Router /bulk/products/import/{jobId}/status [get]
@@ -139,6 +142,7 @@ func (h *BulkHandler) GetBulkImportStatus(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param jobId path string true "Bulk Import Job ID"
+// @Security BearerAuth
 // @Success 202 {object} map[string]interface{} "Bulk import confirmation status"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Job not found"
@@ -182,6 +186,7 @@ func (h *BulkHandler) ConfirmBulkImport(c *gin.Context) {
 // @Param format query string false "Export format (csv, excel)" default(csv)
 // @Param category query int false "Filter by Category ID"
 // @Param supplier query int false "Filter by Supplier ID"
+// @Security BearerAuth
 // @Success 202 {object} domain.Job "Export job started"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /bulk/products/export [get]
@@ -231,6 +236,7 @@ func (h *BulkHandler) ExportProducts(c *gin.Context) {
 // @Tags bulk
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Job "List of recent jobs"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /bulk/jobs [get]
@@ -251,6 +257,7 @@ func (h *BulkHandler) ListBulkJobs(c *gin.Context) {
 // @Produce octet-stream
 // @Param bucket path string true "Bucket Name"
 // @Param object path string true "Object Name"
+// @Security BearerAuth
 // @Success 200 {file} application/octet-stream "File content"
 // @Failure 404 {object} map[string]interface{} "File not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

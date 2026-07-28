@@ -37,6 +37,7 @@ func NewSalesHandler(db *gorm.DB, settings services.SettingsService, reportingSe
 // @Accept json
 // @Produce json
 // @Param checkout body requests.CheckoutRequest true "Checkout request"
+// @Security BearerAuth
 // @Success 201 {object} map[string]interface{} "Sale completed"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -90,6 +91,7 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 // @Tags sales
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} map[string]interface{}
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /sales/products [get]
@@ -170,6 +172,7 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 // @Tags sales
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Order
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -215,7 +218,10 @@ func (h *SalesHandler) ListOrders(c *gin.Context) {
 // @Tags sales
 // @Accept json
 // @Produce json
-// @Success 200 {array} domain.Order
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(50)
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /sales/history [get]
@@ -256,7 +262,6 @@ type ProductSummary struct {
 	SKU  string `json:"SKU"`
 }
 
-// @Router /sales/history [get]
 func (h *SalesHandler) ListAllOrders(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
@@ -295,6 +300,7 @@ func (h *SalesHandler) ListAllOrders(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param orderNumber path string true "Order Number"
+// @Security BearerAuth
 // @Success 200 {object} domain.Order
 // @Failure 404 {object} map[string]interface{} "Order not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

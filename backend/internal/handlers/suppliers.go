@@ -32,6 +32,7 @@ func NewSupplierHandler(supplierRepo repository.SupplierRepository, db *gorm.DB)
 // @Accept json
 // @Produce json
 // @Param supplier body requests.SupplierCreateRequest true "Supplier creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Supplier
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 409 {object} map[string]interface{} "Conflict: Supplier with this name already exists"
@@ -70,6 +71,7 @@ func (h *SupplierHandler) CreateSupplier(c *gin.Context) {
 // @Tags suppliers
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Supplier
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /suppliers [get]
@@ -89,6 +91,7 @@ func (h *SupplierHandler) ListSuppliers(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Supplier ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Supplier
 // @Failure 404 {object} map[string]interface{} "Supplier not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -114,6 +117,7 @@ func (h *SupplierHandler) GetSupplier(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param name path string true "Supplier Name"
+// @Security BearerAuth
 // @Success 200 {object} domain.Supplier
 // @Failure 404 {object} map[string]interface{} "Supplier not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -140,6 +144,7 @@ func (h *SupplierHandler) GetSupplierByName(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Supplier ID"
 // @Param supplier body requests.SupplierUpdateRequest true "Supplier update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.Supplier
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Supplier not found"
@@ -190,6 +195,7 @@ func (h *SupplierHandler) UpdateSupplier(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Supplier ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Supplier not found"
 // @Failure 409 {object} map[string]interface{} "Conflict: Supplier has associated products"
@@ -230,6 +236,7 @@ func (h *SupplierHandler) DeleteSupplier(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Supplier ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Supplier performance data"
 // @Failure 404 {object} map[string]interface{} "Supplier not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

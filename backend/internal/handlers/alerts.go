@@ -47,6 +47,7 @@ type AlertTriggeredPayload struct {
 // @Produce json
 // @Param productId path int true "Product ID"
 // @Param settings body requests.ProductAlertSettingsRequest true "Product alert settings"
+// @Security BearerAuth
 // @Success 200 {object} domain.ProductAlertSettings
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
@@ -100,6 +101,7 @@ func PutProductAlertSettings(c *gin.Context) {
 // @Param type query string false "Filter by alert type (LOW_STOCK, OUT_OF_STOCK, OVERSTOCK, EXPIRY_ALERT)"
 // @Param status query string false "Filter by alert status (ACTIVE, RESOLVED)"
 // @Param productId query int false "Filter by Product ID"
+// @Security BearerAuth
 // @Success 200 {array} domain.Alert
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /alerts [get]
@@ -142,6 +144,7 @@ func ListAlerts(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param alertId path int true "Alert ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Alert
 // @Failure 404 {object} map[string]interface{} "Alert not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -167,6 +170,7 @@ func GetAlert(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param alertId path int true "Alert ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Alert
 // @Failure 404 {object} map[string]interface{} "Alert not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -204,6 +208,7 @@ func ResolveAlert(c *gin.Context) {
 // @Produce json
 // @Param userId path int true "User ID"
 // @Param settings body requests.UserNotificationSettingsRequest true "User notification settings"
+// @Security BearerAuth
 // @Success 200 {object} domain.UserNotificationSettings
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "User not found"

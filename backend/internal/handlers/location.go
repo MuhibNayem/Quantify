@@ -20,6 +20,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param location body requests.LocationCreateRequest true "Location creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Location
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 409 {object} map[string]interface{} "Conflict: Location with this name already exists"
@@ -55,6 +56,7 @@ func CreateLocation(c *gin.Context) {
 // @Tags locations
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Location
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /locations [get]
@@ -74,6 +76,7 @@ func ListLocations(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Location ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Location
 // @Failure 404 {object} map[string]interface{} "Location not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -100,6 +103,7 @@ func GetLocation(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Location ID"
 // @Param location body requests.LocationUpdateRequest true "Location update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.Location
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Location not found"
@@ -146,6 +150,7 @@ func UpdateLocation(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Location ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Location not found"
 // @Failure 409 {object} map[string]interface{} "Conflict: Location has associated data"

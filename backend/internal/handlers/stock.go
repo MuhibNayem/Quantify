@@ -34,6 +34,7 @@ type StockAdjustedEventPayload struct {
 // @Produce json
 // @Param productId path int true "Product ID"
 // @Param batch body requests.StockInBatchRequest true "Batch creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Batch
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
@@ -85,6 +86,7 @@ func CreateBatch(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path int true "Product ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Product stock details"
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -139,6 +141,7 @@ func GetProductStock(c *gin.Context) {
 // @Produce json
 // @Param productId path int true "Product ID"
 // @Param adjustment body requests.StockAdjustmentRequest true "Stock adjustment request"
+// @Security BearerAuth
 // @Success 201 {object} domain.StockAdjustment
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
@@ -301,6 +304,7 @@ func CreateStockAdjustment(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param productId path int true "Product ID"
+// @Security BearerAuth
 // @Success 200 {array} domain.StockAdjustment
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

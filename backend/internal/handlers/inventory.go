@@ -18,6 +18,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param transfer body requests.StockTransferRequest true "Stock transfer request"
+// @Security BearerAuth
 // @Success 201 {object} map[string]string
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

@@ -57,6 +57,7 @@ var purchaseOrders = make(map[uint]domain.PurchaseOrder) // Using PO ID as key
 // @Accept json
 // @Produce json
 // @Param forecast body requests.ForecastGenerationRequest true "Forecast generation request"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Forecast generation status"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -87,6 +88,7 @@ func (h *ReplenishmentHandler) GenerateDemandForecast(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param forecastId path int true "Forecast ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.DemandForecast
 // @Failure 404 {object} map[string]interface{} "Forecast not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -110,6 +112,7 @@ func (h *ReplenishmentHandler) GetDemandForecast(c *gin.Context) {
 // @Description Retrieves aggregated forecasting data including top predicted demand and low stock warnings.
 // @Tags replenishment
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/dashboard [get]
@@ -128,6 +131,7 @@ func (h *ReplenishmentHandler) GetForecastDashboard(c *gin.Context) {
 // @Tags replenishment
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Generation status"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/suggestions/generate [post]
@@ -147,6 +151,7 @@ func (h *ReplenishmentHandler) GenerateReorderSuggestions(c *gin.Context) {
 // @Produce json
 // @Param status query string false "Filter by suggestion status (PENDING, APPROVED)"
 // @Param supplierId query int false "Filter by Supplier ID"
+// @Security BearerAuth
 // @Success 200 {array} domain.ReorderSuggestion
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/suggestions [get]
@@ -170,6 +175,7 @@ func (h *ReplenishmentHandler) ListReorderSuggestions(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param suggestionId path int true "Reorder Suggestion ID"
+// @Security BearerAuth
 // @Success 201 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Suggestion not found"
@@ -208,6 +214,7 @@ func (h *ReplenishmentHandler) CreatePOFromSuggestion(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
@@ -234,6 +241,7 @@ func (h *ReplenishmentHandler) SendPurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
@@ -272,6 +280,7 @@ func (h *ReplenishmentHandler) ApprovePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -298,6 +307,7 @@ func (h *ReplenishmentHandler) GetPurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
 // @Param po body requests.UpdatePORequest true "Purchase Order update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
@@ -355,6 +365,7 @@ func (h *ReplenishmentHandler) UpdatePurchaseOrder(c *gin.Context) {
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
 // @Param receivedItems body requests.ReceivePORequest true "Received items details"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
@@ -411,6 +422,7 @@ func (h *ReplenishmentHandler) ReceivePurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param poId path int true "Purchase Order ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Purchase Order not found"
@@ -437,6 +449,7 @@ func (h *ReplenishmentHandler) CancelPurchaseOrder(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body requests.CreatePORequest true "Create PO request"
+// @Security BearerAuth
 // @Success 201 {object} domain.PurchaseOrder
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -494,6 +507,7 @@ func (h *ReplenishmentHandler) CreatePurchaseOrder(c *gin.Context) {
 // @Tags replenishment
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.PurchaseOrder
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/purchase-orders [get]
@@ -513,6 +527,7 @@ func (h *ReplenishmentHandler) ListPurchaseOrders(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param request body services.CreatePurchaseReturnRequest true "Return request"
+// @Security BearerAuth
 // @Success 201 {object} domain.PurchaseReturn
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -546,6 +561,7 @@ func (h *ReplenishmentHandler) CreatePurchaseReturn(c *gin.Context) {
 // @Tags replenishment
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.PurchaseReturn
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /replenishment/returns [get]
@@ -565,6 +581,7 @@ func (h *ReplenishmentHandler) ListPurchaseReturns(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Vendor return ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseReturn
 // @Failure 404 {object} map[string]interface{} "Not Found"
 // @Router /replenishment/returns/{id} [get]
@@ -593,6 +610,7 @@ func (h *ReplenishmentHandler) GetPurchaseReturn(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Vendor return ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseReturn
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Not Found"
@@ -635,6 +653,7 @@ func (h *ReplenishmentHandler) ApprovePurchaseReturn(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Vendor return ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseReturn
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Not Found"
@@ -671,6 +690,7 @@ func (h *ReplenishmentHandler) CompletePurchaseReturn(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Vendor return ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.PurchaseReturn
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Not Found"

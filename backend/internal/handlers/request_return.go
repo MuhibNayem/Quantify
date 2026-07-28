@@ -30,6 +30,7 @@ type ReturnRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body ReturnRequest true "Return request"
+// @Security BearerAuth
 // @Success 201 {object} map[string]interface{} "Return requested"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"

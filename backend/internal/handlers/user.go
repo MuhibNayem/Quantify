@@ -48,7 +48,7 @@ func resolveRefreshTTL(cfg *config.Config) time.Duration {
 // @Param q query string false "Search by username or ID"
 // @Param page query int false "Page number (default: 1)"
 // @Param limit query int false "Items per page (default: 50, max: 200)"
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Paginated list of users"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /users [get]
@@ -267,6 +267,7 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param token body requests.RefreshTokenRequest true "Refresh token request"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "New access token"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized: Invalid refresh token"
@@ -340,6 +341,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param token body requests.RefreshTokenRequest true "Refresh token request"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "Logout successful"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -384,7 +386,7 @@ func (h *UserHandler) LogoutUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID"
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 200 {object} domain.User
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "User not found"
@@ -419,7 +421,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Produce json
 // @Param id path int true "User ID"
 // @Param user body requests.UserUpdateRequest true "User update request"
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 200 {object} domain.User
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
@@ -517,7 +519,7 @@ func (h *UserHandler) UpdateUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID"
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "User not found"
@@ -550,7 +552,7 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "User ID"
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 200 {object} domain.User
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 404 {object} map[string]interface{} "User not found"

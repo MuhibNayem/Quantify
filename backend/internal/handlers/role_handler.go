@@ -21,7 +21,8 @@ func NewRoleHandler(service services.RoleService) *RoleHandler {
 // @Summary List all roles
 // @Tags roles
 // @Produce json
-// @Success 200 {array} domain.Role
+// @Security BearerAuth
+// @Success 200 {array} object
 // @Router /roles [get]
 func (h *RoleHandler) ListRoles(c *gin.Context) {
 	roles, err := h.service.ListRoles()
@@ -38,7 +39,8 @@ func (h *RoleHandler) ListRoles(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param role body object true "Role data"
-// @Success 201 {object} domain.Role
+// @Security BearerAuth
+// @Success 201 {object} object
 // @Router /roles [post]
 func (h *RoleHandler) CreateRole(c *gin.Context) {
 	var req struct {
@@ -65,7 +67,8 @@ func (h *RoleHandler) CreateRole(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Role ID"
 // @Param role body object true "Role data"
-// @Success 200 {object} domain.Role
+// @Security BearerAuth
+// @Success 200 {object} object
 // @Router /roles/{id} [put]
 func (h *RoleHandler) UpdateRole(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
@@ -90,6 +93,7 @@ func (h *RoleHandler) UpdateRole(c *gin.Context) {
 // @Summary Delete a custom role
 // @Tags roles
 // @Param id path int true "Role ID"
+// @Security BearerAuth
 // @Success 204 "No content"
 // @Router /roles/{id} [delete]
 func (h *RoleHandler) DeleteRole(c *gin.Context) {
@@ -105,7 +109,8 @@ func (h *RoleHandler) DeleteRole(c *gin.Context) {
 // @Summary List all available system permissions
 // @Tags roles
 // @Produce json
-// @Success 200 {array} domain.Permission
+// @Security BearerAuth
+// @Success 200 {array} object
 // @Router /permissions [get]
 func (h *RoleHandler) ListPermissions(c *gin.Context) {
 	perms, err := h.service.ListPermissions()
@@ -123,6 +128,7 @@ func (h *RoleHandler) ListPermissions(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Role ID"
 // @Param body body object true "Permission IDs"
+// @Security BearerAuth
 // @Success 200 "OK"
 // @Router /roles/{id}/permissions [put]
 func (h *RoleHandler) UpdateRolePermissions(c *gin.Context) {

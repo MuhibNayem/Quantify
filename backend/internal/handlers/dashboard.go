@@ -23,7 +23,7 @@ func NewDashboardHandler(repo repository.DashboardRepository) *DashboardHandler 
 // @Tags dashboard
 // @Accept json
 // @Produce json
-// @Security ApiKeyAuth
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /dashboard/summary [get]

@@ -23,6 +23,19 @@ func NewCRMHandler(crmService services.CRMService, db *gorm.DB) *CRMHandler {
 	return &CRMHandler{crmService: crmService, db: db}
 }
 
+// ListCustomers godoc
+// @Summary List customers
+// @Description Get a paginated list of customers with optional search
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(50)
+// @Param q query string false "Search query"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers [get]
 func (h *CRMHandler) ListCustomers(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
@@ -51,6 +64,18 @@ func (h *CRMHandler) ListCustomers(c *gin.Context) {
 	})
 }
 
+// CreateCustomer godoc
+// @Summary Create a new customer
+// @Description Create a new customer account
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param customer body requests.CreateCustomerRequest true "Customer creation request"
+// @Security BearerAuth
+// @Success 201 {object} domain.User
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers [post]
 func (h *CRMHandler) CreateCustomer(c *gin.Context) {
 	var req requests.CreateCustomerRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -68,6 +93,18 @@ func (h *CRMHandler) CreateCustomer(c *gin.Context) {
 	c.JSON(http.StatusCreated, user)
 }
 
+// GetCustomer godoc
+// @Summary Get customer by identifier
+// @Description Get a customer by ID, email, phone, or username
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param identifier path string true "Customer identifier (ID, email, phone, or username)"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/{identifier} [get]
 func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	identifier := c.Param("identifier")
 	user, err := h.lookupCustomer(c.Request.Context(), identifier)
@@ -116,6 +153,18 @@ func isPhone(s string) bool {
 	return len(s) >= 7 && len(s) <= 20
 }
 
+// GetCustomerByUsername godoc
+// @Summary Get customer by username
+// @Description Get a customer by their username
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param username path string true "Username"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/username/{username} [get]
 func (h *CRMHandler) GetCustomerByUsername(c *gin.Context) {
 	username := c.Param("username")
 	user, err := h.crmService.GetCustomerByUsername(username)
@@ -127,6 +176,18 @@ func (h *CRMHandler) GetCustomerByUsername(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// GetCustomerByEmail godoc
+// @Summary Get customer by email
+// @Description Get a customer by their email address
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param email path string true "Email address"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/email/{email} [get]
 func (h *CRMHandler) GetCustomerByEmail(c *gin.Context) {
 	email := c.Param("email")
 	user, err := h.crmService.GetCustomerByEmail(email)
@@ -138,6 +199,18 @@ func (h *CRMHandler) GetCustomerByEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// GetCustomerByPhone godoc
+// @Summary Get customer by phone
+// @Description Get a customer by their phone number
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param phone path string true "Phone number"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/phone/{phone} [get]
 func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 	phone := c.Param("phone")
 	user, err := h.crmService.GetCustomerByPhone(phone)
@@ -149,6 +222,19 @@ func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// UpdateCustomer godoc
+// @Summary Update a customer
+// @Description Update customer details by user ID
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param identifier path string true "Customer user ID"
+// @Param customer body requests.UpdateCustomerRequest true "Customer update request"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/{identifier} [put]
 func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
 	if err != nil {
@@ -172,6 +258,18 @@ func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// DeleteCustomer godoc
+// @Summary Delete a customer
+// @Description Delete a customer by user ID
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param identifier path string true "Customer user ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/{identifier} [delete]
 func (h *CRMHandler) DeleteCustomer(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
 	if err != nil {
@@ -187,6 +285,18 @@ func (h *CRMHandler) DeleteCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Customer deleted successfully"})
 }
 
+// GetLoyaltyAccount godoc
+// @Summary Get loyalty account
+// @Description Get loyalty account details for a customer
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param userId path int true "User ID"
+// @Security BearerAuth
+// @Success 200 {object} domain.LoyaltyAccount
+// @Failure 404 {object} map[string]interface{} "Loyalty account not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/loyalty/{userId} [get]
 func (h *CRMHandler) GetLoyaltyAccount(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
 	if err != nil {
@@ -202,6 +312,19 @@ func (h *CRMHandler) GetLoyaltyAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, account)
 }
 
+// AddLoyaltyPoints godoc
+// @Summary Add loyalty points
+// @Description Add loyalty points to a customer's account
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param userId path int true "User ID"
+// @Param points body object{points=int} true "Points to add"
+// @Security BearerAuth
+// @Success 200 {object} domain.LoyaltyAccount
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/loyalty/{userId}/points [post]
 func (h *CRMHandler) AddLoyaltyPoints(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
 	if err != nil {
@@ -225,6 +348,19 @@ func (h *CRMHandler) AddLoyaltyPoints(c *gin.Context) {
 	c.JSON(http.StatusOK, account)
 }
 
+// RedeemLoyaltyPoints godoc
+// @Summary Redeem loyalty points
+// @Description Redeem loyalty points from a customer's account
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param userId path int true "User ID"
+// @Param points body object{points=int} true "Points to redeem"
+// @Security BearerAuth
+// @Success 200 {object} domain.LoyaltyAccount
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/loyalty/{userId}/redeem [post]
 func (h *CRMHandler) RedeemLoyaltyPoints(c *gin.Context) {
 	userID, err := strconv.ParseUint(c.Param("userId"), 10, 32)
 	if err != nil {
@@ -248,6 +384,18 @@ func (h *CRMHandler) RedeemLoyaltyPoints(c *gin.Context) {
 	c.JSON(http.StatusOK, account)
 }
 
+// GetChurnRisk godoc
+// @Summary Get customer churn risk
+// @Description Analyze and return churn risk assessment for a customer
+// @Tags crm
+// @Accept json
+// @Produce json
+// @Param identifier path string true "Customer identifier"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /crm/customers/{identifier}/churn-risk [get]
 func (h *CRMHandler) GetChurnRisk(c *gin.Context) {
 	identifier := c.Param("identifier")
 	user, err := h.lookupCustomer(c.Request.Context(), identifier)

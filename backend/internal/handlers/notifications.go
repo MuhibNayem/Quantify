@@ -39,6 +39,7 @@ func (h *NotificationHandler) WithDB(db *gorm.DB) *NotificationHandler {
 // @Param isRead query bool false "Filter by read status"
 // @Param limit query int false "Limit number of notifications"
 // @Param offset query int false "Offset for pagination"
+// @Security BearerAuth
 // @Success 200 {array} domain.Notification
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 403 {object} map[string]interface{} "Forbidden"
@@ -98,6 +99,7 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 // @Tags notifications
 // @Produce json
 // @Param userId path int true "User ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 403 {object} map[string]interface{} "Forbidden"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -137,6 +139,7 @@ func (h *NotificationHandler) GetUnreadNotificationCount(c *gin.Context) {
 // @Produce json
 // @Param userId path int true "User ID"
 // @Param notificationId path int true "Notification ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 403 {object} map[string]interface{} "Forbidden"
@@ -180,6 +183,7 @@ func (h *NotificationHandler) MarkNotificationAsRead(c *gin.Context) {
 // @Tags notifications
 // @Produce json
 // @Param userId path int true "User ID"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 403 {object} map[string]interface{} "Forbidden"
@@ -228,6 +232,7 @@ type BroadcastNotificationRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body BroadcastNotificationRequest true "Broadcast request"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -265,6 +270,7 @@ func (h *NotificationHandler) BroadcastNotification(c *gin.Context) {
 // @Param id path int true "User ID"
 // @Param type path string true "Alert type (e.g. LOW_STOCK, OUT_OF_STOCK)"
 // @Param request body object{enabled=bool} true "Subscription payload"
+// @Security BearerAuth
 // @Success 200 {object} domain.UserNotificationSubscription
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
@@ -327,6 +333,7 @@ func (h *NotificationHandler) UpdateSubscription(c *gin.Context) {
 // @Tags notifications
 // @Produce json
 // @Param id path int true "User ID"
+// @Security BearerAuth
 // @Success 200 {array} domain.UserNotificationSubscription
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 403 {object} map[string]interface{} "Forbidden"

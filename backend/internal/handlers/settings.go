@@ -75,6 +75,15 @@ func numericRange(min, max float64) func(string) error {
 	}
 }
 
+// GetSettings godoc
+// @Summary Get all settings
+// @Description Retrieves all system settings
+// @Tags settings
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /settings [get]
 func (h *SettingsHandler) GetSettings(c *gin.Context) {
 	settings, err := h.service.GetAllSettings()
 	if err != nil {
@@ -84,6 +93,18 @@ func (h *SettingsHandler) GetSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
+// UpdateSetting godoc
+// @Summary Update a setting
+// @Description Updates a system setting value
+// @Tags settings
+// @Accept json
+// @Produce json
+// @Param setting body object{key=string,value=string} true "Setting key and value"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /settings [put]
 func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 	var req struct {
 		Key   string      `json:"key"`
@@ -118,6 +139,15 @@ func (h *SettingsHandler) UpdateSetting(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Setting updated"})
 }
 
+// GetPublicConfigurations godoc
+// @Summary Get public configurations
+// @Description Retrieves publicly accessible system configurations
+// @Tags settings
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Router /settings/configurations [get]
 func (h *SettingsHandler) GetPublicConfigurations(c *gin.Context) {
 	settings, err := h.service.GetPublicSettings()
 	if err != nil {

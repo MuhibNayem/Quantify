@@ -46,6 +46,7 @@ type ProductEventPayload struct {
 // @Accept json
 // @Produce json
 // @Param product body requests.ProductCreateRequest true "Product creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Product
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -112,6 +113,7 @@ func (h *ProductHandler) CreateProduct(c *gin.Context) {
 // @Param category query int false "Filter by Category ID"
 // @Param supplier query int false "Filter by Supplier ID"
 // @Param status query string false "Filter by Status (Active, Archived, Discontinued)"
+// @Security BearerAuth
 // @Success 200 {object} map[string]interface{} "List of products"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /products [get]
@@ -193,6 +195,7 @@ func (h *ProductHandler) ListProducts(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Product ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Product
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -237,6 +240,7 @@ func (h *ProductHandler) GetProduct(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param sku path string true "Product SKU"
+// @Security BearerAuth
 // @Success 200 {object} domain.Product
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -262,6 +266,7 @@ func (h *ProductHandler) GetProductBySKU(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param barcode path string true "Product Barcode"
+// @Security BearerAuth
 // @Success 200 {object} domain.Product
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -288,6 +293,7 @@ func (h *ProductHandler) GetProductByBarcode(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Product ID"
 // @Param product body requests.ProductUpdateRequest true "Product update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.Product
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
@@ -358,6 +364,7 @@ func (h *ProductHandler) UpdateProduct(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Product ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 409 {object} map[string]interface{} "Conflict: Product has associated data"
@@ -421,6 +428,7 @@ func (h *ProductHandler) DeleteProduct(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Product ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Product
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"

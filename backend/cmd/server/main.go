@@ -12,6 +12,15 @@ import (
 	"inventory/backend/internal/config"
 )
 
+// @title           Quantify API
+// @version         1.0
+// @description     Inventory management and POS system API
+// @host            localhost:8080
+// @BasePath        /api/v1
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT Bearer token. Format: "Bearer {token}"
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

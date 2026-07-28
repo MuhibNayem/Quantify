@@ -23,7 +23,8 @@ func NewSearchHandler(searchService *services.SearchService) *SearchHandler {
 // @Accept json
 // @Produce json
 // @Param q query string true "Search query"
-// @Success 200 {array} repository.SearchResult
+// @Security BearerAuth
+// @Success 200 {array} object
 // @Failure 400 {object} map[string]interface{} "Bad Request: Query parameter 'q' is required"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /search [get]

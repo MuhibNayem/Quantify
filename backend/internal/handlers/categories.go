@@ -32,6 +32,7 @@ func NewCategoryHandler(categoryRepo repository.CategoryRepository, db *gorm.DB)
 // @Accept json
 // @Produce json
 // @Param category body requests.CategoryCreateRequest true "Category creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.Category
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 409 {object} map[string]interface{} "Conflict: Category with this name already exists"
@@ -66,6 +67,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 // @Tags categories
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {array} domain.Category
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /categories [get]
@@ -85,6 +87,7 @@ func (h *CategoryHandler) ListCategories(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Category ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.Category
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -110,6 +113,7 @@ func (h *CategoryHandler) GetCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param name path string true "Category Name"
+// @Security BearerAuth
 // @Success 200 {object} domain.Category
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -136,6 +140,7 @@ func (h *CategoryHandler) GetCategoryByName(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Category ID"
 // @Param category body requests.CategoryUpdateRequest true "Category update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.Category
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Category not found"
@@ -182,6 +187,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Category ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 409 {object} map[string]interface{} "Conflict: Category has associated data"
@@ -231,6 +237,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 // @Produce json
 // @Param categoryId path int true "Category ID"
 // @Param subCategory body requests.SubCategoryCreateRequest true "Sub-category creation request"
+// @Security BearerAuth
 // @Success 201 {object} domain.SubCategory
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Category not found"
@@ -279,6 +286,7 @@ func (h *CategoryHandler) CreateSubCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param categoryId path int true "Category ID"
+// @Security BearerAuth
 // @Success 200 {array} domain.SubCategory
 // @Failure 404 {object} map[string]interface{} "Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -300,6 +308,7 @@ func (h *CategoryHandler) ListSubCategories(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Sub-Category ID"
+// @Security BearerAuth
 // @Success 200 {object} domain.SubCategory
 // @Failure 404 {object} map[string]interface{} "Sub-Category not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -326,6 +335,7 @@ func (h *CategoryHandler) GetSubCategory(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Sub-Category ID"
 // @Param subCategory body requests.SubCategoryUpdateRequest true "Sub-category update request"
+// @Security BearerAuth
 // @Success 200 {object} domain.SubCategory
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Sub-Category not found"
@@ -364,6 +374,7 @@ func (h *CategoryHandler) UpdateSubCategory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Sub-Category ID"
+// @Security BearerAuth
 // @Success 204 "No Content"
 // @Failure 404 {object} map[string]interface{} "Sub-Category not found"
 // @Failure 409 {object} map[string]interface{} "Conflict: Sub-Category has associated products"

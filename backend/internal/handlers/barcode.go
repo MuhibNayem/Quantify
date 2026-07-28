@@ -27,6 +27,7 @@ func NewBarcodeHandler(barcodeService services.BarcodeService) *BarcodeHandler {
 // @Produce image/png
 // @Param sku query string false "Product SKU"
 // @Param productId query int false "Product ID"
+// @Security BearerAuth
 // @Success 200 {file} image/png "Barcode image"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
@@ -72,7 +73,8 @@ func (h *BarcodeHandler) GenerateBarcode(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param barcode query string true "Barcode or UPC value"
-// @Success 200 {object} domain.Product
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
