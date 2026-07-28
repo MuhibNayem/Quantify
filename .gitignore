@@ -35,3 +35,7 @@ pnpm-debug.log*
 .svelte-kit/
 
 #Backend
+
+# Infrastructure
+bin/
+certs/

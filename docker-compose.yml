@@ -1,45 +1,72 @@
 services:
 
-  minio:
-    image: minio/minio:latest
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    environment:
-      MINIO_ROOT_USER: minioadmin4321
-      MINIO_ROOT_PASSWORD: minioadmin4321
-    command: server /data --console-address ":9001"
-    networks:
-      - my_network
-
   db:
     image: postgres:15-alpine
-    restart: always
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: inventory_db
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-inventory_db}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d inventory_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-inventory_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "1G"
     networks:
-      - my_network
+      - backend
 
-  # Redis Cluster 
+  db-replica:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_MASTER_HOST: db
+    ports:
+      - "${POSTGRES_REPLICA_PORT:-5433}:5432"
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: >
+      bash -c "
+      until pg_basebackup --pgdata=/var/lib/postgresql/data -R --slot=replication_slot --host=db --port=5432 --username=${POSTGRES_USER:-user} --dbname=${POSTGRES_DB:-inventory_db}; do
+        echo 'Waiting for primary to connect...'
+        sleep 1s
+      done
+      chmod 0700 /var/lib/postgresql/data
+      postgres
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-inventory_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    networks:
+      - backend
+
   redis1:
     image: redis:7.0
     container_name: redis1
     hostname: redis1
+    restart: unless-stopped
     environment:
-      REDISCLI_AUTH: redispass
+      REDISCLI_AUTH: ${REDIS_PASS:-redispass}
     ports:
       - "6379:6379"
       - "16379:16379"
@@ -48,32 +75,37 @@ services:
       "--cluster-enabled", "yes",
       "--cluster-config-file", "nodes.conf",
       "--cluster-node-timeout", "5000",
-      "--requirepass", "redispass",
-      "--masterauth", "redispass",
+      "--requirepass", "${REDIS_PASS:-redispass}",
+      "--masterauth", "${REDIS_PASS:-redispass}",
       "--protected-mode", "no",
       "--cluster-announce-ip", "redis1",
       "--cluster-announce-port", "6379",
       "--cluster-announce-bus-port", "16379"
     ]
-
     volumes:
       - redis1_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASS:-redispass}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
     networks:
-      - my_network
+      - backend
 
   redis2:
     image: redis:7.0
     container_name: redis2
     hostname: redis2
+    restart: unless-stopped
     depends_on:
       - redis1
     environment:
-      REDISCLI_AUTH: redispass
+      REDISCLI_AUTH: ${REDIS_PASS:-redispass}
     ports:
       - "6380:6379"
       - "16380:16379"
@@ -82,32 +114,37 @@ services:
       "--cluster-enabled", "yes",
       "--cluster-config-file", "nodes.conf",
       "--cluster-node-timeout", "5000",
-      "--requirepass", "redispass",
-      "--masterauth", "redispass",
+      "--requirepass", "${REDIS_PASS:-redispass}",
+      "--masterauth", "${REDIS_PASS:-redispass}",
       "--protected-mode", "no",
       "--cluster-announce-ip", "redis2",
       "--cluster-announce-port", "6379",
       "--cluster-announce-bus-port", "16379"
     ]
-
     volumes:
       - redis2_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASS:-redispass}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
     networks:
-      - my_network
+      - backend
 
   redis3:
     image: redis:7.0
     container_name: redis3
     hostname: redis3
+    restart: unless-stopped
     depends_on:
       - redis2
     environment:
-      REDISCLI_AUTH: redispass
+      REDISCLI_AUTH: ${REDIS_PASS:-redispass}
     ports:
       - "6381:6379"
       - "16381:16379"
@@ -116,8 +153,8 @@ services:
       "--cluster-enabled", "yes",
       "--cluster-config-file", "nodes.conf",
       "--cluster-node-timeout", "5000",
-      "--requirepass", "redispass",
-      "--masterauth", "redispass",
+      "--requirepass", "${REDIS_PASS:-redispass}",
+      "--masterauth", "${REDIS_PASS:-redispass}",
       "--protected-mode", "no",
       "--cluster-announce-ip", "redis3",
       "--cluster-announce-port", "6379",
@@ -126,12 +163,17 @@ services:
     volumes:
       - redis3_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redispass", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASS:-redispass}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
     networks:
-      - my_network
+      - backend
 
   redis-init:
     image: redis:7.0
@@ -141,7 +183,7 @@ services:
         condition: service_healthy
       redis2:
         condition: service_healthy
-      redis3: 
+      redis3:
         condition: service_healthy
     entrypoint: ["bash", "-c", "
       echo 'Waiting for Redis cluster nodes to be ready...';
@@ -150,36 +192,68 @@ services:
       yes yes | redis-cli --cluster create \
         redis1:6379 redis2:6379 redis3:6379 \
         --cluster-replicas 0 \
-        -a redispass;
+        -a ${REDIS_PASS:-redispass};
       echo 'Redis cluster initialized.'
       "]
     networks:
-      - my_network
+      - backend
     restart: "no"
-
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    restart: always
+    restart: unless-stopped
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: user
-      RABBITMQ_DEFAULT_PASS: password
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-password}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
     networks:
-      - my_network
+      - backend
+
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY_ID:-minioadmin4321}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_ACCESS_KEY:-minioadmin4321}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    networks:
+      - backend
 
   backend:
     build:
       context: ./backend
+    restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       db:
         condition: service_healthy
@@ -187,64 +261,238 @@ services:
         condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     env_file:
       - ./backend/.env
+    environment:
+      - AI_SERVICE_URL=http://ai-service:8000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
           cpus: "0.5"
           memory: "512M"
-    environment:
-      - AI_SERVICE_URL=http://ai-service:8000
     networks:
-      - my_network
+      - backend
+      - monitoring
 
   ai-service:
     build:
       context: ./ai-service
+    restart: unless-stopped
     ports:
-      - "8001:8000"
+      - "${AI_SERVICE_PORT:-8001}:8000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     env_file:
       - ./ai-service/.env
     environment:
       - BACKEND_URL=http://backend:8080
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
     networks:
-      - my_network
-
+      - backend
+      - monitoring
 
   prometheus:
-    image: prom/prometheus:v2.37.0
-    restart: always
+    image: prom/prometheus:v2.53.0
+    restart: unless-stopped
     ports:
-      - "9091:9091"
+      - "${PROMETHEUS_PORT:-9091}:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
     networks:
-      - my_network
+      - monitoring
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    networks:
+      - monitoring
+
+  loki:
+    image: grafana/loki:2.9.4
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
+    networks:
+      - monitoring
+
+  promtail:
+    image: grafana/promtail:2.9.4
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    networks:
+      - monitoring
 
   grafana:
-    image: grafana/grafana:9.1.0
-    restart: always
+    image: grafana/grafana:10.4.0
+    restart: unless-stopped
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3001}:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning/:/etc/grafana/provisioning/
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: password
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-password}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "512M"
     networks:
-      - my_network
+      - monitoring
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    restart: unless-stopped
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@quantify.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-password}
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/misc/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "256M"
+    networks:
+      - backend
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "echo", "ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: "128M"
+    networks:
+      - backend
 
 volumes:
   postgres_data:
-  grafana_data:
-  redis3_data:
-  redis2_data:
+  postgres_replica_data:
   redis1_data:
+  redis2_data:
+  redis3_data:
+  rabbitmq_data:
   minio_data:
+  prometheus_data:
+  alertmanager_data:
+  loki_data:
+  grafana_data:
+  pgadmin_data:
 
 networks:
-  my_network:
+  backend:
+    driver: bridge
+  monitoring:
     driver: bridge

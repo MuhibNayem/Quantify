@@ -1,0 +1,39 @@
+services:
+
+  backend:
+    build:
+      context: ./backend
+      target: builder
+    command: ["go", "run", "./cmd/server/main.go"]
+    volumes:
+      - ./backend:/app/inventory/backend
+      - go_mod_cache:/go/pkg/mod
+    environment:
+      - GIN_MODE=debug
+      - GO_ENV=development
+    ports:
+      - "8080:8080"
+      - "2345:2345"
+
+  ai-service:
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      - ./ai-service:/app
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+    ports:
+      - "8001:8000"
+      - "5678:5678"
+
+  prometheus:
+    ports:
+      - "9091:9090"
+
+  grafana:
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_LOG_LEVEL: debug
+
+volumes:
+  go_mod_cache:
