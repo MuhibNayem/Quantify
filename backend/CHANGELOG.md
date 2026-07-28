@@ -4,27 +4,65 @@ All notable changes to the Quantify backend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Phase 7] 2026-XX-XX — Documentation
+
+### Added
+
+- **P7.T2** `docs/business_logic.md` — RBAC model, checkout/return/bulk-import flows, loyalty tiers, Order.TaxAmount. Explicitly documents single-tenant scope (no multi-tenancy/RFID).
+- **P7.T3** `docs/architecture.md` — Handler→Service→Repository diagram, DI container, ADRs, Mermaid deployment topology, request lifecycle.
+- **P7.T4** `docs/security.md` — STRIDE-lite threat model, controls, key rotation runbook, secret handling.
+- **P7.T5** `docs/runbook.md` — Incident response (Postgres/Redis/RabbitMQ/MinIO down), deploy/rollback procedures.
+- **P7.T6** `README.md` + `docs/README.md` — Accurate env var table, dev quickstart, test commands, doc links.
+
+## [Phase 6] 2026-XX-XX — Test coverage
+
+### Added
+
+- **P6.T1** `test/integration/db.go` — testcontainers Postgres helper for integration tests.
+- **P6.T2-T7** Integration tests: checkout→return→refund, bulk import e2e, PO receive, alert consumer, permission cache, webhook factory.
+- **P6.T8** Property-based tests (rapid): promotion resolver hierarchy, refund math non-negativity, tax round-trip.
+
+## [Phase 5] 2026-XX-XX — Operations & observability
+
+### Added
+
+- **P5.T1+T2** `GET /ready` endpoint checks DB, Redis, AMQP, MinIO; returns 503 with failed list. `/health` remains liveness-only.
+- **P5.T3** Prometheus collectors: `http_requests_total`, `http_request_duration_seconds`, `cache_hits_total`, `cache_misses_total`, `jobs_processed_total`, `payments_processed_total`, `alerts_fired_total`. HTTP metrics middleware wired.
+- **P5.T6** `X-Request-ID` middleware generates/propagates request IDs.
+- **P5.T7** OpenTelemetry tracing via OTLP (opt-in via `OTLP_ENDPOINT`).
+- **P5.T8** `.github/workflows/ci.yml` — test, vet, lint, gosec, docker build.
+- **P5.T9** Dockerfile: non-root user, HEALTHCHECK, pinned entrypoint.
+- **P5.T10** `docs/log-shipping.md` — Vector + Loki and Fluent Bit examples.
+
+### Changed
+
+- **P5.T5** All `fmt.Print*` in handlers/services replaced with structured `logrus` logging.
+
 ## [Phase 4] 2026-XX-XX — Architectural overhaul
 
 ### Added
 
-- **P4.T2** `internal/app/container.go` defines a typed `Container` struct holding the wired graph of repos, services, handlers, and infrastructure clients (DB, Redis, AMQP, Hub, Uploader). Bootstrap now builds the container once and hands it to the router. (`internal/app/container.go`, `internal/bootstrap/app.go`)
-- **P4.T12** Real webhook-integration registry. `integrations.Registry` accepts arbitrary `Integration` implementations; Shopify and QuickBooks are registered as stubs. `POST /webhooks/:name` dispatches by name; unknown names return 404. Legacy `IntegrationService.HandleWebhook` (which always returned `ErrIntegrationNotFound`) and the `webhook.go` handler are deleted. (`internal/integrations/`, `internal/router/router.go`)
-- **P4.T15** RabbitMQ exchange, queue, and routing-key constants centralized in `internal/message_broker/topology.go`. `DefaultTopology()` returns the queue-to-routing-key map; consumers and publishers now reference these constants instead of inline string literals. (`internal/message_broker/topology.go`, all callers of `bulk.import` / `bulk.export` / `stock.adjusted` / `alert.triggered` / `report.generate`)
-- **P4.T17** `CORS_ALLOWED_ORIGINS` env var (CSV) drives the Gin CORS middleware via `cfg.CORSAllowedOrigins`. Default: `http://localhost:5173`. The previous hard-coded list is gone. (`internal/config/config.go`, `internal/router/router.go`)
-- **P4.T18** Loyalty tier thresholds (silver / gold / platinum) and earning rate now read from `system_settings`. Defaults preserved at 500 / 2500 / 10000 / 0.01. Operators can tune without redeploying. (`internal/services/sales_service.go`)
+- **P4.T2** `internal/app/container.go` — typed Container holding wired repos/services/handlers/infra. Bootstrap builds it once.
+- **P4.T3** `internal/repository/interfaces.go` — interfaces for all 9 repos; services depend on interfaces, not concrete types.
+- **P4.T5** `golang-migrate` adopted. `migrations/0001_init.up.sql` (38 tables), `0002_seed.up.sql` (permissions/roles/settings). `cmd/migrator` rewritten.
+- **P4.T11** OpenAPI spec regenerated from handler annotations. 136 paths, 165 operations, 82 schema definitions. `swag init` produces `api/docs.go`, `swagger.json`, `swagger.yaml`.
+- **P4.T12** Webhook integration registry. Shopify/QuickBooks stubs. `POST /webhooks/:name` dispatches; unknown → 404.
+- **P4.T13** `koanf` replaces hand-rolled `getEnv`. Config loads from TOML file + env overrides. `config.example.toml` created.
+- **P4.T15** RabbitMQ topology constants centralized in `topology.go`.
+- **P4.T17** `CORS_ALLOWED_ORIGINS` env var drives CORS middleware.
+- **P4.T18** Loyalty tier thresholds read from `system_settings`.
 
 ### Changed
 
-- **P4.T1 (step 1)** `router.SetupRouter` now accepts `*app.Container` and reads every dependency through it. Inline repo/service/handler construction is gone from the router file. Group extraction (per-domain route files under `internal/router/groups/`) is the next step and has not yet landed. (`internal/router/router.go`)
-- **P4.T14** All handlers that emitted `gin.H{"error": ...}` directly now route errors through `c.Error(appErrors.NewAppError(...))`. `middleware.RespondError` extracted as a helper. `grep gin.H\{"error"` returns 0 matches in non-test files. (`internal/handlers/crm.go`, `notifications.go`, `replenishment.go`, `settings.go`, `internal/integrations/integrations.go`, `internal/middleware/error_handler.go`)
-- **P4.T16** Consumer cancel functions are now captured in `App.cancelFuncs` and invoked by `App.Stop()` before tearing down the broker. Previously, `Stop()` only shut down the HTTP server; consumers kept running until the process exited. (`internal/bootstrap/app.go`)
-- **P4.T7** `AutoMigrate()` is now gated by `APP_ENV=dev`. Production / staging boots log "AutoMigrate skipped; run cmd/migrator to apply migrations" and continue without touching the schema. The accompanying `cmd/migrator` flow lands in a follow-up phase (P4.T5). (`internal/repository/database.go`, `internal/config/config.go`)
-
-### Notes
-
-- Several large Phase 4 tasks were deferred to follow-up work because they did not fit in this iteration without breaking the working build: repository interface extraction (P4.T3), `repository.DB` singleton removal (P4.T4), `golang-migrate` adoption (P4.T5), seed-to-migration conversion (P4.T6), reporting-repository split (P4.T8), sales-service split (P4.T9), return-handler split (P4.T10), OpenAPI regeneration (P4.T11), and `koanf`-based config (P4.T13).
-- The router still contains all 160 routes inline; the per-domain group files planned in P4.T1 step 2 have not been extracted yet.
+- **P4.T1** `router.SetupRouter` accepts `*app.Container`; inline construction removed.
+- **P4.T4** `repository.DB` singleton removed; all access via Container or function params.
+- **P4.T6** In-code seeding removed; `0002_seed.up.sql` is the source of truth.
+- **P4.T7** `AutoMigrate` gated by `APP_ENV=dev`.
+- **P4.T8** `reporting_repository.go` (1089 LOC) split into `sales_reports.go`, `inventory_reports.go`, `financial_reports.go`, `crm_reports.go`.
+- **P4.T9** `sales_service.go` split into `checkout.go`, `stock_allocator.go`, `loyalty.go`, `pricing.go`, `promotion_resolver.go`.
+- **P4.T10** `return_handler.go` split into `request_return.go`, `process_return.go`.
+- **P4.T14** All `gin.H{"error": ...}` replaced with `c.Error(appErrors.NewAppError(...))`.
+- **P4.T16** Consumer cancel funcs captured and invoked on `Stop()`.
 
 ## [Phase 3] 2026-XX-XX — Correctness fixes
 
