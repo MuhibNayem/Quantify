@@ -9,7 +9,7 @@ type SalesTrendsReportRequest struct {
 	CategoryID *uint     `json:"categoryId"`
 	LocationID *uint     `json:"locationId"`
 	ProductID  *uint     `json:"productId"`
-	GroupBy    string    `json:"groupBy" binding:"required,oneof=daily weekly monthly"`
+	GroupBy    string    `json:"groupBy" binding:"required,oneof=daily weekly monthly iso_week calendar_week"`
 }
 
 // InventoryTurnoverReportRequest represents parameters for inventory turnover report.

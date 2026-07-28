@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,4 +43,33 @@ func TestValidateConfig_RejectsEmptyJWTSecret(t *testing.T) {
 	cfg := &Config{JWTSecret: "", RefreshTokenSecret: "u", MinioAccessKeyID: "u", MinioSecretAccessKey: "u", RabbitMQURL: "amqp://x"}
 	err := validateCriticalConfig(cfg)
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "JWT_SECRET")
+}
+
+func TestLoadConfig_AppEnvDefaultsToDev(t *testing.T) {
+	os.Unsetenv("APP_ENV")
+	t.Setenv("RABBITMQ_URL", "amqp://x")
+	t.Setenv("SSLCOMMERZ_STORE_PASSWORD", "uniquesslc")
+	t.Setenv("JWT_SECRET", "u1")
+	t.Setenv("REFRESH_TOKEN_SECRET", "u2")
+	t.Setenv("MINIO_ACCESS_KEY_ID", "u3")
+	t.Setenv("MINIO_SECRET_ACCESS_KEY", "u4")
+
+	cfg, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, "dev", cfg.AppEnv)
+}
+
+func TestLoadConfig_AppEnvHonoredFromEnv(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("RABBITMQ_URL", "amqp://x")
+	t.Setenv("SSLCOMMERZ_STORE_PASSWORD", "uniquesslc")
+	t.Setenv("JWT_SECRET", "u1")
+	t.Setenv("REFRESH_TOKEN_SECRET", "u2")
+	t.Setenv("MINIO_ACCESS_KEY_ID", "u3")
+	t.Setenv("MINIO_SECRET_ACCESS_KEY", "u4")
+
+	cfg, err := LoadConfig()
+	assert.NoError(t, err)
+	assert.Equal(t, "production", cfg.AppEnv)
 }

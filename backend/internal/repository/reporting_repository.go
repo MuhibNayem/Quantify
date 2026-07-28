@@ -34,23 +34,43 @@ func (r *ReportsRepository) GetSalesTrends(startDate, endDate time.Time, categor
 	var salesTrends []SalesTrend
 	var topSellingProducts []TopSellingProduct
 
-	// Sales Trends
-	truncUnit := "day"
-	switch groupBy {
-	case "week":
-		truncUnit = "week"
-	case "month":
-		truncUnit = "month"
+	// Timezone originates from a SystemSetting that an operator can edit;
+	// validate it before interpolating into the SQL string (same defense as
+	// GetHourlySalesHeatmap). Anything outside the IANA alphabet falls back
+	// to UTC rather than reaching the database with attacker-controlled input.
+	if !isValidTimezone(timezone) {
+		timezone = "UTC"
 	}
 
-	// Construct date expression with timezone
-	// adjusted_at is assumed to be stored in UTC (or DB server time).
-	// We convert it to the requested timezone before truncating.
-	// Postgres syntax: DATE_TRUNC('unit', adjusted_at AT TIME ZONE 'UTC' AT TIME ZONE 'timezone')
-	// Note: We assume adjusted_at is TIMESTAMP WITHOUT TIME ZONE (stored as UTC) or TIMESTAMPTZ.
-	// If TIMESTAMPTZ, 'AT TIME ZONE timezone' is enough.
-	// Safest for GORM (usually timestamptz in postgres driver): adjusted_at AT TIME ZONE timezone
-	dateExpr := fmt.Sprintf("DATE_TRUNC('%s', adjusted_at AT TIME ZONE '%s')", truncUnit, timezone)
+	// Resolve groupBy to a date-truncation expression. The switch is the
+	// ONLY place these identifiers are constructed — caller input never
+	// reaches the SQL string.
+	//
+	// Postgres' DATE_TRUNC('week', ts) returns Monday (ISO week start).
+	// For calendar_week (Sunday-start), shift the input forward by one day,
+	// truncate, then shift back: this lands the bucket on the Sunday of the
+	// week containing ts. For ts=Sunday this gives the same Sunday; for
+	// ts=Monday..Saturday this gives the Sunday 1-6 days earlier.
+	//
+	// Supported aliases:
+	//
+	//	daily         | day           → day buckets
+	//	weekly        | week | iso_week → ISO (Monday-start) week buckets
+	//	monthly       | month         → month buckets
+	//	calendar_week                  → Sunday-start week buckets
+	var dateExpr string
+	switch groupBy {
+	case "iso_week", "weekly", "week":
+		dateExpr = fmt.Sprintf("DATE_TRUNC('week', adjusted_at AT TIME ZONE '%s')", timezone)
+	case "calendar_week":
+		dateExpr = fmt.Sprintf("(DATE_TRUNC('week', (adjusted_at AT TIME ZONE '%s') + INTERVAL '1 day') - INTERVAL '1 day')", timezone)
+	case "daily", "day":
+		dateExpr = fmt.Sprintf("DATE_TRUNC('day', adjusted_at AT TIME ZONE '%s')", timezone)
+	case "monthly", "month":
+		dateExpr = fmt.Sprintf("DATE_TRUNC('month', adjusted_at AT TIME ZONE '%s')", timezone)
+	default:
+		return nil, nil, fmt.Errorf("unsupported groupBy: %s", groupBy)
+	}
 
 	query := r.DB.Model(&domain.StockAdjustment{}).
 		Select(fmt.Sprintf("%s as date, SUM(quantity) as total_sales", dateExpr)).

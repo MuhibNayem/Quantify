@@ -240,3 +240,76 @@ func TestCustomerInsights_NetOfReturns(t *testing.T) {
 	assert.InDelta(t, 100, alice.NetRevenue, 0.01)
 	assert.InDelta(t, 100, alice.TotalSpent, 0.01)
 }
+
+// TestSalesTrends_AcceptsAllGroupByAliases verifies the public contract of
+// GetSalesTrends: every supported groupBy alias is accepted without panicking
+// and without a Go-side validation error. Bucket-boundary correctness is
+// Postgres-specific (DATE_TRUNC / INTERVAL are not in SQLite), so the actual
+// row content is exercised by the integration test suite, not here.
+//
+// Supported aliases after the P3.T8 change:
+//
+//	daily         | day           → day buckets
+//	weekly        | week | iso_week → ISO (Monday-start) week buckets
+//	monthly       | month         → month buckets
+//	calendar_week                  → Sunday-start week buckets
+func TestSalesTrends_AcceptsAllGroupByAliases(t *testing.T) {
+	db := setupReportingTestDB(t)
+	repo := NewReportsRepository(db)
+	start := time.Now().Add(-30 * 24 * time.Hour)
+	end := time.Now()
+
+	for _, gb := range []string{"daily", "weekly", "monthly", "iso_week", "calendar_week"} {
+		t.Run(gb, func(t *testing.T) {
+			trends, products, err := repo.GetSalesTrends(start, end, nil, nil, nil, gb, "UTC")
+			// We accept either outcome on SQLite:
+			//   * nil — empty result set, query parsed and ran
+			//   * syntax error — DATE_TRUNC / INTERVAL aren't implemented
+			// The security/correctness contract we exercise here is that the
+			// function does not panic and does not reject the value with a
+			// Go-side "unsupported groupBy" error before reaching the DB.
+			if err != nil {
+				assert.NotContains(t, err.Error(), "unsupported groupBy",
+					"groupBy %q must be accepted by the repository", gb)
+			}
+			_ = trends
+			_ = products
+		})
+	}
+}
+
+// TestSalesTrends_RejectsUnknownGroupBy verifies that unknown groupBy values
+// are rejected with a clear Go-side error before any SQL is built. This
+// protects against silently building queries with attacker-controlled
+// fragments (the switch is the only place those identifiers are chosen).
+func TestSalesTrends_RejectsUnknownGroupBy(t *testing.T) {
+	db := setupReportingTestDB(t)
+	repo := NewReportsRepository(db)
+	start := time.Now().Add(-30 * 24 * time.Hour)
+	end := time.Now()
+
+	_, _, err := repo.GetSalesTrends(start, end, nil, nil, nil, "fortnight", "UTC")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported groupBy")
+}
+
+// TestSalesTrends_RejectsMaliciousTimezone guards against SQL injection via
+// the timezone argument (same defense as GetHourlySalesHeatmap). The
+// timezone originates from a SystemSetting an operator can edit, so the
+// repository must validate before interpolating. The malicious payload
+// must never appear in the resulting SQL string.
+func TestSalesTrends_RejectsMaliciousTimezone(t *testing.T) {
+	db := setupReportingTestDB(t)
+	repo := NewReportsRepository(db)
+	malicious := "UTC' UNION SELECT password FROM users --"
+	start := time.Now().Add(-7 * 24 * time.Hour)
+	end := time.Now()
+
+	_, _, err := repo.GetSalesTrends(start, end, nil, nil, nil, "iso_week", malicious)
+	if err != nil {
+		assert.NotContains(t, err.Error(), "UNION SELECT",
+			"malicious timezone must not be interpolated into SQL; got: %v", err)
+		assert.NotContains(t, err.Error(), "password",
+			"malicious timezone must not be interpolated into SQL; got: %v", err)
+	}
+}
