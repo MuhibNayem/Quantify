@@ -414,3 +414,41 @@ export interface PaginatedResponse<T> {
 	page: number;
 	limit: number;
 }
+
+export interface PaymentRequest {
+	payment_method: 'bkash' | 'card' | 'cash';
+	amount: number;
+	currency?: string;
+	description?: string;
+	order_id?: number;
+	customer_id?: number;
+}
+
+export interface PaymentResponse {
+	payment_url?: string;
+	transaction_id?: string;
+	status: string;
+}
+
+export interface PurchaseReturn {
+	ID: number;
+	PurchaseOrderID: number;
+	SupplierID: number;
+	Status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED';
+	Reason: string;
+	TotalAmount: number;
+	CreatedAt: string;
+	UpdatedAt?: string;
+	PurchaseOrder?: PurchaseOrder;
+	Supplier?: Supplier;
+	Items?: PurchaseReturnItem[];
+}
+
+export interface PurchaseReturnItem {
+	ID: number;
+	PurchaseReturnID: number;
+	ProductID: number;
+	Quantity: number;
+	UnitPrice: number;
+	Product?: Product;
+}

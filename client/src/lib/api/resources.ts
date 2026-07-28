@@ -23,6 +23,9 @@ import type {
 	LoyaltyAccount,
 	TimeClock,
 	BasketAnalysisItem,
+	PaymentRequest,
+	PaymentResponse,
+	PurchaseReturn,
 } from '$lib/types';
 
 export const searchApi = {
@@ -263,4 +266,18 @@ export const timeTrackingApi = {
 	getWeeklySummary: async (userId: number) =>
 		(await api.get<any>(`/time-tracking/weekly-summary/${userId}`)).data,
 	getTeamOverview: async () => (await api.get<any>('/time-tracking/team-overview')).data
+};
+
+export const paymentApi = {
+	create: async (data: PaymentRequest) => (await api.post<PaymentResponse>('/payment/create', data)).data,
+};
+
+export const purchaseReturnsApi = {
+	list: async (params?: Record<string, unknown>) =>
+		(await api.get<PaginatedResponse<PurchaseReturn>>('/replenishment/returns', { params })).data,
+	create: async (data: Record<string, unknown>) =>
+		(await api.post<PurchaseReturn>('/replenishment/returns', data)).data,
+	approve: async (id: number) => (await api.post(`/replenishment/returns/${id}/approve`)).data,
+	complete: async (id: number) => (await api.post(`/replenishment/returns/${id}/complete`)).data,
+	cancel: async (id: number) => (await api.post(`/replenishment/returns/${id}/cancel`)).data,
 };

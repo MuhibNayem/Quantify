@@ -14,7 +14,8 @@ import {
 	Undo2,
 	ShoppingBag,
 	ShoppingCart,
-	Tag
+	Tag,
+	PackageMinus
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -91,6 +92,13 @@ export const navSections: NavSection[] = [
 				description: 'Replenishment & receiving',
 				href: '/purchase-orders',
 				icon: ShoppingCart,
+				permission: 'inventory.view',
+			},
+			{
+				label: 'Purchase Returns',
+				description: 'Supplier returns & refunds',
+				href: '/purchase-returns',
+				icon: PackageMinus,
 				permission: 'inventory.view',
 			},
 		],

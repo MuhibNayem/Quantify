@@ -35,7 +35,7 @@
 		Check
 	} from 'lucide-svelte';
 	import api from '$lib/api';
-	import { crmApi, promotionsApi } from '$lib/api/resources';
+	import { crmApi, promotionsApi, paymentApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
@@ -297,6 +297,22 @@
 		const toastId = toast.loading($t('pos.toasts.processing'));
 
 		try {
+			if (paymentMethod === 'CARD' || paymentMethod === 'BKASH') {
+				const paymentResp = await paymentApi.create({
+					payment_method: paymentMethod === 'CARD' ? 'card' : 'bkash',
+					amount: total,
+					currency: 'BDT',
+					description: `POS sale - ${cart.length} item(s)`,
+					customer_id: selectedCustomer ? selectedCustomer.ID : undefined,
+				});
+
+				if (paymentResp.payment_url) {
+					toast.success('Redirecting to payment gateway...', { id: toastId });
+					window.location.href = paymentResp.payment_url;
+					return;
+				}
+			}
+
 			const payload = {
 				items: cart.map((item) => ({
 					productId: item.id,
@@ -316,14 +332,13 @@
 			if (selectedCustomer && potentialPoints > 0) {
 				toast.info($t('pos.toasts.loyalty_earned', { points: potentialPoints }));
 			}
-			// Reset all state
 			cart = [];
 			paymentMethod = null;
 			selectedCustomer = null;
 			customerSearchTerm = '';
 			pointsToRedeem = 0;
 			
-			await fetchProducts(); // Refresh stock
+			await fetchProducts();
 		} catch (error: any) {
 			console.error('Error completing order:', error);
 			const msg = error.response?.data?.error || 'Failed to complete order';
