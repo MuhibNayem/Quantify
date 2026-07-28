@@ -23,8 +23,7 @@ func TestDefaultTopology(t *testing.T) {
 }
 
 func TestSubscribeRejectsUnknownQueue(t *testing.T) {
-	cancel, err := Subscribe(context.Background(), "unknown", func(context.Context, <-chan amqp091.Delivery) {})
-
+	// Subscribe requires exchange, queueName, routingKey. Unknown queue returns nil cancel.
+	cancel := Subscribe(context.Background(), ExchangeName, "unknown-queue", "unknown.routing", func(context.Context, <-chan amqp091.Delivery) {})
 	require.Nil(t, cancel)
-	require.EqualError(t, err, "unknown queue: unknown")
 }
