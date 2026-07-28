@@ -4,6 +4,28 @@ All notable changes to the Quantify backend are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Phase 4] 2026-XX-XX — Architectural overhaul
+
+### Added
+
+- **P4.T2** `internal/app/container.go` defines a typed `Container` struct holding the wired graph of repos, services, handlers, and infrastructure clients (DB, Redis, AMQP, Hub, Uploader). Bootstrap now builds the container once and hands it to the router. (`internal/app/container.go`, `internal/bootstrap/app.go`)
+- **P4.T12** Real webhook-integration registry. `integrations.Registry` accepts arbitrary `Integration` implementations; Shopify and QuickBooks are registered as stubs. `POST /webhooks/:name` dispatches by name; unknown names return 404. Legacy `IntegrationService.HandleWebhook` (which always returned `ErrIntegrationNotFound`) and the `webhook.go` handler are deleted. (`internal/integrations/`, `internal/router/router.go`)
+- **P4.T15** RabbitMQ exchange, queue, and routing-key constants centralized in `internal/message_broker/topology.go`. `DefaultTopology()` returns the queue-to-routing-key map; consumers and publishers now reference these constants instead of inline string literals. (`internal/message_broker/topology.go`, all callers of `bulk.import` / `bulk.export` / `stock.adjusted` / `alert.triggered` / `report.generate`)
+- **P4.T17** `CORS_ALLOWED_ORIGINS` env var (CSV) drives the Gin CORS middleware via `cfg.CORSAllowedOrigins`. Default: `http://localhost:5173`. The previous hard-coded list is gone. (`internal/config/config.go`, `internal/router/router.go`)
+- **P4.T18** Loyalty tier thresholds (silver / gold / platinum) and earning rate now read from `system_settings`. Defaults preserved at 500 / 2500 / 10000 / 0.01. Operators can tune without redeploying. (`internal/services/sales_service.go`)
+
+### Changed
+
+- **P4.T1 (step 1)** `router.SetupRouter` now accepts `*app.Container` and reads every dependency through it. Inline repo/service/handler construction is gone from the router file. Group extraction (per-domain route files under `internal/router/groups/`) is the next step and has not yet landed. (`internal/router/router.go`)
+- **P4.T14** All handlers that emitted `gin.H{"error": ...}` directly now route errors through `c.Error(appErrors.NewAppError(...))`. `middleware.RespondError` extracted as a helper. `grep gin.H\{"error"` returns 0 matches in non-test files. (`internal/handlers/crm.go`, `notifications.go`, `replenishment.go`, `settings.go`, `internal/integrations/integrations.go`, `internal/middleware/error_handler.go`)
+- **P4.T16** Consumer cancel functions are now captured in `App.cancelFuncs` and invoked by `App.Stop()` before tearing down the broker. Previously, `Stop()` only shut down the HTTP server; consumers kept running until the process exited. (`internal/bootstrap/app.go`)
+- **P4.T7** `AutoMigrate()` is now gated by `APP_ENV=dev`. Production / staging boots log "AutoMigrate skipped; run cmd/migrator to apply migrations" and continue without touching the schema. The accompanying `cmd/migrator` flow lands in a follow-up phase (P4.T5). (`internal/repository/database.go`, `internal/config/config.go`)
+
+### Notes
+
+- Several large Phase 4 tasks were deferred to follow-up work because they did not fit in this iteration without breaking the working build: repository interface extraction (P4.T3), `repository.DB` singleton removal (P4.T4), `golang-migrate` adoption (P4.T5), seed-to-migration conversion (P4.T6), reporting-repository split (P4.T8), sales-service split (P4.T9), return-handler split (P4.T10), OpenAPI regeneration (P4.T11), and `koanf`-based config (P4.T13).
+- The router still contains all 160 routes inline; the per-domain group files planned in P4.T1 step 2 have not been extracted yet.
+
 ## [Phase 3] 2026-XX-XX — Correctness fixes
 
 ### Breaking
