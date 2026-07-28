@@ -33,6 +33,33 @@ func setupSalesTestDB(t *testing.T) *gorm.DB {
 		&domain.Role{},
 		&domain.User{},
 		&domain.AuditLog{},
+		&domain.SystemSetting{},
+	))
+	return db
+}
+
+func setupSalesTestDBWithFile(t *testing.T) *gorm.DB {
+	t.Helper()
+	path := t.TempDir() + "/test.db"
+	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(
+		&domain.Location{},
+		&domain.Category{},
+		&domain.SubCategory{},
+		&domain.Supplier{},
+		&domain.Product{},
+		&domain.Batch{},
+		&domain.StockAdjustment{},
+		&domain.Order{},
+		&domain.OrderItem{},
+		&domain.Transaction{},
+		&domain.LoyaltyAccount{},
+		&domain.Promotion{},
+		&domain.Role{},
+		&domain.User{},
+		&domain.AuditLog{},
+		&domain.SystemSetting{},
 	))
 	return db
 }
@@ -92,6 +119,34 @@ func assertBatchQty(t *testing.T, db *gorm.DB, batchID uint, want int) {
 	var got int
 	require.NoError(t, db.Model(&domain.Batch{}).Where("id = ?", batchID).Select("quantity").Scan(&got).Error)
 	assert.Equal(t, want, got, "batch %d quantity", batchID)
+}
+
+func TestLoyaltyTiers_CustomThresholds(t *testing.T) {
+	db := setupSalesTestDBWithFile(t)
+	userID := uint(1)
+	prod := seedProductWithLocation(t, db, "LOYALTY", 1)
+	prod.SellingPrice = 1000
+	require.NoError(t, db.Save(&prod).Error)
+	expiryDate := time.Now().Add(24 * time.Hour)
+	require.NoError(t, db.Create(&domain.Batch{
+		ProductID:  prod.ID,
+		LocationID: 1,
+		Quantity:   1,
+		ExpiryDate: &expiryDate,
+	}).Error)
+	require.NoError(t, db.Create(&domain.SystemSetting{Key: "loyalty.earning_rate", Value: "0.1"}).Error)
+	require.NoError(t, db.Create(&domain.SystemSetting{Key: "loyalty.tier_gold", Value: "100"}).Error)
+
+	svc := NewSalesService(db, stubSettingsService{}, nil)
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:         []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 1}},
+		PaymentMethod: "cash",
+		CustomerID:    ptrUint(userID),
+	}, userID))
+
+	var loyalty domain.LoyaltyAccount
+	require.NoError(t, db.Where("user_id = ?", userID).First(&loyalty).Error)
+	assert.Equal(t, "Gold", loyalty.Tier)
 }
 
 func TestCheckout_DeductsFromRegisterLocation(t *testing.T) {
@@ -158,14 +213,14 @@ func TestCheckout_EmitsAuditRowForLargeDiscount(t *testing.T) {
 	// discount share = 15% > 10% threshold.
 	now := time.Now()
 	require.NoError(t, db.Create(&domain.Promotion{
-		Name:         "Big",
-		DiscountType: "PERCENTAGE",
+		Name:          "Big",
+		DiscountType:  "PERCENTAGE",
 		DiscountValue: 15,
-		StartDate:    now.Add(-time.Hour),
-		EndDate:      now.Add(time.Hour),
-		IsActive:     true,
-		ProductID:    &prod.ID,
-		Priority:     1,
+		StartDate:     now.Add(-time.Hour),
+		EndDate:       now.Add(time.Hour),
+		IsActive:      true,
+		ProductID:     &prod.ID,
+		Priority:      1,
 	}).Error)
 
 	svc := NewSalesService(db, stubSettingsService{}, nil)
@@ -199,14 +254,14 @@ func TestCheckout_NoAuditRowForSmallDiscount(t *testing.T) {
 
 	now := time.Now()
 	require.NoError(t, db.Create(&domain.Promotion{
-		Name:         "Small",
-		DiscountType: "PERCENTAGE",
+		Name:          "Small",
+		DiscountType:  "PERCENTAGE",
 		DiscountValue: 5,
-		StartDate:    now.Add(-time.Hour),
-		EndDate:      now.Add(time.Hour),
-		IsActive:     true,
-		ProductID:    &prod.ID,
-		Priority:     1,
+		StartDate:     now.Add(-time.Hour),
+		EndDate:       now.Add(time.Hour),
+		IsActive:      true,
+		ProductID:     &prod.ID,
+		Priority:      1,
 	}).Error)
 
 	svc := NewSalesService(db, stubSettingsService{}, nil)

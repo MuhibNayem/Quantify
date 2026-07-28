@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -348,10 +349,12 @@ func (s *SalesService) handleLoyalty(tx *gorm.DB, customerID *uint, pointsToRede
 	}
 
 	// Earning
-	earningRate := 1.0
-	if val, err := s.Settings.GetSetting("loyalty_points_earning_rate"); err == nil {
-		if v, err := strconv.ParseFloat(val, 64); err == nil {
-			earningRate = v
+	earningRate, _ := strconv.ParseFloat(getSetting(context.Background(), tx, "loyalty.earning_rate", "0.01"), 64)
+	if earningRate == 0 {
+		if val, err := s.Settings.GetSetting("loyalty_points_earning_rate"); err == nil {
+			if v, err := strconv.ParseFloat(val, 64); err == nil {
+				earningRate = v
+			}
 		}
 	}
 
@@ -374,25 +377,9 @@ func (s *SalesService) handleLoyalty(tx *gorm.DB, customerID *uint, pointsToRede
 }
 
 func (s *SalesService) updateLoyaltyTier(loyalty *domain.LoyaltyAccount) {
-	silverThreshold := 500
-	goldThreshold := 2500
-	platinumThreshold := 10000
-
-	if val, err := s.Settings.GetSetting("loyalty_tier_silver"); err == nil {
-		if v, err := strconv.Atoi(val); err == nil {
-			silverThreshold = v
-		}
-	}
-	if val, err := s.Settings.GetSetting("loyalty_tier_gold"); err == nil {
-		if v, err := strconv.Atoi(val); err == nil {
-			goldThreshold = v
-		}
-	}
-	if val, err := s.Settings.GetSetting("loyalty_tier_platinum"); err == nil {
-		if v, err := strconv.Atoi(val); err == nil {
-			platinumThreshold = v
-		}
-	}
+	silverThreshold, _ := strconv.Atoi(getSetting(context.Background(), s.DB, "loyalty.tier_silver", "500"))
+	goldThreshold, _ := strconv.Atoi(getSetting(context.Background(), s.DB, "loyalty.tier_gold", "2500"))
+	platinumThreshold, _ := strconv.Atoi(getSetting(context.Background(), s.DB, "loyalty.tier_platinum", "10000"))
 
 	if loyalty.Points >= platinumThreshold {
 		loyalty.Tier = "Platinum"
@@ -401,6 +388,14 @@ func (s *SalesService) updateLoyaltyTier(loyalty *domain.LoyaltyAccount) {
 	} else if loyalty.Points >= silverThreshold {
 		loyalty.Tier = "Silver"
 	}
+}
+
+func getSetting(ctx context.Context, tx *gorm.DB, key, def string) string {
+	var value string
+	if err := tx.WithContext(ctx).Model(&domain.SystemSetting{}).Where("key = ?", key).Pluck("value", &value).Error; err != nil || value == "" {
+		return def
+	}
+	return value
 }
 
 func (s *SalesService) createOrderAndTransaction(
