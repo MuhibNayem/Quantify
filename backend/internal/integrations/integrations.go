@@ -1,48 +1,44 @@
 package integrations
 
-// Integration is the interface that all third-party integrations must implement.
+import "github.com/gin-gonic/gin"
+
+// Integration is the contract every third-party webhook provider must
+// satisfy. The registry uses Name() to dispatch incoming HTTP webhooks
+// to the correct handler.
 type Integration interface {
-	// Name returns the name of the integration.
 	Name() string
-	// Connect initializes the integration with the provided settings.
-	Connect(settings map[string]string) error
-	// Disconnect cleans up the integration.
-	Disconnect() error
-	// SyncProducts syncs products with the third-party service.
-	SyncProducts() error
-	// SyncOrders syncs orders with the third-party service.
-	SyncOrders() error
-	// HandleWebhook handles incoming webhooks from the third-party service.
-	HandleWebhook(payload *WebhookPayload) error
+	HandleWebhook(c *gin.Context) error
 }
 
-// WebhookPayload represents the data received from a webhook.
-type WebhookPayload struct {
-	// Source is the name of the integration that sent the webhook.
-	Source string
-	// Event is the type of event that triggered the webhook.
-	Event string
-	// Data is the payload of the webhook.
-	Data map[string]interface{}
+// Registry stores integrations keyed by Name() and dispatches incoming
+// webhook requests to the matching implementation.
+type Registry struct {
+	integrations map[string]Integration
 }
 
-// NewIntegration creates a new integration based on the provided name.
-func NewIntegration(name string) (Integration, error) {
-	switch name {
-	// Add cases for each supported integration here.
-	// For example:
-	// case "shopify":
-	// 	return &ShopifyIntegration{}, nil
-	default:
-		return nil, &ErrIntegrationNotFound{Name: name}
+// NewRegistry returns an empty Registry.
+func NewRegistry() *Registry {
+	return &Registry{integrations: make(map[string]Integration)}
+}
+
+// Register adds (or replaces) an integration under its Name().
+func (r *Registry) Register(i Integration) {
+	r.integrations[i.Name()] = i
+}
+
+// HandleWebhook is a gin.HandlerFunc-compatible dispatcher. It looks up
+// the integration by the :name path parameter, returns 404 if unknown,
+// and writes 500 if the handler returns an error.
+func (r *Registry) HandleWebhook(c *gin.Context) {
+	name := c.Param("name")
+	i, ok := r.integrations[name]
+	if !ok {
+		c.JSON(404, gin.H{"error": "unknown integration"})
+		return
 	}
-}
-
-// ErrIntegrationNotFound is returned when an integration is not found.
-type ErrIntegrationNotFound struct {
-	Name string
-}
-
-func (e *ErrIntegrationNotFound) Error() string {
-	return "integration not found: " + e.Name
+	if err := i.HandleWebhook(c); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"status": "ok"})
 }

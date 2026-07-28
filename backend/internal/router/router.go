@@ -43,7 +43,6 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	barcodeHandler := c.BarcodeHandler
 	crmHandler := c.CRMHandler
 	timeTrackingHandler := c.TimeTrackingHandler
-	webhookHandler := c.Webhook
 	reportHandler := c.Report
 	bulkHandler := c.Bulk
 	notificationHandler := c.Notification
@@ -72,7 +71,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	// Webhook routes
 	webhookRoutes := r.Group("/webhooks")
 	{
-		webhookRoutes.POST("", webhookHandler.HandleWebhook)
+		webhookRoutes.POST("/:name", c.Integrations.HandleWebhook)
 	}
 
 	// Payment routes

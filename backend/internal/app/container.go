@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/handlers"
+	"inventory/backend/internal/integrations"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/services"
 	"inventory/backend/internal/storage"
@@ -52,7 +53,6 @@ type Container struct {
 	BulkExport       *services.BulkExportService
 	VendorReturn     services.VendorReturnService
 	ForecastingSvc   services.ForecastingService
-	Integration      *services.IntegrationService
 	ReplenishmentSvc services.ReplenishmentService
 	CRMService       services.CRMService
 	BarcodeSvc       services.BarcodeService
@@ -80,5 +80,5 @@ type Container struct {
 	Return               *handlers.ReturnHandler
 	Promotion            *handlers.PromotionHandler
 	DashboardHandler     *handlers.DashboardHandler
-	Webhook              *handlers.WebhookHandler
+	Integrations         *integrations.Registry
 }

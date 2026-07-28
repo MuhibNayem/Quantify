@@ -7,6 +7,7 @@ import (
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/consumers"
 	"inventory/backend/internal/handlers"
+	"inventory/backend/internal/integrations"
 	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/migrations"
 	"inventory/backend/internal/repository"
@@ -118,7 +119,6 @@ func NewApp(cfg *config.Config) *App {
 	c.SettingsSvc = services.NewSettingsService(c.SettingsRepo)
 	c.CRMService = services.NewCRMService(c.CRM, c.DB, c.SettingsSvc, cfg)
 	c.TimeTrackingSvc = services.NewTimeTrackingService(c.TimeTracking, c.Users)
-	c.Integration = services.NewIntegrationService()
 	c.Reporting = services.NewReportingService(c.Reports, c.Uploader, c.Jobs, c.Hub, cfg, c.SettingsSvc)
 	c.SearchSvc = services.NewSearchService(c.DB, c.Search, c.Products, c.Users, c.Suppliers, c.Categories)
 	c.ReplenishmentSvc = services.NewReplenishmentService(c.Replenishment)
@@ -137,7 +137,6 @@ func NewApp(cfg *config.Config) *App {
 	c.BarcodeHandler = handlers.NewBarcodeHandler(c.BarcodeSvc)
 	c.CRMHandler = handlers.NewCRMHandler(c.CRMService, c.DB)
 	c.TimeTrackingHandler = handlers.NewTimeTrackingHandler(c.TimeTrackingSvc)
-	c.Webhook = handlers.NewWebhookHandler(c.Integration)
 	c.Report = handlers.NewReportHandler(c.Reporting, c.Jobs)
 	c.Bulk = handlers.NewBulkHandler(c.Jobs, c.Uploader)
 	c.Notification = handlers.NewNotificationHandler(c.Notifications).WithDB(c.DB)
@@ -149,6 +148,10 @@ func NewApp(cfg *config.Config) *App {
 	c.Return = handlers.NewReturnHandler(c.DB, cfg, c.SettingsSvc, c.Hub, c.Notifications, c.Reporting)
 	c.Promotion = handlers.NewPromotionHandler(c.DB)
 	c.SalesHandler = handlers.NewSalesHandler(c.DB, c.SettingsSvc, c.Reporting, c.Sales)
+
+	c.Integrations = integrations.NewRegistry()
+	c.Integrations.Register(&integrations.Shopify{})
+	c.Integrations.Register(&integrations.QuickBooks{})
 
 	reportingService := c.Reporting
 	notificationRepo := c.Notifications
