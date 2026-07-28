@@ -34,14 +34,14 @@
 						password: data.password
 					});
 					const { accessToken, refreshToken, csrfToken, user, permissions } = response.data;
-				auth.login(accessToken, refreshToken, csrfToken, user, permissions || []);
-				toast.success($t('auth.login.success'), {
-					description: $t('auth.login.successDesc')
-				});
+					auth.login(accessToken, refreshToken, csrfToken, user, permissions || []);
+					toast.success($t('auth.login.success'), {
+						description: $t('auth.login.successDesc')
+					});
 					goto('/');
 				} catch (error: any) {
-				const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-				toast.error($t('auth.login.failed'), {
+					const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+					toast.error($t('auth.login.failed'), {
 						description: errorMessage
 					});
 				}
@@ -64,11 +64,14 @@
 	<!-- Left side - Image section (60% width) -->
 	<div class="relative hidden overflow-hidden lg:flex lg:flex-[1.5]">
 		<!-- Background image covering the entire container -->
-		<img
-			src="/login-visual-feature.png"
-			alt="Inventory and ERP Visualization"
-			class="absolute inset-0 h-full w-full object-cover object-center"
-		/>
+		<picture class="absolute inset-0 h-full w-full">
+			<source srcset="/login-visual-feature.webp" type="image/webp" />
+			<img
+				src="/login-visual-feature.png"
+				alt="Inventory and ERP Visualization"
+				class="absolute inset-0 h-full w-full object-cover object-center"
+			/>
+		</picture>
 
 		<!-- Stronger glass overlay for text legibility -->
 		<div
@@ -138,26 +141,26 @@
 					class="pointer-events-none absolute -top-1/2 -left-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
 				></div>
 
-			<CardHeader class="relative pt-12 pb-2 text-center">
-				<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
-					{$t('auth.login.title')}
-				</CardTitle>
-				<CardDescription class="text-lg font-medium text-slate-600">
-					{$t('auth.login.subtitle')}
-				</CardDescription>
-			</CardHeader>
+				<CardHeader class="relative pt-12 pb-2 text-center">
+					<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
+						{$t('auth.login.title')}
+					</CardTitle>
+					<CardDescription class="text-lg font-medium text-slate-600">
+						{$t('auth.login.subtitle')}
+					</CardDescription>
+				</CardHeader>
 				<CardContent class="relative p-10 pt-8">
 					<form method="POST" use:enhance class="space-y-6">
 						<div class="space-y-6">
 							<div class="space-y-2">
-							<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-								{$t('auth.login.username')}
-							</Label>
-							<!-- Liquid Input: Looks like a cutout filled with denser liquid -->
-							<Input
-								id="username"
-								type="text"
-								placeholder={$t('auth.login.usernamePlaceholder')}
+								<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.login.username')}
+								</Label>
+								<!-- Liquid Input: Looks like a cutout filled with denser liquid -->
+								<Input
+									id="username"
+									type="text"
+									placeholder={$t('auth.login.usernamePlaceholder')}
 									bind:value={$form.username}
 									class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10"
 								/>
@@ -167,14 +170,14 @@
 							</div>
 							<div class="space-y-2">
 								<div class="flex items-center justify-between">
-								<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-									{$t('auth.login.password')}
-								</Label>
-								<a
-									href="#"
-									class="text-sm font-semibold text-blue-700 transition-colors hover:text-blue-600"
-									>{$t('auth.login.forgotPassword')}</a
-								>
+									<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+										{$t('auth.login.password')}
+									</Label>
+									<a
+										href="#"
+										class="text-sm font-semibold text-blue-700 transition-colors hover:text-blue-600"
+										>{$t('auth.login.forgotPassword')}</a
+									>
 								</div>
 								<Input
 									id="password"
@@ -215,30 +218,30 @@
 										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 									></path>
 								</svg>
-							{$t('auth.login.submitting')}
-						{:else}
-							{$t('auth.login.submit')}
+								{$t('auth.login.submitting')}
+							{:else}
+								{$t('auth.login.submit')}
 							{/if}
 						</Button>
 					</form>
 
-				<div class="mt-8 text-center text-sm font-medium text-slate-600">
-					{$t('auth.login.noAccount')}{' '}
-					<a
-						href="/register"
-						class="text-base font-bold text-blue-700 transition-colors hover:text-blue-600"
-					>
-						{$t('auth.login.register')}
-					</a>
-				</div>
+					<div class="mt-8 text-center text-sm font-medium text-slate-600">
+						{$t('auth.login.noAccount')}{' '}
+						<a
+							href="/register"
+							class="text-base font-bold text-blue-700 transition-colors hover:text-blue-600"
+						>
+							{$t('auth.login.register')}
+						</a>
+					</div>
 				</CardContent>
 			</Card>
 
 			<div class="mt-8 flex justify-center gap-6 opacity-80">
 				<!-- Trust indicators -->
-			<p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-				{$t('auth.login.securedBy')}
-			</p>
+				<p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
+					{$t('auth.login.securedBy')}
+				</p>
 			</div>
 		</div>
 	</div>
