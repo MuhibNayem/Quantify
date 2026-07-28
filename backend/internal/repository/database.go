@@ -151,10 +151,11 @@ func fixRolePermissionsSchema() {
 }
 
 func seedData() {
-	permMap := seedPermissions()
-	seedRoles(permMap)
-	seedSettings()
-	logrus.Info("System Data (Roles, Permissions, Settings) seeded")
+	// Seeding moved to migrations/0002_seed.up.sql
+	// permMap := seedPermissions()
+	// seedRoles(permMap)
+	// seedSettings()
+	// logrus.Info("System Data (Roles, Permissions, Settings) seeded")
 }
 
 func seedPermissions() map[string]domain.Permission {
