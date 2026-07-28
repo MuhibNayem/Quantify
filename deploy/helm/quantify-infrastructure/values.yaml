@@ -1,0 +1,177 @@
+# Values for quantify-infrastructure.
+#
+# This chart wires together four Bitnami subcharts. Sensitive values below are
+# PLACEHOLDERS — override them per environment, or (preferred) set
+# `<subchart>.auth.existingSecret` to a pre-created Secret / external secret.
+#
+# After editing Chart.yaml dependencies run:  helm dependency update
+
+global:
+  # Default storage class for all PVCs. Leave empty to use the cluster default.
+  storageClass: ""
+
+# ---------------------------------------------------------------------------
+# Cross-cutting NetworkPolicies restricting access to the data layer to the
+# Quantify application namespaces only.
+# ---------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+  # Namespaces where the quantify-backend / quantify-ai-service charts run.
+  appNamespaces:
+    - quantify
+  # Optional extra pod labels required on the client side (merged as matchLabels).
+  appPodLabels: {}
+  # Raw additional `from:` entries appended to every data-layer NetworkPolicy
+  # (e.g. to permit Prometheus scraping from a monitoring namespace).
+  extraFrom: []
+  # - namespaceSelector:
+  #     matchLabels:
+  #       kubernetes.io/metadata.name: monitoring
+  postgresql:
+    enabled: true
+  redis:
+    enabled: true
+  rabbitmq:
+    enabled: true
+  minio:
+    enabled: true
+
+# ---------------------------------------------------------------------------
+# PostgreSQL (primary + read replicas)
+# ---------------------------------------------------------------------------
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: CHANGE_ME_POSTGRES_PASSWORD
+    username: quantify
+    password: CHANGE_ME_APP_PASSWORD
+    database: inventory_db
+    # Preferred in prod: reference a Secret with keys postgres-password, password.
+    existingSecret: ""
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+  architecture: replication
+  primary:
+    name: primary
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+    # Extended configuration tuned for an OLTP inventory workload.
+    extendedConfiguration: |
+      max_connections = 200
+      shared_buffers = 256MB
+      wal_level = replica
+  readReplicas:
+    name: read
+    replicaCount: 2
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+# ---------------------------------------------------------------------------
+# Redis cluster
+# ---------------------------------------------------------------------------
+redis-cluster:
+  enabled: true
+  usePassword: true
+  password: CHANGE_ME_REDIS_PASSWORD
+  # Preferred in prod: a Secret with key redis-password.
+  existingSecret: ""
+  existingSecretPasswordKey: redis-password
+  cluster:
+    # 6 nodes => 3 masters + 3 replicas.
+    nodes: 6
+    replicas: 1
+  persistence:
+    enabled: true
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+# ---------------------------------------------------------------------------
+# RabbitMQ (clustered)
+# ---------------------------------------------------------------------------
+rabbitmq:
+  enabled: true
+  auth:
+    username: quantify
+    password: CHANGE_ME_RABBITMQ_PASSWORD
+    # Preferred in prod: a Secret with keys rabbitmq-password and rabbitmq-erlang-cookie.
+    existingPasswordSecret: ""
+    existingErlangSecret: ""
+  replicaCount: 3
+  clustering:
+    enabled: true
+    forceBoot: false
+  persistence:
+    enabled: true
+    size: 8Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+# ---------------------------------------------------------------------------
+# MinIO object storage
+# ---------------------------------------------------------------------------
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    rootUser: quantify-admin
+    rootPassword: CHANGE_ME_MINIO_PASSWORD
+    # Preferred in prod: a Secret with keys root-user and root-password.
+    existingSecret: ""
+  defaultBuckets: reports
+  persistence:
+    enabled: true
+    size: 50Gi
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  metrics:
+    serviceMonitor:
+      enabled: true
+      interval: 30s

@@ -1,0 +1,69 @@
+# Staging overrides: 2 replicas, smaller HPA band, staging domain.
+
+replicaCount: 2
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  customMetrics:
+    enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+podAntiAffinity:
+  enabled: true
+  type: preferred
+
+topologySpreadConstraints:
+  enabled: true
+  whenUnsatisfiable: ScheduleAnyway
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api.staging.quantify.dev
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: quantify-backend-staging-tls
+    issuer: letsencrypt-staging
+  rateLimit:
+    enabled: true
+    rps: 50
+    connections: 50
+  cors:
+    enabled: true
+    allowOrigin: https://app.staging.quantify.dev
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+networkPolicy:
+  enabled: true
+
+config:
+  APP_ENV: staging
+  CORS_ALLOWED_ORIGINS: https://app.staging.quantify.dev
+  WS_ALLOWED_ORIGINS: https://app.staging.quantify.dev
+  SSLCOMMERZ_API_HOST: https://sandbox.sslcommerz.com
+  SSLCOMMERZ_SUCCESS_URL: https://api.staging.quantify.dev/payment/success
+  SSLCOMMERZ_FAIL_URL: https://api.staging.quantify.dev/payment/fail
+  SSLCOMMERZ_CANCEL_URL: https://api.staging.quantify.dev/payment/cancel
+  SSLCOMMERZ_IPN_URL: https://api.staging.quantify.dev/payment/ipn
+  BKASH_BASE_URL: https://sandbox.bkash.com/v1.2.0-beta

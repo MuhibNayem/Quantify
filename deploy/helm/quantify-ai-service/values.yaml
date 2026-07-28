@@ -1,0 +1,195 @@
+# Default values for quantify-ai-service.
+# The AI service is an internal FastAPI service called by the backend; it is
+# not exposed through the ingress by default.
+
+replicaCount: 2
+
+image:
+  repository: quantify/ai-service
+  # Defaults to .Chart.AppVersion when empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+priorityClassName: ""
+
+terminationGracePeriodSeconds: 30
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8000
+
+# Internal service: no public ingress by default.
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: ai.quantify.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: quantify-ai-service-tls
+    issuer: letsencrypt-prod
+  rateLimit:
+    enabled: true
+    rps: 50
+    connections: 50
+  cors:
+    enabled: false
+    allowOrigin: "*"
+    allowMethods: "GET, POST, OPTIONS"
+    allowHeaders: "Content-Type,Authorization"
+    allowCredentials: "false"
+    maxAge: "86400"
+  websocket:
+    enabled: false
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 85
+  customMetrics:
+    enabled: false
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# The AI service only exposes /health; readiness reuses it.
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 0
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /health
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startup:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+podAntiAffinity:
+  enabled: true
+  type: preferred
+  topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: ScheduleAnyway
+
+initContainers:
+  waitForDependencies:
+    enabled: true
+    image: busybox:1.36
+    # Wait for the backend to accept connections before starting.
+    extraTargets: []
+
+extraVolumes: []
+extraVolumeMounts: []
+extraEnv: []
+extraContainers: []
+nodeSelector: {}
+tolerations: []
+
+# ---------------------------------------------------------------------------
+# Non-sensitive configuration -> ConfigMap.
+# ---------------------------------------------------------------------------
+config:
+  # Callback URL of the backend (same release namespace).
+  BACKEND_URL: http://quantify-backend:8080
+  AI_USER_USERNAME: ai-agent
+  AI_USER_EMAIL: ai-agent@quantify.com
+  ZAI_BASE_URL: https://api.z.ai/api/paas/v4/
+  # Avoid writing .pyc files so the read-only root filesystem stays clean.
+  PYTHONDONTWRITEBYTECODE: "1"
+
+# ---------------------------------------------------------------------------
+# Sensitive configuration -> Secret.
+# ---------------------------------------------------------------------------
+secrets:
+  ZAI_API_KEY: ""
+  AI_AGENT_PASSWORD: ""
+  BACKEND_API_TOKEN: ""
+
+externalSecrets:
+  enabled: false
+  secretStoreName: vault-ai-service
+  secretStoreKind: ClusterSecretStore
+  refreshInterval: 1h
+  targetName: ""
+  remoteRef: quantify/ai-service
+
+# The AI service does not currently expose a Prometheus /metrics endpoint.
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    scrapeTimeout: 10s
+    path: /metrics
+    labels: {}
+
+networkPolicy:
+  enabled: true
+  # The AI service is reached by the backend, not the ingress controller.
+  ingressNamespaces: []
+  ingressPodLabels: {}
+  # Allow the backend (same namespace) to call the AI service.
+  allowBackend: true
+  egress:
+    # The AI service calls external LLM APIs (e.g. api.z.ai) over HTTPS.
+    allowExternalHttps: true
+    # Instance label of the infrastructure release (for backend lookups).
+    infraInstance: quantify-infrastructure
+    infraNamespace: ""
+    extraRules: []

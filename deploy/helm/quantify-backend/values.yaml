@@ -1,0 +1,257 @@
+# Default values for quantify-backend.
+# Override per environment with values-dev.yaml / values-staging.yaml / values-prod.yaml.
+
+replicaCount: 3
+
+image:
+  repository: quantify/backend
+  # Defaults to .Chart.AppVersion when empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  # Defaults to the fullname when empty.
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# Priority class for the pods (e.g. a custom "quantify-critical" PriorityClass).
+priorityClassName: ""
+
+terminationGracePeriodSeconds: 30
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 10001
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  # Extra raw annotations merged with the generated ones.
+  annotations: {}
+  hosts:
+    - host: api.quantify.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: quantify-backend-tls
+    # cert-manager ClusterIssuer/Issuer name.
+    issuer: letsencrypt-prod
+  rateLimit:
+    enabled: true
+    # Requests per second and concurrent connections per source IP.
+    rps: 100
+    connections: 100
+  cors:
+    enabled: true
+    allowOrigin: "*"
+    allowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    allowHeaders: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization,X-CSRF-Token"
+    allowCredentials: "true"
+    maxAge: "86400"
+  websocket:
+    # Adds proxy timeouts/buffering annotations suitable for /ws.
+    enabled: true
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  # Custom metric backed by prometheus-adapter (http_requests_per_second).
+  customMetrics:
+    enabled: true
+    # Target average requests/sec per pod.
+    requestsPerSecondTarget: 100
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+probes:
+  liveness:
+    path: /health
+    initialDelaySeconds: 0
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    path: /ready
+    initialDelaySeconds: 0
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  startup:
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+
+# Pod anti-affinity. type: "preferred" (soft) or "required" (hard).
+podAntiAffinity:
+  enabled: true
+  type: preferred
+  topologyKey: kubernetes.io/hostname
+
+# Spread pods across zones/nodes.
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: ScheduleAnyway
+
+# Init container that blocks startup until dependencies accept connections.
+initContainers:
+  waitForDependencies:
+    enabled: true
+    image: busybox:1.36
+    # Hosts/ports are derived from config below; add extras here.
+    extraTargets: []
+    # - host: some-host
+    #   port: 5432
+
+# Extra volumes / mounts (the chart always adds a writable /tmp emptyDir).
+extraVolumes: []
+extraVolumeMounts: []
+extraEnv: []
+extraContainers: []
+nodeSelector: {}
+tolerations: []
+
+# ---------------------------------------------------------------------------
+# Non-sensitive configuration -> rendered into a ConfigMap and injected via
+# envFrom. Keys map 1:1 to backend environment variables (see README.md).
+# ---------------------------------------------------------------------------
+config:
+  APP_ENV: production
+  SERVICE_NAME: quantify-backend
+  SERVER_PORT: "8080"
+  # Database (host matches the quantify-infrastructure release).
+  DB_HOST: quantify-infrastructure-postgresql
+  DB_PORT: "5432"
+  DB_NAME: inventory_db
+  DB_USER: quantify
+  # Redis cluster.
+  REDIS_CLUSTER_ADDRS: quantify-infrastructure-redis-cluster-0.quantify-infrastructure-redis-cluster-headless:6379,quantify-infrastructure-redis-cluster-1.quantify-infrastructure-redis-cluster-headless:6379,quantify-infrastructure-redis-cluster-2.quantify-infrastructure-redis-cluster-headless:6379
+  # MinIO.
+  MINIO_ENDPOINT: quantify-infrastructure-minio:9000
+  MINIO_BUCKET_NAME: reports
+  MINIO_USE_TLS: "false"
+  # AI service.
+  AI_SERVICE_URL: http://quantify-ai-service:8000
+  CONSUMER_CONCURRENCY: "2"
+  # CORS / WebSocket origins (CSV).
+  CORS_ALLOWED_ORIGINS: https://app.quantify.local
+  WS_ALLOWED_ORIGINS: https://app.quantify.local
+  # Reporting cache TTLs.
+  SALES_TRENDS_CACHE_TTL: 1h
+  INVENTORY_TURNOVER_CACHE_TTL: 6h
+  PROFIT_MARGIN_CACHE_TTL: 2h
+  REFRESH_TOKEN_TTL: 720h
+  # Payment gateway hosts (non-secret).
+  SSLCOMMERZ_API_HOST: https://securepay.sslcommerz.com
+  SSLCOMMERZ_SUCCESS_URL: https://api.quantify.local/payment/success
+  SSLCOMMERZ_FAIL_URL: https://api.quantify.local/payment/fail
+  SSLCOMMERZ_CANCEL_URL: https://api.quantify.local/payment/cancel
+  SSLCOMMERZ_IPN_URL: https://api.quantify.local/payment/ipn
+  BKASH_BASE_URL: https://checkout.pay.bkash.com/v1.2.0-beta
+  # SMTP (non-secret parts).
+  SMTP_HOST: ""
+  SMTP_PORT: "587"
+  SMTPSENDER: noreply@quantify.local
+  # OpenTelemetry (empty disables tracing).
+  OTLP_ENDPOINT: ""
+
+# ---------------------------------------------------------------------------
+# Sensitive configuration -> rendered into a Secret (stringData) and injected
+# via envFrom. Leave values empty to source them from externalSecrets instead.
+# ---------------------------------------------------------------------------
+secrets:
+  DB_PASSWORD: ""
+  JWT_SECRET: ""
+  REFRESH_TOKEN_SECRET: ""
+  REDIS_PASSWORD: ""
+  RABBITMQ_URL: ""
+  MINIO_ACCESS_KEY_ID: ""
+  MINIO_SECRET_ACCESS_KEY: ""
+  AI_AGENT_PASSWORD: ""
+  SMTP_USER: ""
+  SMTP_PASS: ""
+  SSLCOMMERZ_STORE_ID: ""
+  SSLCOMMERZ_STORE_PASSWORD: ""
+  BKASH_API_KEY: ""
+  BKASH_API_SECRET: ""
+  BKASH_USERNAME: ""
+  BKASH_PASSWORD: ""
+
+# Source secrets from an ExternalSecret (external-secrets.io) instead of the
+# in-chart Secret. Supports Vault / AWS Secrets Manager / GCP / Azure backends.
+externalSecrets:
+  enabled: false
+  # Name of the ClusterSecretStore / SecretStore to bind to.
+  secretStoreName: vault-backend
+  secretStoreKind: ClusterSecretStore
+  refreshInterval: 1h
+  # Name of the Secret the ExternalSecret materialises (defaults to <fullname>-external).
+  targetName: ""
+  # Remote key/path that holds the secret map.
+  remoteRef: quantify/backend
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+    scrapeTimeout: 10s
+    path: /metrics
+    labels: {}
+
+networkPolicy:
+  enabled: true
+  # Namespaces allowed to reach the backend (typically the ingress controller).
+  ingressNamespaces:
+    - ingress-nginx
+  # Pod labels within ingressNamespaces allowed to connect.
+  ingressPodLabels:
+    app.kubernetes.io/name: ingress-nginx
+  # Allow the AI service (same release namespace) to call back into the backend.
+  allowAiService: true
+  # Egress destinations. DNS egress is always permitted.
+  egress:
+    # Extra CIDR/namespace/podSelector egress rules.
+    extraRules: []

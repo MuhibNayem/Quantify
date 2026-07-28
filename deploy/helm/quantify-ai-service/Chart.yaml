@@ -1,0 +1,16 @@
+apiVersion: v2
+name: quantify-ai-service
+description: Quantify AI service (Python/FastAPI) — demand forecasting, churn prediction, and AI agent
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.26.0-0"
+keywords:
+  - quantify
+  - ai
+  - forecasting
+home: https://github.com/your-username/quantify
+sources:
+  - https://github.com/your-username/quantify
+maintainers:
+  - name: Quantify Team

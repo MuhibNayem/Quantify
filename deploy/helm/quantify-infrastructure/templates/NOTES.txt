@@ -1,0 +1,31 @@
+Quantify infrastructure has been deployed.
+
+Release:    {{ .Release.Name }}
+Namespace:  {{ .Release.Namespace }}
+
+Components:
+{{- if .Values.postgresql.enabled }}
+  - PostgreSQL (architecture: {{ .Values.postgresql.architecture }},
+      read replicas: {{ .Values.postgresql.readReplicas.replicaCount }})
+      Primary:  {{ .Release.Name }}-postgresql
+      Reads:    {{ .Release.Name }}-postgresql-read
+{{- end }}
+{{- if index .Values "redis-cluster" "enabled" }}
+  - Redis cluster ({{ index .Values "redis-cluster" "cluster" "nodes" }} nodes,
+      {{ index .Values "redis-cluster" "cluster" "replicas" }} replica(s) per master)
+      Service:  {{ .Release.Name }}-redis-cluster
+{{- end }}
+{{- if .Values.rabbitmq.enabled }}
+  - RabbitMQ ({{ .Values.rabbitmq.replicaCount }} clustered replicas)
+      Service:  {{ .Release.Name }}-rabbitmq
+{{- end }}
+{{- if .Values.minio.enabled }}
+  - MinIO (mode: {{ .Values.minio.mode }}, buckets: {{ .Values.minio.defaultBuckets }})
+      Service:  {{ .Release.Name }}-minio
+{{- end }}
+
+IMPORTANT: The auth passwords in values.yaml are PLACEHOLDERS. Before
+installing, override them per environment or reference pre-created Secrets via
+each subchart's `auth.existingSecret` / `existingSecret` fields.
+
+Run `helm dependency update` in this chart directory before `helm install`.

@@ -1,0 +1,30 @@
+{{- if and .Values.networkPolicy.enabled .Values.networkPolicy.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-redis-cluster-access
+  labels:
+    {{- include "quantify-infrastructure.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: redis-cluster
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Ingress
+  ingress:
+    # Intra-release traffic: cluster bus and gossip.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+    # Application access from the Quantify namespaces.
+    - from:
+        {{- include "quantify-infrastructure.appFrom" . | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 16379
+{{- end }}

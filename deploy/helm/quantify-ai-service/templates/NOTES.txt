@@ -1,0 +1,19 @@
+Quantify AI service has been deployed.
+
+Release:    {{ .Release.Name }}
+Namespace:  {{ .Release.Namespace }}
+Image:      {{ include "quantify-ai-service.image" . }}
+
+Service:    {{ include "quantify-ai-service.fullname" . }}:{{ .Values.service.port }}
+Health:     GET /health
+
+This is an internal service consumed by the backend
+({{ .Values.config.BACKEND_URL }}). It is not exposed via ingress by default.
+
+{{- if .Values.externalSecrets.enabled }}
+Secrets are sourced from the external secret store
+"{{ .Values.externalSecrets.secretStoreName }}" (key: {{ .Values.externalSecrets.remoteRef }}).
+{{- else }}
+NOTE: Sensitive values (ZAI_API_KEY, AI_AGENT_PASSWORD) are rendered from
+.Values.secrets. For production, enable externalSecrets.
+{{- end }}

@@ -1,0 +1,61 @@
+# Development overrides: single replica, no HPA, debug on, local storage.
+
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+priorityClassName: ""
+
+autoscaling:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+podAntiAffinity:
+  enabled: false
+
+topologySpreadConstraints:
+  enabled: false
+
+initContainers:
+  waitForDependencies:
+    enabled: true
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api.quantify.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: false
+  rateLimit:
+    enabled: false
+
+metrics:
+  serviceMonitor:
+    enabled: false
+
+networkPolicy:
+  enabled: false
+
+config:
+  APP_ENV: dev
+  CORS_ALLOWED_ORIGINS: http://localhost:5173,http://app.quantify.local
+  WS_ALLOWED_ORIGINS: http://localhost:5173,http://app.quantify.local
+  DB_HOST: quantify-infrastructure-postgresql
+  REDIS_CLUSTER_ADDRS: quantify-infrastructure-redis-cluster-0.quantify-infrastructure-redis-cluster-headless:6379
+  MINIO_ENDPOINT: quantify-infrastructure-minio:9000
+  AI_SERVICE_URL: http://quantify-ai-service:8000
+  CONSUMER_CONCURRENCY: "1"

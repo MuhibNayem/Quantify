@@ -1,0 +1,30 @@
+Quantify backend has been deployed.
+
+Release:    {{ .Release.Name }}
+Namespace:  {{ .Release.Namespace }}
+Image:      {{ include "quantify-backend.image" . }}
+
+Service:    {{ include "quantify-backend.fullname" . }}:{{ .Values.service.port }}
+{{- if .Values.ingress.enabled }}
+Ingress:
+{{- range .Values.ingress.hosts }}
+  - http{{ if $.Values.ingress.tls.enabled }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+Health:     GET /health
+Readiness:  GET /ready
+Metrics:    GET /metrics
+WebSocket:  /ws
+
+{{- if .Values.externalSecrets.enabled }}
+Secrets are sourced from the external secret store
+"{{ .Values.externalSecrets.secretStoreName }}" (key: {{ .Values.externalSecrets.remoteRef }}).
+{{- else }}
+NOTE: Sensitive values are rendered from .Values.secrets. For production,
+enable externalSecrets or inject secrets via your CI/CD secret manager.
+{{- end }}
+
+NOTE: Database migrations are NOT run by this chart. The production image only
+ships the server binary. Run migrations out-of-band (e.g. a Helm pre-upgrade
+hook Job using `cmd/migrator`) before rolling out a new version.

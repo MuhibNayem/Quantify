@@ -1,0 +1,63 @@
+# Values for kube-prometheus-stack (production monitoring).
+#
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#     --namespace monitoring --create-namespace \
+#     -f deploy/k8s/monitoring/kube-prometheus-stack-values.yaml
+#
+# This stack ships Prometheus, Alertmanager, Grafana, exporters, and the
+# prometheus-adapter (configured further in prometheus-adapter-values.yaml).
+
+fullnameOverride: kps
+
+prometheus:
+  prometheusSpec:
+    retention: 15d
+    # Scrape ServiceMonitors/PodMonitors across all namespaces so the
+    # quantify-backend ServiceMonitor is picked up automatically.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: "2"
+        memory: 4Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 100Gi
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+grafana:
+  enabled: true
+  adminPassword: CHANGE_ME_GRAFANA_PASSWORD
+  persistence:
+    enabled: true
+    size: 10Gi
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+
+# Enable the adapter so HPA can consume custom metrics (http_requests_per_second).
+prometheusAdapter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true

@@ -1,0 +1,85 @@
+# Production overrides: 3 replicas, full HPA band, hard anti-affinity,
+# external secrets, production domain.
+
+replicaCount: 3
+
+image:
+  pullPolicy: IfNotPresent
+
+priorityClassName: system-cluster-critical
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  customMetrics:
+    enabled: true
+    requestsPerSecondTarget: 100
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+podAntiAffinity:
+  enabled: true
+  type: required
+  topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  enabled: true
+  maxSkew: 1
+  topologyKey: topology.kubernetes.io/zone
+  whenUnsatisfiable: DoNotSchedule
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api.quantify.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    enabled: true
+    secretName: quantify-backend-prod-tls
+    issuer: letsencrypt-prod
+  rateLimit:
+    enabled: true
+    rps: 100
+    connections: 100
+  cors:
+    enabled: true
+    allowOrigin: https://app.quantify.com
+
+# Source all sensitive config from the external secret manager in prod.
+externalSecrets:
+  enabled: true
+  secretStoreName: vault-backend
+  secretStoreKind: ClusterSecretStore
+  refreshInterval: 1h
+  remoteRef: quantify/backend
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    interval: 15s
+
+networkPolicy:
+  enabled: true
+  ingressNamespaces:
+    - ingress-nginx
+
+config:
+  APP_ENV: production
+  CORS_ALLOWED_ORIGINS: https://app.quantify.com
+  WS_ALLOWED_ORIGINS: https://app.quantify.com
+  CONSUMER_CONCURRENCY: "4"

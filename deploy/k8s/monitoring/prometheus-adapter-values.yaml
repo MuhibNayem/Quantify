@@ -1,0 +1,43 @@
+# Values for prometheus-adapter — exposes the custom metric
+# `http_requests_per_second` consumed by the quantify-backend HPA.
+#
+# If you install prometheus-adapter standalone:
+#   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#   helm upgrade --install prometheus-adapter prometheus-community/prometheus-adapter \
+#     --namespace monitoring --create-namespace \
+#     -f deploy/k8s/monitoring/prometheus-adapter-values.yaml
+#
+# (kube-prometheus-stack also bundles this adapter; merge the `prometheusAdapter`
+# block from this file into its values if you prefer the bundled chart.)
+
+replicas: 2
+
+prometheus:
+  url: http://kps-kube-prome-prometheus.monitoring.svc
+  port: 9090
+  path: ""
+
+rules:
+  custom:
+    # Requests per second per pod, derived from the http_requests_total counter
+    # exposed by the backend on /metrics.
+    - seriesQuery: 'http_requests_total{namespace!="",pod!=""}'
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      name:
+        matches: "^(.*)$"
+        as: "http_requests_per_second"
+      metricsQuery: 'sum(rate(<<.Series>>{<<.LabelMatchers>>}[2m])) by (<<.GroupBy>>)'
+  default: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

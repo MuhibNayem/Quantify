@@ -1,0 +1,77 @@
+# Values for the ingress-nginx Helm chart (production).
+#
+#   helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+#   helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+#     --namespace ingress-nginx --create-namespace \
+#     -f deploy/k8s/ingress-nginx/values.yaml
+
+controller:
+  replicaCount: 2
+
+  # Spread controller pods across nodes.
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: ingress-nginx
+                app.kubernetes.io/instance: ingress-nginx
+                app.kubernetes.io/component: controller
+            topologyKey: kubernetes.io/hostname
+
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+  # Global NGINX tuning. Per-Ingress rate limiting is set via annotations on
+  # the quantify-backend Ingress (see its Helm chart).
+  config:
+    use-forwarded-headers: "true"
+    compute-full-forwarded-for: "true"
+    use-proxy-protocol: "false"
+    proxy-body-size: "20m"
+    proxy-read-timeout: "3600"
+    proxy-send-timeout: "3600"
+    ssl-protocols: "TLSv1.2 TLSv1.3"
+    server-tokens: "false"
+    enable-real-ip: "true"
+
+  # Publish the controller via a cloud load balancer.
+  service:
+    enabled: true
+    type: LoadBalancer
+    externalTrafficPolicy: Local
+
+  admissionWebhooks:
+    enabled: true
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+      namespaceSelector:
+        matchNames:
+          - ingress-nginx
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
+
+defaultBackend:
+  enabled: false

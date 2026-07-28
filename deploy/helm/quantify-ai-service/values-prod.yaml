@@ -1,0 +1,48 @@
+# Production overrides for the AI service.
+
+replicaCount: 3
+
+priorityClassName: system-cluster-critical
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 75
+  targetMemoryUtilizationPercentage: 85
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
+
+podAntiAffinity:
+  enabled: true
+  type: required
+  topologyKey: kubernetes.io/hostname
+
+topologySpreadConstraints:
+  enabled: true
+  whenUnsatisfiable: DoNotSchedule
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+
+externalSecrets:
+  enabled: true
+  secretStoreName: vault-ai-service
+  secretStoreKind: ClusterSecretStore
+  refreshInterval: 1h
+  remoteRef: quantify/ai-service
+
+networkPolicy:
+  enabled: true
+  egress:
+    allowExternalHttps: true
+
+config:
+  BACKEND_URL: http://quantify-backend:8080

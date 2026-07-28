@@ -1,0 +1,17 @@
+apiVersion: v2
+name: quantify-backend
+description: Quantify backend API (Go/Gin) — inventory management and POS service
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.26.0-0"
+keywords:
+  - quantify
+  - backend
+  - inventory
+  - pos
+home: https://github.com/your-username/quantify
+sources:
+  - https://github.com/your-username/quantify
+maintainers:
+  - name: Quantify Team
