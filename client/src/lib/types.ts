@@ -2,6 +2,8 @@ export interface BaseEntity {
 	ID: number;
 	Reasoning?: string;
 	GeneratedAt: string;
+	CreatedAt?: string;
+	UpdatedAt?: string;
 }
 
 export interface Category extends BaseEntity {
@@ -93,7 +95,6 @@ export interface PaginatedProducts {
 	totalPages: number;
 	products: Product[];
 }
-
 
 export interface Batch extends BaseEntity {
 	ProductID: number;

@@ -16,10 +16,37 @@
 	import { auth } from '$lib/stores/auth';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
+	import { superForm } from 'sveltekit-superforms';
+	import { zod4 } from 'sveltekit-superforms/adapters';
+	import { loginSchema } from '$lib/schemas/auth';
 
-	let username = $state('');
-	let password = $state('');
-	let loading = $state(false);
+	const { form, errors, enhance, submitting } = superForm(
+		{ username: '', password: '' },
+		{
+			validators: zod4(loginSchema),
+			onSubmit: async ({ cancel }) => {
+				cancel();
+				const data = $form;
+				try {
+					const response = await api.post('/users/login', {
+						username: data.username,
+						password: data.password
+					});
+					const { accessToken, refreshToken, csrfToken, user, permissions } = response.data;
+					auth.login(accessToken, refreshToken, csrfToken, user, permissions || []);
+					toast.success('Login successful!', {
+						description: 'Welcome back to your workspace.'
+					});
+					goto('/');
+				} catch (error: any) {
+					const errorMessage = error.response?.data?.error || error.message || 'Login failed';
+					toast.error('Login Failed', {
+						description: errorMessage
+					});
+				}
+			}
+		}
+	);
 
 	onMount(() => {
 		auth.subscribe((state) => {
@@ -28,26 +55,6 @@
 			}
 		})();
 	});
-
-	async function handleLogin() {
-		loading = true;
-		try {
-			const response = await api.post('/users/login', { username, password });
-			const { accessToken, refreshToken, csrfToken, user, permissions } = response.data;
-			auth.login(accessToken, refreshToken, csrfToken, user, permissions || []);
-			toast.success('Login successful!', {
-				description: 'Welcome back to your workspace.'
-			});
-			goto('/');
-		} catch (error: any) {
-			const errorMessage = error.response?.data?.error || error.message || 'Login failed';
-			toast.error('Login Failed', {
-				description: errorMessage
-			});
-		} finally {
-			loading = false;
-		}
-	}
 </script>
 
 <div
@@ -67,7 +74,7 @@
 			class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"
 		></div>
 
-		<div class="absolute bottom-20 left-12 right-12 max-w-2xl text-white">
+		<div class="absolute right-12 bottom-20 left-12 max-w-2xl text-white">
 			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">Orchestrate Your Business</h2>
 			<p class="mt-6 text-xl font-medium text-slate-100 drop-shadow-lg">
 				Seamlessly connect inventory, POS, and supply chain in one fluid system.
@@ -79,9 +86,9 @@
 	<div class="relative flex flex-1 items-center justify-center overflow-hidden p-8 lg:p-12">
 		<!-- Exact Ambient Background from Time Tracking Route -->
 		<div class="absolute inset-0 -z-10 opacity-80">
-			<div class="absolute -left-36 top-10 h-80 w-80 rounded-full bg-sky-200/70 blur-[120px]"></div>
+			<div class="absolute top-10 -left-36 h-80 w-80 rounded-full bg-sky-200/70 blur-[120px]"></div>
 			<div
-				class="absolute right-0 top-0 h-72 w-72 rounded-full bg-emerald-200/60 blur-[110px]"
+				class="absolute top-0 right-0 h-72 w-72 rounded-full bg-emerald-200/60 blur-[110px]"
 			></div>
 			<div
 				class="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-indigo-200/60 blur-[150px]"
@@ -127,10 +134,10 @@
 			>
 				<!-- Light flare overlay -->
 				<div
-					class="pointer-events-none absolute -left-1/2 -top-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
+					class="pointer-events-none absolute -top-1/2 -left-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
 				></div>
 
-				<CardHeader class="relative pb-2 pt-12 text-center">
+				<CardHeader class="relative pt-12 pb-2 text-center">
 					<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
 						Welcome Back
 					</CardTitle>
@@ -139,13 +146,7 @@
 					</CardDescription>
 				</CardHeader>
 				<CardContent class="relative p-10 pt-8">
-					<form
-						onsubmit={(event) => {
-							event.preventDefault();
-							handleLogin();
-						}}
-						class="space-y-6"
-					>
+					<form method="POST" use:enhance class="space-y-6">
 						<div class="space-y-6">
 							<div class="space-y-2">
 								<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
@@ -156,10 +157,12 @@
 									id="username"
 									type="text"
 									placeholder="Enter your username"
-									bind:value={username}
-									required
+									bind:value={$form.username}
 									class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10"
 								/>
+								{#if $errors.username}
+									<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.username}</p>
+								{/if}
 							</div>
 							<div class="space-y-2">
 								<div class="flex items-center justify-between">
@@ -176,21 +179,23 @@
 									id="password"
 									type="password"
 									placeholder="••••••••"
-									bind:value={password}
-									required
+									bind:value={$form.password}
 									class="h-14 rounded-2xl border-white/40 bg-white/60 px-5 text-lg font-medium text-slate-900 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] backdrop-blur-xl transition-all placeholder:text-slate-500 focus:border-blue-500/50 focus:bg-white/90 focus:ring-4 focus:ring-blue-500/10"
 								/>
+								{#if $errors.password}
+									<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.password}</p>
+								{/if}
 							</div>
 						</div>
 
 						<Button
 							type="submit"
 							class="glass-button mt-6 h-14 w-full rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(79,70,229,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] disabled:opacity-70"
-							disabled={loading}
+							disabled={$submitting}
 						>
-							{#if loading}
+							{#if $submitting}
 								<svg
-									class="-ml-1 mr-3 h-5 w-5 animate-spin text-white"
+									class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
 									xmlns="http://www.w3.org/2000/svg"
 									fill="none"
 									viewBox="0 0 24 24"
@@ -230,7 +235,7 @@
 
 			<div class="mt-8 flex justify-center gap-6 opacity-80">
 				<!-- Trust indicators -->
-				<p class="text-xs font-semibold uppercase tracking-wider text-slate-500">
+				<p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
 					Secured by Industry Standard Text Encryption
 				</p>
 			</div>

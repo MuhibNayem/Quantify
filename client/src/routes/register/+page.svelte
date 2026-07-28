@@ -15,22 +15,56 @@
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
 	import { ArrowLeft, ArrowRight, ChevronDown, Check } from 'lucide-svelte';
+	import { superForm } from 'sveltekit-superforms';
+	import { zod4 } from 'sveltekit-superforms/adapters';
+	import { registerSchema } from '$lib/schemas/auth';
 
-	let username = $state('');
-	let password = $state('');
-	let confirmPassword = $state('');
-	let firstName = $state('');
-	let lastName = $state('');
-	let email = $state('');
-	let phoneNumber = $state('');
-	let address = $state('');
-	let selectedRole = $state<'Admin' | 'Manager' | 'Staff'>('Staff');
+	const { form, errors, enhance, submitting } = superForm(
+		{
+			username: '',
+			password: '',
+			confirmPassword: '',
+			role: 'Staff' as 'Admin' | 'Manager' | 'Staff',
+			firstName: '',
+			lastName: '',
+			email: '',
+			phoneNumber: '',
+			address: ''
+		},
+		{
+			validators: zod4(registerSchema),
+			onSubmit: async ({ cancel }) => {
+				cancel();
+				const data = $form;
+				try {
+					await api.post('/users/register', {
+						username: data.username,
+						password: data.password,
+						role: data.role,
+						firstName: data.firstName || undefined,
+						lastName: data.lastName || undefined,
+						email: data.email || undefined,
+						phoneNumber: data.phoneNumber || undefined,
+						address: data.address || undefined
+					});
+					toast.success('Registration successful! Please log in.');
+					goto('/login');
+				} catch (error: any) {
+					const errorMessage =
+						error.response?.data?.error || error.message || 'Registration failed';
+					toast.error('Registration Failed', {
+						description: errorMessage
+					});
+				}
+			}
+		}
+	);
+
 	let availableRoles: { value: string; label: string }[] = [
 		{ value: 'Admin', label: 'Administrator' },
 		{ value: 'Manager', label: 'Manager' },
 		{ value: 'Staff', label: 'Staff Member' }
 	];
-	let loading = $state(false);
 	let passwordStrength = $state(0);
 
 	// Multi-step state
@@ -50,16 +84,16 @@
 	}
 
 	$effect(() => {
-		passwordStrength = calculatePasswordStrength(password);
+		passwordStrength = calculatePasswordStrength($form.password);
 	});
 
 	function nextStep() {
 		if (currentStep === 1) {
-			if (!username || !password || !confirmPassword) {
+			if (!$form.username || !$form.password || !$form.confirmPassword) {
 				toast.error('Please fill in all fields');
 				return;
 			}
-			if (password !== confirmPassword) {
+			if ($form.password !== $form.confirmPassword) {
 				toast.error('Passwords do not match');
 				return;
 			}
@@ -76,13 +110,13 @@
 	}
 
 	function toggleRoleDropdown() {
-		if (!loading) {
+		if (!$submitting) {
 			isRoleDropdownOpen = !isRoleDropdownOpen;
 		}
 	}
 
 	function selectRole(role: 'Admin' | 'Manager' | 'Staff') {
-		selectedRole = role;
+		$form.role = role;
 		isRoleDropdownOpen = false;
 	}
 
@@ -92,32 +126,6 @@
 			if (!target.closest('#role-dropdown-trigger') && !target.closest('#role-dropdown-menu')) {
 				isRoleDropdownOpen = false;
 			}
-		}
-	}
-
-	async function handleRegister() {
-		loading = true;
-
-		try {
-			await api.post('/users/register', {
-				username,
-				password,
-				role: selectedRole,
-				firstName: firstName || undefined,
-				lastName: lastName || undefined,
-				email: email || undefined,
-				phoneNumber: phoneNumber || undefined,
-				address: address || undefined
-			});
-			toast.success('Registration successful! Please log in.');
-			goto('/login');
-		} catch (error: any) {
-			const errorMessage = error.response?.data?.error || error.message || 'Registration failed';
-			toast.error('Registration Failed', {
-				description: errorMessage
-			});
-		} finally {
-			loading = false;
 		}
 	}
 </script>
@@ -141,7 +149,7 @@
 			class="absolute inset-0 bg-gradient-to-t from-emerald-900/80 via-transparent to-transparent"
 		></div>
 
-		<div class="absolute bottom-20 left-12 right-12 max-w-2xl text-white">
+		<div class="absolute right-12 bottom-20 left-12 max-w-2xl text-white">
 			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">Accelerate Your Growth</h2>
 			<p class="mt-6 text-xl font-medium text-emerald-100 drop-shadow-lg">
 				Join the platform that turns data into actionable insights for millions.
@@ -154,13 +162,13 @@
 		<!-- Ambient Background -->
 		<div class="absolute inset-0 -z-10 opacity-70">
 			<div
-				class="absolute -right-20 -top-20 h-[500px] w-[500px] rounded-full bg-emerald-200/50 blur-[100px]"
+				class="absolute -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-emerald-200/50 blur-[100px]"
 			></div>
 			<div
 				class="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-teal-200/50 blur-[100px]"
 			></div>
 			<div
-				class="absolute right-1/4 top-1/3 h-[300px] w-[300px] rounded-full bg-lime-100/40 blur-[80px]"
+				class="absolute top-1/3 right-1/4 h-[300px] w-[300px] rounded-full bg-lime-100/40 blur-[80px]"
 			></div>
 		</div>
 
@@ -196,11 +204,11 @@
 				<!-- Light flare overlay (Clipped Container) -->
 				<div class="pointer-events-none absolute inset-0 overflow-hidden rounded-[40px]">
 					<div
-						class="absolute -left-1/2 -top-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
+						class="absolute -top-1/2 -left-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
 					></div>
 				</div>
 
-				<CardHeader class="relative pb-2 pt-12 text-center">
+				<CardHeader class="relative pt-12 pb-2 text-center">
 					<div class="mb-6 flex justify-center gap-2">
 						{#each Array(totalSteps) as _, i}
 							<div
@@ -218,13 +226,7 @@
 					</CardDescription>
 				</CardHeader>
 				<CardContent class="relative p-10 pt-8">
-					<form
-						onsubmit={(event) => {
-							event.preventDefault();
-							if (currentStep === totalSteps) handleRegister();
-						}}
-						class="space-y-6"
-					>
+					<form method="POST" use:enhance class="space-y-6">
 						{#if currentStep === 1}
 							<div class="space-y-6" in:slide={{ axis: 'x', duration: 300 }}>
 								<div class="space-y-2">
@@ -235,10 +237,12 @@
 										id="username"
 										type="text"
 										placeholder="Choose a username"
-										bind:value={username}
-										required
+										bind:value={$form.username}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
+									{#if $errors.username}
+										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.username}</p>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -249,11 +253,13 @@
 										id="password"
 										type="password"
 										placeholder="••••••••"
-										bind:value={password}
-										required
+										bind:value={$form.password}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
-									{#if password}
+									{#if $errors.password}
+										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.password}</p>
+									{/if}
+									{#if $form.password}
 										<div class="space-y-2 px-1 pt-2">
 											<div class="flex justify-between text-xs font-bold text-slate-600">
 												<span>STRENGTH</span>
@@ -283,10 +289,14 @@
 										id="confirmPassword"
 										type="password"
 										placeholder="••••••••"
-										bind:value={confirmPassword}
-										required
+										bind:value={$form.confirmPassword}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
+									{#if $errors.confirmPassword}
+										<p class="ml-1 text-sm font-semibold text-rose-600">
+											{$errors.confirmPassword}
+										</p>
+									{/if}
 								</div>
 
 								<div class="relative space-y-2">
@@ -299,11 +309,11 @@
 										id="role-dropdown-trigger"
 										type="button"
 										onclick={toggleRoleDropdown}
-										class="flex h-14 w-full items-center justify-between rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] outline-none ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-										disabled={loading}
+										class="flex h-14 w-full items-center justify-between rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all outline-none focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
+										disabled={$submitting}
 									>
 										<span class="flex items-center gap-2">
-											{availableRoles.find((r) => r.value === selectedRole)?.label}
+											{availableRoles.find((r) => r.value === $form.role)?.label}
 										</span>
 										<ChevronDown
 											class="h-5 w-5 text-slate-600 transition-transform duration-300 {isRoleDropdownOpen
@@ -316,7 +326,7 @@
 									{#if isRoleDropdownOpen}
 										<div
 											id="role-dropdown-menu"
-											class="top-FULL absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] ring-1 ring-white/40 backdrop-blur-2xl"
+											class="top-FULL absolute right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] ring-1 ring-white/40 backdrop-blur-2xl"
 											in:slide={{ duration: 200, axis: 'y' }}
 											out:fade={{ duration: 150 }}
 										>
@@ -325,13 +335,13 @@
 													<button
 														type="button"
 														onclick={() => selectRole(role.value as any)}
-														class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left font-bold transition-colors hover:bg-emerald-500/10 {selectedRole ===
+														class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left font-bold transition-colors hover:bg-emerald-500/10 {$form.role ===
 														role.value
 															? 'bg-emerald-500/10 text-emerald-800'
 															: 'text-slate-700 hover:text-emerald-700'}"
 													>
 														{role.label}
-														{#if selectedRole === role.value}
+														{#if $form.role === role.value}
 															<Check class="h-4 w-4 text-emerald-600" />
 														{/if}
 													</button>
@@ -362,10 +372,12 @@
 											id="firstName"
 											type="text"
 											placeholder="John"
-											bind:value={firstName}
-											required
+											bind:value={$form.firstName}
 											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 										/>
+										{#if $errors.firstName}
+											<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.firstName}</p>
+										{/if}
 									</div>
 
 									<div class="space-y-2">
@@ -379,10 +391,12 @@
 											id="lastName"
 											type="text"
 											placeholder="Doe"
-											bind:value={lastName}
-											required
+											bind:value={$form.lastName}
 											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 										/>
+										{#if $errors.lastName}
+											<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.lastName}</p>
+										{/if}
 									</div>
 								</div>
 
@@ -394,10 +408,12 @@
 										id="email"
 										type="email"
 										placeholder="john@example.com"
-										bind:value={email}
-										required
+										bind:value={$form.email}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
+									{#if $errors.email}
+										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.email}</p>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -411,10 +427,12 @@
 										id="phoneNumber"
 										type="tel"
 										placeholder="(555) 123-4567"
-										bind:value={phoneNumber}
-										required
+										bind:value={$form.phoneNumber}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
+									{#if $errors.phoneNumber}
+										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.phoneNumber}</p>
+									{/if}
 								</div>
 
 								<div class="space-y-2">
@@ -425,7 +443,7 @@
 										id="address"
 										type="text"
 										placeholder="123 Main Street"
-										bind:value={address}
+										bind:value={$form.address}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
 								</div>
@@ -442,11 +460,11 @@
 									<Button
 										type="submit"
 										class="glass-button h-14 flex-1 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-emerald-400 hover:to-teal-500 active:scale-[0.98] disabled:opacity-70"
-										disabled={loading}
+										disabled={$submitting}
 									>
-										{#if loading}
+										{#if $submitting}
 											<svg
-												class="-ml-1 mr-3 h-5 w-5 animate-spin text-white"
+												class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
 												xmlns="http://www.w3.org/2000/svg"
 												fill="none"
 												viewBox="0 0 24 24"

@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
-
 // WithElementRef...
 export type WithElementRef<T extends SvelteHTMLElements[keyof SvelteHTMLElements]> = T & {
 	ref?: T['ref'];
@@ -40,11 +39,11 @@ export function formatCurrency(amount: number): string {
 	// Custom formatting:
 	return new Intl.NumberFormat(globalConfig.locale, {
 		style: 'currency',
-		currency: globalConfig.currency_code || 'USD',
+		currency: globalConfig.currency_code || 'USD'
 	}).format(amount);
 }
 
-export function formatDateTime(dateString: string): string {
+export function formatDateTime(dateString?: string | null): string {
 	if (!dateString) return '';
 	const date = new Date(dateString);
 	return date.toLocaleString(globalConfig.locale, {
@@ -57,7 +56,7 @@ export function formatDateTime(dateString: string): string {
 	});
 }
 
-export function formatPercent(value: number): string {
+export function formatPercent(value: number | null | undefined): string {
 	if (value === null || value === undefined || Number.isNaN(value)) return '';
 	const normalized = value > 1 ? value / 100 : value;
 	return new Intl.NumberFormat(globalConfig.locale, {
@@ -66,7 +65,10 @@ export function formatPercent(value: number): string {
 	}).format(normalized);
 }
 
-export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
+export function debounce<T extends (...args: any[]) => void>(
+	func: T,
+	wait: number
+): (...args: Parameters<T>) => void {
 	let timeout: NodeJS.Timeout;
 	return (...args: Parameters<T>) => {
 		clearTimeout(timeout);
