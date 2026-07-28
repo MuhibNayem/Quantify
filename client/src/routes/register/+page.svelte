@@ -18,6 +18,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { registerSchema } from '$lib/schemas/auth';
+	import { t } from '$lib/i18n';
 
 	const { form, errors, enhance, submitting } = superForm(
 		{
@@ -47,12 +48,12 @@
 						phoneNumber: data.phoneNumber || undefined,
 						address: data.address || undefined
 					});
-					toast.success('Registration successful! Please log in.');
+					toast.success($t('auth.register.success'));
 					goto('/login');
 				} catch (error: any) {
 					const errorMessage =
 						error.response?.data?.error || error.message || 'Registration failed';
-					toast.error('Registration Failed', {
+					toast.error($t('auth.register.failed'), {
 						description: errorMessage
 					});
 				}
@@ -60,11 +61,11 @@
 		}
 	);
 
-	let availableRoles: { value: string; label: string }[] = [
-		{ value: 'Admin', label: 'Administrator' },
-		{ value: 'Manager', label: 'Manager' },
-		{ value: 'Staff', label: 'Staff Member' }
-	];
+	let availableRoles: { value: string; label: string }[] = $derived([
+		{ value: 'Admin', label: $t('auth.register.roles.admin') },
+		{ value: 'Manager', label: $t('auth.register.roles.manager') },
+		{ value: 'Staff', label: $t('auth.register.roles.staff') }
+	]);
 	let passwordStrength = $state(0);
 
 	// Multi-step state
@@ -90,15 +91,15 @@
 	function nextStep() {
 		if (currentStep === 1) {
 			if (!$form.username || !$form.password || !$form.confirmPassword) {
-				toast.error('Please fill in all fields');
+				toast.error($t('auth.register.fillAllFields'));
 				return;
 			}
 			if ($form.password !== $form.confirmPassword) {
-				toast.error('Passwords do not match');
+				toast.error($t('auth.register.passwordMismatch'));
 				return;
 			}
 			if (passwordStrength < 75) {
-				toast.error('Please choose a stronger password');
+				toast.error($t('auth.register.weakPassword'));
 				return;
 			}
 		}
@@ -150,9 +151,9 @@
 		></div>
 
 		<div class="absolute right-12 bottom-20 left-12 max-w-2xl text-white">
-			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">Accelerate Your Growth</h2>
+			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">{$t('auth.register.heroTitle')}</h2>
 			<p class="mt-6 text-xl font-medium text-emerald-100 drop-shadow-lg">
-				Join the platform that turns data into actionable insights for millions.
+				{$t('auth.register.heroSubtitle')}
 			</p>
 		</div>
 	</div>
@@ -218,25 +219,25 @@
 							></div>
 						{/each}
 					</div>
-					<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
-						{currentStep === 1 ? 'Create Account' : 'Personal Details'}
-					</CardTitle>
-					<CardDescription class="text-lg font-medium text-slate-600">
-						{currentStep === 1 ? 'Start your journey with us' : 'Tell us a bit about yourself'}
-					</CardDescription>
+				<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
+					{currentStep === 1 ? $t('auth.register.title') : $t('auth.register.step2Title')}
+				</CardTitle>
+				<CardDescription class="text-lg font-medium text-slate-600">
+					{currentStep === 1 ? $t('auth.register.subtitle') : $t('auth.register.step2Subtitle')}
+				</CardDescription>
 				</CardHeader>
 				<CardContent class="relative p-10 pt-8">
 					<form method="POST" use:enhance class="space-y-6">
 						{#if currentStep === 1}
 							<div class="space-y-6" in:slide={{ axis: 'x', duration: 300 }}>
 								<div class="space-y-2">
-									<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										Username
-									</Label>
-									<Input
-										id="username"
-										type="text"
-										placeholder="Choose a username"
+								<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.register.username')}
+								</Label>
+								<Input
+									id="username"
+									type="text"
+									placeholder={$t('auth.register.usernamePlaceholder')}
 										bind:value={$form.username}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
@@ -246,9 +247,9 @@
 								</div>
 
 								<div class="space-y-2">
-									<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										Password
-									</Label>
+								<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.register.password')}
+								</Label>
 									<Input
 										id="password"
 										type="password"
@@ -262,7 +263,7 @@
 									{#if $form.password}
 										<div class="space-y-2 px-1 pt-2">
 											<div class="flex justify-between text-xs font-bold text-slate-600">
-												<span>STRENGTH</span>
+												<span>{$t('auth.register.strength')}</span>
 												<span>{passwordStrength}%</span>
 											</div>
 											<div class="h-2 w-full rounded-full bg-slate-200/50">
@@ -279,12 +280,12 @@
 								</div>
 
 								<div class="space-y-2">
-									<Label
-										for="confirmPassword"
-										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-									>
-										Confirm Password
-									</Label>
+								<Label
+									for="confirmPassword"
+									class="ml-1 text-sm font-bold tracking-wide text-slate-800"
+								>
+									{$t('auth.register.confirmPassword')}
+								</Label>
 									<Input
 										id="confirmPassword"
 										type="password"
@@ -300,9 +301,9 @@
 								</div>
 
 								<div class="relative space-y-2">
-									<Label for="role" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										Role
-									</Label>
+								<Label for="role" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.register.role')}
+								</Label>
 
 									<!-- Custom Liquid Dropdown Trigger -->
 									<button
@@ -355,23 +356,23 @@
 									onclick={nextStep}
 									class="glass-button h-14 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-emerald-400 hover:to-teal-500 active:scale-[0.98]"
 								>
-									Next Step <ArrowRight class="ml-2 h-6 w-6" />
+									{$t('auth.register.nextStep')} <ArrowRight class="ml-2 h-6 w-6" />
 								</Button>
 							</div>
 						{:else}
 							<div class="space-y-6" in:slide={{ axis: 'x', duration: 300 }}>
 								<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 									<div class="space-y-2">
-										<Label
-											for="firstName"
-											class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-										>
-											First Name
-										</Label>
-										<Input
-											id="firstName"
-											type="text"
-											placeholder="John"
+									<Label
+										for="firstName"
+										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
+									>
+										{$t('auth.register.firstName')}
+									</Label>
+									<Input
+										id="firstName"
+										type="text"
+										placeholder={$t('auth.register.firstNamePlaceholder')}
 											bind:value={$form.firstName}
 											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 										/>
@@ -381,16 +382,16 @@
 									</div>
 
 									<div class="space-y-2">
-										<Label
-											for="lastName"
-											class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-										>
-											Last Name
-										</Label>
-										<Input
-											id="lastName"
-											type="text"
-											placeholder="Doe"
+									<Label
+										for="lastName"
+										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
+									>
+										{$t('auth.register.lastName')}
+									</Label>
+									<Input
+										id="lastName"
+										type="text"
+										placeholder={$t('auth.register.lastNamePlaceholder')}
 											bind:value={$form.lastName}
 											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 										/>
@@ -401,13 +402,13 @@
 								</div>
 
 								<div class="space-y-2">
-									<Label for="email" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										Email
-									</Label>
-									<Input
-										id="email"
-										type="email"
-										placeholder="john@example.com"
+								<Label for="email" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.register.email')}
+								</Label>
+								<Input
+									id="email"
+									type="email"
+									placeholder={$t('auth.register.emailPlaceholder')}
 										bind:value={$form.email}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
@@ -417,16 +418,16 @@
 								</div>
 
 								<div class="space-y-2">
-									<Label
-										for="phoneNumber"
-										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-									>
-										Phone
-									</Label>
-									<Input
-										id="phoneNumber"
-										type="tel"
-										placeholder="(555) 123-4567"
+								<Label
+									for="phoneNumber"
+									class="ml-1 text-sm font-bold tracking-wide text-slate-800"
+								>
+									{$t('auth.register.phone')}
+								</Label>
+								<Input
+									id="phoneNumber"
+									type="tel"
+									placeholder={$t('auth.register.phonePlaceholder')}
 										bind:value={$form.phoneNumber}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
@@ -436,13 +437,13 @@
 								</div>
 
 								<div class="space-y-2">
-									<Label for="address" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										Address
-									</Label>
-									<Input
-										id="address"
-										type="text"
-										placeholder="123 Main Street"
+								<Label for="address" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
+									{$t('auth.register.address')}
+								</Label>
+								<Input
+									id="address"
+									type="text"
+									placeholder={$t('auth.register.addressPlaceholder')}
 										bind:value={$form.address}
 										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
 									/>
@@ -455,7 +456,7 @@
 										onclick={prevStep}
 										class="h-14 w-1/3 rounded-2xl border-white/60 bg-white/40 text-lg font-bold text-slate-700 hover:bg-white/60"
 									>
-										<ArrowLeft class="mr-2 h-5 w-5" /> Back
+										<ArrowLeft class="mr-2 h-5 w-5" /> {$t('auth.register.back')}
 									</Button>
 									<Button
 										type="submit"
@@ -483,9 +484,9 @@
 													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 												></path>
 											</svg>
-											Creating...
-										{:else}
-											Complete
+										{$t('auth.register.creating')}
+									{:else}
+										{$t('auth.register.complete')}
 										{/if}
 									</Button>
 								</div>
@@ -493,15 +494,15 @@
 						{/if}
 					</form>
 
-					<div class="mt-8 text-center text-sm font-medium text-slate-600">
-						Already have an account?{' '}
-						<a
-							href="/login"
-							class="text-base font-bold text-emerald-700 transition-colors hover:text-emerald-600"
-						>
-							Sign in here
-						</a>
-					</div>
+				<div class="mt-8 text-center text-sm font-medium text-slate-600">
+					{$t('auth.register.haveAccount')}{' '}
+					<a
+						href="/login"
+						class="text-base font-bold text-emerald-700 transition-colors hover:text-emerald-600"
+					>
+						{$t('auth.register.signIn')}
+					</a>
+				</div>
 				</CardContent>
 			</Card>
 		</div>

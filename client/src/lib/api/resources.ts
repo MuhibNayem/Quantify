@@ -1,4 +1,5 @@
 import api, { API_BASE_URL } from '$lib/api';
+import { getCached, setCache, invalidateCache } from '$lib/cache';
 import type {
 	Alert,
 	Batch,
@@ -32,28 +33,57 @@ import type {
 	TeamOverview,
 	WeeklySummary,
 } from '$lib/types';
+import type { AxiosRequestConfig } from 'axios';
+
+async function cachedGet<T>(key: string, url: string, config?: AxiosRequestConfig): Promise<T> {
+	const cached = getCached<T>(key);
+	if (cached) return cached;
+	const response = await api.get<T>(url, config);
+	setCache(key, response.data);
+	return response.data;
+}
 
 export const searchApi = {
 	query: async (q: string) => (await api.get('/search', { params: { q } })).data,
 };
 
 export const dashboardApi = {
-	getSummary: async () => (await api.get<DashboardSummary>('/dashboard/summary')).data,
+	getSummary: async () => cachedGet<DashboardSummary>('dashboard:summary', '/dashboard/summary'),
 };
 
 export const productsApi = {
-	list: async (page: number = 1, limit: number = 100, search?: string) => (await api.get<PaginatedProducts>(`/products?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`)).data,
-	get: async (id: number) => (await api.get<Product>(`/products/${id}`)).data,
-	getBySku: async (sku: string) => (await api.get<Product>(`/products/sku/${sku}`)).data,
-	create: async (payload: Record<string, unknown>) => (await api.post<Product>('/products', payload)).data,
-	update: async (id: number, payload: Record<string, unknown>) => (await api.put<Product>(`/products/${id}`, payload)).data,
-	remove: async (id: number) => (await api.delete(`/products/${id}`)).data,
+	list: async (page: number = 1, limit: number = 100, search?: string) =>
+		cachedGet<PaginatedProducts>(`products:list:${page}:${limit}:${search ?? ''}`, `/products?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`),
+	get: async (id: number) => cachedGet<Product>(`products:get:${id}`, `/products/${id}`),
+	getBySku: async (sku: string) => cachedGet<Product>(`products:sku:${sku}`, `/products/sku/${sku}`),
+	create: async (payload: Record<string, unknown>) => {
+		const data = (await api.post<Product>('/products', payload)).data;
+		invalidateCache('products:');
+		return data;
+	},
+	update: async (id: number, payload: Record<string, unknown>) => {
+		const data = (await api.put<Product>(`/products/${id}`, payload)).data;
+		invalidateCache('products:');
+		return data;
+	},
+	remove: async (id: number) => {
+		const data = (await api.delete(`/products/${id}`)).data;
+		invalidateCache('products:');
+		return data;
+	},
 	stock: async (id: number, params?: Record<string, string | number | undefined>) =>
-		(await api.get(`/products/${id}/stock`, { params })).data as { productId: number; currentQuantity: number; batches: Batch[] },
-	stockHistory: async (id: number) => (await api.get<StockAdjustment[]>(`/products/${id}/history`)).data,
-	createBatch: async (id: number, payload: Record<string, unknown>) => (await api.post<Batch>(`/products/${id}/stock/batches`, payload)).data,
-	adjustStock: async (id: number, payload: Record<string, unknown>) =>
-		(await api.post(`/products/${id}/stock/adjustments`, payload)).data,
+		cachedGet<{ productId: number; currentQuantity: number; batches: Batch[] }>(`products:stock:${id}`, `/products/${id}/stock`, { params }),
+	stockHistory: async (id: number) => cachedGet<StockAdjustment[]>(`products:history:${id}`, `/products/${id}/history`),
+	createBatch: async (id: number, payload: Record<string, unknown>) => {
+		const data = (await api.post<Batch>(`/products/${id}/stock/batches`, payload)).data;
+		invalidateCache(`products:stock:${id}`);
+		return data;
+	},
+	adjustStock: async (id: number, payload: Record<string, unknown>) => {
+		const data = (await api.post(`/products/${id}/stock/adjustments`, payload)).data;
+		invalidateCache(`products:stock:${id}`);
+		return data;
+	},
 };
 
 export const promotionsApi = {
@@ -76,38 +106,86 @@ export const promotionsApi = {
 };
 
 export const categoriesApi = {
-	list: async () => (await api.get<Category[]>('/categories')).data,
-	get: async (id: number) => (await api.get<Category>(`/categories/${id}`)).data,
-	getByName: async (name: string) => (await api.get<Category>(`/categories/name/${name}`)).data,
-	create: async (payload: { name: string }) => (await api.post<Category>('/categories', payload)).data,
-	update: async (id: number, payload: { name: string }) => (await api.put<Category>(`/categories/${id}`, payload)).data,
-	remove: async (id: number) => (await api.delete(`/categories/${id}`)).data,
+	list: async () => cachedGet<Category[]>('categories:list', '/categories'),
+	get: async (id: number) => cachedGet<Category>(`categories:get:${id}`, `/categories/${id}`),
+	getByName: async (name: string) => cachedGet<Category>(`categories:name:${name}`, `/categories/name/${name}`),
+	create: async (payload: { name: string }) => {
+		const data = (await api.post<Category>('/categories', payload)).data;
+		invalidateCache('categories:');
+		return data;
+	},
+	update: async (id: number, payload: { name: string }) => {
+		const data = (await api.put<Category>(`/categories/${id}`, payload)).data;
+		invalidateCache('categories:');
+		return data;
+	},
+	remove: async (id: number) => {
+		const data = (await api.delete(`/categories/${id}`)).data;
+		invalidateCache('categories:');
+		return data;
+	},
 };
 
 export const subCategoriesApi = {
-	list: async (categoryId: number) => (await api.get<SubCategory[]>(`/categories/${categoryId}/sub-categories`)).data,
-	get: async (id: number) => (await api.get<SubCategory>(`/sub-categories/${id}`)).data,
-	create: async (data: { name: string; }, categoryId: number) => (await api.post<SubCategory>(`/categories/${categoryId}/sub-categories`, data)).data,
-	update: async (id: number, data: { name: string }) => (await api.put<SubCategory>(`/sub-categories/${id}`, data)).data,
-	remove: async (id: number) => (await api.delete(`/sub-categories/${id}`)).data,
+	list: async (categoryId: number) => cachedGet<SubCategory[]>(`subcategories:list:${categoryId}`, `/categories/${categoryId}/sub-categories`),
+	get: async (id: number) => cachedGet<SubCategory>(`subcategories:get:${id}`, `/sub-categories/${id}`),
+	create: async (data: { name: string; }, categoryId: number) => {
+		const result = (await api.post<SubCategory>(`/categories/${categoryId}/sub-categories`, data)).data;
+		invalidateCache('subcategories:');
+		return result;
+	},
+	update: async (id: number, data: { name: string }) => {
+		const result = (await api.put<SubCategory>(`/sub-categories/${id}`, data)).data;
+		invalidateCache('subcategories:');
+		return result;
+	},
+	remove: async (id: number) => {
+		const result = (await api.delete(`/sub-categories/${id}`)).data;
+		invalidateCache('subcategories:');
+		return result;
+	},
 };
 
 export const suppliersApi = {
-	list: async () => (await api.get<Supplier[]>('/suppliers')).data,
-	get: async (id: number) => (await api.get<Supplier>(`/suppliers/${id}`)).data,
-	getByName: async (name: string) => (await api.get<Supplier>(`/suppliers/name/${name}`)).data,
-	create: async (payload: Record<string, unknown>) => (await api.post<Supplier>('/suppliers', payload)).data,
-	update: async (id: number, payload: Record<string, unknown>) => (await api.put<Supplier>(`/suppliers/${id}`, payload)).data,
-	remove: async (id: number) => (await api.delete(`/suppliers/${id}`)).data,
-	performance: async (id: number) => (await api.get<SupplierPerformance>(`/suppliers/${id}/performance`)).data,
+	list: async () => cachedGet<Supplier[]>('suppliers:list', '/suppliers'),
+	get: async (id: number) => cachedGet<Supplier>(`suppliers:get:${id}`, `/suppliers/${id}`),
+	getByName: async (name: string) => cachedGet<Supplier>(`suppliers:name:${name}`, `/suppliers/name/${name}`),
+	create: async (payload: Record<string, unknown>) => {
+		const data = (await api.post<Supplier>('/suppliers', payload)).data;
+		invalidateCache('suppliers:');
+		return data;
+	},
+	update: async (id: number, payload: Record<string, unknown>) => {
+		const data = (await api.put<Supplier>(`/suppliers/${id}`, payload)).data;
+		invalidateCache('suppliers:');
+		return data;
+	},
+	remove: async (id: number) => {
+		const data = (await api.delete(`/suppliers/${id}`)).data;
+		invalidateCache('suppliers:');
+		return data;
+	},
+	performance: async (id: number) => cachedGet<SupplierPerformance>(`suppliers:perf:${id}`, `/suppliers/${id}/performance`),
 };
 
 export const locationsApi = {
-	list: async () => (await api.get<Location[]>('/locations')).data,
-	get: async (id: number) => (await api.get<Location>(`/locations/${id}`)).data,
-	create: async (payload: Record<string, unknown>) => (await api.post<Location>('/locations', payload)).data,
-	update: async (id: number, payload: Record<string, unknown>) => (await api.put<Location>(`/locations/${id}`, payload)).data,
-	remove: async (id: number) => (await api.delete(`/locations/${id}`)).data,
+	list: async () => cachedGet<Location[]>('locations:list', '/locations'),
+	get: async (id: number) => cachedGet<Location>(`locations:get:${id}`, `/locations/${id}`),
+	create: async (payload: Record<string, unknown>) => {
+		const data = (await api.post<Location>('/locations', payload)).data;
+		invalidateCache('locations:');
+		return data;
+	},
+	update: async (id: number, payload: Record<string, unknown>) => {
+		const data = (await api.put<Location>(`/locations/${id}`, payload)).data;
+		invalidateCache('locations:');
+		return data;
+	},
+	remove: async (id: number) => {
+		const data = (await api.delete(`/locations/${id}`)).data;
+		invalidateCache('locations:');
+		return data;
+	},
 };
 
 export const barcodeApi = {
