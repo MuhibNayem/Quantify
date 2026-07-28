@@ -1,37 +1,38 @@
 package main
 
 import (
-	"inventory/backend/internal/config"
-	"inventory/backend/internal/migrations"
-	"inventory/backend/internal/repository"
+	"flag"
+	"fmt"
+	"log"
 	"os"
 
-	"github.com/sirupsen/logrus"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 func main() {
-	// Initialize Logrus
-	logrus.SetFormatter(&logrus.JSONFormatter{})
-	logrus.SetOutput(os.Stdout)
-	logrus.SetLevel(logrus.InfoLevel)
+	dir := flag.String("dir", "migrations", "migrations directory")
+	cmd := flag.String("cmd", "up", "up | down | version")
+	dsn := flag.String("dsn", os.Getenv("DATABASE_URL"), "Postgres DSN")
+	flag.Parse()
 
-	logrus.Info("Starting database migration for search index...")
-
-	// Load configuration
-	cfg, err := config.LoadConfig()
+	m, err := migrate.New(fmt.Sprintf("file://%s", *dir), *dsn)
 	if err != nil {
-		logrus.Fatalf("Failed to load configuration: %v", err)
+		log.Fatal(err)
 	}
-
-	// Initialize database connection
-	repository.InitDB(cfg)
-	db := repository.DB()
-	defer repository.CloseDB()
-
-	// Run the migration to populate the search index
-	if err := migrations.PopulateSearchIndex(db); err != nil {
-		logrus.Fatalf("Failed to run search index migration: %v", err)
+	switch *cmd {
+	case "up":
+		err = m.Up()
+	case "down":
+		err = m.Down()
+	case "version":
+		v, dirty, _ := m.Version()
+		fmt.Printf("version=%d dirty=%v\n", v, dirty)
+		return
 	}
-
-	logrus.Info("Search index migration completed successfully.")
+	if err != nil && err != migrate.ErrNoChange {
+		log.Fatal(err)
+	}
+	fmt.Println("OK")
 }
