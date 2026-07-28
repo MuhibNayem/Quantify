@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/repository"
@@ -9,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -59,9 +59,11 @@ func (h *NotificationHandler) ListNotifications(c *gin.Context) {
 
 	// Authorization check
 	authUserRole := c.GetString("role")
-	fmt.Println("authUserID:", authUserID)
-	fmt.Println("authUserRole:", authUserRole)
-	fmt.Println("userID:", userID)
+	logrus.WithFields(logrus.Fields{
+		"auth_user_id": authUserID,
+		"auth_role":    authUserRole,
+		"user_id":      userID,
+	}).Debug("ListNotifications authorization check")
 
 	if authUserRole != "Admin" && authUserID != uint(userID) {
 		c.Error(appErrors.NewAppError("Forbidden", http.StatusForbidden, nil))

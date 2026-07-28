@@ -29,6 +29,10 @@ func SetupRouter(c *app.Container) *gin.Engine {
 		AllowWebSockets:  true,
 	}
 
+	r.Use(middleware.RequestID())
+
+	r.Use(middleware.Metrics())
+
 	r.Use(cors.New(corsConfig))
 
 	r.Use(middleware.SecurityHeaders())

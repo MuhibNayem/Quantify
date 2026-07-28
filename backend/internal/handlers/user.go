@@ -1,13 +1,13 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
@@ -244,8 +244,11 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		}
 	}
 
-	// DEBUG: Log the role and extracted permissions
-	fmt.Printf("DEBUG: LoginUser - User Role: %s (ID: %d), Found %d permissions\n", user.Role.Name, user.Role.ID, len(permissions))
+	logrus.WithFields(logrus.Fields{
+		"role":        user.Role.Name,
+		"role_id":     user.Role.ID,
+		"permissions": len(permissions),
+	}).Debug("LoginUser resolved role permissions")
 
 	user.Password = ""
 	c.JSON(http.StatusOK, gin.H{

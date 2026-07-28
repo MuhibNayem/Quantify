@@ -127,7 +127,7 @@ func (s *purchaseOrderService) SendPurchaseOrder(poID string) (*domain.PurchaseO
 
 	go func() {
 		if err := s.emailService.SendPurchaseOrderEmail(po); err != nil {
-			fmt.Printf("Failed to send PO email: %v\n", err)
+			logrus.WithError(err).WithField("po_id", po.ID).Error("Failed to send PO email")
 		}
 	}()
 
