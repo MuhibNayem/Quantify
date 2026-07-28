@@ -33,6 +33,11 @@ type App struct {
 	Server           *http.Server
 	Cron             *cron.Cron
 	MinIOUploader    storage.Uploader
+
+	// cancelFuncs holds the cancel funcs returned by each consumer's
+	// Start(). Stop() invokes them so the AMQP Subscribe goroutines exit
+	// before we tear down the message-broker connection.
+	cancelFuncs []context.CancelFunc
 }
 
 // NewApp initializes the application and its dependencies.
@@ -209,6 +214,13 @@ func (app *App) Run(ctx context.Context) {
 func (app *App) Stop() {
 	logrus.Info("Shutdown signal received, shutting down gracefully...")
 
+	// Cancel consumer subscriptions first so the AMQP delivery loops
+	// exit before we close the broker connection underneath them.
+	for _, cancel := range app.cancelFuncs {
+		cancel()
+	}
+	app.cancelFuncs = nil
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -239,23 +251,20 @@ func (app *App) startConsumers(ctx context.Context) {
 	if app.Cfg.ConsumerConcurrency > 0 {
 		workerCount = app.Cfg.ConsumerConcurrency
 	}
-	// We don't need to defer stop here because the context cancellation will handle it (if implemented correctly)
-	// or we rely on process termination.
-	// However, consumers.Start returns a cancel func. Ideally we should call it on Stop.
-	// For simplicity in this refactor, we let them run until context is done (which is passed from main).
-	// But wait, Start() returns a cancelFunc that STOPS the subscription.
-	// If we don't store it, we can't stop it explicitly.
-	// But since we pass ctx to Start, if that ctx is cancelled, does the consumer stop?
-	// Let's check AlertConsumer.Start:
-	// return message_broker.Subscribe(ctx, ...)
-	// message_broker.Subscribe usually listens to ctx.Done().
-	// So passing ctx from Run (which is ctx.Done() when signal received) should be enough.
 
-	bulkConsumer.Start(ctx, workerCount)
+	if bulkCancel := bulkConsumer.Start(ctx, workerCount); bulkCancel != nil {
+		app.cancelFuncs = append(app.cancelFuncs, bulkCancel)
+	}
 
 	alertConsumer := consumers.NewAlertConsumer(repository.DB, app.NotificationRepo, app.Hub, app.Cfg)
-	alertConsumer.Start(ctx)
+	alertCancel := alertConsumer.Start(ctx)
+	if alertCancel != nil {
+		app.cancelFuncs = append(app.cancelFuncs, alertCancel)
+	}
 
 	reportingConsumer := consumers.NewReportingConsumer(app.ReportingService, app.JobRepo)
-	reportingConsumer.Start(ctx)
+	reportingCancel := reportingConsumer.Start(ctx)
+	if reportingCancel != nil {
+		app.cancelFuncs = append(app.cancelFuncs, reportingCancel)
+	}
 }
