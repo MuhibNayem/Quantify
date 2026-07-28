@@ -1,13 +1,9 @@
 package router
 
 import (
-	"inventory/backend/internal/config"
+	"inventory/backend/internal/app"
 	"inventory/backend/internal/handlers"
 	"inventory/backend/internal/middleware"
-	"inventory/backend/internal/repository"
-	"inventory/backend/internal/services"
-	"inventory/backend/internal/storage"
-	"inventory/backend/internal/websocket"
 	"net/http"
 	"time"
 
@@ -20,7 +16,7 @@ import (
 	_ "inventory/backend/api"
 )
 
-func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.JobRepository, minioUploader storage.Uploader) *gin.Engine {
+func SetupRouter(c *app.Container) *gin.Engine {
 	r := gin.Default()
 
 	corsConfig := cors.Config{
@@ -39,70 +35,35 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 
 	r.Use(middleware.ErrorHandler())
 
-	// Initialize repositories
-	db := repository.DB
-	productRepo := repository.NewProductRepository(db)
-	categoryRepo := repository.NewCategoryRepository(db)
-	supplierRepo := repository.NewSupplierRepository(db)
-	paymentRepo := repository.NewPaymentRepository(db)
-	forecastingRepo := repository.NewForecastingRepository(db)
-	barcodeRepo := repository.NewBarcodeRepository(db)
-	crmRepo := repository.NewCRMRepository(db)
-	timeTrackingRepo := repository.NewTimeTrackingRepository(db)
-	reportsRepo := repository.NewReportsRepository(db)
-	notificationRepo := repository.NewNotificationRepository(db)
-	searchRepo := repository.NewSearchRepository(db)
-	userRepo := repository.NewUserRepository(db)
-	dashboardRepo := repository.NewDashboardRepository(db)
-	replenishmentRepo := repository.NewReplenishmentRepository(db)
-	settingsRepo := repository.NewSettingsRepository(db)
-	roleRepo := repository.NewRoleRepository(db, repository.GetClient())
-
-	// Initialize services
-	paymentService := services.NewPaymentService(cfg, paymentRepo)
-	forecastingService := services.NewForecastingService(forecastingRepo, cfg)
-	barcodeService := services.NewBarcodeService(barcodeRepo)
-	settingsService := services.NewSettingsService(settingsRepo)
-	crmService := services.NewCRMService(crmRepo, db, settingsService, cfg)
-	timeTrackingService := services.NewTimeTrackingService(timeTrackingRepo, userRepo)
-	integrationService := services.NewIntegrationService()
-	reportingService := services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
-	searchService := services.NewSearchService(db, searchRepo, productRepo, userRepo, supplierRepo, categoryRepo)
-	replenishmentService := services.NewReplenishmentService(replenishmentRepo)
-	roleService := services.NewRoleService(roleRepo)
-	salesService := services.NewSalesService(db, settingsService, reportingService)
-	emailService := services.NewEmailService(cfg)
-	purchaseOrderService := services.NewPurchaseOrderService(db, emailService)
-	vendorReturnService := services.NewVendorReturnService(db)
-
-	// Initialize handlers
-	productHandler := handlers.NewProductHandler(productRepo, db)
-	categoryHandler := handlers.NewCategoryHandler(categoryRepo, db)
-	supplierHandler := handlers.NewSupplierHandler(supplierRepo, db)
-	paymentHandler := handlers.NewPaymentHandler(paymentService)
-	replenishmentHandler := handlers.NewReplenishmentHandler(forecastingService, replenishmentService, purchaseOrderService, vendorReturnService, hub, notificationRepo, emailService)
-	barcodeHandler := handlers.NewBarcodeHandler(barcodeService)
-	crmHandler := handlers.NewCRMHandler(crmService, db)
-	timeTrackingHandler := handlers.NewTimeTrackingHandler(timeTrackingService)
-	webhookHandler := handlers.NewWebhookHandler(integrationService)
-	reportHandler := handlers.NewReportHandler(reportingService, jobRepo)
-	bulkHandler := handlers.NewBulkHandler(jobRepo, minioUploader)
-	notificationHandler := handlers.NewNotificationHandler(notificationRepo).WithDB(db)
-	userHandler := handlers.NewUserHandler(userRepo, cfg)
-	searchHandler := handlers.NewSearchHandler(searchService)
-	dashboardHandler := handlers.NewDashboardHandler(dashboardRepo)
-	settingsHandler := handlers.NewSettingsHandler(settingsService)
-	roleHandler := handlers.NewRoleHandler(roleService)
-	returnHandler := handlers.NewReturnHandler(db, cfg, settingsService, hub, notificationRepo, reportingService)
-	promotionHandler := handlers.NewPromotionHandler(db)
+	productHandler := c.Product
+	categoryHandler := c.Category
+	supplierHandler := c.Supplier
+	paymentHandler := c.PaymentHandler
+	replenishmentHandler := c.ReplenishmentHandler
+	barcodeHandler := c.BarcodeHandler
+	crmHandler := c.CRMHandler
+	timeTrackingHandler := c.TimeTrackingHandler
+	webhookHandler := c.Webhook
+	reportHandler := c.Report
+	bulkHandler := c.Bulk
+	notificationHandler := c.Notification
+	userHandler := c.User
+	searchHandler := c.SearchHandler
+	dashboardHandler := c.DashboardHandler
+	settingsHandler := c.SettingsHandler
+	roleHandler := c.RoleHandler
+	returnHandler := c.Return
+	promotionHandler := c.Promotion
+	salesHandler := c.SalesHandler
+	roleRepo := c.Roles
 
 	// Public routes (no tenant middleware)
 	publicRoutes := r.Group("/")
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
-		publicRoutes.GET("/ws", func(c *gin.Context) {
-			handlers.ServeWs(hub, c, notificationRepo, roleRepo, cfg)
-		})
+	publicRoutes.GET("/ws", func(ctx *gin.Context) {
+		handlers.ServeWs(c.Hub, ctx, c.Notifications, roleRepo, c.Cfg)
+	})
 		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
 		// Swagger UI
 		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -258,11 +219,11 @@ func SetupRouter(cfg *config.Config, hub *websocket.Hub, jobRepo *repository.Job
 			// Let's create SalesService in SetupRouter and pass it here.
 			// Wait, I need to update SetupRouter signature or initialize it inside.
 			// See below for SetupRouter update.
-			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService, reportingService, salesService).Checkout)
-			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), handlers.NewSalesHandler(db, settingsService, reportingService, salesService).ListProducts)
-			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService, salesService).ListOrders)
-			sales.GET("/orders/:orderNumber", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService, salesService).GetOrderByNumber)
-			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), handlers.NewSalesHandler(db, settingsService, reportingService, salesService).ListAllOrders)
+			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), salesHandler.Checkout)
+			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), salesHandler.ListProducts)
+			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.ListOrders)
+			sales.GET("/orders/:orderNumber", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.GetOrderByNumber)
+			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.ListAllOrders)
 		}
 
 		// Returns

@@ -88,40 +88,65 @@ func NewApp(cfg *config.Config) *App {
 		Uploader: minioUploader,
 		Jobs:     jobRepo,
 	}
-	reportsRepo := repository.NewReportsRepository(repository.DB)
-	notificationRepo := repository.NewNotificationRepository(repository.DB)
-	settingsRepo := repository.NewSettingsRepository(repository.DB)
+	c.Products = repository.NewProductRepository(c.DB)
+	c.Categories = repository.NewCategoryRepository(c.DB)
+	c.Suppliers = repository.NewSupplierRepository(c.DB)
+	c.Payments = repository.NewPaymentRepository(c.DB)
+	c.Forecasting = repository.NewForecastingRepository(c.DB)
+	c.Barcode = repository.NewBarcodeRepository(c.DB)
+	c.CRM = repository.NewCRMRepository(c.DB)
+	c.TimeTracking = repository.NewTimeTrackingRepository(c.DB)
+	c.Reports = repository.NewReportsRepository(c.DB)
+	c.Notifications = repository.NewNotificationRepository(c.DB)
+	c.Search = repository.NewSearchRepository(c.DB)
+	c.Users = repository.NewUserRepository(c.DB)
+	c.Dashboard = repository.NewDashboardRepository(c.DB)
+	c.Replenishment = repository.NewReplenishmentRepository(c.DB)
+	c.SettingsRepo = repository.NewSettingsRepository(c.DB)
+	c.Roles = repository.NewRoleRepository(c.DB, c.Redis)
+	c.Locations = repository.NewLocationRepository(c.DB)
 
 	// Initialize Services
-	settingsService := services.NewSettingsService(settingsRepo)
-	c.SettingsRepo = settingsRepo
-	c.SettingsSvc = settingsService
-	c.Reports = reportsRepo
-	c.Notifications = notificationRepo
-	c.Reporting = services.NewReportingService(reportsRepo, minioUploader, jobRepo, hub, cfg, settingsService)
-	reportingService := c.Reporting
-	c.Sales = services.NewSalesService(repository.DB, settingsService, reportingService)
-	c.Users = repository.NewUserRepository(repository.DB)
-	c.Products = repository.NewProductRepository(repository.DB)
-	c.Categories = repository.NewCategoryRepository(repository.DB)
-	c.Suppliers = repository.NewSupplierRepository(repository.DB)
-	c.Locations = repository.NewLocationRepository(repository.DB)
-	c.User = handlers.NewUserHandler(c.Users, cfg)
-	c.Product = handlers.NewProductHandler(c.Products, repository.DB)
-	c.Category = handlers.NewCategoryHandler(c.Categories, repository.DB)
-	c.Supplier = handlers.NewSupplierHandler(c.Suppliers, repository.DB)
-	c.Report = handlers.NewReportHandler(reportingService, jobRepo)
-	c.Notification = handlers.NewNotificationHandler(notificationRepo)
-	c.SettingsHandler = handlers.NewSettingsHandler(settingsService)
-	c.SalesHandler = handlers.NewSalesHandler(repository.DB, settingsService, reportingService, c.Sales)
+	c.Payment = services.NewPaymentService(cfg, c.Payments)
+	c.ForecastingSvc = services.NewForecastingService(c.Forecasting, cfg)
+	c.BarcodeSvc = services.NewBarcodeService(c.Barcode)
+	c.SettingsSvc = services.NewSettingsService(c.SettingsRepo)
+	c.CRMService = services.NewCRMService(c.CRM, c.DB, c.SettingsSvc, cfg)
+	c.TimeTrackingSvc = services.NewTimeTrackingService(c.TimeTracking, c.Users)
+	c.Integration = services.NewIntegrationService()
+	c.Reporting = services.NewReportingService(c.Reports, c.Uploader, c.Jobs, c.Hub, cfg, c.SettingsSvc)
+	c.SearchSvc = services.NewSearchService(c.DB, c.Search, c.Products, c.Users, c.Suppliers, c.Categories)
+	c.ReplenishmentSvc = services.NewReplenishmentService(c.Replenishment)
+	c.Role = services.NewRoleService(c.Roles)
+	c.Sales = services.NewSalesService(c.DB, c.SettingsSvc, c.Reporting)
+	c.Email = services.NewEmailService(cfg)
+	c.PurchaseOrder = services.NewPurchaseOrderService(c.DB, c.Email)
+	c.VendorReturn = services.NewVendorReturnService(c.DB)
 
-	// Wait, SettingsService is an interface in handlers. Let's see how it was passed before.
-	// In original main.go:
-	// It wasn't explicitly initialized in the snippet I saw, but handlers.NewSalesHandler took it.
-	// Let's check handlers/sales.go again. It takes services.SettingsService.
-	// We need to find where SettingsService is defined and implemented.
-	// I'll assume for now there's a NewSettingsService or similar.
-	// If not, I might need to check services package.
+	// Initialize Handlers
+	c.Product = handlers.NewProductHandler(c.Products, c.DB)
+	c.Category = handlers.NewCategoryHandler(c.Categories, c.DB)
+	c.Supplier = handlers.NewSupplierHandler(c.Suppliers, c.DB)
+	c.PaymentHandler = handlers.NewPaymentHandler(c.Payment)
+	c.ReplenishmentHandler = handlers.NewReplenishmentHandler(c.ForecastingSvc, c.ReplenishmentSvc, c.PurchaseOrder, c.VendorReturn, c.Hub, c.Notifications, c.Email)
+	c.BarcodeHandler = handlers.NewBarcodeHandler(c.BarcodeSvc)
+	c.CRMHandler = handlers.NewCRMHandler(c.CRMService, c.DB)
+	c.TimeTrackingHandler = handlers.NewTimeTrackingHandler(c.TimeTrackingSvc)
+	c.Webhook = handlers.NewWebhookHandler(c.Integration)
+	c.Report = handlers.NewReportHandler(c.Reporting, c.Jobs)
+	c.Bulk = handlers.NewBulkHandler(c.Jobs, c.Uploader)
+	c.Notification = handlers.NewNotificationHandler(c.Notifications).WithDB(c.DB)
+	c.User = handlers.NewUserHandler(c.Users, cfg)
+	c.SearchHandler = handlers.NewSearchHandler(c.SearchSvc)
+	c.DashboardHandler = handlers.NewDashboardHandler(c.Dashboard)
+	c.SettingsHandler = handlers.NewSettingsHandler(c.SettingsSvc)
+	c.RoleHandler = handlers.NewRoleHandler(c.Role)
+	c.Return = handlers.NewReturnHandler(c.DB, cfg, c.SettingsSvc, c.Hub, c.Notifications, c.Reporting)
+	c.Promotion = handlers.NewPromotionHandler(c.DB)
+	c.SalesHandler = handlers.NewSalesHandler(c.DB, c.SettingsSvc, c.Reporting, c.Sales)
+
+	reportingService := c.Reporting
+	notificationRepo := c.Notifications
 
 	// Initialize and start the BulkConsumer
 	// We will start consumers in Run()
@@ -139,7 +164,7 @@ func NewApp(cfg *config.Config) *App {
 	})
 
 	// Setup router
-	r := router.SetupRouter(cfg, hub, jobRepo, minioUploader)
+	r := router.SetupRouter(c)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.ServerPort,
