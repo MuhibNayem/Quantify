@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	appPkg "inventory/backend/internal/app"
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/repository"
@@ -28,9 +29,9 @@ func TestStartConsumers_StoresCancelFuncs(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:start-consumers?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
 
-	prevDB := repository.DB
-	repository.DB = db
-	t.Cleanup(func() { repository.DB = prevDB })
+	prevDB := repository.DB()
+	repository.SetDB(db)
+	t.Cleanup(func() { repository.SetDB(prevDB) })
 
 	// InitRabbitMQ with a black-hole URL — the manager exists but never
 	// connects. Subscribe() still returns a cancel func immediately; the
@@ -40,8 +41,9 @@ func TestStartConsumers_StoresCancelFuncs(t *testing.T) {
 	t.Cleanup(message_broker.Close)
 
 	app := &App{
-		Cfg:     &config.Config{ConsumerConcurrency: 1},
-		JobRepo: repository.NewJobRepository(db),
+		Cfg:       &config.Config{ConsumerConcurrency: 1},
+		Container: &appPkg.Container{DB: db},
+		JobRepo:   repository.NewJobRepository(db),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -75,9 +77,9 @@ func TestStop_InvokesAllCancelFuncs(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:stop-cancels?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)
 
-	prevDB := repository.DB
-	repository.DB = db
-	t.Cleanup(func() { repository.DB = prevDB })
+	prevDB := repository.DB()
+	repository.SetDB(db)
+	t.Cleanup(func() { repository.SetDB(prevDB) })
 
 	// Real consumer Start would return cancel funcs backed by an AMQP
 	// connection. We avoid that complexity here by populating cancelFuncs

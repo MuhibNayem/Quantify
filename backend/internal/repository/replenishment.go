@@ -9,7 +9,7 @@ func GetSalesDataForForecast(productID uint, days int) ([]domain.StockAdjustment
 	var salesData []domain.StockAdjustment
 	periodAgo := time.Now().AddDate(0, 0, -days)
 
-	err := DB.Model(&domain.StockAdjustment{}).
+	err := db.Model(&domain.StockAdjustment{}).
 		Where("product_id = ?", productID).
 		Where("type = ?", "STOCK_OUT").
 		Where("reason_code = ?", "SALE").

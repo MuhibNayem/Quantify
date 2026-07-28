@@ -45,23 +45,24 @@ type App struct {
 func NewApp(cfg *config.Config) *App {
 	// Initialize database connection
 	repository.InitDB(cfg)
+	gormDB := repository.DB()
 
 	// Check if search index migration should run
 	if os.Getenv("RUN_MIGRATIONS") == "true" {
 		logrus.Info("RUN_MIGRATIONS environment variable is true. Running search index population...")
-		if err := migrations.PopulateSearchIndex(repository.DB); err != nil {
+		if err := migrations.PopulateSearchIndex(gormDB); err != nil {
 			logrus.Fatalf("Failed to run search index population on startup: %v", err)
 		}
 		logrus.Info("Search index population completed.")
 	}
 
 	// Seed Roles
-	if err := migrations.SeedRoles(repository.DB); err != nil {
+	if err := migrations.SeedRoles(gormDB); err != nil {
 		logrus.Errorf("Failed to seed roles: %v", err)
 	}
 
 	// Seed AI Agent User
-	if err := migrations.SeedAIUser(repository.DB); err != nil {
+	if err := migrations.SeedAIUser(gormDB); err != nil {
 		logrus.Errorf("Failed to seed AI Agent user: %v", err)
 	}
 
@@ -85,10 +86,10 @@ func NewApp(cfg *config.Config) *App {
 	}
 
 	// Initialize Repositories
-	jobRepo := repository.NewJobRepository(repository.DB)
+	jobRepo := repository.NewJobRepository(gormDB)
 	c := &app.Container{
 		Cfg:      cfg,
-		DB:       repository.DB,
+		DB:       gormDB,
 		Redis:    repository.GetClient(),
 		Hub:      hub,
 		Uploader: minioUploader,
@@ -240,15 +241,16 @@ func (app *App) Stop() {
 }
 
 func (app *App) startConsumers(ctx context.Context) {
-	productRepo := repository.NewProductRepository(repository.DB)
-	categoryRepo := repository.NewCategoryRepository(repository.DB)
-	supplierRepo := repository.NewSupplierRepository(repository.DB)
-	locationRepo := repository.NewLocationRepository(repository.DB)
+	db := app.Container.DB
+	productRepo := repository.NewProductRepository(db)
+	categoryRepo := repository.NewCategoryRepository(db)
+	supplierRepo := repository.NewSupplierRepository(db)
+	locationRepo := repository.NewLocationRepository(db)
 
 	bulkImportSvc := services.NewBulkImportService(categoryRepo, supplierRepo, locationRepo)
 	bulkExportSvc := services.NewBulkExportService()
 
-	bulkConsumer := consumers.NewBulkConsumer(repository.DB, app.JobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, app.MinIOUploader, bulkImportSvc, bulkExportSvc, app.Hub, app.NotificationRepo)
+	bulkConsumer := consumers.NewBulkConsumer(db, app.JobRepo, productRepo, categoryRepo, supplierRepo, locationRepo, app.MinIOUploader, bulkImportSvc, bulkExportSvc, app.Hub, app.NotificationRepo)
 
 	workerCount := 1
 	if app.Cfg.ConsumerConcurrency > 0 {
@@ -259,7 +261,7 @@ func (app *App) startConsumers(ctx context.Context) {
 		app.cancelFuncs = append(app.cancelFuncs, bulkCancel)
 	}
 
-	alertConsumer := consumers.NewAlertConsumer(repository.DB, app.NotificationRepo, app.Hub, app.Cfg)
+	alertConsumer := consumers.NewAlertConsumer(db, app.NotificationRepo, app.Hub, app.Cfg)
 	alertCancel := alertConsumer.Start(ctx)
 	if alertCancel != nil {
 		app.cancelFuncs = append(app.cancelFuncs, alertCancel)

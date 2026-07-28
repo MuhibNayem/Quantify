@@ -37,7 +37,7 @@ func CreateLocation(c *gin.Context) {
 		Address: req.Address,
 	}
 
-	if err := repository.DB.Create(&location).Error; err != nil {
+	if err := repository.DB().Create(&location).Error; err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			c.Error(appErrors.NewAppError("Location with this name already exists", http.StatusConflict, err))
 			return
@@ -60,7 +60,7 @@ func CreateLocation(c *gin.Context) {
 // @Router /locations [get]
 func ListLocations(c *gin.Context) {
 	var locations []domain.Location
-	if err := repository.DB.Find(&locations).Error; err != nil {
+	if err := repository.DB().Find(&locations).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch locations", http.StatusInternalServerError, err))
 		return
 	}
@@ -81,7 +81,7 @@ func ListLocations(c *gin.Context) {
 func GetLocation(c *gin.Context) {
 	id := c.Param("id")
 	var location domain.Location
-	if err := repository.DB.First(&location, id).Error; err != nil {
+	if err := repository.DB().First(&location, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Location not found", http.StatusNotFound, err))
 			return
@@ -115,7 +115,7 @@ func UpdateLocation(c *gin.Context) {
 	}
 
 	var location domain.Location
-	if err := repository.DB.First(&location, id).Error; err != nil {
+	if err := repository.DB().First(&location, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Location not found", http.StatusNotFound, err))
 			return
@@ -124,7 +124,7 @@ func UpdateLocation(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Model(&location).Updates(domain.Location{
+	if err := repository.DB().Model(&location).Updates(domain.Location{
 		Name:    req.Name,
 		Address: req.Address,
 	}).Error; err != nil {
@@ -154,7 +154,7 @@ func UpdateLocation(c *gin.Context) {
 func DeleteLocation(c *gin.Context) {
 	id := c.Param("id")
 	var location domain.Location
-	if err := repository.DB.First(&location, id).Error; err != nil {
+	if err := repository.DB().First(&location, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Location not found", http.StatusNotFound, err))
 			return
@@ -165,7 +165,7 @@ func DeleteLocation(c *gin.Context) {
 
 	// Check for associated products
 	var productCount int64
-	repository.DB.Model(&domain.Product{}).Where("location_id = ?", id).Count(&productCount)
+	repository.DB().Model(&domain.Product{}).Where("location_id = ?", id).Count(&productCount)
 	if productCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete location: products are associated", http.StatusConflict, nil))
 		return
@@ -173,7 +173,7 @@ func DeleteLocation(c *gin.Context) {
 
 	// Check for associated batches
 	var batchCount int64
-	repository.DB.Model(&domain.Batch{}).Where("location_id = ?", id).Count(&batchCount)
+	repository.DB().Model(&domain.Batch{}).Where("location_id = ?", id).Count(&batchCount)
 	if batchCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete location: batches are associated", http.StatusConflict, nil))
 		return
@@ -181,13 +181,13 @@ func DeleteLocation(c *gin.Context) {
 
 	// Check for associated stock adjustments
 	var adjustmentCount int64
-	repository.DB.Model(&domain.StockAdjustment{}).Where("location_id = ?", id).Count(&adjustmentCount)
+	repository.DB().Model(&domain.StockAdjustment{}).Where("location_id = ?", id).Count(&adjustmentCount)
 	if adjustmentCount > 0 {
 		c.Error(appErrors.NewAppError("Cannot delete location: stock adjustments are associated", http.StatusConflict, nil))
 		return
 	}
 
-	if err := repository.DB.Delete(&location).Error; err != nil {
+	if err := repository.DB().Delete(&location).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete location", http.StatusInternalServerError, err))
 		return
 	}

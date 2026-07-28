@@ -66,7 +66,7 @@ func PutProductAlertSettings(c *gin.Context) {
 	}
 
 	var product domain.Product
-	if err := repository.DB.First(&product, productID).Error; err != nil {
+	if err := repository.DB().First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
@@ -83,7 +83,7 @@ func PutProductAlertSettings(c *gin.Context) {
 	}
 
 	// Upsert: create if not exists, update if exists
-	if err := repository.DB.Where(domain.ProductAlertSettings{ProductID: uint(productID)}).Assign(settings).FirstOrCreate(&settings).Error; err != nil {
+	if err := repository.DB().Where(domain.ProductAlertSettings{ProductID: uint(productID)}).Assign(settings).FirstOrCreate(&settings).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to save product alert settings", http.StatusInternalServerError, err))
 		return
 	}
@@ -105,7 +105,7 @@ func PutProductAlertSettings(c *gin.Context) {
 // @Router /alerts [get]
 func ListAlerts(c *gin.Context) {
 	var alerts []domain.Alert
-	db := repository.DB.Preload("Product").Preload("Batch")
+	db := repository.DB().Preload("Product").Preload("Batch")
 
 	if alertType := c.Query("type"); alertType != "" {
 		if _, ok := allowedAlertTypes[alertType]; !ok {
@@ -149,7 +149,7 @@ func ListAlerts(c *gin.Context) {
 func GetAlert(c *gin.Context) {
 	alertID := c.Param("alertId")
 	var alert domain.Alert
-	if err := repository.DB.Preload("Product").Preload("Batch").First(&alert, alertID).Error; err != nil {
+	if err := repository.DB().Preload("Product").Preload("Batch").First(&alert, alertID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Alert not found", http.StatusNotFound, err))
 			return
@@ -174,7 +174,7 @@ func GetAlert(c *gin.Context) {
 func ResolveAlert(c *gin.Context) {
 	alertID := c.Param("alertId")
 	var alert domain.Alert
-	if err := repository.DB.First(&alert, alertID).Error; err != nil {
+	if err := repository.DB().First(&alert, alertID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Alert not found", http.StatusNotFound, err))
 			return
@@ -188,7 +188,7 @@ func ResolveAlert(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Model(&alert).Update("Status", "RESOLVED").Error; err != nil {
+	if err := repository.DB().Model(&alert).Update("Status", "RESOLVED").Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to resolve alert", http.StatusInternalServerError, err))
 		return
 	}
@@ -223,7 +223,7 @@ func PutUserNotificationSettings(c *gin.Context) {
 	}
 
 	var user domain.User
-	if err := repository.DB.First(&user, userID).Error; err != nil {
+	if err := repository.DB().First(&user, userID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("User not found", http.StatusNotFound, err))
 			return
@@ -241,7 +241,7 @@ func PutUserNotificationSettings(c *gin.Context) {
 	}
 
 	// Upsert: create if not exists, update if exists
-	if err := repository.DB.Where(domain.UserNotificationSettings{UserID: uint(userID)}).Assign(settings).FirstOrCreate(&settings).Error; err != nil {
+	if err := repository.DB().Where(domain.UserNotificationSettings{UserID: uint(userID)}).Assign(settings).FirstOrCreate(&settings).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to save user notification settings", http.StatusInternalServerError, err))
 		return
 	}
@@ -252,7 +252,7 @@ func PutUserNotificationSettings(c *gin.Context) {
 // CheckAndTriggerAlerts is a background function to check and trigger alerts.
 func CheckAndTriggerAlerts() {
 	var settings []domain.ProductAlertSettings
-	if err := repository.DB.Find(&settings).Error; err != nil {
+	if err := repository.DB().Find(&settings).Error; err != nil {
 		logrus.WithError(err).Error("alert scan: load settings failed")
 		return
 	}
@@ -264,7 +264,7 @@ func CheckAndTriggerAlerts() {
 					logrus.WithField("product_id", s.ProductID).Errorf("alert scan panicked: %v", r)
 				}
 			}()
-			alertEvalFn(repository.DB, s)
+			alertEvalFn(repository.DB(), s)
 		}()
 	}
 }
@@ -278,14 +278,14 @@ func processAlertForProduct(db *gorm.DB, s domain.ProductAlertSettings) {
 // CheckAndTriggerAlertsForProduct evaluates alert thresholds for a single product.
 func CheckAndTriggerAlertsForProduct(productID uint) {
 	var settings domain.ProductAlertSettings
-	if err := repository.DB.Where("product_id = ?", productID).First(&settings).Error; err != nil {
+	if err := repository.DB().Where("product_id = ?", productID).First(&settings).Error; err != nil {
 		if err != gorm.ErrRecordNotFound {
 			logrus.Errorf("Failed to fetch alert settings for product %d: %v", productID, err)
 		}
 		return
 	}
 
-	processAlertForProduct(repository.DB, settings)
+	processAlertForProduct(repository.DB(), settings)
 }
 
 func checkAndTriggerAlertsForSettings(db *gorm.DB, s *domain.ProductAlertSettings) {

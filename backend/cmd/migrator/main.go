@@ -25,7 +25,7 @@ func main() {
 
 	// Initialize database connection
 	repository.InitDB(cfg)
-	db := repository.DB
+	db := repository.DB()
 	defer repository.CloseDB()
 
 	// Run the migration to populate the search index

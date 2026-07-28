@@ -14,7 +14,13 @@ import (
 	"inventory/backend/internal/domain"
 )
 
-var DB *gorm.DB
+var db *gorm.DB
+
+// DB returns the package-level DB handle. Prefer injecting *gorm.DB via Container.
+func DB() *gorm.DB { return db }
+
+// SetDB replaces the package-level DB handle (for tests).
+func SetDB(database *gorm.DB) { db = database }
 
 func InitDB(cfg *config.Config) {
 
@@ -33,7 +39,7 @@ func InitDB(cfg *config.Config) {
 
 	var err error
 
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
 
@@ -56,7 +62,7 @@ func InitDB(cfg *config.Config) {
 
 func AutoMigrate() {
 
-	err := DB.AutoMigrate(
+	err := db.AutoMigrate(
 
 		&domain.User{},
 
@@ -132,14 +138,14 @@ func AutoMigrate() {
 }
 
 func fixRolePermissionsSchema() {
-	if DB == nil {
+	if db == nil {
 		return
 	}
 	// The role_permissions table might have a legacy 'role' column from previous migrations.
 	// This column has a NOT NULL constraint which breaks inserts since we now use foreign keys.
 	// We safely drop it if it exists.
 	query := `ALTER TABLE role_permissions DROP COLUMN IF EXISTS role;`
-	if err := DB.Exec(query).Error; err != nil {
+	if err := db.Exec(query).Error; err != nil {
 		logrus.Warnf("Failed to drop legacy 'role' column from role_permissions (this is expected if table doesn't exist yet): %v", err)
 	}
 }
@@ -218,7 +224,7 @@ func seedPermissions() map[string]domain.Permission {
 
 	permMap := make(map[string]domain.Permission)
 	for _, p := range permissions {
-		DB.FirstOrCreate(&p, domain.Permission{Name: p.Name})
+		db.FirstOrCreate(&p, domain.Permission{Name: p.Name})
 		permMap[p.Name] = p
 	}
 	return permMap
@@ -234,7 +240,7 @@ func seedRoles(permMap map[string]domain.Permission) {
 
 	for _, r := range roles {
 		var role domain.Role
-		if err := DB.FirstOrCreate(&role, domain.Role{Name: r.Name}).Error; err != nil {
+		if err := db.FirstOrCreate(&role, domain.Role{Name: r.Name}).Error; err != nil {
 			logrus.Errorf("Failed to seed role %s: %v", r.Name, err)
 			continue
 		}
@@ -288,7 +294,7 @@ func seedRoles(permMap map[string]domain.Permission) {
 		}
 
 		if len(permsToAssign) > 0 {
-			if err := DB.Model(&role).Association("Permissions").Replace(permsToAssign); err != nil {
+			if err := db.Model(&role).Association("Permissions").Replace(permsToAssign); err != nil {
 				logrus.Errorf("Failed to assign permissions to role %s: %v", r.Name, err)
 			}
 		}
@@ -316,9 +322,9 @@ func seedSettings() {
 
 	for _, s := range settings {
 		var count int64
-		DB.Model(&domain.SystemSetting{}).Where("key = ?", s.Key).Count(&count)
+		db.Model(&domain.SystemSetting{}).Where("key = ?", s.Key).Count(&count)
 		if count == 0 {
-			if err := DB.Create(&s).Error; err != nil {
+			if err := db.Create(&s).Error; err != nil {
 				logrus.Errorf("Failed to seed setting %s: %v", s.Key, err)
 			} else {
 				logrus.Infof("Seeded setting: %s", s.Key)
@@ -335,7 +341,7 @@ func ensureDefaultAlertSubscriptions() {
 
 		var count int64
 
-		if err := DB.Model(&domain.AlertRoleSubscription{}).
+		if err := db.Model(&domain.AlertRoleSubscription{}).
 			Where("alert_type = ? AND role = ?", alertType, "Admin").
 			Count(&count).Error; err != nil {
 
@@ -354,7 +360,7 @@ func ensureDefaultAlertSubscriptions() {
 				Role: "Admin",
 			}
 
-			if err := DB.Create(&subscription).Error; err != nil {
+			if err := db.Create(&subscription).Error; err != nil {
 
 				logrus.Errorf("Failed to seed default alert subscription for %s: %v", alertType, err)
 
@@ -371,7 +377,7 @@ func ensureDefaultAlertSubscriptions() {
 }
 
 func ensureBarcodeUniqueIndex() {
-	if DB == nil {
+	if db == nil {
 		return
 	}
 
@@ -387,7 +393,7 @@ BEGIN
 	END IF;
 END $$;
 `
-	if err := DB.Exec(dropConstraint).Error; err != nil {
+	if err := db.Exec(dropConstraint).Error; err != nil {
 		logrus.Errorf("Failed to drop legacy barcode constraint: %v", err)
 	}
 
@@ -396,7 +402,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_products_barcode_upc_not_null
 ON products (barcode_upc)
 WHERE barcode_upc IS NOT NULL AND barcode_upc <> '';
 `
-	if err := DB.Exec(createPartialIndex).Error; err != nil {
+	if err := db.Exec(createPartialIndex).Error; err != nil {
 		logrus.Errorf("Failed to ensure partial barcode index: %v", err)
 	}
 }
@@ -405,7 +411,7 @@ WHERE barcode_upc IS NOT NULL AND barcode_upc <> '';
 
 func CloseDB() {
 
-	sqlDB, err := DB.DB()
+	sqlDB, err := db.DB()
 
 	if err != nil {
 

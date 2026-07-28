@@ -40,7 +40,7 @@ func CreateStockTransfer(c *gin.Context) {
 		return
 	}
 
-	err := services.NewStockTransferService(repository.DB).Transfer(c.Request.Context(), services.StockTransferRequest{
+	err := services.NewStockTransferService(repository.DB()).Transfer(c.Request.Context(), services.StockTransferRequest{
 		ProductID:        req.ProductID,
 		SourceLocationID: req.SourceLocationID,
 		DestLocationID:   req.DestLocationID,

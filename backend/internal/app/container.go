@@ -15,7 +15,7 @@ import (
 
 // Container holds all wired dependencies for the application. Built once
 // in bootstrap, consumed by router/handlers/services. Replaces ad-hoc
-// package-level globals (repository.DB) so tests can inject fakes.
+// package-level globals (repository.DB()) so tests can inject fakes.
 type Container struct {
 	Cfg      *config.Config
 	DB       *gorm.DB

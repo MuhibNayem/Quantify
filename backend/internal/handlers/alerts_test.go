@@ -26,10 +26,10 @@ func setupAlertTestDB(t *testing.T) *gorm.DB {
 		&domain.ProductAlertSettings{},
 	))
 
-	previousDB := repository.DB
-	repository.DB = db
+	previousDB := repository.DB()
+	repository.SetDB(db)
 	t.Cleanup(func() {
-		repository.DB = previousDB
+		repository.SetDB(previousDB)
 		sqlDB, sqlErr := db.DB()
 		if sqlErr == nil {
 			require.NoError(t, sqlDB.Close())

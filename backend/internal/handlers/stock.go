@@ -53,7 +53,7 @@ func CreateBatch(c *gin.Context) {
 	}
 
 	var product domain.Product
-	if err := repository.DB.First(&product, productID).Error; err != nil {
+	if err := repository.DB().First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
@@ -70,7 +70,7 @@ func CreateBatch(c *gin.Context) {
 		LocationID:  product.LocationID, // Inherit from product's default location
 	}
 
-	if err := repository.DB.Create(&batch).Error; err != nil {
+	if err := repository.DB().Create(&batch).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to create batch", http.StatusInternalServerError, err))
 		return
 	}
@@ -92,7 +92,7 @@ func CreateBatch(c *gin.Context) {
 func GetProductStock(c *gin.Context) {
 	productID := c.Param("productId")
 	var product domain.Product
-	if err := repository.DB.First(&product, productID).Error; err != nil {
+	if err := repository.DB().First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
@@ -102,7 +102,7 @@ func GetProductStock(c *gin.Context) {
 	}
 
 	var batches []domain.Batch
-	db := repository.DB.Where("product_id = ?", productID)
+	db := repository.DB().Where("product_id = ?", productID)
 
 	if locationID := c.Query("locationId"); locationID != "" {
 		db = db.Where("location_id = ?", locationID)
@@ -163,7 +163,7 @@ func CreateStockAdjustment(c *gin.Context) {
 	}
 
 	var adjustedBy domain.User
-	if err := repository.DB.First(&adjustedBy, userID).Error; err != nil {
+	if err := repository.DB().First(&adjustedBy, userID).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch authenticated user", http.StatusInternalServerError, err))
 		return
 	}
@@ -175,7 +175,7 @@ func CreateStockAdjustment(c *gin.Context) {
 	}
 
 	var product domain.Product
-	if err := repository.DB.First(&product, productID).Error; err != nil {
+	if err := repository.DB().First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
@@ -187,7 +187,7 @@ func CreateStockAdjustment(c *gin.Context) {
 	var adjustment domain.StockAdjustment
 
 	// Start a database transaction
-	err = repository.DB.Transaction(func(tx *gorm.DB) error {
+	err = repository.DB().Transaction(func(tx *gorm.DB) error {
 		// Lock the batch rows for this product so concurrent stock
 		// adjustments serialize on the row-level lock instead of racing
 		// on a stale SUM read. The lock is honored by PostgreSQL/MySQL;
@@ -308,7 +308,7 @@ func CreateStockAdjustment(c *gin.Context) {
 func ListStockHistory(c *gin.Context) {
 	productID := c.Param("productId")
 	var product domain.Product
-	if err := repository.DB.First(&product, productID).Error; err != nil {
+	if err := repository.DB().First(&product, productID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
 			return
@@ -318,7 +318,7 @@ func ListStockHistory(c *gin.Context) {
 	}
 
 	var history []domain.StockAdjustment
-	db := repository.DB.Where("product_id = ?", productID)
+	db := repository.DB().Where("product_id = ?", productID)
 
 	if locationID := c.Query("locationId"); locationID != "" {
 		db = db.Where("location_id = ?", locationID)

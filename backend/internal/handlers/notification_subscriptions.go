@@ -35,7 +35,7 @@ func CreateAlertRoleSubscription(c *gin.Context) {
 		Role:      req.Role,
 	}
 
-	if err := repository.DB.Create(&subscription).Error; err != nil {
+	if err := repository.DB().Create(&subscription).Error; err != nil {
 		if err.Error() == "UNIQUE constraint failed: alert_role_subscriptions.alert_type, alert_role_subscriptions.role" {
 			c.Error(appErrors.NewAppError("Subscription already exists", http.StatusConflict, err))
 			return
@@ -57,7 +57,7 @@ func CreateAlertRoleSubscription(c *gin.Context) {
 // @Router /alerts/subscriptions [get]
 func ListAlertRoleSubscriptions(c *gin.Context) {
 	var subscriptions []domain.AlertRoleSubscription
-	if err := repository.DB.Find(&subscriptions).Error; err != nil {
+	if err := repository.DB().Find(&subscriptions).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to fetch subscriptions", http.StatusInternalServerError, err))
 		return
 	}
@@ -77,7 +77,7 @@ func ListAlertRoleSubscriptions(c *gin.Context) {
 func DeleteAlertRoleSubscription(c *gin.Context) {
 	id := c.Param("id")
 	var subscription domain.AlertRoleSubscription
-	if err := repository.DB.First(&subscription, id).Error; err != nil {
+	if err := repository.DB().First(&subscription, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Subscription not found", http.StatusNotFound, err))
 			return
@@ -86,7 +86,7 @@ func DeleteAlertRoleSubscription(c *gin.Context) {
 		return
 	}
 
-	if err := repository.DB.Delete(&subscription).Error; err != nil {
+	if err := repository.DB().Delete(&subscription).Error; err != nil {
 		c.Error(appErrors.NewAppError("Failed to delete subscription", http.StatusInternalServerError, err))
 		return
 	}

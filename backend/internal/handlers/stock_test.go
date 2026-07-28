@@ -73,9 +73,9 @@ func TestStockAdjustment_NoLostUpdates(t *testing.T) {
 	sqlDB.SetMaxOpenConns(1)
 
 	// Swap the global DB so the handler uses our test DB.
-	prevDB := repository.DB
-	repository.DB = db
-	t.Cleanup(func() { repository.DB = prevDB })
+	prevDB := repository.DB()
+	repository.SetDB(db)
+	t.Cleanup(func() { repository.SetDB(prevDB) })
 
 	// Initialize a dummy broker so the post-transaction Publish call
 	// does not panic on a nil manager. The connection will fail and the
