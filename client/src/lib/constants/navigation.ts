@@ -13,6 +13,7 @@ import {
 	Settings,
 	Undo2,
 	ShoppingBag,
+	ShoppingCart,
 	Tag
 } from 'lucide-svelte';
 
@@ -84,6 +85,13 @@ export const navSections: NavSection[] = [
 				href: '/orders',
 				icon: ShoppingBag,
 				permission: 'pos.view',
+			},
+			{
+				label: 'Purchase Orders',
+				description: 'Replenishment & receiving',
+				href: '/purchase-orders',
+				icon: ShoppingCart,
+				permission: 'inventory.view',
 			},
 		],
 	},

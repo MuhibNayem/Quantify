@@ -183,9 +183,9 @@
 			const [salesRes, customerReturnsRes, purchasesRes, vendorReturnsRes] =
 				await Promise.all(promises);
 
-			salesOrders = salesRes.data.orders || [];
+			salesOrders = salesRes.data.orders || salesRes.data.data || salesRes.data.items || [];
 			customerReturns = customerReturnsRes.data.returns || [];
-			purchaseOrders = purchasesRes.data.purchaseOrders || [];
+			purchaseOrders = purchasesRes.data.purchaseOrders || purchasesRes.data.data || purchasesRes.data.items || [];
 			purchaseReturns = vendorReturnsRes.data.returns || [];
 
 			// Set initial tab based on permission preference

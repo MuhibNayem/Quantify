@@ -47,7 +47,7 @@
 	async function loadOrders() {
 		try {
 			const data = await ordersApi.listOrders();
-			orders = data.orders || [];
+			orders = data.data || data.items || (data as any).orders || [];
 		} catch (e) {
 			console.error(e);
 			toast.error('Failed to load orders');

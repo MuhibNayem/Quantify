@@ -17,10 +17,12 @@ import type {
 	UserSummary,
 	PaginatedUsers,
 	PaginatedProducts,
+	PaginatedResponse,
 	Notification,
 	DashboardSummary,
 	LoyaltyAccount,
 	TimeClock,
+	BasketAnalysisItem,
 } from '$lib/types';
 
 export const dashboardApi = {
@@ -163,7 +165,7 @@ export const reportsApi = {
 	returnsAnalysis: async (params?: Record<string, unknown>) =>
 		(await api.get('/reports/returns-analysis', { params })).data,
 	basketAnalysis: async (params?: Record<string, unknown>) =>
-		(await api.get('/reports/basket-analysis', { params })).data,
+		(await api.get<PaginatedResponse<BasketAnalysisItem>>('/reports/basket-analysis', { params })).data,
 };
 
 export const alertsApi = {
@@ -222,6 +224,19 @@ export const crmApi = {
 	redeemPoints: async (userId: number, points: number) =>
 		(await api.post<LoyaltyAccount>(`crm/loyalty/${userId}/redeem`, { points })).data,
 	getChurnRisk: async (userId: number) => (await api.get(`crm/customers/${userId}/churn-risk`)).data,
+};
+
+export const purchaseOrdersApi = {
+	list: async (params?: Record<string, unknown>) =>
+		(await api.get<PaginatedResponse<PurchaseOrder>>('/replenishment/purchase-orders', { params })).data,
+	get: async (id: number) => (await api.get<PurchaseOrder>(`/replenishment/purchase-orders/${id}`)).data,
+	create: async (data: Record<string, unknown>) =>
+		(await api.post<PurchaseOrder>('/replenishment/purchase-orders', data)).data,
+	approve: async (id: number) => (await api.post(`/replenishment/purchase-orders/${id}/approve`)).data,
+	send: async (id: number) => (await api.post(`/replenishment/purchase-orders/${id}/send`)).data,
+	receive: async (id: number, data: Record<string, unknown>) =>
+		(await api.post(`/replenishment/purchase-orders/${id}/receive`, data)).data,
+	cancel: async (id: number) => (await api.post(`/replenishment/purchase-orders/${id}/cancel`)).data,
 };
 
 export const timeTrackingApi = {

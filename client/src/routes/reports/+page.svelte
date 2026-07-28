@@ -237,7 +237,7 @@
 			customerInsights = Array.isArray(customerData) ? customerData : [];
 			shrinkage = Array.isArray(shrinkageData) ? shrinkageData : [];
 			returnsAnalysis = Array.isArray(returnsData) ? returnsData : [];
-			basketAnalysis = Array.isArray(basketData) ? basketData : [];
+			basketAnalysis = Array.isArray(basketData) ? basketData : (basketData?.items || basketData?.data || []);
 		} catch (error) {
 			console.error('Critical Report Load Error:', error);
 			toast.error('Failed to load reports');

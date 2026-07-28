@@ -406,3 +406,11 @@ export interface ReturnsAnalysis {
 	ReturnRate: number;
 	Reason: string;
 }
+
+export interface PaginatedResponse<T> {
+	items?: T[];
+	data?: T[];
+	total: number;
+	page: number;
+	limit: number;
+}
