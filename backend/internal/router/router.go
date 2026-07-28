@@ -57,9 +57,12 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	roleRepo := c.Roles
 
 	// Public routes (no tenant middleware)
+	readyHandler := handlers.NewReadyHandler(c.DB, c.Redis, c.AMQP, c.Uploader)
+
 	publicRoutes := r.Group("/")
 	{
 		publicRoutes.GET("/health", handlers.HealthCheck)
+		publicRoutes.GET("/ready", readyHandler.Ready)
 	publicRoutes.GET("/ws", func(ctx *gin.Context) {
 		handlers.ServeWs(c.Hub, ctx, c.Notifications, roleRepo, c.Cfg)
 	})

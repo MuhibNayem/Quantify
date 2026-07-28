@@ -16,6 +16,7 @@ type Uploader interface {
 	UploadFileFromMultipart(bucketName, objectName string, file *multipart.FileHeader) (minio.UploadInfo, error)
 	DownloadFile(bucketName, objectName string) (*minio.Object, error)
 	GetFile(bucketName string, objectName string) (*minio.Object, error)
+	BucketExists(ctx context.Context, bucketName string) (bool, error)
 }
 
 type MinIOUploader struct {
@@ -86,6 +87,10 @@ func (u *MinIOUploader) GetFile(bucketName string, objectName string) (*minio.Ob
 		return nil, err
 	}
 	return object, nil
+}
+
+func (u *MinIOUploader) BucketExists(ctx context.Context, bucketName string) (bool, error) {
+	return u.Client.BucketExists(ctx, bucketName)
 }
 
 func (u *MinIOUploader) GetFileContent(bucketName string, objectName string) ([]byte, error) {
