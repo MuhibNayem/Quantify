@@ -18,6 +18,7 @@ type Config struct {
 	DBPort                    string
 	ServerPort                string
 	WSAllowedOrigins          []string // WS_ALLOWED_ORIGINS, CSV
+	CORSAllowedOrigins        []string // CORS_ALLOWED_ORIGINS, CSV
 	SMTPHost                  string
 	SMTPPort                  int
 	SMTPUser                  string
@@ -105,6 +106,7 @@ func LoadConfig() (*Config, error) {
 		DBPort:                    strconv.Itoa(dbPort),
 		ServerPort:                getEnv("SERVER_PORT", "8080"),
 		WSAllowedOrigins:          loadOrigins("WS_ALLOWED_ORIGINS", "http://localhost:5173"),
+		CORSAllowedOrigins:        loadOrigins("CORS_ALLOWED_ORIGINS", "http://localhost:5173"),
 		SMTPHost:                  getEnv("SMTP_HOST", ""),
 		SMTPPort:                  smtpPort,
 		SMTPUser:                  getEnv("SMTP_USER", ""),

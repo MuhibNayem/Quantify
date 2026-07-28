@@ -20,7 +20,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	r := gin.Default()
 
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     c.Cfg.CORSAllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Authorization", "X-Requested-With", "X-CSRF-Token"},
 		ExposeHeaders:    []string{"Content-Length"},
