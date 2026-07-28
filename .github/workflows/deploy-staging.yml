@@ -1,0 +1,111 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+  ENVIRONMENT: staging
+  NAMESPACE: quantify
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+
+      - name: Deploy backend
+        run: |
+          helm upgrade --install quantify-backend deploy/helm/quantify-backend \
+            --namespace ${{ env.NAMESPACE }} \
+            --values deploy/helm/quantify-backend/values-staging.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 10m
+
+      - name: Deploy ai-service
+        run: |
+          helm upgrade --install quantify-ai-service deploy/helm/quantify-ai-service \
+            --namespace ${{ env.NAMESPACE }} \
+            --values deploy/helm/quantify-ai-service/values-staging.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-ai-service \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 10m
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/quantify-backend -n ${{ env.NAMESPACE }} --timeout=300s
+          kubectl rollout status deployment/quantify-ai-service -n ${{ env.NAMESPACE }} --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          ./scripts/smoke-test.sh "https://api.staging.quantify.dev"
+
+      - name: Run integration tests
+        run: |
+          cd backend && go test -tags=integration -race -count=1 ./...
+        env:
+          TEST_BASE_URL: https://api.staging.quantify.dev
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D68
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install k6
+
+      - name: Run load tests
+        run: |
+          k6 run --out json=k6-results.json \
+            --summary-export=k6-summary.json \
+            -e BASE_URL=https://api.staging.quantify.dev \
+            tests/load/k6-staging.js || true
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-test-reports
+          path: |
+            k6-results.json
+            k6-summary.json
+          retention-days: 14
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "✅ Staging deploy succeeded — `${{ github.sha }}` by ${{ github.actor }}"
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "❌ Staging deploy FAILED — `${{ github.sha }}` by ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"

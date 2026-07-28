@@ -1,0 +1,129 @@
+name: Security
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  gosec:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: backend/go.sum
+
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: "-fmt sarif -out gosec.sarif ./..."
+          working-directory: backend
+
+      - name: Upload gosec results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: backend/gosec.sarif
+          category: gosec
+
+  govulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache-dependency-path: backend/go.sum
+
+      - name: Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          cd backend && govulncheck -format sarif ./... > govulncheck.sarif || true
+
+      - name: Upload govulncheck results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: backend/govulncheck.sarif
+          category: govulncheck
+
+  trivy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: backend
+            context: ./backend
+          - service: ai-service
+            context: ./ai-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: false
+          load: true
+          tags: quantify-${{ matrix.service }}:scan
+          cache-from: type=gha
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: quantify-${{ matrix.service }}:scan
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for frontend
+        id: check
+        run: |
+          if [ -f client/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.exists == 'true'
+        with:
+          node-version: "20"
+
+      - name: npm audit
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          cd client
+          npm audit --audit-level=high --json > npm-audit.json || true
+
+      - name: Upload npm audit results
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit-report
+          path: client/npm-audit.json
+          retention-days: 30

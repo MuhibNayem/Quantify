@@ -1,0 +1,172 @@
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths: ["infrastructure/**"]
+  pull_request:
+    paths: ["infrastructure/**"]
+  workflow_dispatch:
+    inputs:
+      cloud:
+        description: "Cloud provider"
+        required: true
+        type: choice
+        options: [aws, gcp, azure]
+      action:
+        description: "Terraform action"
+        required: true
+        type: choice
+        options: [plan, apply]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  TF_VERSION: "1.9"
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch'
+    outputs:
+      aws: ${{ steps.filter.outputs.aws }}
+      gcp: ${{ steps.filter.outputs.gcp }}
+      azure: ${{ steps.filter.outputs.azure }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            aws:
+              - 'infrastructure/aws/**'
+            gcp:
+              - 'infrastructure/gcp/**'
+            azure:
+              - 'infrastructure/azure/**'
+
+  fmt-validate:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      always() &&
+      (needs.detect-changes.outputs.aws == 'true' ||
+       needs.detect-changes.outputs.gcp == 'true' ||
+       needs.detect-changes.outputs.azure == 'true' ||
+       github.event_name == 'workflow_dispatch')
+    strategy:
+      matrix:
+        cloud: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.cloud)) || fromJSON('["aws", "gcp", "azure"]') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform fmt
+        run: terraform fmt -check -diff
+        working-directory: infrastructure/${{ matrix.cloud }}
+
+      - name: terraform init
+        run: terraform init -backend=false
+        working-directory: infrastructure/${{ matrix.cloud }}
+
+      - name: terraform validate
+        run: terraform validate -no-color
+        working-directory: infrastructure/${{ matrix.cloud }}
+
+  plan:
+    runs-on: ubuntu-latest
+    needs: fmt-validate
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.action == 'plan')
+    strategy:
+      matrix:
+        cloud: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.cloud)) || fromJSON('["aws", "gcp", "azure"]') }}
+    environment: terraform-${{ matrix.cloud }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        run: terraform init
+        working-directory: infrastructure/${{ matrix.cloud }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: terraform plan
+        run: terraform plan -no-color -out=tfplan
+        working-directory: infrastructure/${{ matrix.cloud }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('infrastructure/${{ matrix.cloud }}/tfplan', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### Terraform Plan (${{ matrix.cloud }})\n\`\`\`\n${plan.substring(0, 60000)}\n\`\`\``
+            });
+
+  apply:
+    runs-on: ubuntu-latest
+    needs: fmt-validate
+    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'apply')
+    strategy:
+      matrix:
+        cloud: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.cloud)) || fromJSON('["aws", "gcp", "azure"]') }}
+    environment:
+      name: terraform-${{ matrix.cloud }}-apply
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: terraform init
+        run: terraform init
+        working-directory: infrastructure/${{ matrix.cloud }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+
+      - name: terraform apply
+        run: terraform apply -auto-approve -no-color
+        working-directory: infrastructure/${{ matrix.cloud }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+          ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+          ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+          ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}

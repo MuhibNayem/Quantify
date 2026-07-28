@@ -1,0 +1,80 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+  ENVIRONMENT: dev
+  NAMESPACE: quantify
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG_DEV }}
+
+      - name: Deploy backend
+        run: |
+          helm upgrade --install quantify-backend deploy/helm/quantify-backend \
+            --namespace ${{ env.NAMESPACE }} \
+            --values deploy/helm/quantify-backend/values-dev.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-backend \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 5m
+
+      - name: Deploy ai-service
+        run: |
+          helm upgrade --install quantify-ai-service deploy/helm/quantify-ai-service \
+            --namespace ${{ env.NAMESPACE }} \
+            --values deploy/helm/quantify-ai-service/values-dev.yaml \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-ai-service \
+            --set image.tag=${{ github.sha }} \
+            --wait --timeout 5m
+
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/quantify-backend -n ${{ env.NAMESPACE }} --timeout=300s
+          kubectl rollout status deployment/quantify-ai-service -n ${{ env.NAMESPACE }} --timeout=300s
+
+      - name: Run smoke tests
+        run: |
+          BASE_URL=$(kubectl get ingress quantify-backend -n ${{ env.NAMESPACE }} -o jsonpath='{.spec.rules[0].host}')
+          ./scripts/smoke-test.sh "http://${BASE_URL}"
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "✅ Dev deploy succeeded — `${{ github.sha }}` by ${{ github.actor }}"
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            text: "❌ Dev deploy FAILED — `${{ github.sha }}` by ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
