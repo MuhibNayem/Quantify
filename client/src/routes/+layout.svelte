@@ -7,6 +7,7 @@
 	import Topbar from '$lib/components/layout/Topbar.svelte';
 	import CommandPalette from '$lib/components/command-palette.svelte';
 	import Onboarding from '$lib/components/onboarding.svelte';
+	import OfflineBanner from '$lib/components/offline-banner.svelte';
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
@@ -51,6 +52,7 @@
 </script>
 
 <ModeWatcher />
+<OfflineBanner />
 <svelte:window onkeydown={handleGlobalKeydown} />
 <CommandPalette bind:open={paletteOpen} />
 <Onboarding bind:this={onboardingRef} bind:open={onboardingOpen} />
