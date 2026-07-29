@@ -35,6 +35,7 @@ func setupSalesTestDB(t *testing.T) *gorm.DB {
 		&domain.AuditLog{},
 		&domain.SystemSetting{},
 	))
+	addLedgerToTestDB(t, db)
 	return db
 }
 
@@ -61,7 +62,32 @@ func setupSalesTestDBWithFile(t *testing.T) *gorm.DB {
 		&domain.AuditLog{},
 		&domain.SystemSetting{},
 	))
+	addLedgerToTestDB(t, db)
 	return db
+}
+
+// addLedgerToTestDB migrates the ledger tables and seeds the chart of accounts.
+// Checkout posts a journal entry on every sale, so these must exist in test DBs.
+func addLedgerToTestDB(t *testing.T, db *gorm.DB) {
+	t.Helper()
+	require.NoError(t, db.AutoMigrate(
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
+		&domain.AccountsReceivable{},
+		&domain.Payment{},
+		&domain.PaymentAllocation{},
+	))
+	accounts := []domain.Account{
+		{Code: domain.AccountCodeCash, Name: "Cash", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeAccountsReceivable, Name: "AR", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeSalesRevenue, Name: "Revenue", Type: domain.AccountRevenue},
+		{Code: domain.AccountCodeCOGS, Name: "COGS", Type: domain.AccountExpense},
+	}
+	for i := range accounts {
+		require.NoError(t, db.Create(&accounts[i]).Error)
+	}
 }
 
 type stubSettingsService struct{}

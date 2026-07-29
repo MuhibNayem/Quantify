@@ -38,7 +38,24 @@ func setupUnitsTestDB(t *testing.T) *gorm.DB {
 		&domain.UnitDimension{},
 		&domain.Unit{},
 		&domain.ProductUnit{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
+		&domain.AccountsReceivable{},
+		&domain.Payment{},
+		&domain.PaymentAllocation{},
 	))
+	// Checkout posts to the ledger, so the chart of accounts must exist.
+	accounts := []domain.Account{
+		{Code: domain.AccountCodeCash, Name: "Cash", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeAccountsReceivable, Name: "AR", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeSalesRevenue, Name: "Revenue", Type: domain.AccountRevenue},
+		{Code: domain.AccountCodeCOGS, Name: "COGS", Type: domain.AccountExpense},
+	}
+	for i := range accounts {
+		require.NoError(t, db.Create(&accounts[i]).Error)
+	}
 	return db
 }
 
