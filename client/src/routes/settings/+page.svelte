@@ -11,6 +11,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Switch } from '$lib/components/ui/switch';
 	import { Select } from '$lib/components/ui/select';
+	import HelpTip from '$lib/components/ui/help-tip.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import {
 		Settings,
@@ -510,9 +511,10 @@
 									{$t('settings.business.points_configuration')}
 								</h4>
 								<div class="space-y-3">
-									<Label class="ml-1 font-medium text-slate-600"
-										>{$t('settings.business.earning_rate')}</Label
-									>
+									<Label class="ml-1 flex items-center gap-1 font-medium text-slate-600">
+										{$t('settings.business.earning_rate')}
+										<HelpTip text="Loyalty points earned per unit of currency spent. For example, 1 means a customer earns 1 point for every $1 spent." />
+									</Label>
 									<div class="flex gap-3">
 										<Input
 											type="number"
@@ -661,9 +663,10 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600"
-									>{$t('settings.business.default_tax_rate')}</Label
-								>
+								<Label class="ml-1 flex items-center gap-1 font-medium text-slate-600">
+									{$t('settings.business.default_tax_rate')}
+									<HelpTip text="Default tax percentage applied to sales at checkout. Enter 5 for 5%." />
+								</Label>
 								<div class="flex gap-3">
 									<Input
 										type="number"

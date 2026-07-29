@@ -20,6 +20,7 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import HelpTip from '$lib/components/ui/help-tip.svelte';
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
@@ -471,7 +472,12 @@
 					<TableRow>
 						<TableHead>{$t('intelligence.reorder_suggestions.table.product')}</TableHead>
 						<TableHead>{$t('intelligence.reorder_suggestions.table.supplier')}</TableHead>
-						<TableHead>{$t('intelligence.reorder_suggestions.table.suggested_qty')}</TableHead>
+						<TableHead>
+							<span class="inline-flex items-center gap-1">
+								{$t('intelligence.reorder_suggestions.table.suggested_qty')}
+								<HelpTip text="Recommended reorder quantity based on recent sales velocity and lead time." />
+							</span>
+						</TableHead>
 						<TableHead>{$t('intelligence.reorder_suggestions.table.status')}</TableHead>
 						<TableHead class="text-right">{$t('intelligence.reorder_suggestions.table.actions')}</TableHead>
 					</TableRow>

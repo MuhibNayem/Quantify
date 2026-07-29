@@ -16,6 +16,7 @@
 	} from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import { Switch } from '$lib/components/ui/switch';
+	import HelpTip from '$lib/components/ui/help-tip.svelte';
 	import { formatDateTime, formatCurrency } from '$lib/utils';
 	import { cn } from '$lib/utils';
 	import { promotionsApi, productsApi, categoriesApi, subCategoriesApi } from '$lib/api/resources';
@@ -498,7 +499,10 @@
 					class="grid grid-cols-2 gap-6 rounded-2xl border border-white/30 bg-gradient-to-br from-white/40 to-indigo-50/10 p-5 shadow-sm"
 				>
 					<div class="space-y-2">
-						<Label class="font-semibold text-indigo-900">Discount Type</Label>
+						<Label class="flex items-center gap-1 font-semibold text-indigo-900">
+							Discount Type
+							<HelpTip text="PERCENTAGE applies a % off the price; FIXED_AMOUNT subtracts a flat currency value." />
+						</Label>
 						<Select
 							value={$form.discountType}
 							options={discountTypeOptions}

@@ -16,6 +16,7 @@
 	import { t } from '$lib/i18n';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import { saveView, loadView } from '$lib/saved-views';
+	import { deleteWithUndo } from '$lib/undo';
 
 	type Props = {
 		refreshToken?: number;
@@ -41,8 +42,6 @@
 	let bulkEditStatus = $state('');
 	let bulkDeleting = $state(false);
 	let bulkDeleteProgress = $state(0);
-	let deleteTarget = $state<Product | null>(null);
-	let singleDeleteOpen = $state(false);
 
 	const selectedCount = $derived(selectedIds.size);
 	const allSelected = $derived(products.length > 0 && selectedIds.size === products.length);
@@ -218,21 +217,18 @@
 	};
 
 	const deleteProduct = (product: Product) => {
-		deleteTarget = product;
-		singleDeleteOpen = true;
-	};
-
-	const confirmDeleteProduct = async () => {
-		if (!deleteTarget) return;
-		try {
-			await productsApi.remove(deleteTarget.ID);
-			toast.success($t('catalog.toasts.product_removed'));
-			await loadAll(pagination.currentPage);
-		} catch (error: any) {
-			const errorMessage = error.response?.data?.error || 'Unable to delete product';
-			toast.error($t('catalog.toasts.product_remove_fail'), { description: errorMessage });
-		}
-		deleteTarget = null;
+		const snapshot = products;
+		products = products.filter((p) => p.ID !== product.ID);
+		deleteWithUndo(
+			product.Name,
+			async () => {
+				await productsApi.remove(product.ID);
+				await loadAll(pagination.currentPage);
+			},
+			() => {
+				products = snapshot;
+			}
+		);
 	};
 
 	$effect(() => {
@@ -413,17 +409,6 @@
 		/>
 	{/if}
 </div>
-
-<ConfirmDialog
-	bind:open={singleDeleteOpen}
-	title="Delete product"
-	description={deleteTarget
-		? `This will permanently delete "${deleteTarget.Name}". This action cannot be undone.`
-		: ''}
-	confirmText={deleteTarget?.Name ?? ''}
-	confirmLabel="Delete"
-	onConfirm={confirmDeleteProduct}
-/>
 
 <ConfirmDialog
 	bind:open={bulkDeleteOpen}

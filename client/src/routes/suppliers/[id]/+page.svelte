@@ -15,6 +15,7 @@
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
+	import { addRecent } from '$lib/recent';
 
 	$effect(() => {
 		if (!auth.hasPermission('suppliers.read')) {
@@ -29,6 +30,17 @@
 
 	let supplier = $derived(data.supplier);
 	let performance = $derived(data.performance);
+
+	$effect(() => {
+		if (supplier?.ID) {
+			addRecent({
+				type: 'supplier',
+				id: supplier.ID,
+				label: supplier.Name,
+				href: `/suppliers/${supplier.ID}`
+			});
+		}
+	});
 </script>
 
 <div class="mx-auto w-full max-w-6xl px-6 py-8">

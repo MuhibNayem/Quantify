@@ -26,6 +26,7 @@
 	import type { PageData } from './$types';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { addRecent } from '$lib/recent';
 
 	$effect(() => {
 		if (!auth.hasPermission('products.read')) {
@@ -40,6 +41,17 @@
 
 	let product = $derived(data.product);
 	let stockHistory = $derived(data.stockHistory);
+
+	$effect(() => {
+		if (product?.ID) {
+			addRecent({
+				type: 'product',
+				id: product.ID,
+				label: product.Name,
+				href: `/products/${product.ID}`
+			});
+		}
+	});
 
 	const statusBadge = (status?: string) => {
 		if (!status) return undefined;

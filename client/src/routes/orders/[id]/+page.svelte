@@ -11,6 +11,7 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { settings } from '$lib/stores/settings';
+	import { addRecent } from '$lib/recent';
 
 	let orderId = $page.params.id; // actually OrderNumber or ID, usually number in URL, but backend uses string OrderNumber.
 	// Assuming route is /orders/[id], if id is the db ID, we fetch by ID. If orderNumber, by Number.
@@ -56,6 +57,14 @@
 			// Let's assume the user navigated from a list where they clicked an Order Number.
 			const response = await api.get(`/sales/orders/${orderId}`);
 			order = response.data.order;
+			if (order) {
+				addRecent({
+					type: 'order',
+					id: Number(order.ID ?? orderId),
+					label: order.OrderNumber ? `Order ${order.OrderNumber}` : `Order ${orderId}`,
+					href: `/orders/${orderId}`
+				});
+			}
 		} catch (err: any) {
 			console.error('Error fetching order:', err);
 			error = 'Failed to load order details.';

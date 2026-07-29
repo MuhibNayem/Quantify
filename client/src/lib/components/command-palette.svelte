@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { auth } from '$lib/stores/auth';
 	import { toggleMode } from 'mode-watcher';
+	import { getRecent } from '$lib/recent';
 	import {
 		LayoutDashboard,
 		ShoppingCart,
@@ -20,10 +21,17 @@
 		Settings,
 		Plus,
 		MoonStar,
-		LogOut
+		LogOut,
+		History
 	} from 'lucide-svelte';
 
 	let { open = $bindable(false) } = $props();
+
+	let recent = $state(getRecent());
+
+	$effect(() => {
+		if (open) recent = getRecent();
+	});
 
 	const navigationCommands = [
 		{ label: 'Go to Dashboard', shortcut: 'G D', icon: LayoutDashboard, action: () => goto('/') },
@@ -66,6 +74,19 @@
 				<CommandInput placeholder="Type a command or search…" />
 				<CommandList class="max-h-72 overflow-y-auto">
 					<CommandEmpty>No results found.</CommandEmpty>
+					{#if recent.length > 0}
+						<CommandGroup heading="Recent">
+							{#each recent as item}
+								<CommandItem onSelect={() => runCommand({ action: () => goto(item.href) })}>
+									<History class="h-4 w-4 text-slate-400" />
+									<span class="flex-1">{item.label}</span>
+									<span
+										class="text-[0.65rem] font-medium text-slate-400 capitalize">{item.type}</span
+									>
+								</CommandItem>
+							{/each}
+						</CommandGroup>
+					{/if}
 					<CommandGroup heading="Navigate">
 						{#each navigationCommands as cmd}
 							<CommandItem onSelect={() => runCommand(cmd)}>
