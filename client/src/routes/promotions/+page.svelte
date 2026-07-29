@@ -4,7 +4,6 @@
 	import { fly } from 'svelte/transition';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Select } from '$lib/components/ui/select';
 	import {
 		Dialog,
@@ -37,6 +36,9 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { promotionSchema } from '$lib/schemas/promotion';
+
+	const inputClass =
+		'liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
 
 	let promotions = $state<Promotion[]>([]);
 	let loading = $state(false);
@@ -260,29 +262,26 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10">
-	<!-- Background -->
-	<div
-		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-purple-100/20 via-slate-50/20 to-white/20"
-	></div>
-
+<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
 		<!-- Header -->
-		<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+		<div
+			class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
+			data-animate="fade-up"
+		>
 			<div class="space-y-1">
-				<h1
-					class="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent"
-				>
+				<p class="overline">Pricing · Campaigns</p>
+				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
 					Promotions & Discounts
 				</h1>
-				<p class="text-slate-500">
+				<p class="text-muted-foreground">
 					Manage dynamic pricing rules, sales events, and granular discounts.
 				</p>
 			</div>
 
 			<Button
 				onclick={openCreateDialog}
-				class="rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-6 font-semibold text-white shadow-lg shadow-purple-500/25 transition-all hover:scale-105 hover:shadow-purple-500/40"
+				class="bg-primary text-primary-foreground rounded-md px-6 font-semibold shadow-md hover:bg-primary/90"
 			>
 				<Plus class="mr-2 h-4 w-4" /> New Promotion
 			</Button>
@@ -291,7 +290,7 @@
 		{#if loading}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each Array(6) as _}
-					<div class="h-48 animate-pulse rounded-2xl bg-white/50"></div>
+					<div class="bg-muted h-48 animate-pulse rounded-lg"></div>
 				{/each}
 			</div>
 		{:else}
@@ -301,56 +300,42 @@
 			>
 				{#each promotions as promo (promo.ID)}
 					{@const target = getTargetLabel(promo)}
-					<div
-						class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-300 hover:-translate-y-1 hover:bg-white/60 hover:shadow-xl hover:shadow-purple-500/10"
-					>
+					<div class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg">
 						<!-- Active Indicator -->
 						<div class="absolute top-0 right-0 p-4">
 							<div
 								class={cn(
-									'h-2.5 w-2.5 rounded-full shadow-sm',
-									promo.IsActive ? 'animate-pulse bg-emerald-500' : 'bg-slate-300'
+									'h-2.5 w-2.5 rounded-full',
+									promo.IsActive ? 'bg-success animate-pulse' : 'bg-border'
 								)}
 							></div>
 						</div>
 
 						<!-- Card Header -->
-						<div class="border-b border-slate-100/50 p-5">
+						<div class="border-border border-b p-5">
 							<div class="flex items-start justify-between pr-6">
 								<div>
-									<h3 class="line-clamp-1 text-lg font-bold text-slate-800">{promo.Name}</h3>
-									<p class="mt-1 line-clamp-2 min-h-[1.5em] text-xs font-medium text-slate-400">
+									<h3 class="text-foreground line-clamp-1 text-lg font-bold">{promo.Name}</h3>
+									<p class="text-muted-foreground mt-1 line-clamp-2 min-h-[1.5em] text-xs font-medium">
 										{promo.Description || 'No description provided'}
 									</p>
 								</div>
 							</div>
 
 							<div class="mt-4 flex flex-wrap gap-2">
-								<Badge
-									variant="secondary"
-									class="border-indigo-100 bg-indigo-50 text-indigo-700 backdrop-blur-sm"
-								>
-									<Layers class="mr-1 h-3 w-3" />
+								<span class="badge-info">
+									<Layers class="h-3 w-3" />
 									{target.type}
-								</Badge>
-								<Badge variant="outline" class="border-slate-200 text-slate-600 backdrop-blur-sm">
-									{target.name}
-								</Badge>
+								</span>
+								<span class="badge-neutral">{target.name}</span>
 							</div>
 						</div>
 
 						<!-- Card Content -->
 						<div class="flex-1 space-y-4 p-5">
-							<div
-								class="flex items-center justify-between rounded-xl border border-white/50 bg-white/40 p-3 backdrop-blur-sm"
-							>
-								<span class="text-sm font-medium text-slate-500">Discount</span>
-								<span
-									class={cn(
-										'text-lg font-bold',
-										promo.DiscountType === 'PERCENTAGE' ? 'text-purple-600' : 'text-emerald-600'
-									)}
-								>
+							<div class="bg-muted flex items-center justify-between rounded-md p-3">
+								<span class="text-muted-foreground text-sm font-medium">Discount</span>
+								<span class="num-mono text-primary text-lg font-bold">
 									{#if promo.DiscountType === 'PERCENTAGE'}
 										{promo.DiscountValue}% OFF
 									{:else}
@@ -361,32 +346,32 @@
 
 							<div class="space-y-2 text-sm">
 								<div class="flex items-center justify-between">
-									<span class="flex items-center text-slate-500">
+									<span class="text-muted-foreground flex items-center">
 										<CalendarRange class="mr-2 h-3.5 w-3.5" /> Period
 									</span>
-									<span class="text-xs font-medium text-slate-700">
+									<span class="num-mono text-foreground text-xs font-medium">
 										{formatDateTime(promo.StartDate).split(',')[0]} - {formatDateTime(
 											promo.EndDate
 										).split(',')[0]}
 									</span>
 								</div>
 								<div class="flex items-center justify-between">
-									<span class="flex items-center text-slate-500">
+									<span class="text-muted-foreground flex items-center">
 										<AlertCircle class="mr-2 h-3.5 w-3.5" /> Priority
 									</span>
-									<Badge variant="outline" class="h-5 bg-slate-50 px-2">{promo.Priority}</Badge>
+									<span class="badge-neutral num-mono">{promo.Priority}</span>
 								</div>
 							</div>
 						</div>
 
 						<!-- Card Footer -->
 						<div
-							class="mt-auto flex items-center justify-between border-t border-slate-100/50 bg-slate-50/30 p-4 backdrop-blur-sm"
+							class="border-border bg-muted/40 mt-auto flex items-center justify-between border-t p-4"
 						>
 							<span
 								class={cn(
-									'text-[10px] font-bold tracking-wider uppercase',
-									promo.IsActive ? 'text-emerald-600' : 'text-slate-400'
+									'overline',
+									promo.IsActive ? 'text-success' : 'text-muted-foreground'
 								)}
 							>
 								{promo.IsActive ? 'Active Now' : 'Inactive'}
@@ -395,7 +380,7 @@
 								<Button
 									variant="ghost"
 									size="icon"
-									class="h-8 w-8 rounded-full text-slate-500 hover:bg-purple-50 hover:text-purple-600"
+									class="text-muted-foreground hover:bg-muted hover:text-primary h-8 w-8 rounded-md"
 									onclick={() => openEditDialog(promo)}
 								>
 									<Pencil class="h-4 w-4" />
@@ -403,7 +388,7 @@
 								<Button
 									variant="ghost"
 									size="icon"
-									class="h-8 w-8 rounded-full text-slate-500 hover:bg-red-50 hover:text-red-600"
+									class="text-muted-foreground hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md"
 									onclick={() => handleDelete(promo.ID)}
 								>
 									<Trash2 class="h-4 w-4" />
@@ -413,17 +398,15 @@
 					</div>
 				{:else}
 					<div class="col-span-full py-20 text-center">
-						<div
-							class="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-purple-50 text-purple-200"
-						>
+						<div class="bg-muted text-muted-foreground mx-auto flex h-20 w-20 items-center justify-center rounded-lg">
 							<Tag class="h-10 w-10" />
 						</div>
-						<h3 class="mt-4 text-lg font-bold text-slate-700">No Promotions Found</h3>
-						<p class="text-slate-500">Create your first promotion to boost sales.</p>
+						<h3 class="text-foreground mt-4 text-lg font-bold">No Promotions Found</h3>
+						<p class="text-muted-foreground">Create your first promotion to boost sales.</p>
 						<Button
 							onclick={openCreateDialog}
 							variant="outline"
-							class="mt-4 border-purple-200 text-purple-700 hover:bg-purple-50"
+							class="glass-button text-foreground mt-4 rounded-md"
 						>
 							Create Promotion
 						</Button>
@@ -436,19 +419,15 @@
 	<!-- Create/Edit Dialog -->
 	<Dialog bind:open={isDialogOpen}>
 		<DialogContent
-			class="gap-0 overflow-visible rounded-[2rem] border-white/20 bg-white/60 p-0 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] backdrop-blur-3xl sm:max-w-[650px]"
+			class="bg-card border-border gap-0 overflow-visible rounded-lg border p-0 shadow-lg sm:max-w-[650px]"
 		>
-			<!-- Glassy Header -->
-			<div
-				class="rounded-t-[2rem] border-b border-white/30 bg-gradient-to-r from-indigo-50/40 to-purple-50/40 px-8 pt-8 pb-6"
-			>
+			<!-- Header -->
+			<div class="border-border bg-muted/50 rounded-t-lg border-b px-8 pt-8 pb-6">
 				<DialogHeader>
-					<DialogTitle
-						class="bg-gradient-to-r from-indigo-900 to-purple-900 bg-clip-text text-2xl font-bold text-transparent"
-					>
+					<DialogTitle class="font-display text-foreground text-2xl font-bold">
 						{editingId ? 'Edit Promotion' : 'Create Promotion'}</DialogTitle
 					>
-					<DialogDescription class="font-medium text-slate-500">
+					<DialogDescription class="text-muted-foreground font-medium">
 						Configure discount rules and targeting. Higher priority rules override overlapping ones.
 					</DialogDescription>
 				</DialogHeader>
@@ -462,44 +441,35 @@
 			>
 				<div class="grid grid-cols-2 gap-6">
 					<div class="space-y-2">
-						<Label class="text-xs font-bold tracking-wider text-slate-500 uppercase">Name</Label>
-						<Input
-							bind:value={$form.name}
-							placeholder="e.g. Summer Sale"
-							class="h-11 rounded-xl border-white/40 bg-white/40 font-medium placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20"
-						/>
+						<Label class="overline">Name</Label>
+						<Input bind:value={$form.name} placeholder="e.g. Summer Sale" class={inputClass} />
 						{#if $errors.name}
-							<p class="text-xs font-semibold text-rose-600">{$errors.name}</p>
+							<p class="text-danger text-xs font-semibold">{$errors.name}</p>
 						{/if}
 					</div>
 					<div class="space-y-2">
-						<Label class="text-xs font-bold tracking-wider text-slate-500 uppercase">Priority</Label
-						>
+						<Label class="overline">Priority</Label>
 						<Input
 							type="number"
 							bind:value={$form.priority}
 							min="0"
-							class="h-11 rounded-xl border-white/40 bg-white/40 font-medium focus:border-indigo-500 focus:ring-indigo-500/20"
+							class="{inputClass} num-mono"
 						/>
 					</div>
 				</div>
 
 				<div class="space-y-2">
-					<Label class="text-xs font-bold tracking-wider text-slate-500 uppercase"
-						>Description</Label
-					>
+					<Label class="overline">Description</Label>
 					<Input
 						bind:value={$form.description}
 						placeholder="Internal note..."
-						class="h-11 rounded-xl border-white/40 bg-white/40 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/20"
+						class={inputClass}
 					/>
 				</div>
 
-				<div
-					class="grid grid-cols-2 gap-6 rounded-2xl border border-white/30 bg-gradient-to-br from-white/40 to-indigo-50/10 p-5 shadow-sm"
-				>
+				<div class="border-border bg-muted/40 grid grid-cols-2 gap-6 rounded-md border p-5">
 					<div class="space-y-2">
-						<Label class="flex items-center gap-1 font-semibold text-indigo-900">
+						<Label class="text-foreground flex items-center gap-1 font-semibold">
 							Discount Type
 							<HelpTip text="PERCENTAGE applies a % off the price; FIXED_AMOUNT subtracts a flat currency value." />
 						</Label>
@@ -508,21 +478,21 @@
 							options={discountTypeOptions}
 							on:change={onDiscountTypeChange}
 							placeholder="Select Type"
-							style="bg-white/60 border-white/40 h-11 rounded-xl"
+							style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label class="font-semibold text-indigo-900">Value</Label>
+						<Label class="text-foreground font-semibold">Value</Label>
 						<div class="relative">
 							<Input
 								type="number"
 								bind:value={$form.discountValue}
 								min="0"
 								step="0.01"
-								class="h-11 rounded-xl border-white/40 bg-white/80 pl-10 text-lg font-bold text-indigo-600 focus:border-indigo-500 focus:ring-indigo-500/20"
+								class="liquid-input num-mono text-primary h-11 w-full rounded-md bg-card pl-10 text-lg font-bold focus:border-primary focus:ring-0"
 							/>
 							<div
-								class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-indigo-400"
+								class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
 							>
 								{#if $form.discountType === 'PERCENTAGE'}
 									<Percent class="h-5 w-5" />
@@ -536,39 +506,36 @@
 
 				<div class="grid grid-cols-2 gap-6">
 					<div class="space-y-2">
-						<Label class="text-xs font-bold tracking-wider text-slate-500 uppercase"
-							>Start Date</Label
-						>
+						<Label class="overline">Start Date</Label>
 						<Input
 							type="datetime-local"
 							bind:value={$form.startDate}
-							class="h-11 rounded-xl border-white/40 bg-white/40 text-sm font-medium text-slate-600"
+							class="{inputClass} num-mono"
 						/>
 						{#if $errors.startDate}
-							<p class="text-xs font-semibold text-rose-600">{$errors.startDate}</p>
+							<p class="text-danger text-xs font-semibold">{$errors.startDate}</p>
 						{/if}
 					</div>
 					<div class="space-y-2">
-						<Label class="text-xs font-bold tracking-wider text-slate-500 uppercase">End Date</Label
-						>
+						<Label class="overline">End Date</Label>
 						<Input
 							type="datetime-local"
 							bind:value={$form.endDate}
-							class="h-11 rounded-xl border-white/40 bg-white/40 text-sm font-medium text-slate-600"
+							class="{inputClass} num-mono"
 						/>
 						{#if $errors.endDate}
-							<p class="text-xs font-semibold text-rose-600">{$errors.endDate}</p>
+							<p class="text-danger text-xs font-semibold">{$errors.endDate}</p>
 						{/if}
 					</div>
 				</div>
 
-				<div class="space-y-4 rounded-2xl border border-white/40 bg-white/20 p-6 shadow-sm">
+				<div class="border-border bg-card space-y-4 rounded-md border p-6 shadow-xs">
 					<div class="mb-2 flex items-center gap-2">
-						<Layers class="h-5 w-5 text-indigo-600" />
-						<Label class="text-base font-bold text-slate-800">Targeting Rules</Label>
+						<Layers class="text-primary h-5 w-5" />
+						<Label class="text-foreground text-base font-bold">Targeting Rules</Label>
 					</div>
 
-					<div class="flex rounded-xl bg-slate-100/50 p-1.5 backdrop-blur-md">
+					<div class="bg-muted flex rounded-md p-1.5">
 						{#each [{ val: 'CATEGORY', label: 'Category' }, { val: 'SUBCATEGORY', label: 'Sub-Category' }, { val: 'PRODUCT', label: 'Product' }] as option}
 							<label class="relative flex-1 cursor-pointer">
 								<input
@@ -579,7 +546,7 @@
 									bind:group={$form.targetType}
 								/>
 								<div
-									class="flex items-center justify-center rounded-lg py-2.5 text-sm font-semibold text-slate-500 transition-all duration-300 peer-checked:bg-white peer-checked:text-indigo-600 peer-checked:shadow-sm"
+									class="text-muted-foreground peer-checked:bg-card peer-checked:text-primary peer-checked:shadow-sm flex items-center justify-center rounded-md py-2.5 text-sm font-semibold transition-all duration-200"
 								>
 									{option.label}
 								</div>
@@ -590,43 +557,40 @@
 					<div class="min-h-[80px] space-y-4 pt-2">
 						{#if $form.targetType === 'CATEGORY' || $form.targetType === 'SUBCATEGORY'}
 							<div in:fly={{ y: 5, duration: 200 }} class="space-y-2">
-								<Label class="text-xs font-semibold text-slate-500 uppercase">Select Category</Label
-								>
+								<Label class="overline">Select Category</Label>
 								<Select
 									value={$form.categoryId ? String($form.categoryId) : ''}
 									options={categoryOptions}
 									on:change={onCategoryChange}
 									placeholder="Choose a category..."
-									style="bg-white/80 h-11 rounded-xl border-white/40"
+									style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
 								/>
 							</div>
 						{/if}
 
 						{#if $form.targetType === 'SUBCATEGORY'}
 							<div in:fly={{ y: 5, duration: 200 }} class="space-y-2">
-								<Label class="text-xs font-semibold text-slate-500 uppercase"
-									>Select Sub-Category</Label
-								>
+								<Label class="overline">Select Sub-Category</Label>
 								<Select
 									value={$form.subCategoryId ? String($form.subCategoryId) : ''}
 									options={subCategoryOptions}
 									on:change={onSubCategoryChange}
 									disabled={!$form.categoryId || subCategories.length === 0}
 									placeholder="Choose a sub-category..."
-									style="bg-white/80 h-11 rounded-xl border-white/40"
+									style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
 								/>
 							</div>
 						{/if}
 
 						{#if $form.targetType === 'PRODUCT'}
 							<div in:fly={{ y: 5, duration: 200 }} class="space-y-2">
-								<Label class="text-xs font-semibold text-slate-500 uppercase">Find Product</Label>
+								<Label class="overline">Find Product</Label>
 								<div class="group relative">
 									<Search
-										class="absolute top-3.5 left-3 h-4 w-4 text-slate-400 transition-colors group-focus-within:text-indigo-500"
+										class="text-muted-foreground absolute top-3.5 left-3 h-4 w-4"
 									/>
 									<Input
-										class="h-11 rounded-xl border-white/40 bg-white/60 pl-10 focus:border-indigo-500 focus:ring-indigo-500/20"
+										class="{inputClass} pl-10"
 										placeholder="Search by name or SKU..."
 										bind:value={productSearch}
 										oninput={(e) => searchProducts(e.currentTarget.value)}
@@ -634,43 +598,36 @@
 								</div>
 
 								{#if products.length > 0}
-									<div class="mt-2 px-1 text-xs font-medium text-slate-400">
+									<div class="text-muted-foreground mt-2 px-1 text-xs font-medium">
 										Found {products.length} matches
 									</div>
 									<div
-										class="custom-scrollbar mt-2 max-h-[160px] overflow-y-auto rounded-xl border border-slate-100/50 bg-white/60 p-1 shadow-lg backdrop-blur-md"
+										class="custom-scrollbar border-border bg-card mt-2 max-h-[160px] overflow-y-auto rounded-md border p-1 shadow-md"
 									>
 										{#each products as textProd}
 											<button
-												class="group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm transition-all hover:bg-indigo-50/50 {$form.productId ===
+												class="group flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted {$form.productId ===
 												textProd.ID
-													? 'bg-indigo-50 ring-1 ring-indigo-200'
+													? 'bg-accent ring-primary/30 ring-1'
 													: ''}"
 												onclick={() => ($form.productId = textProd.ID)}
 											>
-												<span
-													class="font-medium text-slate-700 transition-colors group-hover:text-indigo-700"
-													>{textProd.Name}</span
-												>
-												<Badge
-													variant="secondary"
-													class="bg-slate-100 font-mono text-[10px] tracking-wider text-slate-500 group-hover:bg-white"
-													>{textProd.SKU}</Badge
-												>
+												<span class="text-foreground font-medium">{textProd.Name}</span>
+												<span class="badge-neutral num-mono">{textProd.SKU}</span>
 											</button>
 										{/each}
 									</div>
 								{/if}
 								{#if $form.productId}
 									<div
-										class="animate-in fade-in slide-in-from-top-1 mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/50 p-3 text-emerald-700"
+										class="text-success mt-3 flex items-center justify-between rounded-md border border-success/25 bg-success/10 p-3"
 									>
 										<div class="flex items-center gap-2 text-sm font-medium">
-											<CheckCircle2 class="h-4 w-4 text-emerald-600" />
+											<CheckCircle2 class="text-success h-4 w-4" />
 											Product Selected
 										</div>
 										<span
-											class="rounded-md border border-emerald-200/50 bg-white/50 px-2 py-0.5 font-mono text-xs"
+											class="num-mono border-success/30 bg-card rounded-md border px-2 py-0.5 text-xs"
 											>ID: {$form.productId}</span
 										>
 									</div>
@@ -682,10 +639,8 @@
 
 				<div
 					class={cn(
-						'flex items-center space-x-4 rounded-2xl border p-4 shadow-sm transition-all duration-300',
-						$form.isActive
-							? 'border-emerald-200/60 bg-emerald-50/60 shadow-emerald-500/10'
-							: 'border-slate-200/60 bg-slate-50/60'
+						'flex items-center space-x-4 rounded-md border p-4 transition-colors duration-200',
+						$form.isActive ? 'border-success/30 bg-success/10' : 'border-border bg-muted/50'
 					)}
 				>
 					<Switch bind:checked={$form.isActive} id="active-mode" />
@@ -694,7 +649,7 @@
 							for="active-mode"
 							class={cn(
 								'cursor-pointer text-sm font-bold transition-colors',
-								$form.isActive ? 'text-emerald-800' : 'text-slate-600'
+								$form.isActive ? 'text-success' : 'text-muted-foreground'
 							)}
 						>
 							{$form.isActive ? 'Promotion Active' : 'Promotion Inactive'}
@@ -702,7 +657,7 @@
 						<span
 							class={cn(
 								'text-xs transition-colors',
-								$form.isActive ? 'text-emerald-600/80' : 'text-slate-400'
+								$form.isActive ? 'text-success/80' : 'text-muted-foreground'
 							)}
 						>
 							{$form.isActive
@@ -713,19 +668,19 @@
 				</div>
 			</form>
 
-			<!-- Glassy Footer -->
-			<div class="rounded-b-[2rem] border-t border-white/20 bg-slate-50/30 p-6 backdrop-blur-md">
+			<!-- Footer -->
+			<div class="border-border bg-muted/50 rounded-b-lg border-t p-6">
 				<DialogFooter class="gap-3 sm:gap-0">
 					<Button
 						variant="outline"
 						onclick={() => (isDialogOpen = false)}
-						class="rounded-xl border-white/40 bg-white/40 font-medium transition-all hover:bg-white/60 hover:text-slate-900"
+						class="glass-button text-foreground rounded-md font-medium"
 						>Cancel</Button
 					>
 					<Button
 						type="submit"
 						form="promotion-form"
-						class="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-8 font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] hover:from-indigo-500 hover:to-purple-500"
+						class="bg-primary text-primary-foreground rounded-md px-8 font-semibold shadow-md hover:bg-primary/90"
 					>
 						{editingId ? 'Save Changes' : 'Create Promotion'}
 					</Button>

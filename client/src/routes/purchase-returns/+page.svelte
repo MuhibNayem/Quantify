@@ -12,14 +12,6 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
 	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
-	import {
 		Undo2,
 		Plus,
 		Search,
@@ -123,14 +115,15 @@
 	function getStatusColor(status: string) {
 		switch (status) {
 			case 'APPROVED':
+				return 'badge-info';
 			case 'COMPLETED':
-				return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+				return 'badge-success';
 			case 'PENDING':
-				return 'bg-amber-100 text-amber-700 border-amber-200';
+				return 'badge-warning';
 			case 'CANCELLED':
-				return 'bg-red-100 text-red-700 border-red-200';
+				return 'badge-danger';
 			default:
-				return 'bg-slate-100 text-slate-700 border-slate-200';
+				return 'badge-neutral';
 		}
 	}
 
@@ -236,23 +229,21 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10">
-	<div
-		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-100/20 via-slate-50/20 to-white/20"
-	></div>
-
+<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
-		<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+		<div
+			class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+			data-animate="fade-up"
+		>
 			<div class="space-y-1">
-				<h1
-					class="bg-gradient-to-r from-slate-900 via-orange-900 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent"
-				>
+				<p class="overline">Procurement · Vendor Returns</p>
+				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
 					Purchase Returns
 				</h1>
-				<p class="text-slate-500">Manage supplier returns and refunds</p>
+				<p class="text-muted-foreground">Manage supplier returns and refunds</p>
 			</div>
 			<Button
-				class="gap-2 bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md hover:from-orange-500 hover:to-amber-500"
+				class="bg-primary text-primary-foreground gap-2 rounded-md shadow-md hover:bg-primary/90"
 				onclick={openCreateModal}
 			>
 				<Plus class="h-4 w-4" />
@@ -261,7 +252,9 @@
 		</div>
 
 		<div
-			class="liquid-panel flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm md:flex-row md:items-center"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 md:flex-row md:items-center"
+			data-animate="fade-up"
+			style="animation-delay: 80ms;"
 		>
 			<div class="w-48">
 				<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
@@ -269,7 +262,7 @@
 			<div class="w-48">
 				<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
 			</div>
-			<Button variant="outline" size="sm" onclick={applyFilters} class="gap-1">
+			<Button variant="outline" size="sm" onclick={applyFilters} class="glass-button gap-1 rounded-md">
 				<Search class="h-3 w-3" />
 				Filter
 			</Button>
@@ -277,10 +270,10 @@
 
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
-				<Loader2 class="h-8 w-8 animate-spin text-orange-500" />
+				<Loader2 class="text-primary h-8 w-8 animate-spin" />
 			</div>
 		{:else if returns.length === 0}
-			<div class="rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+			<div class="liquid-panel rounded-lg">
 				<EmptyState
 					icon={Undo2}
 					title="No purchase returns found"
@@ -290,121 +283,117 @@
 				/>
 			</div>
 		{:else}
-			<div
-				in:fly={{ y: 20, duration: 300 }}
-				class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl"
-			>
-				<Table>
-					<TableHeader>
-						<TableRow class="border-slate-100 bg-slate-50/50">
-							<TableHead class="font-bold text-slate-600">Return #</TableHead>
-							<TableHead class="font-bold text-slate-600">PO #</TableHead>
-							<TableHead class="font-bold text-slate-600">Supplier</TableHead>
-							<TableHead class="font-bold text-slate-600">Status</TableHead>
-							<TableHead class="font-bold text-slate-600">Amount</TableHead>
-							<TableHead class="font-bold text-slate-600">Reason</TableHead>
-							<TableHead class="font-bold text-slate-600">Created</TableHead>
-							<TableHead class="text-right font-bold text-slate-600">Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{#each returns as ret (ret.ID)}
-							<TableRow class="border-slate-50 transition-colors hover:bg-orange-50/30">
-								<TableCell class="font-mono font-semibold text-slate-800">
-									{returnNumber(ret.ID)}
-								</TableCell>
-								<TableCell class="font-mono text-slate-600">
-									{poNumber(ret.PurchaseOrderID)}
-								</TableCell>
-								<TableCell class="text-slate-700">
-									{ret.Supplier?.Name || `Supplier #${ret.SupplierID}`}
-								</TableCell>
-								<TableCell>
-									<span
-										class={cn(
-											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
-											getStatusColor(ret.Status)
-										)}
-									>
-										{ret.Status}
-									</span>
-								</TableCell>
-								<TableCell class="font-semibold text-slate-800">
-									{formatCurrency(ret.TotalAmount)}
-								</TableCell>
-								<TableCell class="max-w-[12rem] truncate text-slate-500">
-									{ret.Reason}
-								</TableCell>
-								<TableCell class="text-slate-500">
-									<TimeAgo date={ret.CreatedAt} />
-								</TableCell>
-								<TableCell>
-									<div class="flex items-center justify-end gap-1">
-										{#if actionLoading === ret.ID}
-											<Loader2 class="h-4 w-4 animate-spin text-orange-500" />
-										{:else}
-											{#if ret.Status === 'PENDING'}
-												<Button
-													variant="ghost"
-													size="sm"
-													class="h-7 w-7 p-0 text-slate-500 hover:text-emerald-600"
-													title="Approve"
-													onclick={() => handleApprove(ret)}
-												>
-													<CheckCircle2 class="h-3.5 w-3.5" />
-												</Button>
+			<div in:fly={{ y: 20, duration: 300 }} class="liquid-panel overflow-hidden rounded-lg">
+				<div class="overflow-x-auto">
+					<table class="ledger-table">
+						<thead>
+							<tr>
+								<th>Return #</th>
+								<th>PO #</th>
+								<th>Supplier</th>
+								<th>Status</th>
+								<th class="text-right">Amount</th>
+								<th>Reason</th>
+								<th>Created</th>
+								<th class="text-right">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each returns as ret (ret.ID)}
+								<tr>
+									<td class="num-mono text-foreground font-semibold">
+										{returnNumber(ret.ID)}
+									</td>
+									<td class="num-mono text-muted-foreground">
+										{poNumber(ret.PurchaseOrderID)}
+									</td>
+									<td class="text-foreground">
+										{ret.Supplier?.Name || `Supplier #${ret.SupplierID}`}
+									</td>
+									<td>
+										<span class={cn('uppercase', getStatusColor(ret.Status))}>
+											{ret.Status}
+										</span>
+									</td>
+									<td class="col-num text-foreground font-semibold">
+										{formatCurrency(ret.TotalAmount)}
+									</td>
+									<td class="text-muted-foreground max-w-[12rem] truncate">
+										{ret.Reason}
+									</td>
+									<td class="text-muted-foreground">
+										<TimeAgo date={ret.CreatedAt} />
+									</td>
+									<td>
+										<div class="flex items-center justify-end gap-1">
+											{#if actionLoading === ret.ID}
+												<Loader2 class="text-primary h-4 w-4 animate-spin" />
+											{:else}
+												{#if ret.Status === 'PENDING'}
+													<Button
+														variant="ghost"
+														size="sm"
+														class="text-muted-foreground hover:text-success h-7 w-7 rounded-md p-0"
+														title="Approve"
+														onclick={() => handleApprove(ret)}
+													>
+														<CheckCircle2 class="h-3.5 w-3.5" />
+													</Button>
+												{/if}
+												{#if ret.Status === 'APPROVED'}
+													<Button
+														variant="ghost"
+														size="sm"
+														class="text-muted-foreground hover:text-info h-7 w-7 rounded-md p-0"
+														title="Complete"
+														onclick={() => handleComplete(ret)}
+													>
+														<PackageCheck class="h-3.5 w-3.5" />
+													</Button>
+												{/if}
+												{#if ret.Status === 'PENDING' || ret.Status === 'APPROVED'}
+													<Button
+														variant="ghost"
+														size="sm"
+														class="text-muted-foreground hover:text-danger h-7 w-7 rounded-md p-0"
+														title="Cancel"
+														onclick={() => handleCancel(ret)}
+													>
+														<XCircle class="h-3.5 w-3.5" />
+													</Button>
+												{/if}
 											{/if}
-											{#if ret.Status === 'APPROVED'}
-												<Button
-													variant="ghost"
-													size="sm"
-													class="h-7 w-7 p-0 text-slate-500 hover:text-blue-600"
-													title="Complete"
-													onclick={() => handleComplete(ret)}
-												>
-													<PackageCheck class="h-3.5 w-3.5" />
-												</Button>
-											{/if}
-											{#if ret.Status === 'PENDING' || ret.Status === 'APPROVED'}
-												<Button
-													variant="ghost"
-													size="sm"
-													class="h-7 w-7 p-0 text-slate-500 hover:text-red-600"
-													title="Cancel"
-													onclick={() => handleCancel(ret)}
-												>
-													<XCircle class="h-3.5 w-3.5" />
-												</Button>
-											{/if}
-										{/if}
-									</div>
-								</TableCell>
-							</TableRow>
-						{/each}
-					</TableBody>
-				</Table>
+										</div>
+									</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			</div>
 
 			{#if totalPages > 1}
 				<div class="flex items-center justify-between">
-					<p class="text-sm text-slate-500">
+					<p class="text-muted-foreground text-sm">
 						Showing {returns.length} of {total} returns
 					</p>
 					<div class="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
+							class="glass-button rounded-md"
 							disabled={page <= 1}
 							onclick={() => goToPage(page - 1)}
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-sm font-medium text-slate-700">
+						<span class="text-foreground num-mono text-sm font-medium">
 							Page {page} of {totalPages}
 						</span>
 						<Button
 							variant="outline"
 							size="sm"
+							class="glass-button rounded-md"
 							disabled={page >= totalPages}
 							onclick={() => goToPage(page + 1)}
 						>
@@ -429,18 +418,16 @@
 		<div class="space-y-4 py-4">
 			<div class="space-y-2">
 				<Label>Purchase Order</Label>
-				<select
-					bind:value={createForm.purchaseOrderId}
-					onchange={onPoSelect}
-					class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none"
-				>
-					<option value="">Select a PO...</option>
-					{#each purchaseOrders as po}
-						<option value={String(po.ID)}>
-							{poNumber(po.ID)} — {(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
-						</option>
-					{/each}
-				</select>
+				<div class="select-wrapper">
+					<select bind:value={createForm.purchaseOrderId} onchange={onPoSelect}>
+						<option value="">Select a PO...</option>
+						{#each purchaseOrders as po}
+							<option value={String(po.ID)}>
+								{poNumber(po.ID)} — {(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
+							</option>
+						{/each}
+					</select>
+				</div>
 			</div>
 
 			<div class="space-y-2">
@@ -454,36 +441,36 @@
 			{#if createForm.items.length > 0}
 				<div class="space-y-2">
 					<Label>Items</Label>
-					<div class="rounded-lg border border-slate-200">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead class="text-xs">Product</TableHead>
-									<TableHead class="text-xs">Qty</TableHead>
-									<TableHead class="text-xs">Unit Price</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
+					<div class="border-border overflow-hidden rounded-md border">
+						<table class="ledger-table">
+							<thead>
+								<tr>
+									<th>Product</th>
+									<th class="text-right">Qty</th>
+									<th class="text-right">Unit Price</th>
+								</tr>
+							</thead>
+							<tbody>
 								{#each createForm.items as item, i}
-									<TableRow>
-										<TableCell class="text-sm">
+									<tr>
+										<td class="num-mono text-sm">
 											Product #{item.productId}
-										</TableCell>
-										<TableCell>
+										</td>
+										<td class="text-right">
 											<Input
 												type="number"
 												min="1"
 												bind:value={item.quantity}
-												class="h-7 w-20 text-sm"
+												class="liquid-input num-mono h-7 w-20 px-2 text-right text-sm"
 											/>
-										</TableCell>
-										<TableCell class="text-sm">
+										</td>
+										<td class="col-num">
 											{formatCurrency(item.unitPrice)}
-										</TableCell>
-									</TableRow>
+										</td>
+									</tr>
 								{/each}
-							</TableBody>
-						</Table>
+							</tbody>
+						</table>
 					</div>
 				</div>
 			{/if}
@@ -494,7 +481,7 @@
 			<Button
 				onclick={handleCreate}
 				disabled={creating}
-				class="bg-gradient-to-r from-orange-600 to-amber-600 text-white hover:from-orange-500 hover:to-amber-500"
+				class="bg-primary text-primary-foreground hover:bg-primary/90"
 			>
 				{#if creating}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />

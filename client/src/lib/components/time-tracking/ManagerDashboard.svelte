@@ -104,22 +104,24 @@
 <div class="space-y-10">
 	<!-- Header -->
 	<div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-		<div>
-			<p class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">{$t('time_tracking.manager.header.subtitle')}</p>
-			<h1 class="mt-2 text-3xl font-semibold text-slate-900 md:text-4xl">{$t('time_tracking.manager.header.title')}</h1>
-			<p class="text-slate-500">{$t('time_tracking.manager.header.desc')}</p>
+		<div class="space-y-1" data-animate="fade-up">
+			<p class="overline">{$t('time_tracking.manager.header.subtitle')}</p>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight md:text-4xl">
+				{$t('time_tracking.manager.header.title')}
+			</h1>
+			<p class="text-muted-foreground">{$t('time_tracking.manager.header.desc')}</p>
 		</div>
 		<div class="flex gap-3">
 			<Button
 				onclick={handleExportReport}
-				class="glass-button flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-500/90 to-indigo-500/90 px-5 py-3 font-semibold text-white shadow-lg"
+				class="bg-primary text-primary-foreground flex items-center gap-2 rounded-md px-5 py-3 font-semibold shadow-md hover:bg-primary/90"
 			>
 				<Download size={18} />
 				{$t('time_tracking.manager.actions.export')}
 			</Button>
 			<Button
 				variant="ghost"
-				class="glass-button flex items-center gap-2 rounded-2xl px-5 py-3 text-slate-700"
+				class="glass-button text-foreground flex items-center gap-2 rounded-md px-5 py-3"
 			>
 				<Filter size={18} />
 				{$t('time_tracking.manager.actions.filter')}
@@ -129,54 +131,58 @@
 
 	<!-- Team Stats Overview -->
 	<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
-		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_35px_90px_-60px_rgba(59,130,246,0.55)] transition-all duration-300 hover:scale-[1.01]"
-		>
+		<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
 			<CardHeader class="pb-2">
-				<CardTitle class="flex items-center gap-3 text-slate-600">
+				<CardTitle class="text-muted-foreground flex items-center gap-3">
 					<Clock size={20} />
 					<span>{$t('time_tracking.manager.stats.total_hours')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<p class="text-3xl font-bold text-slate-900">{teamStats.totalHours}</p>
-				<div class="mt-2 h-2 w-full rounded-full bg-slate-200/70">
+				<p class="kpi-num text-foreground text-3xl">{teamStats.totalHours}</p>
+				<div class="bg-muted mt-2 h-2 w-full rounded-md">
 					<div
-						class="h-2 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 transition-all duration-500"
+						class="bg-primary h-2 rounded-md transition-all duration-500"
 						style="width: {teamStats.progress}%"
 					></div>
 				</div>
-				<p class="mt-1 text-sm text-slate-500">{$t('time_tracking.manager.stats.weekly_target_percent', { percent: teamStats.progress })}</p>
+				<p class="text-muted-foreground num-mono mt-1 text-sm">
+					{$t('time_tracking.manager.stats.weekly_target_percent', { percent: teamStats.progress })}
+				</p>
 			</CardContent>
 		</Card>
 
 		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_35px_90px_-60px_rgba(16,185,129,0.5)] transition-all duration-300 hover:scale-[1.01]"
+			class="liquid-panel overflow-hidden rounded-lg"
+			data-animate="fade-up"
+			style="animation-delay: 100ms;"
 		>
 			<CardHeader class="pb-2">
-				<CardTitle class="flex items-center gap-3 text-slate-600">
+				<CardTitle class="text-muted-foreground flex items-center gap-3">
 					<Users size={20} />
 					<span>{$t('time_tracking.manager.stats.active_members')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<p class="text-3xl font-bold text-slate-900">{teamStats.activeMembers}/5</p>
-				<p class="text-sm text-slate-500">{$t('time_tracking.manager.stats.working')}</p>
+				<p class="kpi-num text-foreground text-3xl">{teamStats.activeMembers}/5</p>
+				<p class="text-muted-foreground text-sm">{$t('time_tracking.manager.stats.working')}</p>
 			</CardContent>
 		</Card>
 
 		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 text-slate-900 shadow-[0_35px_90px_-60px_rgba(249,115,22,0.45)] transition-all duration-300 hover:scale-[1.01]"
+			class="liquid-panel overflow-hidden rounded-lg"
+			data-animate="fade-up"
+			style="animation-delay: 200ms;"
 		>
 			<CardHeader class="pb-2">
-				<CardTitle class="flex items-center gap-3 text-slate-600">
+				<CardTitle class="text-muted-foreground flex items-center gap-3">
 					<Target size={20} />
 					<span>{$t('time_tracking.manager.stats.weekly_target')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
-				<p class="text-3xl font-bold text-slate-900">{teamStats.weeklyTarget}h</p>
-				<p class="text-sm text-slate-500">{$t('time_tracking.manager.stats.team_goal')}</p>
+				<p class="kpi-num text-foreground text-3xl">{teamStats.weeklyTarget}h</p>
+				<p class="text-muted-foreground text-sm">{$t('time_tracking.manager.stats.team_goal')}</p>
 			</CardContent>
 		</Card>
 	</div>
@@ -184,50 +190,46 @@
 	<!-- Team Members and Projects -->
 	<div class="grid grid-cols-1 gap-8">
 		<!-- Team Members -->
-		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(191,219,254,0.6)] transition-all duration-300 hover:scale-[1.01]"
-		>
+		<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
 			<CardHeader>
-				<CardTitle class="flex items-center gap-3 text-slate-600">
-					<Users size={20} class="text-blue-500/80" />
+				<CardTitle class="text-foreground flex items-center gap-3">
+					<Users size={20} class="text-primary" />
 					<span>{$t('time_tracking.manager.team.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-3">
 					{#each teamMembers as member}
-						<div
-							class="liquid-hoverable flex items-center justify-between rounded-xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all duration-200 hover:bg-white/60"
-						>
+						<div class="liquid-hoverable flex items-center justify-between rounded-md p-4">
 							<div class="flex items-center gap-3">
 								<div
-									class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 font-semibold text-white shadow-lg shadow-blue-500/20"
+									class="bg-primary text-primary-foreground flex h-10 w-10 items-center justify-center rounded-md font-semibold"
 								>
 									{member.avatar}
 								</div>
 								<div>
-									<p class="font-semibold text-slate-800">{member.name}</p>
-									<p class="text-sm text-slate-500">{member.role}</p>
+									<p class="text-foreground font-semibold">{member.name}</p>
+									<p class="text-muted-foreground text-sm">{member.role}</p>
 								</div>
 							</div>
-							<div class="text-right">
-								<div class="mb-1 flex items-center gap-2">
-									<div
-										class="h-2 w-2 rounded-full ring-2 ring-white/50 {member.status === 'active'
-											? 'animate-pulse bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.6)]'
-											: member.status === 'break'
-												? 'bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]'
-												: 'bg-slate-400'}"
-									></div>
-									<span class="text-xs font-medium text-slate-600">
-										{member.status === 'active'
-											? $t('time_tracking.manager.team.status.working')
-											: member.status === 'break'
-												? $t('time_tracking.manager.team.status.on_break')
-												: $t('time_tracking.manager.team.status.offline')}
-									</span>
-								</div>
-								<p class="font-mono font-medium text-slate-700">{member.hours}</p>
+							<div class="flex items-center gap-3">
+								<span
+									class={member.status === 'active'
+										? 'badge-success'
+										: member.status === 'break'
+											? 'badge-warning'
+											: 'badge-neutral'}
+								>
+									{#if member.status === 'active'}
+										<span class="live-dot" style="width: 0.4rem; height: 0.4rem;"></span>
+									{/if}
+									{member.status === 'active'
+										? $t('time_tracking.manager.team.status.working')
+										: member.status === 'break'
+											? $t('time_tracking.manager.team.status.on_break')
+											: $t('time_tracking.manager.team.status.offline')}
+								</span>
+								<p class="num-mono text-foreground font-medium">{member.hours}</p>
 							</div>
 						</div>
 					{/each}
@@ -239,12 +241,10 @@
 	<!-- Attendance and Recent Activities -->
 	<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
 		<!-- Attendance Overview -->
-		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(52,211,153,0.45)] transition-all duration-300 hover:scale-[1.01]"
-		>
+		<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
 			<CardHeader>
-				<CardTitle class="flex items-center gap-3 text-slate-800">
-					<Calendar size={20} class="text-green-500" />
+				<CardTitle class="text-foreground flex items-center gap-3">
+					<Calendar size={20} class="text-success" />
 					<span>{$t('time_tracking.manager.attendance.title')}</span>
 				</CardTitle>
 			</CardHeader>
@@ -255,38 +255,38 @@
 							<div class="flex flex-1 flex-col items-center">
 								<div class="flex h-24 items-end justify-center gap-1">
 									<div
-										class="w-4 rounded-t-lg bg-gradient-to-t from-green-400 to-green-600 transition-all duration-300 hover:from-green-500 hover:to-green-700"
+										class="bg-success hover:bg-success/80 w-4 rounded-t-sm transition-colors duration-300"
 										style="height: {(day.present / 10) * 60}px;"
 									></div>
 									{#if day.absent > 0}
 										<div
-											class="w-4 rounded-t-lg bg-gradient-to-t from-rose-400 to-rose-600 transition-all duration-300 hover:from-rose-500 hover:to-rose-700"
+											class="bg-danger hover:bg-danger/80 w-4 rounded-t-sm transition-colors duration-300"
 											style="height: {(day.absent / 10) * 60}px;"
 										></div>
 									{/if}
 									{#if day.late > 0}
 										<div
-											class="w-4 rounded-t-lg bg-gradient-to-t from-amber-400 to-amber-600 transition-all duration-300 hover:from-amber-500 hover:to-amber-700"
+											class="bg-warning hover:bg-warning/80 w-4 rounded-t-sm transition-colors duration-300"
 											style="height: {(day.late / 10) * 60}px;"
 										></div>
 									{/if}
 								</div>
-								<span class="mt-2 text-xs text-slate-500">{day.day}</span>
+								<span class="text-muted-foreground mt-2 text-xs">{day.day}</span>
 							</div>
 						{/each}
 					</div>
 					<div class="flex justify-center gap-6">
 						<div class="flex items-center gap-2">
-							<div class="h-3 w-3 rounded-full bg-green-500"></div>
-							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.present')}</span>
+							<div class="bg-success h-3 w-3 rounded-sm"></div>
+							<span class="text-muted-foreground text-xs">{$t('time_tracking.manager.attendance.present')}</span>
 						</div>
 						<div class="flex items-center gap-2">
-							<div class="h-3 w-3 rounded-full bg-amber-500"></div>
-							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.late')}</span>
+							<div class="bg-warning h-3 w-3 rounded-sm"></div>
+							<span class="text-muted-foreground text-xs">{$t('time_tracking.manager.attendance.late')}</span>
 						</div>
 						<div class="flex items-center gap-2">
-							<div class="h-3 w-3 rounded-full bg-rose-500"></div>
-							<span class="text-xs text-slate-600">{$t('time_tracking.manager.attendance.absent')}</span>
+							<div class="bg-danger h-3 w-3 rounded-sm"></div>
+							<span class="text-muted-foreground text-xs">{$t('time_tracking.manager.attendance.absent')}</span>
 						</div>
 					</div>
 				</div>
@@ -294,43 +294,39 @@
 		</Card>
 
 		<!-- Recent Activities -->
-		<Card
-			class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(165,180,252,0.5)] transition-all duration-300 hover:scale-[1.01]"
-		>
+		<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
 			<CardHeader>
-				<CardTitle class="flex items-center gap-3 text-slate-800">
-					<Activity size={20} class="text-indigo-500" />
+				<CardTitle class="text-foreground flex items-center gap-3">
+					<Activity size={20} class="text-info" />
 					<span>{$t('time_tracking.manager.recent_activity.title')}</span>
 				</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-3">
 					{#each recentActivities as activity}
-						<div
-							class="liquid-hoverable flex items-start gap-3 rounded-xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-3 transition-all duration-200 hover:bg-white/60"
-						>
+						<div class="liquid-hoverable flex items-start gap-3 rounded-md p-3">
 							<div class="mt-1">
 								{#if activity.action === 'clocked in'}
-									<div class="rounded-full bg-green-400/20 p-1 text-green-600">
+									<div class="bg-success/10 text-success rounded-md p-1">
 										<CheckCircle size={14} />
 									</div>
 								{:else if activity.action === 'started break'}
-									<div class="rounded-full bg-amber-400/20 p-1 text-amber-600">
+									<div class="bg-warning/10 text-warning rounded-md p-1">
 										<Coffee size={14} />
 									</div>
 								{:else}
-									<div class="rounded-full bg-blue-400/20 p-1 text-blue-600">
+									<div class="bg-info/10 text-info rounded-md p-1">
 										<FileText size={14} />
 									</div>
 								{/if}
 							</div>
 							<div class="flex-1">
-								<p class="text-sm text-slate-800">
-									<span class="font-semibold">{activity.user}</span>
-									<span class="text-slate-600">{activity.action}</span>
+								<p class="text-sm">
+									<span class="text-foreground font-semibold">{activity.user}</span>
+									<span class="text-muted-foreground">{activity.action}</span>
 								</p>
 								<div class="mt-1 flex items-center justify-end">
-									<p class="font-mono text-xs font-medium text-slate-500">{activity.time}</p>
+									<p class="num-mono text-muted-foreground text-xs font-medium">{activity.time}</p>
 								</div>
 							</div>
 						</div>
@@ -341,12 +337,10 @@
 	</div>
 
 	<!-- Quick Actions -->
-	<Card
-		class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 shadow-[0_35px_90px_-60px_rgba(148,163,184,0.5)] transition-all duration-300 hover:scale-[1.01]"
-	>
+	<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
 		<CardHeader>
-			<CardTitle class="flex items-center gap-3 text-slate-800">
-				<Settings size={20} class="text-slate-500" />
+			<CardTitle class="text-foreground flex items-center gap-3">
+				<Settings size={20} class="text-muted-foreground" />
 				<span>{$t('time_tracking.manager.quick_actions.title')}</span>
 			</CardTitle>
 		</CardHeader>
@@ -354,30 +348,30 @@
 			<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
 				<Button
 					variant="ghost"
-					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
+					class="glass-button text-foreground flex h-24 flex-col items-center justify-center gap-2 rounded-md"
 				>
-					<PieChart size={24} class="text-blue-500" />
+					<PieChart size={24} class="text-info" />
 					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.reports')}</span>
 				</Button>
 				<Button
 					variant="ghost"
-					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
+					class="glass-button text-foreground flex h-24 flex-col items-center justify-center gap-2 rounded-md"
 				>
-					<Calendar size={24} class="text-green-500" />
+					<Calendar size={24} class="text-success" />
 					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.schedule')}</span>
 				</Button>
 				<Button
 					variant="ghost"
-					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
+					class="glass-button text-foreground flex h-24 flex-col items-center justify-center gap-2 rounded-md"
 				>
-					<DollarSign size={24} class="text-purple-500" />
+					<DollarSign size={24} class="text-primary" />
 					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.payroll')}</span>
 				</Button>
 				<Button
 					variant="ghost"
-					class="glass-button flex h-24 flex-col items-center justify-center gap-2 rounded-2xl text-slate-700"
+					class="glass-button text-foreground flex h-24 flex-col items-center justify-center gap-2 rounded-md"
 				>
-					<AlertCircle size={24} class="text-amber-500" />
+					<AlertCircle size={24} class="text-warning" />
 					<span class="text-sm font-medium">{$t('time_tracking.manager.quick_actions.reminders')}</span>
 				</Button>
 			</div>

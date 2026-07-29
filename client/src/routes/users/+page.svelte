@@ -4,13 +4,6 @@
 	import { rolesApi } from '$lib/api/roles';
 	import type { Role, UserSummary } from '$lib/types';
 	import { toast } from 'svelte-sonner';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
@@ -21,6 +14,9 @@
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
 	import { goto } from '$app/navigation';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
 
 	$effect(() => {
 		if (!auth.hasPermission('users.view')) {
@@ -275,64 +271,29 @@
 		}
 		deleteTargetUser = null;
 	};
-
-	// --- Parallax Hero Motion ---
-	onMount(() => {
-		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
-		if (!hero) return;
-		const handleScroll = () => {
-			const y = window.scrollY / 8;
-			hero.style.transform = `translateY(${y}px)`;
-		};
-		window.addEventListener('scroll', handleScroll, { passive: true });
-		return () => window.removeEventListener('scroll', handleScroll);
-	});
 </script>
 
-<!-- HERO -->
-<section
-	class="animate-gradientShift relative w-full overflow-hidden bg-gradient-to-r from-teal-50 via-sky-50 to-indigo-100 px-6 py-16 sm:py-20"
->
-	<div class="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
-
-	<!-- floating blobs -->
-	<div
-		class="animate-floatSlow pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-gradient-to-br from-sky-300/50 to-teal-300/50 blur-3xl"
-	></div>
-	<div
-		class="animate-floatSlow pointer-events-none absolute -bottom-24 -left-20 h-56 w-56 rounded-full bg-gradient-to-br from-indigo-300/50 to-sky-300/50 blur-3xl delay-500"
-	></div>
-
-	<!-- hero content -->
-	<div
-		class="parallax-hero relative z-10 mx-auto flex max-w-5xl flex-col items-center gap-4 text-center will-change-transform"
-	>
-		<div
-			class="animate-pulseGlow rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 p-4 shadow-xl sm:p-5"
-		>
-			<UserCheck class="h-8 w-8 text-white sm:h-9 sm:w-9" />
-		</div>
-		<h1
-			class="animate-fadeUp bg-gradient-to-r from-sky-700 via-indigo-700 to-teal-700 bg-clip-text text-3xl font-extrabold tracking-tight text-transparent sm:text-5xl"
-		>
-			{$t('users.title')}
-		</h1>
-		<p class="animate-fadeUp max-w-2xl text-slate-700 delay-150">
-			{$t('users.subtitle')}
-		</p>
-		<div class="animate-fadeUp mt-2 flex flex-wrap items-center justify-center gap-2 delay-200">
-			<span
-				class="rounded-full border border-sky-200 bg-white/70 px-3 py-1.5 text-xs text-sky-700 shadow-sm sm:text-sm"
-				>{$t('users.badges.role_control')}</span
-			>
-			<span
-				class="rounded-full border border-indigo-200 bg-white/70 px-3 py-1.5 text-xs text-indigo-700 shadow-sm sm:text-sm"
-				>{$t('users.badges.status_filters')}</span
-			>
-			<span
-				class="rounded-full border border-teal-200 bg-white/70 px-3 py-1.5 text-xs text-teal-700 shadow-sm sm:text-sm"
-				>{$t('users.badges.inline_edits')}</span
-			>
+<!-- HEADER -->
+<section class="w-full">
+	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+		<div class="space-y-3" data-animate="fade-up">
+			<div class="flex items-center gap-3">
+				<span class="glass-button inline-flex rounded-md p-2">
+					<UserCheck class="text-primary h-5 w-5" />
+				</span>
+				<p class="overline">Staff · Access</p>
+			</div>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
+				{$t('users.title')}
+			</h1>
+			<p class="text-muted-foreground max-w-2xl">
+				{$t('users.subtitle')}
+			</p>
+			<div class="flex flex-wrap items-center gap-2 pt-1">
+				<span class="badge-neutral">{$t('users.badges.role_control')}</span>
+				<span class="badge-neutral">{$t('users.badges.status_filters')}</span>
+				<span class="badge-neutral">{$t('users.badges.inline_edits')}</span>
+			</div>
 		</div>
 	</div>
 </section>
@@ -347,24 +308,20 @@
 />
 
 <!-- MAIN CONTENT -->
-<section class="mx-auto max-w-7xl space-y-10 bg-white px-4 py-12 sm:px-6 sm:py-14">
+<section class="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6">
 	<!-- Search & Filter -->
-	<Card
-		class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-indigo-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-	>
-		<CardHeader
-			class="space-y-4 rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-		>
+	<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up" style="animation-delay: 100ms;">
+		<div class="border-border bg-muted/40 space-y-4 border-b px-6 py-5">
 			<div class="flex flex-col gap-3 sm:flex-row">
 				<Input
-					class="flex-1 rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+					class="{inputClass} flex-1"
 					placeholder={$t('users.filters.search_placeholder')}
 					value={searchTerm}
 					oninput={(event) => (searchTerm = event.currentTarget.value)}
 					onkeydown={(event) => event.key === 'Enter' && handleSearch()}
 				/>
 				<Button
-					class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
+					class="bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
 					onclick={handleSearch}
 				>
 					{$t('users.filters.search_btn')}
@@ -374,71 +331,66 @@
 				{#each tabFilters as tab}
 					<Button
 						variant={tab.value === activeTab ? 'default' : 'secondary'}
-						class={`flex-1 rounded-xl ${tab.value === activeTab ? 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white' : 'border border-sky-200 bg-white/70 text-sky-700 hover:bg-sky-50'}`}
+						class={tab.value === activeTab
+							? 'glass-toggle-active flex-1 rounded-md'
+							: 'glass-button text-muted-foreground flex-1 rounded-md'}
 						onclick={() => (activeTab = tab.value)}
 					>
 						{$t(tab.label)}
 					</Button>
 				{/each}
 			</div>
-		</CardHeader>
+		</div>
 
-		<CardContent class="overflow-hidden rounded-b-2xl p-0">
-			<div class="overflow-x-auto">
-				<table class="min-w-full divide-y divide-sky-200 text-sm">
-					<thead
-						class="bg-gradient-to-r from-sky-100 to-indigo-100 text-left text-xs uppercase tracking-wide text-slate-600"
-					>
-						<tr>
-							<th class="px-4 py-3 font-medium">{$t('users.table.id')}</th>
-							<th class="px-4 py-3 font-medium">{$t('users.table.username')}</th>
-							<th class="px-4 py-3 font-medium">{$t('users.table.role')}</th>
-							<th class="px-4 py-3 font-medium">{$t('users.table.status')}</th>
-							<th class="px-4 py-3 text-right font-medium">{$t('users.table.actions')}</th>
-						</tr>
-					</thead>
-					<tbody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
-						{#if listLoading}
-							{#each Array(4) as _, i}
-								<tr
-									><td colspan="5" class="px-4 py-3"><Skeleton class="h-6 w-full bg-white/60" /></td
-									></tr
-								>
-							{/each}
-						{:else if users.length === 0}
+		<div class="overflow-x-auto">
+			<table class="ledger-table">
+				<thead>
+					<tr>
+						<th>{$t('users.table.id')}</th>
+						<th>{$t('users.table.username')}</th>
+						<th>{$t('users.table.role')}</th>
+						<th>{$t('users.table.status')}</th>
+						<th class="text-right">{$t('users.table.actions')}</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#if listLoading}
+						{#each Array(4) as _, i}
 							<tr>
-								<td colspan="5" class="px-4 py-6 text-center text-sm text-slate-600">
-									{$t('users.table.empty')}
-								</td>
+								<td colspan="5"><Skeleton class="bg-muted h-6 w-full" /></td>
 							</tr>
-						{:else}
-							{#each users as item}
-								<tr
-									class={selectedUser?.ID === item.ID
-										? 'border-l-4 border-sky-400 bg-sky-50'
-										: 'cursor-pointer hover:bg-white/90'}
-									on:click={() => openUserDetails(item)}
-								>
-									<td class="px-4 py-3 font-mono text-xs text-slate-700">#{item.ID}</td>
-									<td class="px-4 py-3 text-slate-800">{item.Username}</td>
-									<td class="px-4 py-3 text-slate-700">{item.Role.Name}</td>
-									<td class="px-4 py-3">
-										<span
-											class={`rounded-full px-2.5 py-0.5 text-xs capitalize shadow-sm ${
-												item.IsActive
-													? 'border border-sky-200 bg-sky-100 text-sky-700'
-													: 'border border-amber-200 bg-amber-100 text-amber-800'
-											}`}
-										>
-											{item.IsActive ? $t('users.status.approved') : $t('users.status.pending')}
-										</span>
-									</td>
-									<td class="space-x-1 px-4 py-3 text-right">
+						{/each}
+					{:else if users.length === 0}
+						<tr>
+							<td colspan="5" class="text-muted-foreground py-6 text-center text-sm">
+								{$t('users.table.empty')}
+							</td>
+						</tr>
+					{:else}
+						{#each users as item}
+							<tr
+								class={selectedUser?.ID === item.ID
+									? 'border-l-2 border-primary bg-muted/60'
+									: 'cursor-pointer'}
+								onclick={() => openUserDetails(item)}
+							>
+								<td class="num-mono text-muted-foreground text-xs">#{item.ID}</td>
+								<td class="text-foreground font-medium">{item.Username}</td>
+								<td>
+									<span class="badge-info">{item.Role.Name}</span>
+								</td>
+								<td>
+									<span class={item.IsActive ? 'badge-success' : 'badge-warning'}>
+										{item.IsActive ? $t('users.status.approved') : $t('users.status.pending')}
+									</span>
+								</td>
+								<td>
+									<div class="flex items-center justify-end gap-1">
 										<Button
 											size="sm"
 											variant="ghost"
 											disabled={item.IsActive}
-											class="rounded-lg px-3 py-1.5 text-sky-700 hover:bg-sky-100"
+											class="bg-success text-primary-foreground hover:bg-success/90 rounded-md px-3 py-1.5"
 											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
 												approveUser(item.ID);
@@ -449,7 +401,7 @@
 										<Button
 											size="sm"
 											variant="ghost"
-											class="rounded-lg px-3 py-1.5 text-indigo-700 hover:bg-indigo-100"
+											class="text-foreground hover:bg-muted rounded-md px-3 py-1.5"
 											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
 												editUser(item);
@@ -461,7 +413,7 @@
 										<Button
 											size="sm"
 											variant="ghost"
-											class="rounded-lg px-3 py-1.5 text-rose-700 hover:bg-rose-100"
+											class="text-danger hover:bg-danger/10 hover:text-danger rounded-md px-3 py-1.5"
 											onclick={(event: MouseEvent) => {
 												event.stopPropagation();
 												deleteUser(item.ID, item.Username);
@@ -469,91 +421,92 @@
 										>
 											{$t('users.table.delete')}
 										</Button>
-									</td>
-								</tr>
-							{/each}
-						{/if}
-					</tbody>
-				</table>
-			</div>
-		</CardContent>
-	</Card>
+									</div>
+								</td>
+							</tr>
+						{/each}
+					{/if}
+				</tbody>
+			</table>
+		</div>
+	</div>
 
 	<!-- User Details -->
-	<Card
+	<div
 		id="user-edit-form"
-		class="rounded-2xl border-0 bg-gradient-to-br from-teal-50 to-sky-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+		class="liquid-panel overflow-hidden rounded-lg"
+		data-animate="fade-up"
+		style="animation-delay: 180ms;"
 	>
-		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
-			<CardTitle class="text-slate-800">{$t('users.form.title')}</CardTitle>
-			<CardDescription class="text-slate-600">{$t('users.form.subtitle')}</CardDescription>
-		</CardHeader>
+		<div class="border-border bg-muted/40 border-b px-6 py-5">
+			<h2 class="font-display text-foreground text-lg font-bold">{$t('users.form.title')}</h2>
+			<p class="text-muted-foreground text-sm">{$t('users.form.subtitle')}</p>
+		</div>
 		{#if !selectedUser}
-			<CardContent class="p-6">
-				<p class="text-sm text-slate-600">{$t('users.form.select_prompt')}</p>
-			</CardContent>
+			<div class="p-6">
+				<p class="text-muted-foreground text-sm">{$t('users.form.select_prompt')}</p>
+			</div>
 		{:else}
-			<CardContent class="space-y-4 p-6">
-				<p class="text-xs text-slate-500">{$t('users.form.editing')} #{selectedUser.ID}</p>
+			<div class="space-y-4 p-6">
+				<p class="text-muted-foreground num-mono text-xs">{$t('users.form.editing')} #{selectedUser.ID}</p>
 
 				<!-- Basic Info -->
 				<div class="space-y-3">
-					<p class="border-b border-sky-200 pb-2 text-sm font-semibold text-slate-700">
+					<p class="overline border-border border-b pb-2">
 						{$t('users.form.sections.credentials')}
 					</p>
 					<Input
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						class={inputClass}
 						placeholder={$t('users.form.fields.username')}
 						bind:value={form.username}
 					/>
 					<Input
 						type="password"
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						class={inputClass}
 						placeholder={$t('users.form.fields.password_placeholder')}
 						bind:value={form.password}
 					/>
-					<select
-						class="w-full rounded-xl border border-sky-200 bg-white/90 px-3 py-2.5 text-sm focus:ring-2 focus:ring-sky-400"
-						bind:value={form.role}
-					>
-						<option value="" disabled>{$t('users.form.fields.select_role')}</option>
-						{#each roles as role}
-							<option value={role.Name}>{role.Name}</option>
-						{/each}
-					</select>
+					<div class="select-wrapper">
+						<select bind:value={form.role}>
+							<option value="" disabled>{$t('users.form.fields.select_role')}</option>
+							{#each roles as role}
+								<option value={role.Name}>{role.Name}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 
 				<!-- Personal Info -->
 				<div class="space-y-3">
-					<p class="border-b border-sky-200 pb-2 text-sm font-semibold text-slate-700">
+					<p class="overline border-border border-b pb-2">
 						{$t('users.form.sections.personal')}
 					</p>
 					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<Input
-							class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+							class={inputClass}
 							placeholder={$t('users.form.fields.first_name')}
 							bind:value={form.firstName}
 						/>
 						<Input
-							class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+							class={inputClass}
 							placeholder={$t('users.form.fields.last_name')}
 							bind:value={form.lastName}
 						/>
 					</div>
 					<Input
 						type="email"
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						class={inputClass}
 						placeholder={$t('users.form.fields.email')}
 						bind:value={form.email}
 					/>
 					<Input
 						type="tel"
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						class={inputClass}
 						placeholder={$t('users.form.fields.phone')}
 						bind:value={form.phoneNumber}
 					/>
 					<Input
-						class="rounded-xl border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+						class={inputClass}
 						placeholder={$t('users.form.fields.address')}
 						bind:value={form.address}
 					/>
@@ -562,35 +515,35 @@
 				<div class="flex flex-col gap-3 pt-2 sm:flex-row">
 					{#if auth.hasPermission('users.manage')}
 						<Button
-							class="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 font-semibold text-white shadow-md transition-all hover:scale-105 hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
+							class="bg-primary text-primary-foreground flex-1 rounded-md font-semibold hover:bg-primary/90"
 							onclick={updateUser}
 						>
 							{$t('users.form.buttons.save')}
 						</Button>
 						<Button
-							class="flex-1 rounded-xl border border-sky-200 text-sky-700 hover:bg-sky-50"
+							class="bg-success text-primary-foreground flex-1 rounded-md font-semibold hover:bg-success/90"
 							onclick={() => approveUser()}
 							disabled={selectedUser.IsActive}
 						>
 							{$t('users.form.buttons.approve')}
 						</Button>
 						<Button
-							class="flex-1 rounded-xl border border-rose-200 text-rose-700 hover:bg-rose-50"
+							class="text-danger hover:bg-danger/10 hover:text-danger flex-1 rounded-md border border-danger/25 font-semibold"
 							onclick={() => deleteUser()}
 						>
 							{$t('users.form.buttons.delete')}
 						</Button>
 					{:else}
 						<div
-							class="w-full rounded-xl border border-amber-200 bg-amber-50 p-4 text-center text-sm text-amber-700"
+							class="text-warning w-full rounded-md border border-warning/25 bg-warning/10 p-4 text-center text-sm"
 						>
 							{$t('users.form.read_only')}
 						</div>
 					{/if}
 				</div>
-			</CardContent>
+			</div>
 		{/if}
-	</Card>
+	</div>
 </section>
 
 <ConfirmDialog
@@ -603,76 +556,3 @@
 	confirmLabel="Delete"
 	onConfirm={confirmDeleteUser}
 />
-
-<style lang="postcss">
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 20s ease-in-out infinite;
-	}
-
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
-		}
-		50% {
-			transform: scale(1.08);
-			box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 8s ease-in-out infinite;
-	}
-
-	@keyframes fadeUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-	.animate-fadeUp {
-		animation: fadeUp 1.3s ease forwards;
-	}
-	.animate-fadeUp.delay-150 {
-		animation-delay: 150ms;
-	}
-	.animate-fadeUp.delay-200 {
-		animation-delay: 200ms;
-	}
-
-	@keyframes floatSlow {
-		0%,
-		100% {
-			transform: translateY(0px) scale(1);
-		}
-		50% {
-			transform: translateY(-10px) scale(1.03);
-		}
-	}
-	.animate-floatSlow {
-		animation: floatSlow 10s ease-in-out infinite;
-	}
-
-	* {
-		transition-property:
-			color, background-color, border-color, box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
-</style>

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import StaffDashboard from '$lib/components/time-tracking/StaffDashboard.svelte';
 	import ManagerDashboard from '$lib/components/time-tracking/ManagerDashboard.svelte';
-	import { Button } from '$lib/components/ui/button';
 	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import { Clock } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
@@ -10,6 +9,8 @@
 	import { fade } from 'svelte/transition';
 
 	import { t } from '$lib/i18n';
+
+	const tabsClass = 'rounded-lg border-border bg-card shadow-sm';
 
 	$effect(() => {
 		if (!auth.hasPermission('users.view')) {
@@ -23,47 +24,33 @@
 	let currentRole: 'Staff' | 'Manager' = $state('Staff');
 </script>
 
-<section
-	class="relative isolate w-full overflow-hidden rounded-[32px] border border-white/30 bg-gradient-to-br from-slate-50/90 via-sky-50/70 to-indigo-50/80 shadow-[0_40px_120px_-80px_rgba(15,23,42,0.9)]"
->
-	<div class="absolute inset-0 -z-10 opacity-80">
-		<div class="absolute -left-36 top-10 h-80 w-80 rounded-full bg-sky-200/70 blur-[120px]"></div>
-		<div class="absolute right-0 top-0 h-72 w-72 rounded-full bg-emerald-200/60 blur-[110px]"></div>
-		<div
-			class="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-indigo-200/60 blur-[150px]"
-		></div>
-	</div>
-
-	<div
-		class="relative mx-auto flex max-w-4xl flex-col items-center px-6 py-20 text-center sm:px-8 lg:px-10"
-	>
-		<div class="mb-6 flex items-center gap-3 text-slate-600">
-			<span
-				class="glass-button flex h-12 w-12 items-center justify-center rounded-2xl text-sky-600 shadow-[0_12px_35px_-20px_rgba(14,165,233,0.9)]"
-			>
-				<Clock class="h-5 w-5" />
-			</span>
-			<p class="text-xs font-semibold uppercase tracking-[0.28em]">
-				{$t('time_tracking.hero.label')}
+<section class="w-full">
+	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+		<div class="space-y-3" data-animate="fade-up">
+			<div class="flex items-center gap-3">
+				<span class="glass-button inline-flex rounded-md p-2">
+					<Clock class="text-primary h-5 w-5" />
+				</span>
+				<p class="overline">{$t('time_tracking.hero.label')}</p>
+			</div>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
+				{$t('time_tracking.hero.title')}
+			</h1>
+			<p class="text-muted-foreground max-w-3xl text-base">
+				{$t('time_tracking.hero.subtitle')}
 			</p>
 		</div>
-		<h1 class="text-balance text-3xl font-semibold text-slate-900 sm:text-4xl lg:text-5xl">
-			{$t('time_tracking.hero.title')}
-		</h1>
-		<p class="mx-auto mt-6 max-w-3xl text-base text-slate-600">
-			{$t('time_tracking.hero.subtitle')}
-		</p>
 	</div>
 </section>
 
-<div class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+<div class="mx-auto mt-8 max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
 	<GlassTabs
 		bind:value={currentRole}
 		tabs={[
 			{ value: 'Staff', label: $t('time_tracking.role_toggle.staff') },
 			{ value: 'Manager', label: $t('time_tracking.role_toggle.manager') }
 		]}
-		class="mx-auto mb-8"
+		class="{tabsClass} mx-auto mb-8"
 	/>
 
 	{#if currentRole === 'Staff'}
@@ -76,31 +63,3 @@
 		</div>
 	{/if}
 </div>
-
-<style lang="postcss">
-	/* Smooth transitions globally - Removed to prevent jarring tab switches */
-	/* * {
-		transition-property:
-			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
-			box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	} */
-
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.35;
-			filter: blur(70px);
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.55;
-			filter: blur(90px);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 12s ease-in-out infinite;
-	}
-</style>

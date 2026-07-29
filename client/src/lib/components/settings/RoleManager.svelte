@@ -181,26 +181,20 @@
 	$: sortedGroups = Object.keys(groupedPermissions).sort();
 </script>
 
-<div
-	class="relative h-[calc(100vh-140px)] w-full overflow-hidden rounded-3xl bg-white/40 shadow-2xl ring-1 ring-white/60"
->
-	<!-- Soft Light Background Effects -->
-
-	<div class="relative z-10 flex h-full flex-col gap-6 p-4 backdrop-blur-xl lg:flex-row">
+<div class="border-border bg-card relative h-[calc(100vh-140px)] w-full overflow-hidden rounded-lg border shadow-md">
+	<div class="relative z-10 flex h-full flex-col gap-6 p-4 lg:flex-row">
 		<!-- Left Column: Role List -->
 		<div
-			class="flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/60 shadow-lg backdrop-blur-md transition-all hover:bg-white/70 lg:w-80"
+			class="border-border bg-card flex w-full shrink-0 flex-col overflow-hidden rounded-md border shadow-xs lg:w-80"
 		>
-			<div class="flex items-center justify-between border-b border-slate-100 bg-white/50 p-5">
-				<h3
-					class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-lg font-bold text-transparent"
-				>
+			<div class="border-border bg-muted/40 flex items-center justify-between border-b p-5">
+				<h3 class="font-display text-foreground text-lg font-bold">
 					{$t('roles.title')}
 				</h3>
 				<Button
 					variant="ghost"
 					size="icon"
-					class="h-8 w-8 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100"
+					class="bg-accent text-primary hover:bg-accent/70 h-8 w-8 rounded-md"
 					onclick={handleNewRole}
 				>
 					<Plus class="h-4 w-4" />
@@ -213,10 +207,10 @@
 				{#each roles as role (role.ID)}
 					<button
 						class={cn(
-							'group relative flex min-w-[160px] flex-col gap-1 rounded-xl p-3 text-left transition-all duration-300 lg:w-full lg:min-w-0',
+							'group relative flex min-w-[160px] flex-col gap-1 rounded-md p-3 text-left transition-colors duration-200 lg:w-full lg:min-w-0',
 							selectedRole?.ID === role.ID
-								? 'border border-blue-100 bg-gradient-to-r from-blue-50 to-purple-50 shadow-sm'
-								: 'border border-transparent hover:border-white/60 hover:bg-white/50'
+								? 'border-primary/40 bg-accent border shadow-xs'
+								: 'border-border hover:bg-muted border'
 						)}
 						onclick={() => selectRole(role)}
 					>
@@ -225,17 +219,17 @@
 								class={cn(
 									'font-semibold transition-colors',
 									selectedRole?.ID === role.ID
-										? 'text-blue-700'
-										: 'text-slate-700 group-hover:text-slate-900'
+										? 'text-accent-foreground'
+										: 'text-foreground group-hover:text-foreground'
 								)}
 							>
 								{role.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${role.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) : role.Name}
 							</span>
 							{#if role.IsSystem}
-								<ShieldCheck class="h-4 w-4 text-amber-500" />
+								<ShieldCheck class="text-warning h-4 w-4" />
 							{/if}
 						</div>
-						<p class="line-clamp-1 text-xs text-slate-500 group-hover:text-slate-600">
+						<p class="text-muted-foreground line-clamp-1 text-xs">
 							{role.Description || 'No description'}
 						</p>
 					</button>
@@ -244,21 +238,19 @@
 		</div>
 
 		<!-- Right Column: Editor -->
-		<div
-			class="flex flex-1 flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/60 shadow-xl backdrop-blur-md"
-		>
+		<div class="border-border bg-card flex flex-1 flex-col overflow-hidden rounded-md border shadow-xs">
 			{#if selectedRole}
 				<div in:fade={{ duration: 300 }} class="flex h-full flex-col">
 					<!-- Header -->
-					<div
-						class="flex flex-col gap-6 border-b border-slate-100 bg-white/50 px-6 py-6 transition-all duration-300 md:px-8"
-					>
+					<div class="border-border bg-muted/40 flex flex-col gap-6 border-b px-6 py-6 md:px-8">
 						<!-- Title Section -->
 						<div class="flex items-center gap-5">
 							<div
 								class={cn(
-									'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/60 shadow-sm transition-transform duration-500 hover:rotate-6',
-									selectedRole.IsSystem ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'
+									'flex h-16 w-16 shrink-0 items-center justify-center rounded-md border shadow-xs',
+									selectedRole.IsSystem
+										? 'border-warning/30 bg-warning/10 text-warning'
+										: 'bg-accent text-primary border-primary/20'
 								)}
 							>
 								{#if selectedRole.IsSystem}
@@ -270,60 +262,55 @@
 								{/if}
 							</div>
 							<div class="space-y-1 overflow-hidden">
-								<h2 class="truncate text-2xl font-bold tracking-tight text-slate-800 md:text-3xl">
+								<h2 class="font-display text-foreground truncate text-2xl font-bold tracking-tight md:text-3xl">
 									{selectedRole.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) : selectedRole.Name}
 								</h2>
-								<div class="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-500">
+								<div class="text-muted-foreground flex flex-wrap items-center gap-3 text-sm font-medium">
 									{#if selectedRole.IsSystem}
-										<span
-											class="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-100/50 px-2.5 py-0.5 text-amber-700"
-										>
+										<span class="badge-warning">
 											<AlertCircle class="h-3.5 w-3.5" /> {$t('roles.system_managed')}
 										</span>
 									{:else}
-										<span
-											class="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-100/50 px-2.5 py-0.5 text-emerald-700"
-										>
+										<span class="badge-success">
 											<Check class="h-3.5 w-3.5" /> {$t('roles.custom_role')}
 										</span>
 									{/if}
-									<span class="hidden h-1 w-1 rounded-full bg-slate-300 sm:block"></span>
-									<span class="whitespace-nowrap text-slate-600"
-										>{selectedPermissionIds.length} {$t('roles.active_permissions')}</span
+									<span class="bg-border hidden h-1 w-1 rounded-full sm:block"></span>
+									<span class="text-muted-foreground whitespace-nowrap"
+										><span class="num-mono">{selectedPermissionIds.length}</span>
+										{$t('roles.active_permissions')}</span
 									>
 								</div>
 							</div>
 						</div>
 
 						<!-- Action Buttons (Separate Row) -->
-						<div
-							class="flex w-full items-center justify-end gap-3 border-t border-slate-100/50 pt-4"
-						>
+						<div class="border-border flex w-full items-center justify-end gap-3 border-t pt-4">
 							<Button
 								variant="ghost"
 								onclick={handleReset}
 								disabled={isSaving}
-								class="rounded-xl font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+								class="text-muted-foreground hover:bg-muted hover:text-foreground rounded-md font-medium"
 							>
 								{$t('roles.reset')}
 							</Button>
 							{#if !selectedRole.IsSystem && selectedRole.ID !== 0}
 								<Button
 									variant="ghost"
-									class="rounded-xl font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
+									class="text-danger hover:bg-danger/10 hover:text-danger rounded-md font-medium"
 									onclick={handleDelete}
 								>
 									<Trash2 class="mr-2 h-4 w-4" /> {$t('roles.delete')}
 								</Button>
 							{/if}
 							<Button
-								class="transform rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 font-semibold text-white shadow-lg shadow-blue-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:from-blue-700 hover:to-indigo-700 hover:shadow-blue-500/40 active:scale-95 disabled:opacity-70"
+								class="bg-primary text-primary-foreground rounded-md px-6 font-semibold shadow-md transition-all hover:bg-primary/90 disabled:opacity-70"
 								onclick={handleSave}
 								disabled={isSaving}
 							>
 								{#if isSaving}
 									<div
-										class="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"
+										class="border-primary-foreground/40 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
 									></div>
 								{:else}
 									<Save class="mr-2 h-4 w-4" />
@@ -334,33 +321,31 @@
 					</div>
 
 					<!-- Scrollable Content -->
-					<div
-						class="scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent flex-1 overflow-y-auto p-4 md:p-8"
-					>
+					<div class="custom-scrollbar flex-1 overflow-y-auto p-4 md:p-8">
 						<!-- Inputs -->
 						<div class="mb-10 grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
 							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-								<Label class="text-base font-semibold text-slate-700">{$t('roles.role_name')}</Label>
+								<Label class="text-foreground text-base font-semibold">{$t('roles.role_name')}</Label>
 								<div class="group relative">
 									<Input
 										bind:value={editName}
 										placeholder="e.g. Sales Associate"
 										disabled={selectedRole.IsSystem}
-										class="h-12 rounded-xl border-slate-200 bg-white/50 text-base shadow-sm transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10 group-hover:bg-white/80"
+										class="liquid-input text-foreground h-12 w-full rounded-md px-3 text-base placeholder:text-muted-foreground"
 									/>
 									{#if selectedRole.IsSystem}
 										<ShieldCheck
-											class="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-amber-500/50"
+											class="text-warning/60 absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2"
 										/>
 									{/if}
 								</div>
 							</div>
 							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 200 }}>
-								<Label class="text-base font-semibold text-slate-700">{$t('roles.description')}</Label>
+								<Label class="text-foreground text-base font-semibold">{$t('roles.description')}</Label>
 								<Input
 									bind:value={editDescription}
 									placeholder="Describe the responsibilities..."
-									class="h-12 rounded-xl border-slate-200 bg-white/50 text-base shadow-sm transition-all hover:bg-white/80 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+									class="liquid-input text-foreground h-12 w-full rounded-md px-3 text-base placeholder:text-muted-foreground"
 								/>
 							</div>
 						</div>
@@ -368,15 +353,15 @@
 						<!-- Permissions Grid -->
 						<div class="space-y-6">
 							<div
-								class="flex items-center gap-3 border-b border-slate-100 pb-4"
+								class="border-border flex items-center gap-3 border-b pb-4"
 								in:fly={{ y: 20, duration: 400, delay: 300 }}
 							>
-								<div class="flex h-10 w-10 items-center justify-center rounded-full bg-purple-50">
-									<Sparkles class="h-5 w-5 text-purple-600" />
+								<div class="bg-accent flex h-10 w-10 items-center justify-center rounded-md">
+									<Sparkles class="text-primary h-5 w-5" />
 								</div>
 								<div>
-									<h3 class="text-lg font-bold text-slate-800">{$t('roles.capabilities')}</h3>
-									<p class="text-sm text-slate-500">{$t('roles.capabilities_desc')}</p>
+									<h3 class="font-display text-foreground text-lg font-bold">{$t('roles.capabilities')}</h3>
+									<p class="text-muted-foreground text-sm">{$t('roles.capabilities_desc')}</p>
 								</div>
 							</div>
 
@@ -384,23 +369,16 @@
 								{#each sortedGroups as group, i}
 									<div
 										in:fly={{ y: 30, duration: 500, delay: 400 + i * 50 }}
-										class="group/card relative overflow-hidden rounded-2xl border border-white/60 bg-gradient-to-br from-white/80 to-white/40 p-5 shadow-sm ring-1 ring-black/5 transition-all duration-300 hover:-translate-y-1 hover:border-white hover:shadow-xl hover:shadow-blue-500/5 md:p-6"
+										class="border-border bg-card relative overflow-hidden rounded-md border p-5 shadow-xs transition-shadow duration-200 hover:shadow-md md:p-6"
 									>
-										<!-- Card Glow -->
-										<div
-											class="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-blue-100/30 blur-3xl transition-all duration-500 group-hover/card:bg-indigo-100/50"
-										></div>
-
-										<div
-											class="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-y-2"
-										>
-											<h4 class="flex items-center gap-2 text-lg font-bold text-slate-700">
+										<div class="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-y-2">
+											<h4 class="text-foreground flex items-center gap-2 text-lg font-bold">
 												{$t(`permissions.groups.${group.toLowerCase()}`) !== `permissions.groups.${group.toLowerCase()}` ? $t(`permissions.groups.${group.toLowerCase()}`) : group}
 											</h4>
 											<div class="flex items-center gap-2">
 												<Label
 													for="group-{group}"
-													class="cursor-pointer text-xs font-semibold uppercase tracking-wider text-slate-400 transition-colors hover:text-blue-600"
+													class="text-muted-foreground hover:text-primary cursor-pointer text-xs font-semibold uppercase tracking-wider transition-colors"
 												>
 													{$t('roles.select_all')}
 												</Label>
@@ -408,7 +386,7 @@
 													id="group-{group}"
 													checked={groupSelectionStates[group]}
 													onCheckedChange={(v) => toggleGroup(group, !!v)}
-													class="h-5 w-5 rounded-md border-slate-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
+													class="border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-5 w-5 rounded-md"
 												/>
 											</div>
 										</div>
@@ -417,29 +395,29 @@
 											{#each groupedPermissions[group] as perm}
 												<label
 													class={cn(
-														'relative flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all duration-200',
+														'relative flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors duration-150',
 														selectedPermissionIds.includes(perm.ID)
-															? 'border-blue-200 bg-blue-50/60 shadow-inner'
-															: 'border-transparent hover:border-slate-100 hover:bg-white/60 hover:shadow-sm'
+															? 'border-primary/30 bg-accent'
+															: 'border-border hover:bg-muted'
 													)}
 												>
 													<Checkbox
 														checked={selectedPermissionIds.includes(perm.ID)}
 														onCheckedChange={() => togglePermission(perm.ID)}
-														class="h-4.5 w-4.5 mt-0.5 rounded border-slate-300 data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white"
+														class="border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground mt-0.5 h-4.5 w-4.5 rounded"
 													/>
 													<div class="space-y-0.5">
 														<span
 															class={cn(
 																'block text-sm font-semibold transition-colors',
 																selectedPermissionIds.includes(perm.ID)
-																	? 'text-blue-700'
-																	: 'text-slate-600'
+																	? 'text-accent-foreground'
+																	: 'text-foreground'
 															)}
 														>
 															{$t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) !== `permissions.names.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) : perm.Name}
 														</span>
-														<span class="line-clamp-2 block text-xs leading-relaxed text-slate-500">
+														<span class="text-muted-foreground line-clamp-2 block text-xs leading-relaxed">
 															{$t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) !== `permissions.descriptions.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) : perm.Description}
 														</span>
 													</div>
@@ -456,22 +434,17 @@
 				<div class="flex h-full flex-col items-center justify-center p-8 text-center" in:fade>
 					<div class="group relative mb-8 cursor-default">
 						<div
-							class="absolute inset-0 animate-pulse rounded-full bg-blue-100 blur-3xl transition-all duration-1000 group-hover:bg-blue-200"
-						></div>
-						<div
-							class="relative flex h-32 w-32 items-center justify-center rounded-3xl bg-white/80 shadow-2xl backdrop-blur-xl transition-transform duration-500 group-hover:rotate-6 group-hover:scale-110"
+							class="bg-card border-border relative flex h-32 w-32 items-center justify-center rounded-lg border shadow-md transition-transform duration-300 group-hover:scale-105"
 						>
-							<Shield
-								class="h-16 w-16 text-slate-300 transition-colors duration-500 group-hover:text-blue-500"
-							/>
+							<Shield class="text-muted-foreground/50 h-16 w-16 transition-colors duration-300 group-hover:text-primary" />
 						</div>
 					</div>
-					<h3 class="text-2xl font-bold text-slate-800">{$t('roles.security_access_control')}</h3>
-					<p class="mt-3 max-w-md text-lg text-slate-500">
+					<h3 class="font-display text-foreground text-2xl font-bold">{$t('roles.security_access_control')}</h3>
+					<p class="text-muted-foreground mt-3 max-w-md text-lg">
 						{$t('roles.security_desc')}
 					</p>
 					<Button
-						class="mt-10 h-12 rounded-xl bg-slate-900 px-8 font-semibold text-white shadow-xl shadow-slate-900/10 transition-all hover:-translate-y-1 hover:bg-blue-600 hover:shadow-blue-600/20"
+						class="bg-primary text-primary-foreground mt-10 h-12 rounded-md px-8 font-semibold shadow-md transition-all hover:-translate-y-0.5 hover:bg-primary/90"
 						onclick={handleNewRole}
 					>
 						<Plus class="mr-2 h-5 w-5" /> {$t('roles.create_first')}

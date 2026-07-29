@@ -38,11 +38,20 @@
 	import { fade, fly } from 'svelte/transition';
 	import { cn } from '$lib/utils';
 	import { t } from '$lib/i18n';
-	import { adaptiveText, liquidGlass } from '$lib/styles/liquid-glass';
 
 	import { settings as systemSettings } from '$lib/stores/settings';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+
+	const inputClass =
+		'liquid-input h-12 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
+	const selectClass =
+		'liquid-input h-12 w-full rounded-md bg-card px-3 text-sm text-foreground';
+	const saveBtn =
+		'bg-primary text-primary-foreground h-12 rounded-md font-medium hover:bg-primary/90';
+	const iconBtn =
+		'bg-primary text-primary-foreground h-12 w-12 rounded-md hover:bg-primary/90';
+	const tabsClass = 'rounded-lg border-border bg-card shadow-sm';
 
 	$effect(() => {
 		if (!auth.hasPermission('settings.view')) {
@@ -255,29 +264,15 @@
 	});
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-[#F9FAFB] p-8 font-sans lg:p-12">
-	<!-- Organic Mesh Gradient Background (Apple-style) -->
-	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
-		<div
-			class="absolute left-[10%] top-[5%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
-		></div>
-		<div
-			class="absolute right-[5%] top-[30%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
-		></div>
-		<div
-			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
-		></div>
-	</div>
-
+<div class="bg-background relative min-h-screen overflow-hidden p-8 lg:p-12">
 	<div class="relative z-10 mx-auto max-w-7xl space-y-8">
 		<!-- Header -->
-		<div class="flex flex-col gap-2 backdrop-blur-sm">
-			<h1
-				class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent drop-shadow-sm"
-			>
+		<div class="flex flex-col gap-2" data-animate="fade-up">
+			<p class="overline">System · Preferences</p>
+			<h1 class="font-display text-foreground text-4xl font-bold tracking-tight">
 				{$t('common.configuration')}
 			</h1>
-			<p class={cn('font-medium', adaptiveText.onGlass.secondary)}>
+			<p class="text-muted-foreground font-medium">
 				{$t('common.manage_preferences')}
 			</p>
 		</div>
@@ -287,12 +282,12 @@
 			class="w-full space-y-8"
 			onValueChange={(val) => (activeTab = val)}
 		>
-			<!-- Liquid Glass Tabs -->
+			<!-- Ledger Tabs -->
 			<div class="overflow-x-auto pb-4">
 				<GlassTabs
 					bind:value={activeTab}
 					tabs={tabs.map((tab) => ({ value: tab.id, label: $t(tab.label) }))}
-					class="mx-auto flex-nowrap"
+					class="{tabsClass} mx-auto flex-nowrap"
 				/>
 			</div>
 
@@ -300,29 +295,16 @@
 			<Tabs.Content value="general" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Business Profile Card -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-8 flex items-start gap-5">
-							<div
-								class="rounded-2xl border border-white bg-gradient-to-br from-blue-50 to-purple-50 p-4 text-blue-600 shadow-sm"
-							>
+							<div class="bg-accent text-primary rounded-md p-4">
 								<Building2 size={32} />
 							</div>
 							<div>
-								<h3 class={cn('text-xl', adaptiveText.heading)}>
+								<h3 class="font-display text-foreground text-xl font-bold">
 									{$t('settings.general.business_profile')}
 								</h3>
-								<p class={adaptiveText.onGlass.secondary}>
+								<p class="text-muted-foreground">
 									{$t('settings.general.business_profile_desc')}
 								</p>
 							</div>
@@ -330,17 +312,15 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class={cn('ml-1', adaptiveText.label)}
-									>{$t('settings.general.business_name')}</Label
-								>
+								<Label class="text-foreground ml-1">{$t('settings.general.business_name')}</Label>
 								<div class="flex gap-3">
 									<Input
-										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-blue-500/20"
+										class={inputClass}
 										bind:value={settings['business_name']}
 										placeholder="e.g. Acme Corp"
 									/>
 									<Button
-										class="h-12 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-6 text-white shadow-lg transition-all hover:from-blue-700 hover:to-purple-700 active:scale-95"
+										class="{saveBtn} px-6"
 										onclick={() => saveSetting('business_name', settings['business_name'])}
 									>
 										<Save size={20} class="mr-2" />
@@ -353,25 +333,12 @@
 
 					<!-- Localization -->
 					<div class="grid gap-6 md:grid-cols-2">
-						<div
-							class={cn(
-								liquidGlass.radius.medium,
-								liquidGlass.border.medium,
-								liquidGlass.background.medium,
-								liquidGlass.blur.heavy,
-								liquidGlass.saturate,
-								liquidGlass.shadow.medium,
-								liquidGlass.innerGlow.medium,
-								liquidGlass.transition,
-								liquidGlass.hover.shadow,
-								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
-							)}
-						>
+						<div class="liquid-panel rounded-lg p-8">
 							<div class="mb-6 flex items-center gap-4">
-								<div class="rounded-xl bg-blue-50 p-3 text-blue-600 ring-1 ring-blue-100">
+								<div class="bg-accent text-primary rounded-md p-3">
 									<Globe size={24} />
 								</div>
-								<h3 class={cn('text-lg', adaptiveText.heading)}>
+								<h3 class="font-display text-foreground text-lg font-bold">
 									{$t('settings.general.currency')}
 								</h3>
 							</div>
@@ -381,11 +348,11 @@
 										options={currencyOptions}
 										bind:value={settings['currency_code']}
 										placeholder={$t('settings.general.select_currency')}
-										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
+										style={selectClass}
 									/>
 								</div>
 								<Button
-									class="h-12 w-12 rounded-xl bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-700 active:scale-95"
+									class={iconBtn}
 									onclick={() => {
 										const selected = currencyOptions.find(
 											(c) => c.value === settings['currency_code']
@@ -402,25 +369,14 @@
 							</div>
 						</div>
 
-						<div
-							class={cn(
-								liquidGlass.radius.medium,
-								liquidGlass.border.medium,
-								liquidGlass.background.medium,
-								liquidGlass.blur.heavy,
-								liquidGlass.saturate,
-								liquidGlass.shadow.medium,
-								liquidGlass.innerGlow.medium,
-								liquidGlass.transition,
-								liquidGlass.hover.shadow,
-								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
-							)}
-						>
+						<div class="liquid-panel rounded-lg p-8">
 							<div class="mb-6 flex items-center gap-4">
-								<div class="rounded-xl bg-emerald-50 p-3 text-emerald-600 ring-1 ring-emerald-100">
+								<div class="bg-accent text-primary rounded-md p-3">
 									<Clock size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">{$t('settings.general.timezone')}</h3>
+								<h3 class="font-display text-foreground text-lg font-bold">
+									{$t('settings.general.timezone')}
+								</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
@@ -428,11 +384,11 @@
 										options={timezoneOptions}
 										bind:value={settings['timezone']}
 										placeholder={$t('settings.general.select_timezone')}
-										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
+										style={selectClass}
 									/>
 								</div>
 								<Button
-									class="h-12 w-12 rounded-xl bg-emerald-600 text-white shadow-lg transition-all hover:bg-emerald-700 active:scale-95"
+									class={iconBtn}
 									onclick={() => saveSetting('timezone', settings['timezone'])}
 								>
 									<Save size={20} />
@@ -440,25 +396,14 @@
 							</div>
 						</div>
 
-						<div
-							class={cn(
-								liquidGlass.radius.medium,
-								liquidGlass.border.medium,
-								liquidGlass.background.medium,
-								liquidGlass.blur.heavy,
-								liquidGlass.saturate,
-								liquidGlass.shadow.medium,
-								liquidGlass.innerGlow.medium,
-								liquidGlass.transition,
-								liquidGlass.hover.shadow,
-								'group relative z-0 p-8 focus-within:z-50 hover:z-50'
-							)}
-						>
+						<div class="liquid-panel rounded-lg p-8">
 							<div class="mb-6 flex items-center gap-4">
-								<div class="rounded-xl bg-purple-50 p-3 text-purple-600 ring-1 ring-purple-100">
+								<div class="bg-accent text-primary rounded-md p-3">
 									<Globe size={24} />
 								</div>
-								<h3 class="text-lg font-bold text-slate-800">{$t('settings.general.locale')}</h3>
+								<h3 class="font-display text-foreground text-lg font-bold">
+									{$t('settings.general.locale')}
+								</h3>
 							</div>
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
@@ -466,11 +411,11 @@
 										options={localeOptions}
 										bind:value={settings['locale']}
 										placeholder={$t('settings.general.select_locale')}
-										style="rounded-xl border-slate-200 bg-white/50 text-slate-800"
+										style={selectClass}
 									/>
 								</div>
 								<Button
-									class="h-12 w-12 rounded-xl bg-purple-600 text-white shadow-lg transition-all hover:bg-purple-700 active:scale-95"
+									class={iconBtn}
 									onclick={() => saveSetting('locale', settings['locale'])}
 								>
 									<Save size={20} />
@@ -485,29 +430,16 @@
 			<Tabs.Content value="business" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
 					<!-- Loyalty Program -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-8 flex items-start gap-5">
-							<div
-								class="rounded-2xl border border-white bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-amber-600 shadow-sm"
-							>
+							<div class="bg-accent text-primary rounded-md p-4">
 								<Sparkles size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">
+								<h3 class="font-display text-foreground text-xl font-bold">
 									{$t('settings.business.loyalty_program')}
 								</h3>
-								<p class="text-slate-500">
+								<p class="text-muted-foreground">
 									{$t('settings.business.loyalty_program_desc')}
 								</p>
 							</div>
@@ -516,11 +448,11 @@
 						<div class="grid gap-8 md:grid-cols-2">
 							<!-- Earning & Redemption -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">
+								<h4 class="overline">
 									{$t('settings.business.points_configuration')}
 								</h4>
 								<div class="space-y-3">
-									<Label class="ml-1 flex items-center gap-1 font-medium text-slate-600">
+									<Label class="text-foreground ml-1 flex items-center gap-1 font-medium">
 										{$t('settings.business.earning_rate')}
 										<HelpTip text="Loyalty points earned per unit of currency spent. For example, 1 means a customer earns 1 point for every $1 spent." />
 									</Label>
@@ -528,11 +460,11 @@
 										<Input
 											type="number"
 											step="0.1"
-											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											class="{inputClass} num-mono"
 											bind:value={settings['loyalty_points_earning_rate']}
 										/>
 										<Button
-											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											class={iconBtn}
 											onclick={() =>
 												saveSetting(
 													'loyalty_points_earning_rate',
@@ -542,24 +474,24 @@
 											<Save size={20} />
 										</Button>
 									</div>
-									<p class="text-xs text-slate-400">
+									<p class="text-muted-foreground text-xs">
 										{$t('settings.business.earning_rate_hint')}
 									</p>
 								</div>
 
 								<div class="space-y-3">
-									<Label class="ml-1 font-medium text-slate-600"
+									<Label class="text-foreground ml-1 font-medium"
 										>{$t('settings.business.redemption_value')}</Label
 									>
 									<div class="flex gap-3">
 										<Input
 											type="number"
 											step="0.01"
-											class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+											class="{inputClass} num-mono"
 											bind:value={settings['loyalty_points_redemption_rate']}
 										/>
 										<Button
-											class="h-12 rounded-xl bg-amber-600 text-white shadow-lg hover:bg-amber-700"
+											class={iconBtn}
 											onclick={() =>
 												saveSetting(
 													'loyalty_points_redemption_rate',
@@ -569,7 +501,7 @@
 											<Save size={20} />
 										</Button>
 									</div>
-									<p class="text-xs text-slate-400">
+									<p class="text-muted-foreground text-xs">
 										{$t('settings.business.redemption_value_hint')}
 									</p>
 								</div>
@@ -577,22 +509,22 @@
 
 							<!-- Tiers -->
 							<div class="space-y-6">
-								<h4 class="font-semibold text-slate-700">
+								<h4 class="overline">
 									{$t('settings.business.tier_thresholds')}
 								</h4>
 								<div class="space-y-4">
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600"
+										<Label class="text-foreground ml-1 font-medium"
 											>{$t('settings.business.silver_tier')}</Label
 										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
-												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												class="{inputClass} num-mono"
 												bind:value={settings['loyalty_tier_silver']}
 											/>
 											<Button
-												class="h-12 rounded-xl bg-slate-400 text-white shadow-lg hover:bg-slate-500"
+												class={iconBtn}
 												onclick={() =>
 													saveSetting('loyalty_tier_silver', settings['loyalty_tier_silver'])}
 											>
@@ -601,17 +533,17 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600"
+										<Label class="text-foreground ml-1 font-medium"
 											>{$t('settings.business.gold_tier')}</Label
 										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
-												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												class="{inputClass} num-mono"
 												bind:value={settings['loyalty_tier_gold']}
 											/>
 											<Button
-												class="h-12 rounded-xl bg-yellow-500 text-white shadow-lg hover:bg-yellow-600"
+												class={iconBtn}
 												onclick={() =>
 													saveSetting('loyalty_tier_gold', settings['loyalty_tier_gold'])}
 											>
@@ -620,17 +552,17 @@
 										</div>
 									</div>
 									<div class="space-y-2">
-										<Label class="ml-1 font-medium text-slate-600"
+										<Label class="text-foreground ml-1 font-medium"
 											>{$t('settings.business.platinum_tier')}</Label
 										>
 										<div class="flex gap-3">
 											<Input
 												type="number"
-												class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+												class="{inputClass} num-mono"
 												bind:value={settings['loyalty_tier_platinum']}
 											/>
 											<Button
-												class="h-12 rounded-xl bg-slate-800 text-white shadow-lg hover:bg-slate-900"
+												class={iconBtn}
 												onclick={() =>
 													saveSetting('loyalty_tier_platinum', settings['loyalty_tier_platinum'])}
 											>
@@ -644,35 +576,22 @@
 					</div>
 
 					<!-- Tax Settings -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-8 flex items-start gap-5">
-							<div
-								class="rounded-2xl border border-white bg-gradient-to-br from-emerald-50 to-teal-50 p-4 text-emerald-600 shadow-sm"
-							>
+							<div class="bg-accent text-primary rounded-md p-4">
 								<Percent size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">
+								<h3 class="font-display text-foreground text-xl font-bold">
 									{$t('settings.business.financial_settings')}
 								</h3>
-								<p class="text-slate-500">{$t('settings.business.financial_settings_desc')}</p>
+								<p class="text-muted-foreground">{$t('settings.business.financial_settings_desc')}</p>
 							</div>
 						</div>
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 flex items-center gap-1 font-medium text-slate-600">
+								<Label class="text-foreground ml-1 flex items-center gap-1 font-medium">
 									{$t('settings.business.default_tax_rate')}
 									<HelpTip text="Default tax percentage applied to sales at checkout. Enter 5 for 5%." />
 								</Label>
@@ -680,11 +599,11 @@
 									<Input
 										type="number"
 										step="0.01"
-										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										class="{inputClass} num-mono"
 										bind:value={settings['tax_rate_percentage']}
 									/>
 									<Button
-										class="h-12 rounded-xl bg-emerald-600 text-white shadow-lg hover:bg-emerald-700"
+										class="{saveBtn} px-6"
 										onclick={() =>
 											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
 									>
@@ -692,7 +611,7 @@
 										{$t('common.save')}
 									</Button>
 								</div>
-								<p class="text-xs text-slate-400">
+								<p class="text-muted-foreground text-xs">
 									{$t('settings.business.default_tax_rate_hint')}
 								</p>
 							</div>
@@ -703,7 +622,7 @@
 
 			<!-- Security / RBAC -->
 			<Tabs.Content value="security" class="pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-3xl shadow-2xl">
+				<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-lg">
 					<RoleManager />
 				</div>
 			</Tabs.Content>
@@ -711,34 +630,23 @@
 			<!-- Policies -->
 			<Tabs.Content value="policies" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-6 flex items-center gap-4">
-							<div class="rounded-xl bg-violet-50 p-3 text-violet-600 ring-1 ring-violet-100">
+							<div class="bg-accent text-primary rounded-md p-3">
 								<Lock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">
+							<h3 class="font-display text-foreground text-lg font-bold">
 								{$t('settings.policies.privacy_policy')}
 							</h3>
 						</div>
 						<Textarea
-							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-violet-500 focus:bg-white focus:ring-violet-500/20"
+							class="liquid-textarea text-foreground min-h-[200px] rounded-md p-6 leading-relaxed placeholder:text-muted-foreground"
 							placeholder={$t('settings.policies.privacy_policy_placeholder')}
 							bind:value={settings['privacy_policy']}
 						/>
 						<div class="mt-4 flex justify-end">
 							<Button
-								class="rounded-xl bg-violet-600 text-white shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-700 active:scale-95"
+								class="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
 								onclick={() => saveSetting('privacy_policy', settings['privacy_policy'])}
 							>
 								<Save size={18} class="mr-2" />
@@ -747,34 +655,23 @@
 						</div>
 					</div>
 
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-6 flex items-center gap-4">
-							<div class="rounded-xl bg-pink-50 p-3 text-pink-600 ring-1 ring-pink-100">
+							<div class="bg-accent text-primary rounded-md p-3">
 								<LayoutTemplate size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">
+							<h3 class="font-display text-foreground text-lg font-bold">
 								{$t('settings.policies.terms_of_service')}
 							</h3>
 						</div>
 						<Textarea
-							class="min-h-[200px] rounded-2xl border-slate-200 bg-white/50 p-6 leading-relaxed text-slate-600 shadow-sm placeholder:text-slate-400 focus:border-pink-500 focus:bg-white focus:ring-pink-500/20"
+							class="liquid-textarea text-foreground min-h-[200px] rounded-md p-6 leading-relaxed placeholder:text-muted-foreground"
 							placeholder={$t('settings.policies.terms_of_service_placeholder')}
 							bind:value={settings['terms_of_service']}
 						/>
 						<div class="mt-4 flex justify-end">
 							<Button
-								class="rounded-xl bg-pink-600 text-white shadow-lg shadow-pink-500/20 transition-all hover:bg-pink-700 active:scale-95"
+								class="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
 								onclick={() => saveSetting('terms_of_service', settings['terms_of_service'])}
 							>
 								<Save size={18} class="mr-2" />
@@ -784,46 +681,35 @@
 					</div>
 
 					<!-- Return Policy Settings -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-6 flex items-center gap-4">
-							<div class="rounded-xl bg-orange-50 p-3 text-orange-600 ring-1 ring-orange-100">
+							<div class="bg-accent text-primary rounded-md p-3">
 								<Clock size={24} />
 							</div>
-							<h3 class="text-lg font-bold text-slate-800">
+							<h3 class="font-display text-foreground text-lg font-bold">
 								{$t('settings.policies.return_policy')}
 							</h3>
 						</div>
 						<div class="max-w-xl space-y-3">
-							<Label class="ml-1 font-medium text-slate-600"
+							<Label class="text-foreground ml-1 font-medium"
 								>{$t('settings.policies.return_window')}</Label
 							>
 							<div class="flex gap-3">
 								<Input
 									type="number"
-									class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+									class="{inputClass} num-mono"
 									bind:value={settings['return_window_days']}
 									placeholder="e.g. 30"
 								/>
 								<Button
-									class="h-12 rounded-xl bg-orange-600 text-white shadow-lg hover:bg-orange-700 active:scale-95"
+									class="{saveBtn} px-6"
 									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
 								>
 									<Save size={20} class="mr-2" />
 									{$t('common.save')}
 								</Button>
 							</div>
-							<p class="text-xs text-slate-400">
+							<p class="text-muted-foreground text-xs">
 								{$t('settings.policies.return_window_hint')}
 							</p>
 						</div>
@@ -834,27 +720,16 @@
 			<!-- System & AI -->
 			<Tabs.Content value="system" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-8 flex items-start gap-5">
-							<div
-								class="rounded-2xl border border-white bg-gradient-to-br from-sky-50 to-blue-50 p-4 text-sky-600 shadow-sm"
-							>
+							<div class="bg-accent text-primary rounded-md p-4">
 								<Zap size={32} />
 							</div>
 							<div>
-								<h3 class="text-xl font-bold text-slate-800">{$t('settings.system.ai_system')}</h3>
-								<p class="text-slate-500">
+								<h3 class="font-display text-foreground text-xl font-bold">
+									{$t('settings.system.ai_system')}
+								</h3>
+								<p class="text-muted-foreground">
 									{$t('settings.system.ai_system_desc')}
 								</p>
 							</div>
@@ -862,24 +737,24 @@
 
 						<div class="max-w-xl space-y-6">
 							<div class="space-y-3">
-								<Label class="ml-1 font-medium text-slate-600"
+								<Label class="text-foreground ml-1 font-medium"
 									>{$t('settings.system.wake_up_time')}</Label
 								>
 								<div class="flex gap-3">
 									<Input
 										type="time"
-										class="h-12 rounded-xl border-slate-200 bg-white/50 text-slate-800 shadow-sm"
+										class="{inputClass} num-mono"
 										bind:value={settings['ai_wake_up_time']}
 									/>
 									<Button
-										class="h-12 rounded-xl bg-sky-600 text-white shadow-lg hover:bg-sky-700"
+										class="{saveBtn} px-6"
 										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
 									>
 										<Save size={20} class="mr-2" />
 										{$t('common.save')}
 									</Button>
 								</div>
-								<p class="text-xs text-slate-400">
+								<p class="text-muted-foreground text-xs">
 									{$t('settings.system.wake_up_time_hint')}
 								</p>
 							</div>
@@ -891,35 +766,24 @@
 			<!-- Notifications -->
 			<Tabs.Content value="notifications" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.border.medium,
-							liquidGlass.background.medium,
-							liquidGlass.blur.heavy,
-							liquidGlass.saturate,
-							liquidGlass.shadow.medium,
-							liquidGlass.innerGlow.medium,
-							'p-8'
-						)}
-					>
+					<div class="liquid-panel rounded-lg p-8">
 						<div class="mb-8 flex items-start justify-between gap-5">
 							<div class="flex items-start gap-5">
-								<div
-									class="rounded-2xl border border-white bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-amber-600 shadow-sm"
-								>
+								<div class="bg-accent text-primary rounded-md p-4">
 									<Bell size={32} />
 								</div>
 								<div>
-									<h3 class={cn('text-xl', adaptiveText.heading)}>Notification Subscriptions</h3>
-									<p class={adaptiveText.onGlass.secondary}>
+									<h3 class="font-display text-foreground text-xl font-bold">
+										Notification Subscriptions
+									</h3>
+									<p class="text-muted-foreground">
 										Choose which alert types you want to receive notifications for.
 									</p>
 								</div>
 							</div>
 							{#if auth.hasPermission('notifications.broadcast')}
 								<Button
-									class="rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 px-5 text-white shadow-lg transition-all hover:from-purple-700 hover:to-pink-700 active:scale-95"
+									class="bg-primary text-primary-foreground rounded-md px-5 font-medium hover:bg-primary/90"
 									onclick={() => (broadcastOpen = true)}
 								>
 									<Megaphone size={18} class="mr-2" />
@@ -930,17 +794,17 @@
 
 						{#if subscriptionsLoading}
 							<div class="flex items-center justify-center py-12">
-								<Loader2 class="h-8 w-8 animate-spin text-amber-500" />
+								<Loader2 class="text-primary h-8 w-8 animate-spin" />
 							</div>
 						{:else}
 							<div class="grid gap-4 sm:grid-cols-2">
 								{#each ALERT_TYPES as alertType}
 									<div
-										class="flex items-center justify-between rounded-xl border border-slate-200/60 bg-white/50 px-5 py-4 shadow-sm transition-all hover:bg-white/80"
+										class="border-border bg-card hover:bg-muted/60 flex items-center justify-between rounded-md border px-5 py-4 shadow-xs transition-colors"
 									>
 										<div>
-											<p class="font-semibold text-slate-800">{alertType.label}</p>
-											<p class="text-xs text-slate-500">{alertType.value}</p>
+											<p class="text-foreground font-semibold">{alertType.label}</p>
+											<p class="text-muted-foreground num-mono text-xs">{alertType.value}</p>
 										</div>
 										<Switch
 											checked={subscriptions[alertType.value] ?? true}
@@ -960,8 +824,8 @@
 <Dialog.Root bind:open={broadcastOpen}>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title class="flex items-center gap-2">
-				<Megaphone class="h-5 w-5 text-purple-600" />
+			<Dialog.Title class="text-foreground flex items-center gap-2">
+				<Megaphone class="text-primary h-5 w-5" />
 				Broadcast Notification
 			</Dialog.Title>
 			<Dialog.Description>Send a notification to all users.</Dialog.Description>
@@ -990,7 +854,7 @@
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (broadcastOpen = false)}>Cancel</Button>
 			<Button
-				class="bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+				class="bg-primary text-primary-foreground hover:bg-primary/90"
 				onclick={sendBroadcast}
 				disabled={broadcastSending}
 			>
@@ -1004,27 +868,3 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
-
-<style>
-	@keyframes blob {
-		0%,
-		100% {
-			transform: translate(0, 0) scale(1);
-		}
-		33% {
-			transform: translate(30px, -50px) scale(1.1);
-		}
-		66% {
-			transform: translate(-20px, 20px) scale(0.9);
-		}
-	}
-	.animate-blob {
-		animation: blob 15s infinite;
-	}
-	.animation-delay-2000 {
-		animation-delay: 2s;
-	}
-	.animation-delay-4000 {
-		animation-delay: 4s;
-	}
-</style>

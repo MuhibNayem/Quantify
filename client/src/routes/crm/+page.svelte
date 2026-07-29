@@ -24,29 +24,14 @@
 	} from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
-	import {
-		Root,
-		Content,
-		Item,
-		PrevButton,
-		NextButton,
-		Ellipsis,
-		Link
-	} from '$lib/components/ui/pagination';
-	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import { crmApi } from '$lib/api/resources';
 	import type { UserSummary } from '$lib/types';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
 
 	let customers = $state<UserSummary[]>([]);
 	let filteredCustomers = $state<UserSummary[]>([]);
@@ -215,13 +200,13 @@
 	const getTierColor = (tier: string) => {
 		switch (tier) {
 			case 'Bronze':
-				return 'bg-orange-100 text-orange-800 border-orange-200';
+				return 'badge-neutral';
 			case 'Silver':
-				return 'bg-indigo-100 text-indigo-800 border-indigo-200';
+				return 'badge-info';
 			case 'Gold':
-				return 'bg-amber-400 text-amber-900 border-amber-500';
+				return 'badge-success';
 			default:
-				return 'bg-gray-100 text-gray-800 border-gray-200';
+				return 'badge-neutral';
 		}
 	};
 
@@ -243,60 +228,36 @@
 	});
 </script>
 
-<!-- ===== HERO SECTION ===== -->
-<section class="relative isolate w-full overflow-hidden">
-	<!-- Gradient background with motion -->
-	<div
-		class="animate-gradientShift absolute inset-0 -z-10 bg-gradient-to-r from-violet-400 via-purple-400 to-indigo-500 bg-[length:200%_200%]"
-	></div>
-
-	<!-- Floating glow blobs -->
-	<div
-		class="animate-pulseGlow absolute -left-24 -top-32 h-96 w-96 rounded-full bg-violet-300/50 blur-3xl"
-	></div>
-	<div
-		class="animate-pulseGlow absolute -bottom-28 -right-24 h-80 w-80 rounded-full bg-indigo-300/40 blur-3xl delay-700"
-	></div>
-
-	<!-- Hero container -->
-	<div class="relative mx-auto max-w-7xl px-4 pb-10 pt-16 sm:px-6 sm:pb-16 sm:pt-20 lg:px-8">
-		<div class="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+<!-- ===== HEADER ===== -->
+<section class="w-full">
+	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+		<div
+			class="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end"
+			data-animate="fade-up"
+		>
 			<div>
 				<div class="mb-3 inline-flex items-center gap-3">
-					<span
-						class="animate-cardFloat inline-flex rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 p-2 shadow-md"
-					>
-						<Users class="h-6 w-6 text-white" />
+					<span class="glass-button inline-flex rounded-md p-2">
+						<Users class="text-primary h-5 w-5" />
 					</span>
-					<p class="text-xs font-semibold uppercase tracking-[0.18em] text-white sm:text-sm">
-						Customer Loyalty
-					</p>
+					<p class="overline">Customer Loyalty</p>
 				</div>
 
-				<h1
-					class="mb-3 bg-gradient-to-r from-white via-gray-100 to-gray-200 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
-				>
+				<h1 class="font-display text-foreground mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
 					Customer Management
 				</h1>
-				<p class="max-w-2xl text-sm text-white/90 sm:text-base">
+				<p class="text-muted-foreground max-w-2xl text-sm sm:text-base">
 					Manage customer relationships and loyalty programs
 				</p>
 			</div>
 
 			<!-- Action buttons -->
 			<div class="flex flex-col gap-3 sm:flex-row">
-				<Button
-					variant="secondary"
-					onclick={fetchCustomers}
-					class="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-violet-700 hover:to-indigo-700 hover:shadow-xl focus:ring-2 focus:ring-violet-300"
-				>
-					<Zap class="mr-2 h-4 w-4" /> Refresh
+				<Button variant="outline" onclick={fetchCustomers} class="glass-button gap-2 rounded-md">
+					<Zap class="h-4 w-4" /> Refresh
 				</Button>
-				<Button
-					onclick={() => openModal()}
-					class="rounded-xl border border-white/30 bg-white/20 px-5 py-2.5 font-medium text-white shadow-md transition-all duration-300 hover:scale-105 hover:bg-white/30 hover:shadow-lg focus:ring-2 focus:ring-white/50"
-				>
-					<UserPlus class="mr-2 h-4 w-4" /> Add Customer
+				<Button onclick={() => openModal()} class="bg-primary text-primary-foreground gap-2 rounded-md hover:bg-primary/90">
+					<UserPlus class="h-4 w-4" /> Add Customer
 				</Button>
 			</div>
 		</div>
@@ -305,16 +266,16 @@
 
 <!-- ===== SEARCH AND FILTERS ===== -->
 <div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div class="rounded-2xl border border-violet-200/50 bg-white/90 p-6 shadow-lg backdrop-blur">
+	<div class="liquid-panel rounded-lg p-5" data-animate="fade-up" style="animation-delay: 80ms;">
 		<div class="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
 			<div class="w-full flex-1 lg:w-auto">
 				<div class="relative">
-					<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+					<Search class="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
 					<Input
 						bind:value={searchTerm}
 						oninput={handleSearch}
 						placeholder="Search customers by name or email..."
-						class="w-full rounded-xl border-violet-300 bg-white/90 px-3.5 py-2.5 pl-10 text-sm focus:ring-2 focus:ring-violet-500"
+						class="{inputClass} pl-10"
 					/>
 				</div>
 			</div>
@@ -323,28 +284,28 @@
 				<Button
 					variant="outline"
 					onclick={() => (showFilters = !showFilters)}
-					class="rounded-xl border-violet-300 px-4 py-2.5 text-violet-700 hover:bg-violet-50"
+					class="glass-button gap-2 rounded-md"
 				>
-					<Filter class="mr-2 h-4 w-4" /> Filters
+					<Filter class="h-4 w-4" /> Filters
 					{#if selectedTier !== 'all'}
-						<Badge class="ml-2 bg-violet-100 text-violet-700">1</Badge>
+						<Badge class="badge-info ml-1">1</Badge>
 					{/if}
 				</Button>
 			</div>
 		</div>
 
 		{#if showFilters}
-			<div class="mt-4 border-t border-violet-200/50 pt-4">
+			<div class="border-border mt-4 border-t pt-4">
 				<div class="flex items-center gap-3">
-					<span class="text-sm font-medium text-slate-700">Tier:</span>
+					<span class="text-muted-foreground text-sm font-medium">Tier:</span>
 					<div class="flex gap-2">
 						{#each ['all', 'Bronze', 'Silver', 'Gold'] as tier}
 							<Button
 								variant={selectedTier === tier ? 'default' : 'ghost'}
 								size="sm"
 								class={selectedTier === tier
-									? 'bg-violet-600 text-white'
-									: 'text-slate-600 hover:bg-violet-50 hover:text-violet-700'}
+									? 'glass-toggle-active rounded-md'
+									: 'text-muted-foreground hover:bg-muted hover:text-foreground rounded-md'}
 								onclick={() => {
 									selectedTier = tier;
 									handleSearch();
@@ -364,75 +325,134 @@
 <div class="mx-auto mb-12 mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
 	<div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
 		<!-- Customer Table -->
-		<div class="lg:col-span-2">
-			<DataTable
-				data={customers}
-				columns={[
-					{ header: 'Customer', class: 'w-[250px]' },
-					{ header: 'Contact' },
-					{ header: 'Loyalty Tier' },
-					{ header: 'Points', class: 'text-right' },
-					{ header: 'Actions', class: 'text-right' }
-				]}
-				totalItems={pagination.totalItems}
-				pageSize={pagination.itemsPerPage}
-				currentPage={pagination.currentPage}
-				onPageChange={handlePageChange}
-				{loading}
-				onRowClick={(customer) => (selectedCustomer = customer)}
-			>
-				{#snippet children(customer)}
-					<TableCell>
-						<div class="font-medium">
-							{(customer.FirstName + ' ' + (customer.LastName || '')).trim()}
-						</div>
-						<div class="text-muted-foreground text-sm">{customer.Email}</div>
-					</TableCell>
-					<TableCell>{customer.PhoneNumber}</TableCell>
-					<TableCell>
-						<Badge class={getTierColor(customer.loyalty?.Tier || 'Bronze')}>
-							<svelte:component
-								this={getTierIcon(customer.loyalty?.Tier || 'Bronze')}
-								class="mr-1 h-3 w-3"
-							/>
-							{customer.loyalty?.Tier || 'Bronze'}
-						</Badge>
-					</TableCell>
-					<TableCell class="text-right font-mono">{customer.loyalty?.Points || 0}</TableCell>
-					<TableCell class="text-right">
-						<div class="flex justify-end gap-2" onclick={(e) => e.stopPropagation()}>
-							<Button
-								size="sm"
-								variant="outline"
-								onclick={() => openModal(customer)}
-								class="h-8 w-8 rounded-lg border-violet-300 p-0 text-violet-700 hover:bg-violet-50"
-							>
-								<Edit class="h-4 w-4" />
-							</Button>
-							<Button
-								size="sm"
-								variant="destructive"
-								onclick={() => deleteCustomer(customer)}
-								class="h-8 w-8 rounded-lg bg-red-500/20 p-0 text-red-500 hover:bg-red-500/30"
-							>
-								<Trash2 class="h-4 w-4 text-red-500" />
-							</Button>
-						</div>
-					</TableCell>
-				{/snippet}
-			</DataTable>
+		<div class="lg:col-span-2" data-animate="fade-up" style="animation-delay: 140ms;">
+			<div class="liquid-panel overflow-hidden rounded-lg">
+				<div class="overflow-x-auto">
+					<table class="ledger-table">
+						<thead>
+							<tr>
+								<th class="w-[250px]">Customer</th>
+								<th>Contact</th>
+								<th>Loyalty Tier</th>
+								<th class="text-right">Points</th>
+								<th class="text-right">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#if loading}
+								{#each Array(pagination.itemsPerPage) as _}
+									<tr>
+										<td colspan="5">
+											<Skeleton class="bg-muted h-5 w-full" />
+										</td>
+									</tr>
+								{/each}
+							{:else if customers.length === 0}
+								<tr>
+									<td colspan="5" class="py-12 text-center">
+										<Users class="text-muted-foreground/40 mx-auto mb-3 h-10 w-10" />
+										<p class="text-foreground text-sm font-medium">No customers found</p>
+										<p class="text-muted-foreground text-xs">Try adjusting your search</p>
+									</td>
+								</tr>
+							{:else}
+								{#each customers as customer (customer.ID)}
+									<tr
+										class="cursor-pointer transition-colors {selectedCustomer?.ID ===
+										customer.ID
+											? 'border-l-2 border-primary bg-muted/60'
+											: ''}"
+										onclick={() => (selectedCustomer = customer)}
+									>
+										<td>
+											<div class="text-foreground font-medium">
+												{(customer.FirstName + ' ' + (customer.LastName || '')).trim()}
+											</div>
+											<div class="text-muted-foreground text-xs">{customer.Email}</div>
+										</td>
+										<td class="text-muted-foreground num-mono text-sm">
+											{customer.PhoneNumber}
+										</td>
+										<td>
+											<span class={getTierColor(customer.loyalty?.Tier || 'Bronze')}>
+												<svelte:component
+													this={getTierIcon(customer.loyalty?.Tier || 'Bronze')}
+													class="h-3 w-3"
+												/>
+												{customer.loyalty?.Tier || 'Bronze'}
+											</span>
+										</td>
+										<td class="col-num text-foreground font-semibold">
+											{customer.loyalty?.Points || 0}
+										</td>
+										<td>
+											<div class="flex justify-end gap-2" onclick={(e) => e.stopPropagation()}>
+												<Button
+													size="sm"
+													variant="outline"
+													onclick={() => openModal(customer)}
+													class="glass-button h-8 w-8 rounded-md p-0"
+												>
+													<Edit class="h-4 w-4" />
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													onclick={() => deleteCustomer(customer)}
+													class="text-danger hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md p-0"
+												>
+													<Trash2 class="h-4 w-4" />
+												</Button>
+											</div>
+										</td>
+									</tr>
+								{/each}
+							{/if}
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			{#if pagination.totalPages > 1}
+				<div class="mt-4 flex items-center justify-between">
+					<p class="text-muted-foreground text-sm">
+						Showing {customers.length} of {pagination.totalItems} customers
+					</p>
+					<div class="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							class="glass-button rounded-md"
+							disabled={pagination.currentPage <= 1}
+							onclick={() => handlePageChange(pagination.currentPage - 1)}
+						>
+							<ChevronLeft class="h-4 w-4" />
+						</Button>
+						<span class="text-foreground text-sm font-medium">
+							Page {pagination.currentPage} of {pagination.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							size="sm"
+							class="glass-button rounded-md"
+							disabled={pagination.currentPage >= pagination.totalPages}
+							onclick={() => handlePageChange(pagination.currentPage + 1)}
+						>
+							<ChevronRight class="h-4 w-4" />
+						</Button>
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Customer Details Sidebar -->
-		<div class="lg:col-span-1">
+		<div class="lg:col-span-1" data-animate="fade-up" style="animation-delay: 200ms;">
 			{#if selectedCustomer}
 				<div class="sticky top-6 space-y-6">
 					<!-- Customer Profile Card -->
-					<div
-						class="rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 p-6 text-white shadow-xl"
-					>
+					<div class="liquid-panel rounded-lg p-6">
 						<div class="mb-4 flex items-center justify-between">
-							<h2 class="text-xl font-bold">
+							<h2 class="font-display text-foreground text-xl font-bold">
 								{(selectedCustomer.FirstName + ' ' + (selectedCustomer.LastName || '')).trim()}
 							</h2>
 							<div class="flex gap-2">
@@ -440,56 +460,56 @@
 									size="sm"
 									variant="outline"
 									onclick={() => openModal(selectedCustomer)}
-									class="rounded-lg border-white/30 text-white hover:bg-white/20"
+									class="glass-button h-8 w-8 rounded-md p-0"
 								>
 									<Edit2 class="h-4 w-4" />
 								</Button>
 								<Button
 									size="sm"
-									variant="destructive"
+									variant="ghost"
 									onclick={() => selectedCustomer && deleteCustomer(selectedCustomer)}
-									class="rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30"
+									class="text-danger hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md p-0"
 								>
-									<Trash2 class="h-4 w-4 text-red-500" />
+									<Trash2 class="h-4 w-4" />
 								</Button>
 							</div>
 						</div>
 
 						<div class="space-y-3">
 							<div class="flex items-center gap-3">
-								<Mail class="h-4 w-4 text-white/80" />
-								<span class="text-sm text-white/90">{selectedCustomer.Email}</span>
+								<Mail class="text-muted-foreground h-4 w-4" />
+								<span class="text-foreground text-sm">{selectedCustomer.Email}</span>
 							</div>
 							<div class="flex items-center gap-3">
-								<Phone class="h-4 w-4 text-white/80" />
-								<span class="text-sm text-white/90">{selectedCustomer.PhoneNumber}</span>
+								<Phone class="text-muted-foreground h-4 w-4" />
+								<span class="text-foreground text-sm">{selectedCustomer.PhoneNumber}</span>
 							</div>
 						</div>
 					</div>
 
 					<!-- Loyalty Card -->
 					{#if auth.hasPermission('loyalty.read')}
-						<div
-							class="rounded-2xl border border-violet-200/50 bg-white/90 p-6 shadow-lg backdrop-blur"
-						>
-							<h3 class="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-800">
-								<Star class="text-violet-600" />
+						<div class="liquid-panel rounded-lg p-6">
+							<h3 class="text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
+								<Star class="text-primary" />
 								Loyalty Program
 							</h3>
 
 							<div class="mb-6 text-center">
-								<p class="text-3xl font-bold text-violet-600">
+								<p class="kpi-num text-primary text-4xl">
 									{selectedCustomer.loyalty?.Points || 0}
 								</p>
-								<p class="text-sm text-slate-500">Available Points</p>
-								<Badge class={`mt-2 ${getTierColor(selectedCustomer.loyalty?.Tier || 'Bronze')}`}>
+								<p class="text-muted-foreground text-sm">Available Points</p>
+								<span
+									class={`mt-2 inline-flex ${getTierColor(selectedCustomer.loyalty?.Tier || 'Bronze')}`}
+								>
 									<svelte:component
 										this={getTierIcon(selectedCustomer.loyalty?.Tier || 'Bronze')}
-										class="mr-1 h-3 w-3"
+										class="h-3 w-3"
 									/>
 									{selectedCustomer.loyalty?.Tier || 'Bronze'} Member
-								</Badge>
-								<div class="mt-3 text-[0.65rem] text-slate-400">
+								</span>
+								<div class="text-muted-foreground mt-3 text-[0.65rem]">
 									Earning Rate: {$settings.loyalty_points_earning_rate} pt / {$settings.currency_symbol}1
 									spent
 								</div>
@@ -497,17 +517,17 @@
 
 							<div class="space-y-3">
 								<div>
-									<label class="text-sm font-medium text-slate-700">Add Points</label>
+									<label class="text-foreground text-sm font-medium">Add Points</label>
 									<div class="mt-1 flex gap-2">
 										<Input
 											type="number"
 											placeholder="Amount"
 											bind:value={pointsToAdd}
-											class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+											class="{inputClass} num-mono"
 										/>
 										<Button
 											onclick={addPoints}
-											class="rounded-lg bg-violet-600 px-3 py-2 text-white hover:bg-violet-700"
+											class="bg-primary text-primary-foreground rounded-md px-3 hover:bg-primary/90"
 										>
 											<Gift class="h-4 w-4" />
 										</Button>
@@ -515,17 +535,17 @@
 								</div>
 
 								<div>
-									<label class="text-sm font-medium text-slate-700">Redeem Points</label>
+									<label class="text-foreground text-sm font-medium">Redeem Points</label>
 									<div class="mt-1 flex gap-2">
 										<Input
 											type="number"
 											placeholder="Amount"
 											bind:value={pointsToRedeem}
-											class="rounded-lg border-violet-300 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500"
+											class="{inputClass} num-mono"
 										/>
 										<Button
 											onclick={redeemPoints}
-											class="rounded-lg bg-indigo-600 px-3 py-2 text-white hover:bg-indigo-700"
+											class="bg-primary text-primary-foreground rounded-md px-3 hover:bg-primary/90"
 										>
 											Redeem
 										</Button>
@@ -536,20 +556,18 @@
 					{/if}
 
 					<!-- Quick Stats -->
-					<div
-						class="rounded-2xl border border-violet-200/50 bg-white/90 p-6 shadow-lg backdrop-blur"
-					>
-						<h3 class="mb-4 text-lg font-semibold text-slate-800">Quick Stats</h3>
+					<div class="liquid-panel rounded-lg p-6">
+						<h3 class="text-foreground mb-4 text-lg font-semibold">Quick Stats</h3>
 						<div class="space-y-3">
 							<div class="flex justify-between">
-								<span class="text-sm text-slate-600">Joined Date</span>
-								<span class="text-sm font-medium text-slate-800"
+								<span class="text-muted-foreground text-sm">Joined Date</span>
+								<span class="text-foreground num-mono text-sm font-medium"
 									>{new Date(selectedCustomer.CreatedAt || '').toLocaleDateString()}</span
 								>
 							</div>
 							<div class="flex justify-between">
-								<span class="text-sm text-slate-600">Last Activity</span>
-								<span class="text-sm font-medium text-slate-800"
+								<span class="text-muted-foreground text-sm">Last Activity</span>
+								<span class="text-foreground num-mono text-sm font-medium"
 									>{new Date(selectedCustomer.UpdatedAt || '').toLocaleDateString()}</span
 								>
 							</div>
@@ -558,12 +576,10 @@
 				</div>
 			{:else}
 				<div class="sticky top-6">
-					<div
-						class="rounded-2xl border border-violet-200/50 bg-white/90 p-12 text-center backdrop-blur"
-					>
-						<Users class="mx-auto mb-4 h-16 w-16 text-violet-300" />
-						<p class="text-lg font-medium text-slate-600">Select a Customer</p>
-						<p class="text-sm text-slate-500">Choose a customer from list to view details</p>
+					<div class="liquid-panel rounded-lg p-12 text-center">
+						<Users class="text-muted-foreground/40 mx-auto mb-4 h-16 w-16" />
+						<p class="text-foreground text-lg font-medium">Select a Customer</p>
+						<p class="text-muted-foreground text-sm">Choose a customer from list to view details</p>
 					</div>
 				</div>
 			{/if}
@@ -573,93 +589,68 @@
 
 <Dialog.Root bind:open={isModalOpen}>
 	<Dialog.Content
-		class="overflow-hidden rounded-3xl border-0 bg-white/95 p-0 shadow-2xl backdrop-blur-xl transition-all duration-300 sm:max-w-[425px]"
+		class="bg-card border-border overflow-hidden rounded-lg border p-0 shadow-lg sm:max-w-[425px]"
 	>
-		<!-- Header with gradient and pattern -->
-		<div
-			class="relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 px-6 py-6 sm:px-10 sm:py-10"
-		>
-			<!-- Background decorative elements -->
-			<div class="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-			<div
-				class="absolute bottom-0 right-0 h-32 w-32 translate-x-12 translate-y-12 rounded-full bg-indigo-500/30 blur-2xl"
-			></div>
-
-			<div class="relative z-10">
-				<Dialog.Title class="text-2xl font-bold tracking-tight text-white">
-					{editingCustomer ? 'Edit Customer' : 'New Customer'}
-				</Dialog.Title>
-				<Dialog.Description class="mt-1.5 text-violet-100">
-					{editingCustomer
-						? "Update the customer's profile information."
-						: 'Add a new member to your customer base.'}
-				</Dialog.Description>
-			</div>
+		<!-- Header -->
+		<div class="border-border bg-muted/50 px-6 py-6 sm:px-8">
+			<Dialog.Title class="font-display text-foreground text-2xl font-bold tracking-tight">
+				{editingCustomer ? 'Edit Customer' : 'New Customer'}
+			</Dialog.Title>
+			<Dialog.Description class="text-muted-foreground mt-1.5">
+				{editingCustomer
+					? "Update the customer's profile information."
+					: 'Add a new member to your customer base.'}
+			</Dialog.Description>
 		</div>
 
 		<!-- Body -->
-		<div class="space-y-6 px-6 py-8 sm:px-10">
+		<div class="space-y-6 px-6 py-8 sm:px-8">
 			{#key isModalOpen}
 				<!-- Name Field -->
 				<div class="group space-y-2">
-					<label
-						for="name"
-						class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
-					>
-						Full Name
-					</label>
+					<label for="name" class="overline ml-1"> Full Name </label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Users class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							<Users class="text-muted-foreground h-4 w-4" />
 						</div>
 						<Input
 							id="name"
 							bind:value={customerForm.name}
 							placeholder="Jane Doe"
-							class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							class="{inputClass} pl-10"
 						/>
 					</div>
 				</div>
 
 				<!-- Email Field -->
 				<div class="group space-y-2">
-					<label
-						for="email"
-						class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
-					>
-						Email Address
-					</label>
+					<label for="email" class="overline ml-1"> Email Address </label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Mail class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							<Mail class="text-muted-foreground h-4 w-4" />
 						</div>
 						<Input
 							id="email"
 							type="email"
 							bind:value={customerForm.email}
 							placeholder="jane@example.com"
-							class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							class="{inputClass} pl-10"
 						/>
 					</div>
 				</div>
 
 				<!-- Phone Field -->
 				<div class="group space-y-2">
-					<label
-						for="phone"
-						class="ml-1 text-xs font-semibold uppercase tracking-wider text-slate-500 transition-colors group-focus-within:text-violet-600"
-					>
-						Phone Number
-					</label>
+					<label for="phone" class="overline ml-1"> Phone Number </label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Phone class="h-4 w-4 text-slate-400 group-focus-within:text-violet-500" />
+							<Phone class="text-muted-foreground h-4 w-4" />
 						</div>
 						<Input
 							id="phone"
 							bind:value={customerForm.phone}
 							placeholder="+1 (555) 000-0000"
-							class="rounded-xl border-slate-200 bg-slate-50 pl-10 transition-all duration-300 focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10 group-hover:border-violet-300"
+							class="{inputClass} pl-10"
 						/>
 					</div>
 				</div>
@@ -667,113 +658,20 @@
 		</div>
 
 		<!-- Footer -->
-		<div
-			class="flex items-center justify-end gap-3 bg-slate-50/50 px-6 py-4 backdrop-blur sm:px-10"
-		>
+		<div class="bg-muted/50 flex items-center justify-end gap-3 px-6 py-4 sm:px-8">
 			<Button
 				variant="ghost"
 				onclick={() => (isModalOpen = false)}
-				class="rounded-xl text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+				class="text-muted-foreground hover:bg-muted hover:text-foreground rounded-md"
 			>
 				Cancel
 			</Button>
 			<Button
 				onclick={saveCustomer}
-				class="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-8 font-semibold text-white shadow-lg shadow-violet-500/25 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:shadow-violet-500/35 active:scale-[0.98]"
+				class="bg-primary text-primary-foreground rounded-md px-8 font-semibold hover:bg-primary/90"
 			>
 				{editingCustomer ? 'Update Profile' : 'Create Profile'}
 			</Button>
 		</div>
 	</Dialog.Content>
 </Dialog.Root>
-
-<style lang="postcss">
-	/* Smooth transitions globally */
-	* {
-		transition-property:
-			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
-			box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
-
-	/* Hero gradient animation */
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 16s ease-in-out infinite;
-	}
-
-	/* Soft glowing blobs */
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.45;
-			filter: blur(80px);
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.6;
-			filter: blur(90px);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 10s ease-in-out infinite;
-	}
-
-	/* Card float micro-motion */
-	@keyframes cardFloat {
-		0%,
-		100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(-4px);
-		}
-	}
-	.animate-cardFloat {
-		animation: cardFloat 4s ease-in-out infinite;
-	}
-
-	/* Fade-up reveal */
-	@keyframes fadeUp {
-		from {
-			opacity: 0;
-			transform: translateY(12px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-	.animate-fadeUp {
-		animation: fadeUp 500ms var(--ease, cubic-bezier(0.4, 0, 0.2, 1)) forwards;
-	}
-
-	/* Pastel scrollbar */
-	::-webkit-scrollbar {
-		width: 8px;
-		height: 8px;
-	}
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	::-webkit-scrollbar-thumb {
-		background: rgba(139, 92, 246, 0.25);
-		border-radius: 9999px;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		background: rgba(139, 92, 246, 0.35);
-	}
-</style>
