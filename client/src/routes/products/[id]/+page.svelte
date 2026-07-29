@@ -23,6 +23,7 @@
 	import { ArrowLeft, Info, History } from 'lucide-svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
 	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
+	import ActivityHistory from '$lib/components/activity-history.svelte';
 	import type { PageData } from './$types';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -185,24 +186,30 @@
 								{ header: 'Qty', accessorKey: 'Quantity' },
 								{ header: 'Date', accessorKey: 'AdjustedAt' }
 							]}
-						>
-							{#snippet children(item)}
-								<TableCell class="font-medium text-slate-700">{item.Type}</TableCell>
-								<TableCell
-									class="font-semibold {item.Type === 'STOCK_IN'
-										? 'text-emerald-600'
-										: 'text-rose-600'}"
-								>
-									{item.Type === 'STOCK_IN' ? '+' : '-'}{item.Quantity}
-								</TableCell>
-								<TableCell class="text-slate-500">
-									{new Date(item.AdjustedAt).toLocaleDateString()}
-								</TableCell>
-							{/snippet}
-						</DataTable>
+					>
+						{#snippet children(item)}
+							<TableCell class="font-medium text-slate-700">{item.Type}</TableCell>
+							<TableCell
+								class="font-semibold {item.Type === 'STOCK_IN'
+									? 'text-emerald-600'
+									: 'text-rose-600'}"
+							>
+								{item.Type === 'STOCK_IN' ? '+' : '-'}{item.Quantity}
+							</TableCell>
+							<TableCell class="text-slate-500">
+								{new Date(item.AdjustedAt).toLocaleDateString()}
+							</TableCell>
+						{/snippet}
+					</DataTable>
+
+					<div
+						class="rounded-2xl border border-sky-100 bg-white/50 p-4 shadow-sm backdrop-blur transition-shadow duration-300 hover:shadow-md"
+					>
+						<ActivityHistory entity="Product" entityId={product.ID} />
 					</div>
 				</div>
 			</div>
+		</div>
 		{:else}
 			<!-- Loading State -->
 			<div class="grid gap-8 lg:grid-cols-3">

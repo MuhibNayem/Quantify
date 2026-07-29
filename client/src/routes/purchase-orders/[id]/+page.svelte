@@ -20,6 +20,7 @@
 	import { ArrowLeft, ShoppingCart } from 'lucide-svelte';
 	import { cn, poNumber } from '$lib/utils';
 	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
+	import ActivityHistory from '$lib/components/activity-history.svelte';
 
 	import { replenishmentApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
@@ -145,17 +146,23 @@
 									{new Date(purchaseOrder.OrderDate).toLocaleDateString()}
 								</p>
 							</div>
-							<div>
-								<p class="font-medium text-slate-500">Expected Delivery</p>
-								<p class="text-slate-800">
-									{purchaseOrder.ExpectedDeliveryDate
-										? new Date(purchaseOrder.ExpectedDeliveryDate).toLocaleDateString()
-										: 'N/A'}
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
+						<div>
+							<p class="font-medium text-slate-500">Expected Delivery</p>
+							<p class="text-slate-800">
+								{purchaseOrder.ExpectedDeliveryDate
+									? new Date(purchaseOrder.ExpectedDeliveryDate).toLocaleDateString()
+									: 'N/A'}
+							</p>
+						</div>
+					</CardContent>
+				</Card>
+
+				<Card
+					class="rounded-2xl border-0 bg-gradient-to-br from-slate-50 to-blue-50 p-4 shadow-lg transition-all duration-300 hover:shadow-xl"
+				>
+					<ActivityHistory entity="PurchaseOrder" entityId={purchaseOrder.ID} />
+				</Card>
+			</div>
 
 				<!-- PO Items -->
 				<div class="lg:col-span-2">

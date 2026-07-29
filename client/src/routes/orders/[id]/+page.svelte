@@ -12,6 +12,7 @@
 	import { toast } from 'svelte-sonner';
 	import { settings } from '$lib/stores/settings';
 	import { addRecent } from '$lib/recent';
+	import ActivityHistory from '$lib/components/activity-history.svelte';
 
 	let orderId = $page.params.id; // actually OrderNumber or ID, usually number in URL, but backend uses string OrderNumber.
 	// Assuming route is /orders/[id], if id is the db ID, we fetch by ID. If orderNumber, by Number.
@@ -367,12 +368,19 @@
 									>{order.PaymentMethod || 'N/A'}</span
 								>
 							</div>
-							<div class="flex justify-between text-sm">
-								<span class="text-slate-500">Status</span>
-								<span class="font-medium text-slate-800">{order.Status}</span>
-							</div>
-						</GlassCard>
-					</div>
+						<div class="flex justify-between text-sm">
+							<span class="text-slate-500">Status</span>
+							<span class="font-medium text-slate-800">{order.Status}</span>
+						</div>
+					</GlassCard>
+
+					<!-- Activity History -->
+					<GlassCard
+						class="liquid-panel rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(148,163,184,0.5)] transition-all hover:scale-[1.01]"
+					>
+						<ActivityHistory entity="Order" entityId={order.ID ?? orderId} />
+					</GlassCard>
+				</div>
 				</div>
 			</div>
 		{/if}
