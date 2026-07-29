@@ -7,7 +7,7 @@ import (
 )
 
 type ReplenishmentRepository interface {
-	GetProductStock(productID uint) (int, error)
+	GetProductStock(productID uint) (float64, error)
 	GetAllProductAlertSettings() ([]domain.ProductAlertSettings, error)
 	GetPendingSuggestion(productID uint) (*domain.ReorderSuggestion, error)
 	GetPendingPO(productID uint) (*domain.PurchaseOrder, error)
@@ -42,13 +42,13 @@ func (r *replenishmentRepository) ListReorderSuggestions(status string, supplier
 	return suggestions, err
 }
 
-func (r *replenishmentRepository) GetProductStock(productID uint) (int, error) {
-	var totalStock int64
+func (r *replenishmentRepository) GetProductStock(productID uint) (float64, error) {
+	var totalStock float64
 	err := r.db.Model(&domain.Batch{}).
 		Where("product_id = ?", productID).
 		Select("COALESCE(SUM(quantity), 0)").
 		Scan(&totalStock).Error
-	return int(totalStock), err
+	return totalStock, err
 }
 
 func (r *replenishmentRepository) GetAllProductAlertSettings() ([]domain.ProductAlertSettings, error) {

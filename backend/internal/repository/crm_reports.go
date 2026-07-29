@@ -106,7 +106,7 @@ type ProductPerformanceAnalytics struct {
 	TotalRevenue float64
 	TotalCost    float64
 	TotalProfit  float64
-	CurrentStock int
+	CurrentStock float64
 	DaysOfStock  float64
 }
 
@@ -149,9 +149,9 @@ func (r *reportsRepository) GetProductPerformanceAnalytics(startDate, endDate ti
 
 		p.TotalProfit = p.TotalRevenue - p.TotalCost
 
-		var currentStock int64
+		var currentStock float64
 		r.DB.Model(&domain.Batch{}).Where("product_id = ?", p.ProductID).Select("COALESCE(SUM(quantity), 0)").Scan(&currentStock)
-		p.CurrentStock = int(currentStock)
+		p.CurrentStock = currentStock
 
 		daysInPeriod := endDate.Sub(startDate).Hours() / 24
 		if daysInPeriod < 1 {
@@ -161,7 +161,7 @@ func (r *reportsRepository) GetProductPerformanceAnalytics(startDate, endDate ti
 		dailySalesVelocity := totalSoldQty / daysInPeriod
 
 		if dailySalesVelocity > 0 {
-			p.DaysOfStock = float64(p.CurrentStock) / dailySalesVelocity
+			p.DaysOfStock = p.CurrentStock / dailySalesVelocity
 		} else {
 			p.DaysOfStock = 999
 		}
@@ -176,7 +176,7 @@ type ShrinkageItem struct {
 	ProductID   uint
 	ProductName string
 	Reason      string
-	Quantity    int
+	Quantity    float64
 	LostValue   float64
 }
 

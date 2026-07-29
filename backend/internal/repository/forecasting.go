@@ -74,8 +74,8 @@ func (r *forecastingRepository) GetProductsBatch(offset, limit int) ([]domain.Pr
 type ForecastDashboardItem struct {
 	ProductID       uint
 	ProductName     string
-	PredictedDemand int
-	CurrentStock    int
+	PredictedDemand float64
+	CurrentStock    float64
 }
 
 func (r *forecastingRepository) GetTopForecasts(limit int) ([]ForecastDashboardItem, error) {

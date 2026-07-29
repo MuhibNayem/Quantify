@@ -321,7 +321,7 @@ type CategoryPerformance struct {
 	TotalCost     float64
 	GrossMargin   float64
 	MarginPercent float64
-	ItemCount     int
+	ItemCount     float64
 }
 
 func (r *reportsRepository) GetCategoryDrillDownReport(startDate, endDate time.Time) ([]CategoryPerformance, error) {
