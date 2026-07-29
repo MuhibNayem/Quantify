@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Check, ChevronsUpDown } from "lucide-svelte";
   import { cn } from "$lib/utils";
-  import { Button } from "$lib/components/ui/button";
+  import { buttonVariants } from "$lib/components/ui/button";
   import {
     Command,
     CommandEmpty,
@@ -17,28 +17,24 @@
     value = $bindable(""),
     placeholder = "Select item...",
     className = "",
-  } = $props<{
+  }: {
     items?: { value: string; label: string }[];
     value?: string;
     placeholder?: string;
     className?: string;
-  }>();
+  } = $props();
 
   let open = $state(false);
 </script>
 
 <Popover bind:open>
-  <PopoverTrigger asChild let:builder>
-    <Button
-      variant="outline"
-      role="combobox"
-      aria-expanded={open}
-      class={cn("w-[200px] justify-between", className)}
-      use:builder
-    >
-      {value ? items.find((item) => item.value === value)?.label : placeholder}
-      <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-    </Button>
+  <PopoverTrigger
+    role="combobox"
+    aria-expanded={open}
+    class={cn(buttonVariants({ variant: "outline" }), "w-[200px] justify-between", className)}
+  >
+    {value ? items.find((item) => item.value === value)?.label : placeholder}
+    <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
   </PopoverTrigger>
   <PopoverContent class="w-[200px] p-0">
     <Command>

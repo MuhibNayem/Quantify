@@ -2,13 +2,16 @@
 	import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
 	import CircleIcon from "@lucide/svelte/icons/circle";
 	import { cn, type WithoutChild } from "$lib/utils.js";
+	import type { Snippet } from "svelte";
 
 	let {
 		ref = $bindable(null),
 		class: className,
 		children: childrenProp,
 		...restProps
-	}: WithoutChild<ContextMenuPrimitive.RadioItemProps> = $props();
+	}: WithoutChild<ContextMenuPrimitive.RadioItemProps> & {
+		children?: Snippet<[{ checked: boolean }]>;
+	} = $props();
 </script>
 
 <ContextMenuPrimitive.RadioItem

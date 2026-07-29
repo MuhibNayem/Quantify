@@ -14,14 +14,14 @@
 		label = '',
 		disabled = false,
 		style = ''
-	} = $props<{
+	}: {
 		value?: string;
 		options?: { value: string; label: string }[];
 		placeholder?: string;
 		label?: string;
 		disabled?: boolean;
 		style?: string;
-	}>();
+	} = $props();
 
 	let isOpen = $state(false);
 	let selectRef: HTMLElement | null = null;

@@ -49,7 +49,7 @@
 		allSelected = false,
 		someSelected = false,
 		onSelectAll
-	} = $props<Props>();
+	}: Props = $props();
 
 	let totalPages = $derived(Math.ceil(totalItems / pageSize));
 

@@ -2,6 +2,7 @@
 	import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import { cn, type WithoutChild } from "$lib/utils.js";
+	import type { Snippet } from "svelte";
 
 	let {
 		ref = $bindable(null),
@@ -11,6 +12,7 @@
 		...restProps
 	}: WithoutChild<ContextMenuPrimitive.SubTriggerProps> & {
 		inset?: boolean;
+		children?: Snippet;
 	} = $props();
 </script>
 

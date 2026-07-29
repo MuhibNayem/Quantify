@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as FormPrimitive from "formsnap";
 	import { cn, type WithoutChild } from "$lib/utils.js";
+	import type { Snippet } from "svelte";
 
 	let {
 		ref = $bindable(null),
@@ -10,6 +11,7 @@
 		...restProps
 	}: WithoutChild<FormPrimitive.FieldErrorsProps> & {
 		errorClasses?: string | undefined | null;
+		children?: Snippet<[{ errors: string[]; errorProps: Record<string, unknown> }]>;
 	} = $props();
 </script>
 

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { Calendar as CalendarIcon } from "lucide-svelte";
-  import { DateFormatter, getLocalTimeZone, today } from "@internationalized/date";
+  import { DateFormatter, fromDate, getLocalTimeZone, toCalendarDate, today } from "@internationalized/date";
+  import type { DateValue } from "@internationalized/date";
   import { cn } from "$lib/utils";
-  import { Button } from "$lib/components/ui/button";
+  import { buttonVariants } from "$lib/components/ui/button";
   import { Calendar } from "$lib/components/ui/calendar";
   import { Popover, PopoverContent, PopoverTrigger } from "$lib/components/ui/popover";
 
@@ -11,50 +12,45 @@
     placeholder = "Pick a date",
     disabled = false,
     className = "",
-  } = $props<{
+  }: {
     value?: Date | undefined;
     placeholder?: string;
     disabled?: boolean;
     className?: string;
-  }>();
+  } = $props();
 
   let formatter = new DateFormatter("en-US", {
     dateStyle: "long",
   });
 
-  let date = $state(value ? today(getLocalTimeZone()).setFromDate(value) : undefined);
+  const timeZone = getLocalTimeZone();
 
-  $effect(() => {
-    date = value ? today(getLocalTimeZone()).setFromDate(value) : undefined;
-  });
+  let date = $derived(value ? toCalendarDate(fromDate(value, timeZone)) : undefined);
 
-  function handleSelect(e: CustomEvent<any>) {
-    value = e.detail.date?.toDate(getLocalTimeZone());
+  function handleDateChange(newDate: DateValue | undefined) {
+    value = newDate ? newDate.toDate(timeZone) : undefined;
   }
 </script>
 
 <Popover>
-  <PopoverTrigger asChild let:builder>
-    <Button
-      variant="outline"
-      class={cn(
-        "w-[280px] justify-start text-left font-normal",
-        !value && "text-muted-foreground",
-        className
-      )}
-      disabled={disabled}
-      use:builder
-    >
-      <CalendarIcon class="mr-2 h-4 w-4" />
-      {value ? formatter.format(date) : placeholder}
-    </Button>
+  <PopoverTrigger
+    class={cn(
+      buttonVariants({ variant: "outline" }),
+      "w-[280px] justify-start text-left font-normal",
+      !value && "text-muted-foreground",
+      className
+    )}
+    {disabled}
+  >
+    <CalendarIcon class="mr-2 h-4 w-4" />
+    {value && date ? formatter.format(date.toDate(timeZone)) : placeholder}
   </PopoverTrigger>
   <PopoverContent class="w-auto p-0">
     <Calendar
-      bind:value={date}
+      value={date}
+      onValueChange={handleDateChange}
       initialFocus
-      onselect={handleSelect}
-      minValue={today(getLocalTimeZone())}
+      minValue={today(timeZone)}
     />
   </PopoverContent>
 </Popover>
