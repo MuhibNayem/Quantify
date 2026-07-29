@@ -98,14 +98,12 @@
 	let requestToken: symbol | null = null;
 
 	const cardAccents: Record<Accent, string> = {
-		sky: 'from-sky-50 via-blue-50 to-cyan-50 border-sky-100 hover:shadow-sky-100/50',
-		violet:
-			'from-violet-50 via-purple-50 to-fuchsia-50 border-violet-100 hover:shadow-violet-100/50',
-		emerald:
-			'from-emerald-50 via-green-50 to-lime-50 border-emerald-100 hover:shadow-emerald-100/50',
-		amber: 'from-amber-50 via-orange-50 to-yellow-50 border-amber-100 hover:shadow-amber-100/50',
-		slate: 'from-slate-50 via-gray-50 to-slate-50 border-slate-100 hover:shadow-slate-100/50',
-		rose: 'from-rose-50 via-pink-50 to-rose-50 border-rose-100 hover:shadow-rose-100/50'
+		sky: 'text-info',
+		violet: 'text-primary',
+		emerald: 'text-success',
+		amber: 'text-warning',
+		slate: 'text-muted-foreground',
+		rose: 'text-danger'
 	};
 
 	function resolveAccent(accent?: Accent) {
@@ -206,7 +204,7 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-sm"
+		class="fixed inset-0 z-40 bg-foreground/40"
 		role="button"
 		tabindex="0"
 		aria-label="Close details"
@@ -220,18 +218,16 @@
 		transition:fade={{ duration: 250, easing: cubicOut }}
 	>
 		<div
-			class="detail-drawer absolute right-0 top-0 flex h-full w-full flex-col rounded-l-2xl border-l border-slate-200/70 bg-gradient-to-br from-white/90 via-sky-50/80 to-violet-50/70 shadow-2xl sm:w-[600px] md:w-[700px]"
+			class="detail-drawer absolute right-0 top-0 flex h-full w-full flex-col rounded-l-lg border-l border-border bg-card shadow-lg sm:w-[600px] md:w-[700px]"
 			transition:fly={{ x: 400, duration: 350, delay: 80, easing: cubicOut }}
 		>
-			<div class="flex items-start justify-between border-b border-slate-100/70 p-6">
+			<div class="flex items-start justify-between border-b border-border p-6">
 				<div class="min-w-0">
-					<h2
-						class="break-words bg-gradient-to-r from-violet-600 to-sky-600 bg-clip-text text-2xl font-semibold text-transparent"
-					>
+					<h2 class="font-display break-words text-2xl font-semibold text-foreground">
 						{title}
 					</h2>
 					{#if subtitle}
-						<p class="mt-1 break-words text-sm text-slate-600">{subtitle}</p>
+						<p class="mt-1 break-words text-sm text-muted-foreground">{subtitle}</p>
 					{/if}
 				</div>
 
@@ -240,20 +236,20 @@
 						<Button
 							variant="ghost"
 							size="icon"
-							class="rounded-full p-2 transition-all hover:bg-sky-100/60 active:scale-95"
+							class="rounded-md p-2 transition-all active:scale-95"
 							onclick={fetchData}
 							disabled={loading}
 						>
-							<RefreshCcw class={cn('h-4 w-4 text-sky-600', loading && 'animate-spin')} />
+							<RefreshCcw class={cn('h-4 w-4 text-muted-foreground', loading && 'animate-spin')} />
 						</Button>
 					{/if}
 					<Button
 						variant="ghost"
 						size="icon"
-						class="rounded-full p-2 transition-all hover:bg-rose-100/70"
+						class="rounded-md p-2 transition-all"
 						onclick={closeDrawer}
 					>
-						<X class="h-5 w-5 text-rose-500" />
+						<X class="h-5 w-5 text-muted-foreground" />
 					</Button>
 				</div>
 			</div>
@@ -261,17 +257,17 @@
 			<!-- Body -->
 			<div class="flex-1 space-y-6 overflow-y-auto p-6">
 				{#if loading}
-					<Skeleton class="h-8 w-3/4 rounded-xl" />
-					<Skeleton class="h-4 w-1/2 rounded-xl" />
+					<Skeleton class="h-8 w-3/4 rounded-md" />
+					<Skeleton class="h-4 w-1/2 rounded-md" />
 				{:else if error}
-					<Card class="break-words border border-rose-100 bg-rose-50/70 shadow-none">
+					<Card class="break-words border-destructive/25 bg-destructive/5 shadow-none">
 						<CardHeader class="flex flex-row items-start gap-3">
-							<div class="rounded-full bg-rose-100 p-2 text-rose-600">
+							<div class="rounded-md bg-destructive/10 p-2 text-destructive">
 								<AlertCircle class="h-5 w-5" />
 							</div>
 							<div>
-								<CardTitle class="break-words text-rose-700">Unable to load details</CardTitle>
-								<CardDescription class="break-words text-rose-600">{error}</CardDescription>
+								<CardTitle class="break-words text-destructive">Unable to load details</CardTitle>
+								<CardDescription class="break-words text-destructive/80">{error}</CardDescription>
 							</div>
 						</CardHeader>
 					</Card>
@@ -281,29 +277,29 @@
 							<div class="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
 								{#each section.cards as card (card.title)}
 									<Card
-										class={cn(
-											'min-w-0 break-words rounded-2xl border bg-gradient-to-br transition-all duration-300 hover:-translate-y-1 hover:shadow-lg',
-											resolveAccent(card.accent)
-										)}
+										class="min-w-0 break-words rounded-lg border-border bg-card shadow-sm transition-shadow duration-200 hover:shadow-md"
 									>
 										<CardHeader class="min-w-0 space-y-1">
 											<CardDescription
-												class="flex items-center gap-2 break-words text-xs uppercase tracking-wide text-slate-600"
+												class="overline flex items-center gap-2 break-words"
 											>
 												{#if card.icon}
-													<svelte:component this={card.icon} class="h-4 w-4 text-slate-500" />
+													<svelte:component
+														this={card.icon}
+														class={cn('h-4 w-4', resolveAccent(card.accent))}
+													/>
 												{/if}
 												{card.title}
 											</CardDescription>
 											<CardTitle
-												class="min-w-0 overflow-hidden break-words text-[clamp(1.25rem,2.8vw,1.875rem)] font-bold leading-tight text-slate-900
+												class="kpi-num min-w-0 overflow-hidden break-words text-[clamp(1.25rem,2.8vw,1.875rem)] text-foreground
 													   [overflow-wrap:anywhere]"
 											>
 												{card.value ?? '—'}
 											</CardTitle>
 										</CardHeader>
 										{#if card.hint}
-											<CardContent class="max-w-full break-words text-sm text-slate-600"
+											<CardContent class="max-w-full break-words text-sm text-muted-foreground"
 												>{card.hint}</CardContent
 											>
 										{/if}
@@ -312,10 +308,10 @@
 							</div>
 						{:else if section.type === 'description'}
 							<Card
-								class="break-words rounded-2xl border border-slate-100 shadow-none transition-all hover:shadow-md"
+								class="break-words rounded-lg border-border bg-card shadow-sm"
 							>
 								<CardHeader>
-									<CardTitle class="break-words text-base font-semibold text-slate-900"
+									<CardTitle class="break-words text-base font-semibold text-foreground"
 										>{section.title ?? 'Overview'}</CardTitle
 									>
 									{#if section.description}
@@ -328,10 +324,10 @@
 							</Card>
 						{:else if section.type === 'table'}
 							<Card
-								class="break-words rounded-2xl border border-slate-100 shadow-none transition-all hover:shadow-md"
+								class="break-words rounded-lg border-border bg-card shadow-sm"
 							>
 								<CardHeader>
-									<CardTitle class="break-words text-base font-semibold text-slate-900"
+									<CardTitle class="break-words text-base font-semibold text-foreground"
 										>{section.title ?? 'Records'}</CardTitle
 									>
 									{#if section.description}
@@ -345,7 +341,7 @@
 												{#each section.columns as column (column.key)}
 													<TableHead
 														class={cn(
-															'break-words px-4 py-3 text-xs uppercase tracking-wide text-slate-600',
+															'break-words px-4 py-3 text-xs uppercase tracking-wide text-muted-foreground',
 															alignClass(column.align)
 														)}
 													>
@@ -360,7 +356,7 @@
 													{#each section.columns as column (column.key)}
 														<TableCell
 															class={cn(
-																'max-w-[1px] overflow-hidden text-ellipsis break-all px-4 py-3 text-sm text-slate-700',
+																'max-w-[1px] overflow-hidden text-ellipsis break-all px-4 py-3 text-sm text-foreground',
 																alignClass(column.align)
 															)}
 														>

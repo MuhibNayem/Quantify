@@ -89,10 +89,10 @@
 	{#if label}
 		<label
 			class={cn(
-				'absolute left-3 z-10 font-bold text-slate-800 transition-all duration-200 ease-in-out',
+				'absolute left-3 z-10 font-medium text-foreground transition-all duration-200 ease-in-out',
 				value || isOpen
-					? '-top-2 rounded-full bg-white/80 px-1 text-xs backdrop-blur-sm'
-					: 'top-1/2 -translate-y-1/2 text-lg',
+					? '-top-2 rounded-sm bg-card px-1 text-xs'
+					: 'top-1/2 -translate-y-1/2 text-base',
 				disabled && 'opacity-50'
 			)}
 		>
@@ -105,12 +105,12 @@
 		bind:this={triggerRef}
 		type="button"
 		class={cn(
-			'flex h-12 w-full items-center justify-between rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-left text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] outline-none ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all',
-			'focus:scale-[1.01] focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10',
+			'flex h-12 w-full items-center justify-between rounded-md border border-input bg-card px-4 text-left text-sm font-medium text-foreground shadow-xs outline-none transition-all',
+			'focus:border-primary focus:ring-[3px] focus:ring-ring/30',
 			'appearance-none',
 			'-webkit-appearance: none;',
 			'cursor: pointer;',
-			disabled && 'cursor-not-allowed bg-gray-100 opacity-50',
+			disabled && 'cursor-not-allowed bg-muted opacity-50',
 			value && label && 'pt-2'
 		)}
 		onclick={toggleDropdown}
@@ -118,11 +118,11 @@
 		aria-expanded={isOpen}
 		{disabled}
 	>
-		<span class={cn(value ? 'text-slate-900' : 'text-slate-500/80')}>
+		<span class={cn(value ? 'text-foreground' : 'text-muted-foreground')}>
 			{selectedLabel}
 		</span>
 		<svg
-			class={cn('h-5 w-5 text-slate-600 transition-transform duration-300', isOpen && 'rotate-180')}
+			class={cn('h-4 w-4 text-muted-foreground transition-transform duration-300', isOpen && 'rotate-180')}
 			fill="none"
 			stroke="currentColor"
 			viewBox="0 0 24 24"
@@ -137,7 +137,7 @@
 	{#if isOpen}
 		<ul
 			class={cn(
-				'absolute z-10 max-h-60 w-full overflow-auto rounded-xl border border-white/60 bg-white/90 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] ring-1 ring-white/40 backdrop-blur-2xl',
+				'custom-scrollbar absolute z-10 max-h-60 w-full overflow-auto rounded-md border border-border bg-card p-1 shadow-lg',
 				dropdownPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
 			)}
 			transition:fly={{ y: dropdownPosition === 'top' ? 10 : -10, duration: 150 }}
@@ -146,8 +146,8 @@
 			{#each options as option (option.value)}
 				<li
 					class={cn(
-						'cursor-pointer px-4 py-3 font-bold text-slate-700 transition-colors hover:bg-emerald-500/10 hover:text-emerald-700',
-						value === option.value && 'bg-emerald-500/10 text-emerald-800'
+						'cursor-pointer rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted',
+						value === option.value && 'bg-accent text-accent-foreground'
 					)}
 					onclick={() => selectOption(option.value)}
 					role="option"

@@ -15,7 +15,7 @@
 	bind:loadingStatus
 	data-slot="avatar"
 	class={cn(
-		'relative flex size-8 shrink-0 overflow-hidden rounded-full border border-white/40 bg-white/50 shadow-[inset_0_2px_4px_rgba(255,255,255,0.5)]',
+		'relative flex size-8 shrink-0 overflow-hidden rounded-full border border-border bg-muted shadow-xs',
 		className
 	)}
 	{...restProps}

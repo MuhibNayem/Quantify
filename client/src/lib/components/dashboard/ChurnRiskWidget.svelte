@@ -63,18 +63,18 @@
 
     function getRiskColor(level: string) {
         switch (level?.toLowerCase()) {
-            case 'high': return 'text-red-600 bg-red-50 border-red-200';
-            case 'medium': return 'text-amber-600 bg-amber-50 border-amber-200';
-            case 'low': return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-            default: return 'text-slate-600 bg-slate-50 border-slate-200';
+            case 'high': return 'text-danger bg-danger/10 border-danger/25';
+            case 'medium': return 'text-warning bg-warning/10 border-warning/25';
+            case 'low': return 'text-success bg-success/10 border-success/25';
+            default: return 'text-muted-foreground bg-muted border-border';
         }
     }
 </script>
 
-<Card class="h-full border-purple-100 bg-gradient-to-br from-white to-purple-50/50 shadow-sm">
+<Card class="h-full border-border bg-card shadow-sm">
 	<CardHeader>
-		<CardTitle class="flex items-center gap-2 text-slate-800">
-			<div class="rounded-lg bg-purple-100 p-2 text-purple-600">
+		<CardTitle class="flex items-center gap-2 text-foreground">
+			<div class="rounded-md bg-muted p-2 text-primary">
 				<Users class="h-5 w-5" />
 			</div>
 			{$t('intelligence.churn_risk.title')}
@@ -86,33 +86,33 @@
 		<div class="space-y-2">
 			<Label>{$t('intelligence.churn_risk.select_customer')}</Label>
             {#if selectedCustomer}
-                <div class="flex items-center justify-between rounded-md border border-purple-200 bg-purple-50 p-2">
+                <div class="flex items-center justify-between rounded-md border border-border bg-muted p-2">
                     <div class="flex flex-col">
-                        <span class="font-medium text-purple-900">{selectedCustomer.FirstName} {selectedCustomer.LastName}</span>
-                        <span class="text-xs text-purple-700">{selectedCustomer.Email}</span>
+                        <span class="font-medium text-foreground">{selectedCustomer.FirstName} {selectedCustomer.LastName}</span>
+                        <span class="text-xs text-muted-foreground">{selectedCustomer.Email}</span>
                     </div>
-                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-purple-500 hover:text-purple-700" onclick={() => { selectedCustomer = null; userId = null; churnRisk = null; }}>
+                    <Button variant="ghost" size="sm" class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onclick={() => { selectedCustomer = null; userId = null; churnRisk = null; }}>
                         X
                     </Button>
                 </div>
             {:else}
                 <div class="relative">
-                    <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
-                    <Input 
-                        placeholder={$t('intelligence.churn_risk.placeholder')} 
-                        class="pl-9" 
+                    <Search class="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder={$t('intelligence.churn_risk.placeholder')}
+                        class="pl-9"
                         bind:value={customerSearch}
                         oninput={searchCustomers}
                     />
                     {#if searchResults.length > 0}
-                        <div class="absolute z-10 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+                        <div class="absolute z-10 mt-1 w-full rounded-md border border-border bg-card shadow-lg">
                             {#each searchResults as customer}
-                                <button 
-                                    class="w-full px-4 py-2 text-left text-sm hover:bg-slate-50"
+                                <button
+                                    class="w-full px-4 py-2 text-left text-sm transition-colors hover:bg-muted"
                                     onclick={() => selectCustomer(customer)}
                                 >
-                                    <div class="font-medium">{customer.FirstName} {customer.LastName}</div>
-                                    <div class="text-xs text-slate-500">{customer.Email}</div>
+                                    <div class="font-medium text-foreground">{customer.FirstName} {customer.LastName}</div>
+                                    <div class="text-xs text-muted-foreground">{customer.Email}</div>
                                 </button>
                             {/each}
                         </div>
@@ -122,7 +122,7 @@
 		</div>
 
 		<div class="flex justify-end">
-			<Button onclick={analyzeChurnRisk} disabled={loading || !userId} class="bg-purple-600 hover:bg-purple-700">
+			<Button onclick={analyzeChurnRisk} disabled={loading || !userId}>
 				{#if loading}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 					{$t('intelligence.churn_risk.analyzing_btn')}
@@ -133,24 +133,24 @@
 		</div>
 
 		{#if churnRisk}
-			<div class="mt-4 space-y-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4">
+			<div class="mt-4 space-y-4 rounded-lg border border-border bg-card p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<div class="text-sm text-slate-500">{$t('intelligence.churn_risk.risk_level')}</div>
-                        <div class={`mt-1 inline-flex items-center rounded-full border px-2.5 py-0.5 text-sm font-semibold ${getRiskColor(churnRisk.risk_level)}`}>
+						<div class="overline">{$t('intelligence.churn_risk.risk_level')}</div>
+                        <div class={`mt-1 inline-flex items-center rounded-md border px-2.5 py-0.5 text-sm font-semibold ${getRiskColor(churnRisk.risk_level)}`}>
                             {churnRisk.risk_level}
                         </div>
 					</div>
                     <div class="text-right">
-                        <div class="text-sm text-slate-500">{$t('intelligence.churn_risk.risk_score')}</div>
-                        <div class="text-2xl font-bold text-slate-900">{(churnRisk.churn_risk_score * 100).toFixed(0)}%</div>
+                        <div class="overline">{$t('intelligence.churn_risk.risk_score')}</div>
+                        <div class="kpi-num text-2xl text-foreground">{(churnRisk.churn_risk_score * 100).toFixed(0)}%</div>
                     </div>
 				</div>
-                
+
                 {#if churnRisk.primary_factors && churnRisk.primary_factors.length > 0}
                     <div class="space-y-1">
-                        <div class="text-sm font-medium text-slate-700">{$t('intelligence.churn_risk.primary_factors')}</div>
-                        <ul class="list-inside list-disc text-sm text-slate-600">
+                        <div class="text-sm font-medium text-foreground">{$t('intelligence.churn_risk.primary_factors')}</div>
+                        <ul class="list-inside list-disc text-sm text-muted-foreground">
                             {#each churnRisk.primary_factors as factor}
                                 <li>{factor}</li>
                             {/each}
@@ -158,15 +158,15 @@
                     </div>
                 {/if}
 
-                <div class="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
-                    <div class="mb-1 font-medium text-slate-900 flex items-center gap-2">
-                        <CheckCircle2 class="h-3 w-3 text-emerald-600" /> {$t('intelligence.churn_risk.retention_strategy')}
+                <div class="rounded-md bg-muted p-3 text-sm text-foreground">
+                    <div class="mb-1 font-medium flex items-center gap-2">
+                        <CheckCircle2 class="h-3 w-3 text-success" /> {$t('intelligence.churn_risk.retention_strategy')}
                     </div>
                     {churnRisk.retention_strategy}
                 </div>
 
                 {#if churnRisk.suggested_discount > 0}
-                    <div class="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+                    <div class="rounded-md border border-success/25 bg-success/10 p-3 text-sm text-success">
                         <div class="font-medium flex items-center gap-2">
                             <AlertTriangle class="h-3 w-3" /> {$t('intelligence.churn_risk.suggested_action')}
                         </div>

@@ -2,16 +2,14 @@
 	import { type VariantProps, tv } from 'tailwind-variants';
 
 	export const badgeVariants = tv({
-		base: 'focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 aria-invalid:border-destructive inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-bold transition-all focus-visible:ring-[3px] [&>svg]:pointer-events-none [&>svg]:size-3',
+		base: 'focus-visible:border-ring focus-visible:ring-ring/30 aria-invalid:ring-destructive/20 aria-invalid:border-destructive inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus-visible:ring-[3px] [&>svg]:pointer-events-none [&>svg]:size-3',
 		variants: {
 			variant: {
-				default:
-					'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm border-transparent [a&]:hover:bg-gradient-to-r [a&]:hover:from-blue-500 [a&]:hover:to-indigo-500',
-				secondary:
-					'bg-white/60 text-slate-800 border-white/40 backdrop-blur-md [a&]:hover:bg-white/80',
-				destructive: 'bg-red-500/10 text-red-700 border-red-200 [a&]:hover:bg-red-500/20',
-				outline:
-					'text-slate-700 border-white/60 bg-white/20 backdrop-blur-sm [a&]:hover:bg-white/40'
+				default: 'bg-primary text-primary-foreground border-transparent [a&]:hover:bg-primary/90',
+				secondary: 'bg-secondary text-secondary-foreground border-border [a&]:hover:bg-secondary/80',
+				destructive:
+					'bg-destructive/10 text-destructive border-destructive/25 [a&]:hover:bg-destructive/20',
+				outline: 'text-foreground border-border bg-transparent [a&]:hover:bg-muted'
 			}
 		},
 		defaultVariants: {

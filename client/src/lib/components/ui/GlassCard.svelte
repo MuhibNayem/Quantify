@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
-	import { glassCard } from '$lib/styles/liquid-glass';
 	import type { Snippet } from 'svelte';
 
 	let {
@@ -10,6 +9,6 @@
 	}: { children: Snippet; className?: string; [key: string]: any } = $props();
 </script>
 
-<div class={cn(glassCard.base, className)} {...rest}>
+<div class={cn('liquid-panel relative overflow-hidden rounded-lg p-6', className)} {...rest}>
 	{@render children()}
 </div>

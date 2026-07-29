@@ -13,7 +13,7 @@
 	bind:ref
 	data-slot="separator"
 	class={cn(
-		'shrink-0 bg-gradient-to-r from-transparent via-slate-300/50 to-transparent data-[orientation=horizontal]:h-[1px] data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-[1px] data-[orientation=vertical]:bg-gradient-to-b',
+		'shrink-0 bg-border data-[orientation=horizontal]:h-[1px] data-[orientation=vertical]:h-full data-[orientation=horizontal]:w-full data-[orientation=vertical]:w-[1px]',
 		className
 	)}
 	{...restProps}

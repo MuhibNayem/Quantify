@@ -37,10 +37,10 @@
 	class={cn('toaster group', className)}
 	toastOptions={{
 		class:
-			'group-[.toaster]:bg-white/90 group-[.toaster]:backdrop-blur-2xl group-[.toaster]:border-white/60 group-[.toaster]:text-slate-900 group-[.toaster]:rounded-2xl group-[.toaster]:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1)]',
-		descriptionClass: 'group-[.toast]:text-slate-500',
-		actionButtonClass: 'group-[.toast]:bg-slate-900 group-[.toast]:text-white',
-		cancelButtonClass: 'group-[.toast]:bg-slate-100 group-[.toast]:text-slate-500',
+			'group-[.toaster]:bg-card group-[.toaster]:border-border group-[.toaster]:text-foreground group-[.toaster]:rounded-lg group-[.toaster]:shadow-lg',
+		descriptionClass: 'group-[.toast]:text-muted-foreground',
+		actionButtonClass: 'group-[.toast]:bg-primary group-[.toast]:text-primary-foreground',
+		cancelButtonClass: 'group-[.toast]:bg-muted group-[.toast]:text-foreground',
 		...toastOptions
 	}}
 	{...rest}
