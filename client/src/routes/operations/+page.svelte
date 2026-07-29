@@ -67,7 +67,7 @@
 			toast.success($t('operations.toasts.snapshot_updated'));
 		} catch (error) {
 			toast.error($t('operations.toasts.fetch_stock_fail'), {
-				description: error.response?.data?.error || 'Unable to fetch stock'
+				description: (error as any)?.response?.data?.error || 'Unable to fetch stock'
 			});
 		} finally {
 			stockLoading = false;
@@ -87,7 +87,7 @@
 			loadStock();
 		} catch (error) {
 			toast.error($t('operations.toasts.adjust_fail'), {
-				description: error.response?.data?.error || 'Unable to apply adjustment'
+				description: (error as any)?.response?.data?.error || 'Unable to apply adjustment'
 			});
 		}
 	};
@@ -103,7 +103,7 @@
 			toast.success($t('operations.toasts.transfer_queued'));
 		} catch (error) {
 			toast.error($t('operations.toasts.transfer_fail'), {
-				description: error.response?.data?.error || 'Unable to create transfer'
+				description: (error as any)?.response?.data?.error || 'Unable to create transfer'
 			});
 		}
 	};
@@ -116,7 +116,7 @@
 			toast.success($t('operations.toasts.sku_resolved'));
 		} catch (error) {
 			toast.error($t('operations.toasts.lookup_fail'), {
-				description: error.response?.data?.error || $t('operations.toasts.product_not_found')
+				description: (error as any)?.response?.data?.error || $t('operations.toasts.product_not_found')
 			});
 		}
 	};
@@ -128,7 +128,7 @@
 			barcodeImage = URL.createObjectURL(blob);
 		} catch (error) {
 			toast.error($t('operations.toasts.generate_fail'), {
-				description: error.response?.data?.error || 'Unable to generate barcode'
+				description: (error as any)?.response?.data?.error || 'Unable to generate barcode'
 			});
 		}
 	};
@@ -229,7 +229,7 @@
 						<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
 							{#if stockSnapshot.batches.length === 0}
 								<TableRow>
-									<TableCell colspan="3" class="py-4 text-center text-sm text-slate-500"
+									<TableCell colspan={3} class="py-4 text-center text-sm text-slate-500"
 										>{$t('operations.snapshot.table.empty')}</TableCell
 									>
 								</TableRow>

@@ -119,7 +119,7 @@
 									href="/suppliers/{purchaseOrder.SupplierID}"
 									class="text-lg font-semibold text-slate-800 hover:underline"
 								>
-									{purchaseOrder.Supplier?.Name || `Supplier #${purchaseOrder.SupplierID}`}
+									{`Supplier #${purchaseOrder.SupplierID}`}
 								</a>
 							</div>
 							<div>
@@ -193,7 +193,7 @@
 										{/each}
 									{:else}
 										<TableRow>
-											<TableCell colspan="4" class="py-4 text-center text-slate-500">
+											<TableCell colspan={4} class="py-4 text-center text-slate-500">
 												No items in this purchase order.
 											</TableCell>
 										</TableRow>

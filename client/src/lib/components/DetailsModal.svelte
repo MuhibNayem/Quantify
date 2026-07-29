@@ -153,19 +153,20 @@
 
 	async function fetchData() {
 		if (!open || !resourceId || !endpoint) return;
+		const id = resourceId;
 		const token = Symbol('details-fetch');
 		requestToken = token;
 		loading = true;
 		error = null;
 
 		try {
-			const { data: payload } = await api.get(`${endpoint}/${resourceId}`);
+			const { data: payload } = await api.get(`${endpoint}/${id}`);
 			if (requestToken !== token) return;
 
 			const extraEntries = await Promise.all(
 				extraFetchers.map(async (fetcher) => {
 					try {
-						const value = await fetcher.request(resourceId);
+						const value = await fetcher.request(id);
 						return [fetcher.key, value] as const;
 					} catch {
 						return [fetcher.key, null] as const;

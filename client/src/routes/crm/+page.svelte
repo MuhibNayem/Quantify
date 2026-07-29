@@ -447,7 +447,7 @@
 								<Button
 									size="sm"
 									variant="destructive"
-									onclick={() => deleteCustomer(selectedCustomer)}
+									onclick={() => selectedCustomer && deleteCustomer(selectedCustomer)}
 									class="rounded-lg bg-red-500/20 text-red-500 hover:bg-red-500/30"
 								>
 									<Trash2 class="h-4 w-4 text-red-500" />

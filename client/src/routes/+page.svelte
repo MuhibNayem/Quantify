@@ -397,14 +397,14 @@
 												class="animate-fadeUp transition-colors hover:bg-white/70"
 												style={`animation-delay:${i * 0.08 + 0.1}s`}
 											>
-												<TableCell colspan="3" class="py-3"
+												<TableCell colspan={3} class="py-3"
 													><Skeleton class="h-6 w-full bg-white/70" /></TableCell
 												>
 											</TableRow>
 										{/each}
 									{:else if recentProducts.length === 0}
 										<TableRow>
-											<TableCell colspan="3" class="py-8 text-center text-slate-500">
+											<TableCell colspan={3} class="py-8 text-center text-slate-500">
 												<div class="space-y-2">
 													<Boxes class="mx-auto h-8 w-8 text-slate-400" />
 													<div>{$t('dashboard.fresh_inventory.no_data')}</div>
@@ -474,14 +474,14 @@
 												class="animate-fadeUp transition-colors hover:bg-white/70"
 												style={`animation-delay:${i * 0.08 + 0.1}s`}
 											>
-												<TableCell colspan="3" class="py-3"
+												<TableCell colspan={3} class="py-3"
 													><Skeleton class="h-6 w-full bg-white/70" /></TableCell
 												>
 											</TableRow>
 										{/each}
 									{:else if recentAlerts.length === 0}
 										<TableRow>
-											<TableCell colspan="3" class="py-8 text-center text-slate-500">
+											<TableCell colspan={3} class="py-8 text-center text-slate-500">
 												<div class="space-y-2">
 													<AlertTriangle class="mx-auto h-8 w-8 text-emerald-400" />
 													<div>{$t('dashboard.priority_alerts.no_data')}</div>
@@ -550,14 +550,14 @@
 											class="animate-fadeUp transition-colors hover:bg-white/70"
 											style={`animation-delay:${i * 0.08 + 0.1}s`}
 										>
-											<TableCell colspan="4" class="py-3"
+											<TableCell colspan={4} class="py-3"
 												><Skeleton class="h-6 w-full bg-white/70" /></TableCell
 											>
 										</TableRow>
 									{/each}
 								{:else if suggestions.length === 0}
 									<TableRow>
-										<TableCell colspan="4" class="py-8 text-center text-slate-500">
+										<TableCell colspan={4} class="py-8 text-center text-slate-500">
 											<div class="space-y-2">
 												<ShoppingCart class="mx-auto h-8 w-8 text-slate-400" />
 												<div>{$t('dashboard.procurement.no_data')}</div>
@@ -572,27 +572,22 @@
 										>
 											<TableCell class="py-3 font-medium text-slate-700">
 												{suggestion?.Product?.Name ??
-													suggestion?.product?.name ??
-													`Product ${suggestion?.ProductID ?? suggestion?.productId ?? 'N/A'}`}
+													`Product ${suggestion?.ProductID ?? 'N/A'}`}
 											</TableCell>
 											<TableCell class="py-3 text-right font-semibold text-blue-600">
 												{suggestion?.SuggestedOrderQuantity ??
-													suggestion?.suggestedOrderQuantity ??
-													suggestion?.quantity ??
 													'N/A'}
 											</TableCell>
 											<TableCell class="py-3 text-slate-600">
 												{suggestion?.Supplier?.Name ??
-													suggestion?.supplier?.name ??
 													suggestion?.SupplierID ??
-													suggestion?.supplierId ??
 													'N/A'}
 											</TableCell>
 											<TableCell class="py-3 text-right">
 												<span
 													class="inline-flex items-center rounded-full border border-cyan-200 bg-cyan-100 px-3 py-1.5 text-xs font-medium text-cyan-700 shadow-sm"
 												>
-													💡 {suggestion?.Status ?? suggestion?.status ?? $t('dashboard.procurement.ready_to_order')}
+													💡 {suggestion?.Status ?? $t('dashboard.procurement.ready_to_order')}
 												</span>
 											</TableCell>
 										</TableRow>

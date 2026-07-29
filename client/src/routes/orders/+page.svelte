@@ -230,6 +230,10 @@
 
 	onMount(() => {
 		loadData();
+
+		const handleReturnUpdated = (e: Event) => handleRealTimeUpdate(e as CustomEvent);
+		window.addEventListener('return-updated', handleReturnUpdated);
+		return () => window.removeEventListener('return-updated', handleReturnUpdated);
 	});
 
 	// Hybrid Sync Logic
@@ -345,8 +349,6 @@
 		return Package;
 	}
 </script>
-
-<svelte:window on:return-updated={(e) => handleRealTimeUpdate(e)} />
 
 <div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10">
 	<!-- Background -->

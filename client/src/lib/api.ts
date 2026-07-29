@@ -82,9 +82,9 @@ api.interceptors.response.use(
           const { accessToken: newAccessToken, refreshToken: newRefreshToken, csrfToken: newCsrfToken } = refreshResponse.data;
 
           // Update auth store with new tokens
-          const currentUser = get(auth).user;
+          const { user: currentUser, permissions: currentPermissions } = get(auth);
           if (currentUser) {
-            auth.login(newAccessToken, newRefreshToken, newCsrfToken, currentUser);
+            auth.login(newAccessToken, newRefreshToken, newCsrfToken, currentUser, currentPermissions);
           }
 
           // Retry the original request with the new access token

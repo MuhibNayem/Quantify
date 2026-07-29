@@ -92,9 +92,8 @@
 							day: 'numeric'
 						}),
 						time: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${h.ClockOut ? new Date(h.ClockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}`,
-						duration: `${hours}h ${minutes}m`,
-						duration: `${hours}h ${minutes}m`
-					};
+					duration: `${hours}h ${minutes}m`
+				};
 				});
 			}
 

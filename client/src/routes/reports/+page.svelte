@@ -148,7 +148,7 @@
 			heatmapGrid = grid;
 
 			// 2. Transform Stock Aging (Object -> Flat Array)
-			const agingArray = [];
+			const agingArray: any[] = [];
 			const agingObj = agingData as any;
 			if (agingObj) {
 				for (const [range, items] of Object.entries(agingObj)) {
