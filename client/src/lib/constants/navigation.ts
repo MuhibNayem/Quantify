@@ -11,12 +11,12 @@ import {
 	Clock,
 	Users,
 	Settings,
-	Undo2,
 	ShoppingBag,
 	ShoppingCart,
 	Tag,
 	PackageMinus,
-	ShieldCheck
+	ShieldCheck,
+	Landmark
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -40,9 +40,9 @@ export const navSections: NavSection[] = [
 				label: 'Overview',
 				description: 'Live metrics and health',
 				href: '/',
-				icon: LayoutDashboard,
-			},
-		],
+				icon: LayoutDashboard
+			}
+		]
 	},
 	{
 		title: 'Workspace',
@@ -52,57 +52,57 @@ export const navSections: NavSection[] = [
 				description: 'Products, categories, partners',
 				href: '/catalog',
 				icon: Boxes,
-				permission: 'products.read',
+				permission: 'products.read'
 			},
 			{
 				label: 'Operations',
 				description: 'Stock moves, barcode, logistics',
 				href: '/operations',
 				icon: Workflow,
-				permission: 'inventory.view',
+				permission: 'inventory.view'
 			},
 			{
 				label: 'Time Tracking',
 				description: 'Clock in/out and manage shifts',
 				href: '/time-tracking',
-				icon: Clock,
+				icon: Clock
 			},
 			{
 				label: 'Intelligence',
 				description: 'Forecasts & business reports',
 				href: '/intelligence',
 				icon: ActivitySquare,
-				permission: 'reports.sales',
+				permission: 'reports.sales'
 			},
 			{
 				label: 'POS',
 				description: 'Checkout & payments',
 				href: '/pos',
 				icon: Sparkles,
-				permission: 'pos.view',
+				permission: 'pos.view'
 			},
 			{
 				label: 'Orders',
 				description: 'Sales & Restock',
 				href: '/orders',
 				icon: ShoppingBag,
-				permission: 'pos.view',
+				permission: 'pos.view'
 			},
 			{
 				label: 'Purchase Orders',
 				description: 'Replenishment & receiving',
 				href: '/purchase-orders',
 				icon: ShoppingCart,
-				permission: 'inventory.view',
+				permission: 'inventory.view'
 			},
 			{
 				label: 'Purchase Returns',
 				description: 'Supplier returns & refunds',
 				href: '/purchase-returns',
 				icon: PackageMinus,
-				permission: 'inventory.view',
-			},
-		],
+				permission: 'inventory.view'
+			}
+		]
 	},
 	{
 		title: 'Business',
@@ -112,23 +112,23 @@ export const navSections: NavSection[] = [
 				description: 'Advanced analytics & insights',
 				href: '/reports',
 				icon: ActivitySquare,
-				permission: 'reports.view',
+				permission: 'reports.view'
 			},
 			{
 				label: 'CRM',
 				description: 'Customers & loyalty',
 				href: '/crm',
 				icon: Users,
-				permission: 'crm.view',
+				permission: 'crm.view'
 			},
 			{
 				label: 'Promotions',
 				description: 'Discounts & Deals',
 				href: '/promotions',
 				icon: Tag,
-				permission: 'products.write',
-			},
-		],
+				permission: 'products.write'
+			}
+		]
 	},
 	{
 		title: 'Control',
@@ -138,36 +138,43 @@ export const navSections: NavSection[] = [
 				description: 'Thresholds, incidents, escalations',
 				href: '/alerts',
 				icon: BellRing,
-				permission: 'alerts.view',
+				permission: 'alerts.view'
 			},
 			{
 				label: 'Bulk Ops',
 				description: 'Imports, exports, automation',
 				href: '/bulk',
 				icon: UploadCloud,
-				permission: 'bulk.import',
+				permission: 'bulk.import'
 			},
 			{
 				label: 'User Access',
 				description: 'Approvals & roles',
 				href: '/users',
 				icon: Users2,
-				permission: 'users.view',
+				permission: 'users.view'
+			},
+			{
+				label: 'Finance',
+				description: 'Ledger, statements & receivables',
+				href: '/finance',
+				icon: Landmark,
+				permission: 'reports.financial'
 			},
 			{
 				label: 'Audit Trail',
 				description: 'Activity & change history',
 				href: '/audit',
 				icon: ShieldCheck,
-				permission: 'reports.financial',
+				permission: 'reports.financial'
 			},
 			{
 				label: 'Settings',
 				description: 'Configuration & RBAC',
 				href: '/settings',
 				icon: Settings,
-				permission: 'settings.view',
-			},
-		],
-	},
+				permission: 'settings.view'
+			}
+		]
+	}
 ];
