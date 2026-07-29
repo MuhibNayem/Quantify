@@ -66,6 +66,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	// Public routes (no tenant middleware)
 	readyHandler := handlers.NewReadyHandler(c.DB, c.Redis, c.AMQP, c.Uploader)
 	financeHandler := handlers.NewFinanceHandler(c.DB)
+	unitsHandler := handlers.NewUnitsHandler(c.DB)
 
 	publicRoutes := r.Group("/")
 	{
@@ -135,6 +136,17 @@ func SetupRouter(c *app.Container) *gin.Engine {
 			products.POST("/:productId/stock/batches", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateBatch)
 			products.POST("/:productId/stock/adjustments", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateStockAdjustment)
 			products.GET("/:productId/history", middleware.RequirePermission(roleRepo, "products.read"), handlers.ListStockHistory)
+			// Per-product selling units (unit-of-measure)
+			products.GET("/:productId/units", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListProductUnits)
+			products.POST("/:productId/units", middleware.RequirePermission(roleRepo, "products.write"), unitsHandler.SaveProductUnit)
+			products.DELETE("/:productId/units/:unitId", middleware.RequirePermission(roleRepo, "products.write"), unitsHandler.DeleteProductUnit)
+		}
+
+		// Units of measure catalog
+		units := api.Group("/units")
+		{
+			units.GET("", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListUnits)
+			units.GET("/dimensions", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListDimensions)
 		}
 
 		// Promotions
