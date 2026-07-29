@@ -31,41 +31,36 @@
 	}[columns];
 
 	const badgeStyles: Record<NonNullable<NonNullable<DescriptionItem['badge']>['variant']>, string> = {
-		default: 'bg-slate-100 text-slate-700 border-slate-200',
-		success: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-		warning: 'bg-amber-100 text-amber-700 border-amber-200',
-		danger: 'bg-rose-100 text-rose-700 border-rose-200',
-		info: 'bg-sky-100 text-sky-700 border-sky-200'
+		default: 'badge-neutral',
+		success: 'badge-success',
+		warning: 'badge-warning',
+		danger: 'badge-danger',
+		info: 'badge-info'
 	};
 </script>
 
 {#if items.length === 0}
-	<div class="text-center text-sm text-slate-500 py-6">{emptyText}</div>
+	<div class="text-center text-sm text-muted-foreground py-6">{emptyText}</div>
 {:else}
 	<dl class={cn('grid grid-cols-1 gap-4', columnClass)}>
 		{#each items as item (item.label)}
-			<div class="rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
-				<dt class="text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-2">
+			<div class="rounded-md border border-border bg-card p-4 shadow-sm">
+				<dt class="overline flex items-center gap-2">
 					{#if item.icon}
-						<svelte:component this={item.icon} class="h-4 w-4 text-slate-400" />
+						<svelte:component this={item.icon} class="h-4 w-4 text-muted-foreground" />
 					{/if}
 					{$t(item.label)}
 				</dt>
-				<dd class={cn('text-slate-900', dense ? 'mt-1 text-sm font-semibold' : 'mt-2 text-base font-semibold')}>
+				<dd class={cn('text-foreground', dense ? 'mt-1 text-sm font-semibold' : 'mt-2 text-base font-semibold')}>
 					<span>{item.value ?? '—'}</span>
 					{#if item.badge}
-						<span
-							class={cn(
-								'ml-2 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium',
-								badgeStyles[item.badge.variant ?? 'default']
-							)}
-						>
+						<span class={cn('ml-2', badgeStyles[item.badge.variant ?? 'default'])}>
 							{item.badge.text}
 						</span>
 					{/if}
 				</dd>
 				{#if item.hint}
-					<p class="mt-1 text-xs text-slate-500">{item.hint}</p>
+					<p class="mt-1 text-xs text-muted-foreground">{item.hint}</p>
 				{/if}
 			</div>
 		{/each}

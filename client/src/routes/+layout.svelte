@@ -60,42 +60,24 @@
 {#if isPublicRoute}
 	{@render children?.()}
 {:else}
-	<!-- Background Glows -->
-	<div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-		<div
-			class="animate-pulseGlow absolute -right-32 -top-40 h-64 w-64 rounded-full bg-gradient-to-r from-sky-300 to-blue-400 opacity-50 blur-3xl sm:-right-48 sm:-top-60 sm:h-96 sm:w-96"
-		></div>
-		<div
-			class="animate-pulseGlow absolute -bottom-40 -left-32 h-64 w-64 rounded-full bg-gradient-to-r from-violet-300 to-purple-400 opacity-40 blur-3xl delay-700 sm:-bottom-60 sm:-left-48 sm:h-96 sm:w-96"
-		></div>
-		<div
-			class="animate-pulseGlow absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-emerald-300 to-green-400 opacity-30 blur-3xl delay-500 sm:h-[28rem] sm:w-[28rem]"
-		></div>
-	</div>
-
 	<a href="#main-content" class="skip-link">Skip to main content</a>
 
 	<!-- Fixed Height Layout -->
-	<div
-		class="relative z-0 flex h-screen overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100/40 text-slate-800 dark:from-slate-900 dark:via-slate-900 dark:to-indigo-950 dark:text-slate-200"
-	>
+	<div class="relative z-0 flex h-screen overflow-hidden bg-background text-foreground">
 		<!-- Sidebar (fixed height, non-scrolling page) -->
 		<Sidebar bind:open={sidebarOpen} user={authState.user ?? data?.user} />
 
 		<!-- Mobile overlay -->
 		{#if sidebarOpen}
 			<div
-				class="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-md lg:hidden"
+				class="fixed inset-0 z-30 bg-foreground/40 lg:hidden"
 				onclick={() => (sidebarOpen = false)}
 			></div>
 		{/if}
 
 		<!-- Main Section (scrolls independently) -->
 		<div class="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-			<Topbar
-				user={authState.user ?? data?.user}
-				on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)}
-			/>
+			<Topbar user={authState.user ?? data?.user} />
 
 		<main
 			id="main-content"
@@ -118,9 +100,9 @@
 		left: 1rem;
 		z-index: 9999;
 		padding: 0.75rem 1.5rem;
-		border-radius: 0 0 1rem 1rem;
+		border-radius: 0 0 var(--radius) var(--radius);
 		background: hsl(var(--primary));
-		color: white;
+		color: hsl(var(--primary-foreground));
 		font-weight: 600;
 		text-decoration: none;
 		transition: top 0.2s ease;
@@ -128,33 +110,6 @@
 
 	.skip-link:focus {
 		top: 0;
-	}
-
-	/* Smooth transitions for all layout elements */
-	* {
-		transition-property:
-			color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter,
-			backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
-
-	/* Background glow animation */
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.45;
-			filter: blur(80px);
-		}
-		50% {
-			transform: scale(1.1);
-			opacity: 0.6;
-			filter: blur(90px);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 10s ease-in-out infinite;
 	}
 
 	/* Layout improvements */
@@ -166,7 +121,7 @@
 
 	main {
 		scrollbar-width: thin;
-		scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+		scrollbar-color: hsl(var(--border)) transparent;
 	}
 
 	main::-webkit-scrollbar {
@@ -174,11 +129,11 @@
 	}
 
 	main::-webkit-scrollbar-thumb {
-		background: rgba(139, 92, 246, 0.3);
-		border-radius: 10px;
+		background: hsl(var(--border));
+		border-radius: 3px;
 	}
 	main::-webkit-scrollbar-thumb:hover {
-		background: rgba(139, 92, 246, 0.5);
+		background: hsl(var(--muted-foreground) / 0.5);
 	}
 
 	/* Responsive adjustments */

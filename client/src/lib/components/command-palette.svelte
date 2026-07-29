@@ -58,7 +58,7 @@
 {#if open}
 	<!-- svelte-ignore a11y_interactive_supports_focus -->
 	<div
-		class="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-sm"
+		class="fixed inset-0 z-50 flex items-start justify-center bg-foreground/40 pt-[15vh]"
 		role="dialog"
 		aria-modal="true"
 		onclick={() => (open = false)}
@@ -66,7 +66,7 @@
 	>
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 		<div
-			class="w-full max-w-lg overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95"
+			class="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-lg"
 			onclick={(e) => e.stopPropagation()}
 			role="document"
 		>
@@ -78,10 +78,10 @@
 						<CommandGroup heading="Recent">
 							{#each recent as item}
 								<CommandItem onSelect={() => runCommand({ action: () => goto(item.href) })}>
-									<History class="h-4 w-4 text-slate-400" />
+									<History class="h-4 w-4 text-muted-foreground" />
 									<span class="flex-1">{item.label}</span>
 									<span
-										class="text-[0.65rem] font-medium text-slate-400 capitalize">{item.type}</span
+										class="text-[0.65rem] font-medium text-muted-foreground capitalize">{item.type}</span
 									>
 								</CommandItem>
 							{/each}
@@ -90,11 +90,11 @@
 					<CommandGroup heading="Navigate">
 						{#each navigationCommands as cmd}
 							<CommandItem onSelect={() => runCommand(cmd)}>
-								<cmd.icon class="h-4 w-4 text-slate-400" />
+								<cmd.icon class="h-4 w-4 text-muted-foreground" />
 								<span class="flex-1">{cmd.label}</span>
 								{#if cmd.shortcut}
 									<kbd
-										class="rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[0.65rem] font-medium text-slate-400 dark:border-slate-600 dark:bg-slate-800"
+										class="rounded-md border border-border bg-muted px-1.5 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
 									>
 										{cmd.shortcut}
 									</kbd>
@@ -105,7 +105,7 @@
 					<CommandGroup heading="Actions">
 						{#each actionCommands as cmd}
 							<CommandItem onSelect={() => runCommand(cmd)}>
-								<cmd.icon class="h-4 w-4 text-slate-400" />
+								<cmd.icon class="h-4 w-4 text-muted-foreground" />
 								<span class="flex-1">{cmd.label}</span>
 							</CommandItem>
 						{/each}

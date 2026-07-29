@@ -91,10 +91,7 @@
 				variant="outline"
 				role="combobox"
 				aria-expanded={open}
-				class={cn(
-					'h-12 w-full justify-between rounded-2xl border-white/60 bg-white/50 shadow-sm backdrop-blur-md transition-all hover:bg-white/80',
-					className
-				)}
+				class={cn('h-12 w-full justify-between rounded-md', className)}
 				{...props}
 			>
 				{#if selectedUser}
@@ -107,14 +104,14 @@
 		{/snippet}
 	</PopoverTrigger>
 	<PopoverContent
-		class="z-50 w-[300px] rounded-2xl border border-white/60 bg-white/90 p-0 shadow-[0_40px_100px_-20px_rgba(50,60,90,0.2),inset_0_1px_0_0_rgba(255,255,255,0.8)] outline-none backdrop-blur-3xl backdrop-saturate-[180%]"
+		class="z-50 w-[300px] rounded-lg border border-border bg-card p-0 shadow-lg outline-none"
 		align="start"
 	>
 		<Command shouldFilter={false}>
-			<div class="flex items-center border-b border-white/20 px-4 py-2" data-cmdk-input-wrapper="">
+			<div class="flex items-center border-b border-border px-4 py-2" data-cmdk-input-wrapper="">
 				<Search class="mr-2 h-4 w-4 shrink-0 opacity-50" />
 				<input
-					class="flex h-12 w-full rounded-md bg-transparent py-3 text-base font-medium text-slate-900 outline-none placeholder:text-slate-500/80 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex h-12 w-full rounded-md bg-transparent py-3 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
 					placeholder="Search by name..."
 					value={searchQuery}
 					oninput={(e) => handleSearch(e.currentTarget.value)}
@@ -141,13 +138,18 @@
 							>
 								<Check
 									class={cn(
-										'mr-2 h-4 w-4',
+										'mr-2 h-4 w-4 text-primary',
 										value === String(user.ID) ? 'opacity-100' : 'opacity-0'
 									)}
 								/>
 								<div class="flex flex-col">
-									<span class="font-medium text-slate-900">{getUserLabel(user)}</span>
-									<span class="text-xs text-slate-500">{user.Email}</span>
+									<span
+										class={cn(
+											'font-medium',
+											value === String(user.ID) ? 'text-primary' : 'text-foreground'
+										)}>{getUserLabel(user)}</span
+									>
+									<span class="text-xs text-muted-foreground">{user.Email}</span>
 								</div>
 							</CommandItem>
 						{/each}

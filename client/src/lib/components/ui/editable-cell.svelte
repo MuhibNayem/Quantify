@@ -69,11 +69,11 @@
 
 {#if editing}
 	<div
-		class="inline-flex items-center gap-0.5 rounded-xl border border-sky-300/70 bg-white/90 py-0.5 pr-0.5 pl-1.5 shadow-[0_4px_12px_-4px_rgba(14,165,233,0.35)] backdrop-blur-xl"
+		class="inline-flex items-center gap-0.5 rounded-md border border-primary bg-card py-0.5 pr-0.5 pl-1.5 shadow-sm"
 		role="group"
 	>
 		{#if prefix}
-			<span class="text-xs font-semibold text-slate-400">{prefix}</span>
+			<span class="text-xs font-semibold text-muted-foreground">{prefix}</span>
 		{/if}
 		<input
 			{type}
@@ -85,10 +85,10 @@
 			disabled={saving}
 			use:focusSelect
 			aria-label="Edit value"
-			class="w-20 bg-transparent px-1 py-0.5 text-sm font-semibold text-slate-800 outline-none disabled:opacity-50"
+			class="w-20 bg-transparent px-1 py-0.5 text-sm font-semibold text-foreground outline-none disabled:opacity-50"
 		/>
 		{#if suffix}
-			<span class="text-xs font-semibold text-slate-400">{suffix}</span>
+			<span class="text-xs font-semibold text-muted-foreground">{suffix}</span>
 		{/if}
 		<button
 			onclick={(e) => {
@@ -97,9 +97,9 @@
 			}}
 			disabled={saving}
 			aria-label="Save"
-			class="inline-flex rounded-lg p-1 transition-all hover:bg-emerald-50 disabled:opacity-40"
+			class="inline-flex rounded-md p-1 transition-colors hover:bg-muted disabled:opacity-40"
 		>
-			<Check class="h-3.5 w-3.5 text-emerald-600" />
+			<Check class="h-3.5 w-3.5 text-success" />
 		</button>
 		<button
 			onclick={(e) => {
@@ -108,33 +108,31 @@
 			}}
 			disabled={saving}
 			aria-label="Cancel"
-			class="inline-flex rounded-lg p-1 transition-all hover:bg-rose-50 disabled:opacity-40"
+			class="inline-flex rounded-md p-1 transition-colors hover:bg-muted disabled:opacity-40"
 		>
-			<X class="h-3.5 w-3.5 text-rose-500" />
+			<X class="h-3.5 w-3.5 text-danger" />
 		</button>
 	</div>
 {:else}
 	<button
-		class="group/cell inline-flex items-center gap-1.5 rounded-lg border border-transparent px-1.5 py-1 font-[inherit] transition-all duration-200 hover:border-white/60 hover:bg-white/70 hover:shadow-sm active:scale-[0.98]"
+		class="group/cell inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 font-[inherit] transition-colors duration-200 hover:border-border hover:bg-muted hover:shadow-sm"
 		onclick={(e) => {
 			e.stopPropagation();
 			startEdit();
 		}}
 		title="Click to edit"
 	>
-		<span
-			class="text-sm font-semibold text-slate-700 transition-colors group-hover/cell:text-slate-900"
-		>
+		<span class="text-sm font-semibold text-foreground">
 			{#if prefix}
-				<span class="mr-0.5 text-xs font-medium text-slate-400">{prefix}</span>
+				<span class="mr-0.5 text-xs font-medium text-muted-foreground">{prefix}</span>
 			{/if}
 			{display ?? value}
 			{#if suffix}
-				<span class="ml-0.5 text-xs font-medium text-slate-400">{suffix}</span>
+				<span class="ml-0.5 text-xs font-medium text-muted-foreground">{suffix}</span>
 			{/if}
 		</span>
 		<Pencil
-			class="h-3 w-3 text-sky-500 opacity-0 transition-opacity duration-200 group-hover/cell:opacity-60"
+			class="h-3 w-3 text-primary opacity-0 transition-opacity duration-200 group-hover/cell:opacity-60"
 		/>
 	</button>
 {/if}
