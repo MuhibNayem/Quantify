@@ -1146,7 +1146,8 @@ export default {
             refund: 'রিফান্ড',
             reason: 'কারণ',
             guest: 'গেস্ট',
-            unknown: 'অজানা'
+            unknown: 'অজানা',
+            order: 'অর্ডার'
         },
         actions: {
             view_details: 'বিস্তারিত দেখুন',

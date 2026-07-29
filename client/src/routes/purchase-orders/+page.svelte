@@ -3,10 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { purchaseOrdersApi, suppliersApi } from '$lib/api/resources';
 	import { auth } from '$lib/stores/auth';
-	import { formatDate, formatCurrency, cn } from '$lib/utils';
+	import { formatCurrency, cn, poNumber } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Input } from '$lib/components/ui/input';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import Select from '$lib/components/ui/select/select.svelte';
 	import {
 		Table,
@@ -158,14 +160,17 @@
 
 	function getPoTotal(po: PurchaseOrder): number {
 		if (!po.PurchaseOrderItems) return 0;
-		return po.PurchaseOrderItems.reduce((sum, item) => sum + item.UnitPrice * item.OrderedQuantity, 0);
+		return po.PurchaseOrderItems.reduce(
+			(sum, item) => sum + item.UnitPrice * item.OrderedQuantity,
+			0
+		);
 	}
 
 	async function handleApprove(po: PurchaseOrder) {
 		actionLoading = po.ID;
 		try {
 			await purchaseOrdersApi.approve(po.ID);
-			toast.success(`PO #${po.ID} approved`);
+			toast.success(`${poNumber(po.ID)} approved`);
 			await loadPurchaseOrders();
 		} catch (e: any) {
 			toast.error('Failed to approve', { description: e?.response?.data?.error || e.message });
@@ -178,7 +183,7 @@
 		actionLoading = po.ID;
 		try {
 			await purchaseOrdersApi.send(po.ID);
-			toast.success(`PO #${po.ID} sent`);
+			toast.success(`${poNumber(po.ID)} sent`);
 			await loadPurchaseOrders();
 		} catch (e: any) {
 			toast.error('Failed to send', { description: e?.response?.data?.error || e.message });
@@ -195,7 +200,7 @@
 				quantity: item.OrderedQuantity - item.ReceivedQuantity
 			}));
 			await purchaseOrdersApi.receive(po.ID, { items });
-			toast.success(`PO #${po.ID} received`);
+			toast.success(`${poNumber(po.ID)} received`);
 			await loadPurchaseOrders();
 		} catch (e: any) {
 			toast.error('Failed to receive', { description: e?.response?.data?.error || e.message });
@@ -205,11 +210,11 @@
 	}
 
 	async function handleCancel(po: PurchaseOrder) {
-		if (!confirm(`Cancel PO #${po.ID}? This cannot be undone.`)) return;
+		if (!confirm(`Cancel ${poNumber(po.ID)}? This cannot be undone.`)) return;
 		actionLoading = po.ID;
 		try {
 			await purchaseOrdersApi.cancel(po.ID);
-			toast.success(`PO #${po.ID} cancelled`);
+			toast.success(`${poNumber(po.ID)} cancelled`);
 			await loadPurchaseOrders();
 		} catch (e: any) {
 			toast.error('Failed to cancel', { description: e?.response?.data?.error || e.message });
@@ -247,7 +252,7 @@
 			class="liquid-panel flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm md:flex-row md:items-center"
 		>
 			<div class="relative max-w-xs flex-1">
-				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
 				<Input
 					bind:value={searchQuery}
 					placeholder="Search POs..."
@@ -256,18 +261,10 @@
 				/>
 			</div>
 			<div class="w-48">
-				<Select
-					bind:value={statusFilter}
-					options={statusOptions}
-					placeholder="All Statuses"
-				/>
+				<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
 			</div>
 			<div class="w-48">
-				<Select
-					bind:value={supplierFilter}
-					options={supplierOptions}
-					placeholder="All Suppliers"
-				/>
+				<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
 			</div>
 			<Button variant="outline" size="sm" onclick={applyFilters} class="gap-1">
 				<Search class="h-3 w-3" />
@@ -280,12 +277,20 @@
 				<Loader2 class="h-8 w-8 animate-spin text-purple-500" />
 			</div>
 		{:else if purchaseOrders.length === 0}
-			<div class="flex h-64 flex-col items-center justify-center text-slate-500">
-				<ShoppingCart class="mb-4 h-12 w-12 text-slate-300" />
-				<p class="font-medium">No purchase orders found</p>
+			<div class="rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+				<EmptyState
+					icon={ShoppingCart}
+					title="No purchase orders found"
+					description="Create a purchase order to replenish your stock."
+					actionLabel="Create PO"
+					onAction={() => goto('/intelligence')}
+				/>
 			</div>
 		{:else}
-			<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+			<div
+				in:fly={{ y: 20, duration: 300 }}
+				class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl"
+			>
 				<Table>
 					<TableHeader>
 						<TableRow class="border-slate-100 bg-slate-50/50">
@@ -301,7 +306,7 @@
 						{#each purchaseOrders as po (po.ID)}
 							<TableRow class="border-slate-50 transition-colors hover:bg-purple-50/30">
 								<TableCell class="font-mono font-semibold text-slate-800">
-									#{po.ID}
+									{poNumber(po.ID)}
 								</TableCell>
 								<TableCell class="text-slate-700">
 									{(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
@@ -309,7 +314,7 @@
 								<TableCell>
 									<span
 										class={cn(
-											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide',
+											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
 											getStatusColor(po.Status)
 										)}
 									>
@@ -320,7 +325,7 @@
 									{formatCurrency(getPoTotal(po))}
 								</TableCell>
 								<TableCell class="text-slate-500">
-									{formatDate(po.OrderDate)}
+									<TimeAgo date={po.OrderDate} />
 								</TableCell>
 								<TableCell>
 									<div class="flex items-center justify-end gap-1">

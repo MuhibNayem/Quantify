@@ -10,6 +10,7 @@
 	} from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ArrowLeft, User, BarChart2 } from 'lucide-svelte';
+	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 	import type { PageData } from './$types';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -32,6 +33,15 @@
 
 <div class="mx-auto w-full max-w-6xl px-6 py-8">
 	<section class="space-y-8">
+		{#if supplier}
+			<Breadcrumbs
+				items={[
+					{ label: 'Catalog', href: '/catalog' },
+					{ label: 'Suppliers', href: '/catalog' },
+					{ label: supplier.Name }
+				]}
+			/>
+		{/if}
 		<!-- HEADER -->
 		<div class="flex items-center justify-between">
 			<a

@@ -7,6 +7,9 @@
 	import { CheckCircle2, XCircle, Eye } from 'lucide-svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Textarea } from '$lib/components/ui/textarea';
+	import { returnNumber } from '$lib/utils';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 
 	let returns: any[] = [];
 	let selectedReturn: any = null;
@@ -64,14 +67,14 @@
 		>
 			<div>
 				<div class="flex items-center gap-3">
-					<h3 class="text-lg font-bold text-slate-800">Return #{ret.ID}</h3>
+					<h3 class="font-mono text-lg font-bold text-slate-800">{returnNumber(ret.ID)}</h3>
 					<Badge variant="secondary">{ret.Status}</Badge>
 				</div>
 				<p class="text-sm text-slate-500">
 					Requested by User #{ret.UserID} for Order #{ret.OrderID}
 				</p>
 				<p class="text-xs text-slate-400">
-					{new Date(ret.CreatedAt).toLocaleDateString()}
+					<TimeAgo date={ret.CreatedAt} />
 				</p>
 			</div>
 
@@ -82,7 +85,7 @@
 				<Button
 					variant="default"
 					size="sm"
-					class="bg-green-600 hover:bg-green-700 text-white"
+					class="bg-green-600 text-white hover:bg-green-700"
 					disabled={processingId === ret.ID}
 					onclick={() => handleProcess(ret.ID, 'approve')}
 				>
@@ -99,12 +102,12 @@
 			</div>
 		</div>
 	{:else}
-		<div
-			class="flex h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/40 text-center"
-		>
-			<CheckCircle2 size={48} class="mb-4 text-slate-300" />
-			<p class="text-lg font-medium text-slate-600">All caught up!</p>
-			<p class="text-slate-400">No pending returns to process.</p>
+		<div class="rounded-3xl border border-dashed border-slate-300 bg-white/40">
+			<EmptyState
+				icon={CheckCircle2}
+				title="All caught up!"
+				description="No pending returns to process."
+			/>
 		</div>
 	{/each}
 </div>
@@ -113,7 +116,9 @@
 <Dialog.Root bind:open={isDetailsOpen}>
 	<Dialog.Content class="sm:max-w-[600px]">
 		<Dialog.Header>
-			<Dialog.Title>Return Details #{selectedReturn?.ID}</Dialog.Title>
+			<Dialog.Title
+				>Return Details {selectedReturn ? returnNumber(selectedReturn.ID) : ''}</Dialog.Title
+			>
 		</Dialog.Header>
 
 		{#if selectedReturn}
@@ -140,7 +145,7 @@
 			<Dialog.Footer>
 				<Button
 					variant="default"
-					class="bg-green-600 hover:bg-green-700 text-white"
+					class="bg-green-600 text-white hover:bg-green-700"
 					onclick={() => handleProcess(selectedReturn.ID, 'approve')}
 				>
 					Approve Return

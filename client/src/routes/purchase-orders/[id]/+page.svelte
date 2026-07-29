@@ -18,7 +18,8 @@
 	} from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ArrowLeft, ShoppingCart } from 'lucide-svelte';
-	import { cn } from '$lib/utils';
+	import { cn, poNumber } from '$lib/utils';
+	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 
 	import { replenishmentApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
@@ -66,6 +67,14 @@
 
 <div class="mx-auto w-full max-w-6xl px-6 py-8">
 	<section class="space-y-8">
+		{#if purchaseOrder}
+			<Breadcrumbs
+				items={[
+					{ label: 'Purchase Orders', href: '/purchase-orders' },
+					{ label: poNumber(purchaseOrder.ID) }
+				]}
+			/>
+		{/if}
 		<!-- HEADER -->
 		<div class="flex items-center justify-between">
 			<a
@@ -99,7 +108,7 @@
 						>
 							<CardTitle class="flex items-center text-slate-800">
 								<ShoppingCart class="mr-2 h-5 w-5 text-blue-600" />
-								Purchase Order #{purchaseOrder.ID}
+								{poNumber(purchaseOrder.ID)}
 							</CardTitle>
 							<CardDescription class="text-slate-600">Details and Status</CardDescription>
 						</CardHeader>

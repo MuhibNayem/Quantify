@@ -3,9 +3,11 @@
 	import { goto } from '$app/navigation';
 	import { purchaseReturnsApi, purchaseOrdersApi, suppliersApi } from '$lib/api/resources';
 	import { auth } from '$lib/stores/auth';
-	import { formatDate, formatCurrency, cn } from '$lib/utils';
+	import { formatCurrency, cn, returnNumber, poNumber } from '$lib/utils';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import Select from '$lib/components/ui/select/select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Label } from '$lib/components/ui/label';
@@ -136,7 +138,7 @@
 		actionLoading = ret.ID;
 		try {
 			await purchaseReturnsApi.approve(ret.ID);
-			toast.success(`Return #${ret.ID} approved`);
+			toast.success(`${returnNumber(ret.ID)} approved`);
 			await loadReturns();
 		} catch (e: any) {
 			toast.error('Failed to approve', { description: e?.response?.data?.error || e.message });
@@ -149,7 +151,7 @@
 		actionLoading = ret.ID;
 		try {
 			await purchaseReturnsApi.complete(ret.ID);
-			toast.success(`Return #${ret.ID} completed`);
+			toast.success(`${returnNumber(ret.ID)} completed`);
 			await loadReturns();
 		} catch (e: any) {
 			toast.error('Failed to complete', { description: e?.response?.data?.error || e.message });
@@ -159,11 +161,11 @@
 	}
 
 	async function handleCancel(ret: PurchaseReturn) {
-		if (!confirm(`Cancel return #${ret.ID}? This cannot be undone.`)) return;
+		if (!confirm(`Cancel ${returnNumber(ret.ID)}? This cannot be undone.`)) return;
 		actionLoading = ret.ID;
 		try {
 			await purchaseReturnsApi.cancel(ret.ID);
-			toast.success(`Return #${ret.ID} cancelled`);
+			toast.success(`${returnNumber(ret.ID)} cancelled`);
 			await loadReturns();
 		} catch (e: any) {
 			toast.error('Failed to cancel', { description: e?.response?.data?.error || e.message });
@@ -262,18 +264,10 @@
 			class="liquid-panel flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm md:flex-row md:items-center"
 		>
 			<div class="w-48">
-				<Select
-					bind:value={statusFilter}
-					options={statusOptions}
-					placeholder="All Statuses"
-				/>
+				<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
 			</div>
 			<div class="w-48">
-				<Select
-					bind:value={supplierFilter}
-					options={supplierOptions}
-					placeholder="All Suppliers"
-				/>
+				<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
 			</div>
 			<Button variant="outline" size="sm" onclick={applyFilters} class="gap-1">
 				<Search class="h-3 w-3" />
@@ -286,12 +280,20 @@
 				<Loader2 class="h-8 w-8 animate-spin text-orange-500" />
 			</div>
 		{:else if returns.length === 0}
-			<div class="flex h-64 flex-col items-center justify-center text-slate-500">
-				<Undo2 class="mb-4 h-12 w-12 text-slate-300" />
-				<p class="font-medium">No purchase returns found</p>
+			<div class="rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+				<EmptyState
+					icon={Undo2}
+					title="No purchase returns found"
+					description="Return damaged or unwanted stock to suppliers."
+					actionLabel="New Return"
+					onAction={openCreateModal}
+				/>
 			</div>
 		{:else}
-			<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+			<div
+				in:fly={{ y: 20, duration: 300 }}
+				class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl"
+			>
 				<Table>
 					<TableHeader>
 						<TableRow class="border-slate-100 bg-slate-50/50">
@@ -309,10 +311,10 @@
 						{#each returns as ret (ret.ID)}
 							<TableRow class="border-slate-50 transition-colors hover:bg-orange-50/30">
 								<TableCell class="font-mono font-semibold text-slate-800">
-									#{ret.ID}
+									{returnNumber(ret.ID)}
 								</TableCell>
 								<TableCell class="font-mono text-slate-600">
-									#{ret.PurchaseOrderID}
+									{poNumber(ret.PurchaseOrderID)}
 								</TableCell>
 								<TableCell class="text-slate-700">
 									{ret.Supplier?.Name || `Supplier #${ret.SupplierID}`}
@@ -320,7 +322,7 @@
 								<TableCell>
 									<span
 										class={cn(
-											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide',
+											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
 											getStatusColor(ret.Status)
 										)}
 									>
@@ -334,7 +336,7 @@
 									{ret.Reason}
 								</TableCell>
 								<TableCell class="text-slate-500">
-									{formatDate(ret.CreatedAt)}
+									<TimeAgo date={ret.CreatedAt} />
 								</TableCell>
 								<TableCell>
 									<div class="flex items-center justify-end gap-1">
@@ -430,12 +432,12 @@
 				<select
 					bind:value={createForm.purchaseOrderId}
 					onchange={onPoSelect}
-					class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+					class="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm shadow-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 focus:outline-none"
 				>
 					<option value="">Select a PO...</option>
 					{#each purchaseOrders as po}
 						<option value={String(po.ID)}>
-							PO #{po.ID} — Supplier #{po.SupplierID}
+							{poNumber(po.ID)} — {(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
 						</option>
 					{/each}
 				</select>
@@ -488,9 +490,7 @@
 		</div>
 
 		<Dialog.Footer>
-			<Button variant="outline" onclick={() => (isCreateModalOpen = false)}>
-				Cancel
-			</Button>
+			<Button variant="outline" onclick={() => (isCreateModalOpen = false)}>Cancel</Button>
 			<Button
 				onclick={handleCreate}
 				disabled={creating}

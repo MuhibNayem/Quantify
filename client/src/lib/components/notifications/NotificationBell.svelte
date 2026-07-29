@@ -8,6 +8,8 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { Bell, CheckCheck, Loader2, RefreshCcw } from 'lucide-svelte';
 	import { toast } from 'svelte-sonner';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 
 	let popoverOpen = $state(false);
 
@@ -71,29 +73,6 @@
 		}
 	};
 
-	const formatRelativeTime = (timestamp?: string | null) => {
-		if (!timestamp) return '—';
-		const eventDate = new Date(timestamp);
-		if (Number.isNaN(eventDate.getTime())) return '—';
-		const now = new Date();
-		const diffMs = eventDate.getTime() - now.getTime();
-		const divisions: [Intl.RelativeTimeFormatUnit, number][] = [
-			['year', 1000 * 60 * 60 * 24 * 365],
-			['month', 1000 * 60 * 60 * 24 * 30],
-			['day', 1000 * 60 * 60 * 24],
-			['hour', 1000 * 60 * 60],
-			['minute', 1000 * 60],
-			['second', 1000]
-		];
-		for (const [unit, amount] of divisions) {
-			if (Math.abs(diffMs) >= amount || unit === 'second') {
-				const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-				return formatter.format(Math.round(diffMs / amount), unit);
-			}
-		}
-		return 'Just now';
-	};
-
 	const notificationAccent = (type: string) => {
 		switch (type) {
 			case 'ALERT':
@@ -127,7 +106,7 @@
 					<Bell class="h-4 w-4 text-sky-700 dark:text-sky-300" />
 					{#if $notifications.unreadCount > 0}
 						<span
-							class="absolute -right-1 -top-1 flex h-5 min-w-[1.35rem] items-center justify-center rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-1 text-[0.65rem] font-semibold text-white shadow-lg"
+							class="absolute -top-1 -right-1 flex h-5 min-w-[1.35rem] items-center justify-center rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-1 text-[0.65rem] font-semibold text-white shadow-lg"
 						>
 							{$notifications.unreadCount > 9 ? '9+' : $notifications.unreadCount}
 						</span>
@@ -181,10 +160,11 @@
 						</div>
 					{/each}
 				{:else if $notifications.items.length === 0}
-					<div class="p-6 text-center text-sm text-slate-500">
-						<p class="font-semibold text-slate-700">You're all caught up 🎉</p>
-						<p class="text-xs text-slate-500">No new notifications at the moment.</p>
-					</div>
+					<EmptyState
+						icon={Bell}
+						title="You're all caught up"
+						description="No new notifications at the moment."
+					/>
 				{:else}
 					{#each $notifications.items as notification}
 						<button
@@ -198,7 +178,7 @@
 								<div class="flex items-center gap-2">
 									<Badge class={notificationAccent(notification.Type)}>{notification.Type}</Badge>
 									<span class="text-xs text-slate-500"
-										>{formatRelativeTime(notification.TriggeredAt)}</span
+										><TimeAgo date={notification.TriggeredAt} /></span
 									>
 								</div>
 								{#if !notification.IsRead}

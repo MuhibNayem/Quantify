@@ -25,12 +25,23 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { cn } from '$lib/utils';
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import UserSelector from '$lib/components/ui/user-selector.svelte';
 
-	import { Bell, Activity, CalendarClock, Package, AlertTriangle, Plus, Trash2, Loader2, Users } from 'lucide-svelte';
+	import {
+		Bell,
+		Activity,
+		CalendarClock,
+		Package,
+		AlertTriangle,
+		Plus,
+		Trash2,
+		Loader2,
+		Users
+	} from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 
@@ -48,7 +59,9 @@
 
 	$effect(() => {
 		if (!auth.hasPermission('alerts.view')) {
-			toast.error($t('alerts.toasts.access_denied'), { description: $t('alerts.toasts.access_denied_desc') });
+			toast.error($t('alerts.toasts.access_denied'), {
+				description: $t('alerts.toasts.access_denied_desc')
+			});
 			goto('/');
 		}
 	});
@@ -131,7 +144,10 @@
 				type: 'description',
 				title: $t('alerts.details.batch_details'),
 				items: [
-					{ label: $t('alerts.details.batch_id'), value: alert.BatchID ? `#${alert.BatchID}` : $t('alerts.details.na') },
+					{
+						label: $t('alerts.details.batch_id'),
+						value: alert.BatchID ? `#${alert.BatchID}` : $t('alerts.details.na')
+					},
 					{
 						label: $t('alerts.details.batch_number'),
 						value: alert.Batch?.BatchNumber ?? '—'
@@ -260,7 +276,9 @@
 			newSub = { alertType: 'LOW_STOCK', roleName: '' };
 			await loadRoleSubscriptions();
 		} catch (e: any) {
-			toast.error('Failed to create subscription', { description: e?.response?.data?.error || 'Unknown error' });
+			toast.error('Failed to create subscription', {
+				description: e?.response?.data?.error || 'Unknown error'
+			});
 		} finally {
 			creatingSub = false;
 		}
@@ -272,7 +290,9 @@
 			toast.success('Role subscription deleted');
 			await loadRoleSubscriptions();
 		} catch (e: any) {
-			toast.error('Failed to delete subscription', { description: e?.response?.data?.error || 'Unknown error' });
+			toast.error('Failed to delete subscription', {
+				description: e?.response?.data?.error || 'Unknown error'
+			});
 		}
 	};
 </script>
@@ -287,10 +307,10 @@
 	<!-- floating blobs -->
 	<div class="pointer-events-none absolute inset-0">
 		<div
-			class="animate-heroFloat absolute -left-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-tr from-amber-200 to-orange-200 opacity-60 blur-3xl"
+			class="animate-heroFloat absolute -top-16 -left-16 h-56 w-56 rounded-full bg-gradient-to-tr from-amber-200 to-orange-200 opacity-60 blur-3xl"
 		></div>
 		<div
-			class="animate-heroFloat absolute -right-10 top-1/3 h-48 w-48 rounded-full bg-gradient-to-tr from-rose-200 to-orange-200 opacity-50 blur-3xl delay-300"
+			class="animate-heroFloat absolute top-1/3 -right-10 h-48 w-48 rounded-full bg-gradient-to-tr from-rose-200 to-orange-200 opacity-50 blur-3xl delay-300"
 		></div>
 	</div>
 
@@ -305,7 +325,7 @@
 				<Bell class="h-8 w-8 text-white" />
 			</div>
 			<h1
-				class="animate-fadeUp bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-3xl font-extrabold leading-tight text-transparent sm:text-5xl"
+				class="animate-fadeUp bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-3xl leading-tight font-extrabold text-transparent sm:text-5xl"
 			>
 				{$t('alerts.title')}
 			</h1>
@@ -399,7 +419,9 @@
 						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.message')}</TableHead>
 						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.status')}</TableHead>
 						{#if auth.hasPermission('alerts.manage')}
-							<TableHead class="px-4 py-3 text-right text-slate-700">{$t('alerts.table.action')}</TableHead>
+							<TableHead class="px-4 py-3 text-right text-slate-700"
+								>{$t('alerts.table.action')}</TableHead
+							>
 						{/if}
 					</TableRow>
 				</TableHeader>
@@ -414,10 +436,13 @@
 						{/each}
 					{:else if alerts.length === 0}
 						<TableRow>
-							<TableCell
-								colspan={auth.hasPermission('alerts.manage') ? 5 : 4}
-								class="py-6 text-center text-sm text-slate-600">{$t('alerts.table.empty')}</TableCell
-							>
+							<TableCell colspan={auth.hasPermission('alerts.manage') ? 5 : 4} class="p-0">
+								<EmptyState
+									icon={Bell}
+									title="No alerts right now"
+									description="Stock, expiry and overstock alerts will appear here as they trigger."
+								/>
+							</TableCell>
 						</TableRow>
 					{:else}
 						{#each alerts as alert}
@@ -429,7 +454,8 @@
 									>{alert.Type}</TableCell
 								>
 								<TableCell class="px-4 py-3 text-slate-800"
-									>{alert.Product?.Name ?? `${$t('alerts.table.product_fallback')} ${alert.ProductID}`}</TableCell
+									>{alert.Product?.Name ??
+										`${$t('alerts.table.product_fallback')} ${alert.ProductID}`}</TableCell
 								>
 								<TableCell class="px-4 py-3 text-sm text-slate-600">{alert.Message}</TableCell>
 								<TableCell class="px-4 py-3">
@@ -478,11 +504,15 @@
 			>
 				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
 					<CardTitle class="text-slate-800">{$t('alerts.thresholds.title')}</CardTitle>
-					<CardDescription class="text-slate-600">{$t('alerts.thresholds.subtitle')}</CardDescription>
+					<CardDescription class="text-slate-600"
+						>{$t('alerts.thresholds.subtitle')}</CardDescription
+					>
 				</CardHeader>
 				<CardContent class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700">{$t('alerts.thresholds.product_label')}</label>
+						<label class="text-sm font-medium text-slate-700"
+							>{$t('alerts.thresholds.product_label')}</label
+						>
 						<ProductSelector
 							bind:value={productSettingsForm.productId}
 							placeholder={$t('alerts.thresholds.product_placeholder')}
@@ -530,7 +560,9 @@
 				</CardHeader>
 				<CardContent class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700">{$t('alerts.notifications.user_label')}</label>
+						<label class="text-sm font-medium text-slate-700"
+							>{$t('alerts.notifications.user_label')}</label
+						>
 						<UserSelector
 							bind:value={userSettingsForm.userId}
 							placeholder={$t('alerts.notifications.user_placeholder')}
@@ -620,7 +652,9 @@
 							{#each roleSubscriptions as sub}
 								<TableRow class="transition-colors hover:bg-white/90">
 									<TableCell class="px-4 py-3">
-										<span class="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+										<span
+											class="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700"
+										>
 											{sub.AlertType || sub.alertType}
 										</span>
 									</TableCell>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Component } from 'svelte';
+	import type { ComponentType } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 
 	let {
@@ -9,7 +9,7 @@
 		actionLabel = '',
 		onAction
 	}: {
-		icon?: Component;
+		icon?: ComponentType;
 		title: string;
 		description?: string;
 		actionLabel?: string;

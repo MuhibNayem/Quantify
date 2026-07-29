@@ -3,7 +3,7 @@
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
 	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import api from '$lib/api';
-	import { formatDate, formatCurrency } from '$lib/utils';
+	import { formatCurrency, orderNumber, returnNumber, poNumber } from '$lib/utils';
 	import { fade, fly, slide } from 'svelte/transition';
 	import {
 		ShoppingBag,
@@ -15,11 +15,15 @@
 		Search,
 		TrendingUp,
 		Factory,
-		ArrowRight
+		ArrowRight,
+		ShoppingCart,
+		Undo2
 	} from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { cn } from '$lib/utils';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 
 	// Types
 	interface Product {
@@ -185,7 +189,8 @@
 
 			salesOrders = salesRes.data.orders || salesRes.data.data || salesRes.data.items || [];
 			customerReturns = customerReturnsRes.data.returns || [];
-			purchaseOrders = purchasesRes.data.purchaseOrders || purchasesRes.data.data || purchasesRes.data.items || [];
+			purchaseOrders =
+				purchasesRes.data.purchaseOrders || purchasesRes.data.data || purchasesRes.data.items || [];
 			purchaseReturns = vendorReturnsRes.data.returns || [];
 
 			// Set initial tab based on permission preference
@@ -255,35 +260,46 @@
 
 	// Filtering
 	const filteredSales = $derived(
-		salesOrders.filter(
-			(o) =>
-				o.OrderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				o.Status.toLowerCase().includes(searchQuery.toLowerCase())
-		)
+		salesOrders.filter((o) => {
+			const q = searchQuery.toLowerCase();
+			const customer = o.Customer
+				? `${o.Customer.FirstName} ${o.Customer.LastName}`.toLowerCase()
+				: '';
+			return (
+				orderNumber(o).toLowerCase().includes(q) ||
+				customer.includes(q) ||
+				o.Status.toLowerCase().includes(q)
+			);
+		})
 	);
 
 	const filteredCustomerReturns = $derived(
-		customerReturns.filter(
-			(r) =>
-				(r.ID + '').includes(searchQuery) ||
-				r.Status.toLowerCase().includes(searchQuery.toLowerCase())
-		)
+		customerReturns.filter((r) => {
+			const q = searchQuery.toLowerCase();
+			return returnNumber(r.ID).toLowerCase().includes(q) || r.Status.toLowerCase().includes(q);
+		})
 	);
 
 	const filteredPurchases = $derived(
-		purchaseOrders.filter(
-			(po) =>
-				po.Supplier?.Name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				po.Status.toLowerCase().includes(searchQuery.toLowerCase())
-		)
+		purchaseOrders.filter((po) => {
+			const q = searchQuery.toLowerCase();
+			return (
+				poNumber(po.ID).toLowerCase().includes(q) ||
+				po.Supplier?.Name.toLowerCase().includes(q) ||
+				po.Status.toLowerCase().includes(q)
+			);
+		})
 	);
 
 	const filteredReturns = $derived(
-		purchaseReturns.filter(
-			(r) =>
-				r.Supplier?.Name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				r.Status.toLowerCase().includes(searchQuery.toLowerCase())
-		)
+		purchaseReturns.filter((r) => {
+			const q = searchQuery.toLowerCase();
+			return (
+				returnNumber(r.ID).toLowerCase().includes(q) ||
+				r.Supplier?.Name.toLowerCase().includes(q) ||
+				r.Status.toLowerCase().includes(q)
+			);
+		})
 	);
 
 	// Helpers
@@ -369,7 +385,7 @@
 			class="liquid-panel flex items-center justify-between rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm"
 		>
 			<div class="relative max-w-md flex-1">
-				<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
 				<Input
 					bind:value={searchQuery}
 					placeholder={activeTab === 'sales'
@@ -413,19 +429,19 @@
 							>
 								{#if order.HasPendingReturn}
 									<div
-										class="absolute right-0 top-0 rounded-bl-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-600 shadow-sm"
+										class="absolute top-0 right-0 rounded-bl-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-600 shadow-sm"
 									>
 										{$t('orders.status.return_pending')}
 									</div>
 								{/if}
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
-										<h3 class="font-mono text-sm font-bold text-slate-800">{order.OrderNumber}</h3>
-										<p class="text-xs text-slate-500">{formatDate(order.OrderDate)}</p>
+										<h3 class="font-mono text-sm font-bold text-slate-800">{orderNumber(order)}</h3>
+										<p class="text-xs text-slate-500"><TimeAgo date={order.OrderDate} /></p>
 									</div>
 									<div
 										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
 											getStatusColor(order.Status)
 										)}
 									>
@@ -455,7 +471,7 @@
 											</div>
 										{/each}
 										{#if order.OrderItems.length > 2}
-											<div class="text-[10px] italic text-slate-400">
+											<div class="text-[10px] text-slate-400 italic">
 												+{order.OrderItems.length - 2}
 												{$t('orders.labels.more')}
 											</div>
@@ -490,8 +506,14 @@
 								</div>
 							</div>
 						{:else}
-							<div class="col-span-full py-12 text-center text-slate-500">
-								{$t('orders.empty.sales')}
+							<div class="col-span-full">
+								<EmptyState
+									icon={ShoppingCart}
+									title="No orders yet"
+									description="Sales you complete at the POS will show up here."
+									actionLabel="Go to POS"
+									onAction={() => goto('/pos')}
+								/>
 							</div>
 						{/each}
 					{:else if activeTab === 'sales' && subTab === 'returns'}
@@ -502,12 +524,14 @@
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
-										<h3 class="text-sm font-bold text-slate-800">Return #{ret.ID}</h3>
-										<p class="text-xs text-slate-500">{formatDate(ret.CreatedAt)}</p>
+										<h3 class="font-mono text-sm font-bold text-slate-800">
+											{returnNumber(ret.ID)}
+										</h3>
+										<p class="text-xs text-slate-500"><TimeAgo date={ret.CreatedAt} /></p>
 									</div>
 									<div
 										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
 											getStatusColor(ret.Status)
 										)}
 									>
@@ -516,6 +540,10 @@
 								</div>
 
 								<div class="flex-1 space-y-3 p-4">
+									<div class="flex items-center justify-between text-sm">
+										<span class="text-slate-500">{$t('orders.labels.order')}</span>
+										<span class="font-mono font-medium text-slate-700">#{ret.OrderID}</span>
+									</div>
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">{$t('orders.labels.refund')}</span>
 										<span class="font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</span>
@@ -538,7 +566,7 @@
 												</div>
 											{/each}
 										{:else}
-											<p class="italic text-slate-400">{$t('orders.status.no_items')}</p>
+											<p class="text-slate-400 italic">{$t('orders.status.no_items')}</p>
 										{/if}
 									</div>
 								</div>
@@ -556,8 +584,12 @@
 								</div>
 							</div>
 						{:else}
-							<div class="col-span-full py-12 text-center text-slate-500">
-								{$t('orders.empty.customer_returns')}
+							<div class="col-span-full">
+								<EmptyState
+									icon={Undo2}
+									title="No customer returns"
+									description="Return requests from customers will appear here."
+								/>
 							</div>
 						{/each}
 					{:else if subTab === 'orders'}
@@ -567,12 +599,12 @@
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
-										<h3 class="text-sm font-bold text-slate-800">PO #{po.ID}</h3>
-										<p class="text-xs text-slate-500">{formatDate(po.OrderDate)}</p>
+										<h3 class="font-mono text-sm font-bold text-slate-800">{poNumber(po.ID)}</h3>
+										<p class="text-xs text-slate-500"><TimeAgo date={po.OrderDate} /></p>
 									</div>
 									<div
 										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
 											getStatusColor(po.Status)
 										)}
 									>
@@ -598,7 +630,7 @@
 											</div>
 										{/each}
 										{#if po.PurchaseOrderItems.length > 2}
-											<div class="text-[10px] italic text-slate-400">
+											<div class="text-[10px] text-slate-400 italic">
 												+{po.PurchaseOrderItems.length - 2}
 												{$t('orders.labels.more')}
 											</div>
@@ -629,8 +661,12 @@
 								</div>
 							</div>
 						{:else}
-							<div class="col-span-full py-12 text-center text-slate-500">
-								{$t('orders.empty.purchase_orders')}
+							<div class="col-span-full">
+								<EmptyState
+									icon={Factory}
+									title="No purchase orders"
+									description="Purchase orders you create for suppliers will show up here."
+								/>
 							</div>
 						{/each}
 					{:else}
@@ -641,12 +677,14 @@
 							>
 								<div class="flex items-start justify-between border-b border-slate-100 p-4">
 									<div>
-										<h3 class="text-sm font-bold text-slate-800">Return #{ret.ID}</h3>
-										<p class="text-xs text-slate-500">{formatDate(ret.ReturnedAt)}</p>
+										<h3 class="font-mono text-sm font-bold text-slate-800">
+											{returnNumber(ret.ID)}
+										</h3>
+										<p class="text-xs text-slate-500"><TimeAgo date={ret.ReturnedAt} /></p>
 									</div>
 									<div
 										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
 											getStatusColor(ret.Status)
 										)}
 									>
@@ -686,8 +724,12 @@
 								</div>
 							</div>
 						{:else}
-							<div class="col-span-full py-12 text-center text-slate-500">
-								{$t('orders.empty.vendor_returns')}
+							<div class="col-span-full">
+								<EmptyState
+									icon={Undo2}
+									title="No vendor returns"
+									description="Returns you send back to suppliers will appear here."
+								/>
 							</div>
 						{/each}
 					{/if}

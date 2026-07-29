@@ -9,9 +9,10 @@
 	import type { Category, Location, Product, Supplier } from '$lib/types';
 	import type { CatalogTab } from '$lib/catalog/detailSections';
 	import { statusBadge } from '$lib/catalog/detailSections';
-	import { PlusCircle, Search } from 'lucide-svelte';
+	import { PlusCircle, Search, Package } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 
 	type Props = {
 		refreshToken?: number;
@@ -183,69 +184,83 @@
 			</div>
 		</div>
 
-		<EntityTable
-			data={products}
-			columns={productColumns}
-			totalItems={pagination.totalItems}
-			pageSize={pagination.itemsPerPage}
-			currentPage={pagination.currentPage}
-			onPageChange={handlePageChange}
-			{loading}
-			onRowClick={(product) => onViewDetails(product, 'products')}
-		>
-			{#snippet children(product)}
-				<TableCell class="font-mono text-xs text-slate-600">{product.SKU}</TableCell>
-				<TableCell class="font-medium text-slate-900">{product.Name}</TableCell>
-				<TableCell>
-					{@const badge = statusBadge(product.Status)}
-					{#if badge}
-						<span
-							class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize shadow-sm
+		{#if !loading && products.length === 0}
+			<div class="rounded-2xl border border-sky-100 bg-white/50 shadow-sm backdrop-blur">
+				<EmptyState
+					icon={Package}
+					title="Add your first product"
+					description="Products you add will appear here and be available at the POS."
+					actionLabel={auth.hasPermission('products.write')
+						? $t('catalog.products.add_button')
+						: ''}
+					onAction={() => (editingProduct = null)}
+				/>
+			</div>
+		{:else}
+			<EntityTable
+				data={products}
+				columns={productColumns}
+				totalItems={pagination.totalItems}
+				pageSize={pagination.itemsPerPage}
+				currentPage={pagination.currentPage}
+				onPageChange={handlePageChange}
+				{loading}
+				onRowClick={(product) => onViewDetails(product, 'products')}
+			>
+				{#snippet children(product)}
+					<TableCell class="font-mono text-xs text-slate-600">{product.SKU}</TableCell>
+					<TableCell class="font-medium text-slate-900">{product.Name}</TableCell>
+					<TableCell>
+						{@const badge = statusBadge(product.Status)}
+						{#if badge}
+							<span
+								class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize shadow-sm
 							{badge.variant === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}
 							{badge.variant === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-700' : ''}
 							{badge.variant === 'danger' ? 'border-rose-200 bg-rose-50 text-rose-700' : ''}
 							{badge.variant === 'info' ? 'border-sky-200 bg-sky-50 text-sky-700' : ''}"
-						>
-							{badge.text}
-						</span>
-					{:else}
-						<span class="text-slate-400">—</span>
-					{/if}
-				</TableCell>
-				{#if auth.hasPermission('products.write') || auth.hasPermission('products.delete')}
-					<TableCell class="text-right">
-						<div class="flex items-center justify-end gap-1">
-							{#if auth.hasPermission('products.write')}
-								<Button
-									size="sm"
-									variant="ghost"
-									class="h-8 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
-									onclick={(event) => {
-										event.stopPropagation();
-										editProduct(product);
-									}}
-								>
-									{$t('catalog.common.edit')}
-								</Button>
-							{/if}
-							{#if auth.hasPermission('products.delete')}
-								<Button
-									size="sm"
-									variant="ghost"
-									class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
-									onclick={(event) => {
-										event.stopPropagation();
-										deleteProduct(product);
-									}}
-								>
-									{$t('catalog.common.delete')}
-								</Button>
-							{/if}
-						</div>
+							>
+								{badge.text}
+							</span>
+						{:else}
+							<span class="text-slate-400">—</span>
+						{/if}
 					</TableCell>
-				{/if}
-			{/snippet}
-		</EntityTable>
+					{#if auth.hasPermission('products.write') || auth.hasPermission('products.delete')}
+						<TableCell class="text-right">
+							<div class="flex items-center justify-end gap-1">
+								{#if auth.hasPermission('products.write')}
+									<Button
+										size="sm"
+										variant="ghost"
+										class="h-8 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+										onclick={(event) => {
+											event.stopPropagation();
+											editProduct(product);
+										}}
+									>
+										{$t('catalog.common.edit')}
+									</Button>
+								{/if}
+								{#if auth.hasPermission('products.delete')}
+									<Button
+										size="sm"
+										variant="ghost"
+										class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+										onclick={(event) => {
+											event.stopPropagation();
+											deleteProduct(product);
+										}}
+									>
+										{$t('catalog.common.delete')}
+									</Button>
+								{/if}
+							</div>
+						</TableCell>
+					{/if}
+				{/snippet}
+			</EntityTable>
+		{/if}
 	</div>
 
 	{#if auth.hasPermission('products.write')}

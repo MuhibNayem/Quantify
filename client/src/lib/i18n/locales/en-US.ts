@@ -1146,7 +1146,8 @@ export default {
             refund: 'Refund',
             reason: 'Reason',
             guest: 'Guest',
-            unknown: 'Unknown'
+            unknown: 'Unknown',
+            order: 'Order'
         },
         actions: {
             view_details: 'View Details',

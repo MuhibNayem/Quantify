@@ -10,6 +10,7 @@
 	} from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ArrowLeft, MapPin } from 'lucide-svelte';
+	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -19,6 +20,15 @@
 
 <div class="mx-auto w-full max-w-4xl px-6 py-8">
 	<section class="space-y-8">
+		{#if location}
+			<Breadcrumbs
+				items={[
+					{ label: 'Catalog', href: '/catalog' },
+					{ label: 'Locations', href: '/catalog' },
+					{ label: location.Name }
+				]}
+			/>
+		{/if}
 		<!-- HEADER -->
 		<div class="flex items-center justify-between">
 			<a

@@ -2,7 +2,8 @@
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import GlassCard from '$lib/components/ui/GlassCard.svelte';
-	import { formatCurrency, formatDate } from '$lib/utils';
+	import { formatCurrency, formatDate, orderNumber } from '$lib/utils';
+	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 	import { adaptiveText, liquidGlass, glassCard } from '$lib/styles/liquid-glass';
 	import { fade, fly } from 'svelte/transition';
 	import api from '$lib/api';
@@ -32,8 +33,9 @@
 		Object.entries(selectedItems).reduce((total, [itemIdStr, qty]) => {
 			const item = order?.OrderItems?.find((i: any) => i.ID === parseInt(itemIdStr));
 			if (!item) return total;
-			return total + (item.UnitPrice * qty);
-		}, 0) * (1 + ($settings.tax_rate_percentage || 0) / 100)
+			return total + item.UnitPrice * qty;
+		}, 0) *
+			(1 + ($settings.tax_rate_percentage || 0) / 100)
 	);
 
 	onMount(async () => {
@@ -125,10 +127,10 @@
 	<!-- Organic Mesh Gradient Background (Apple-style) -->
 	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
 		<div
-			class="absolute left-[10%] top-[5%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
+			class="absolute top-[5%] left-[10%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
 		></div>
 		<div
-			class="absolute right-[5%] top-[30%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
+			class="absolute top-[30%] right-[5%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
 		></div>
 		<div
 			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
@@ -136,6 +138,13 @@
 	</div>
 
 	<div class="relative mx-auto max-w-5xl">
+		{#if order}
+			<div class="mb-4">
+				<Breadcrumbs
+					items={[{ label: 'Orders', href: '/orders' }, { label: orderNumber(order) }]}
+				/>
+			</div>
+		{/if}
 		<button
 			onclick={() => goto('/orders')}
 			class="group mb-8 flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-blue-500"
@@ -170,11 +179,11 @@
 				<div class="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-center">
 					<div>
 						<div class="flex items-center gap-4">
-							<h1 class="text-4xl font-bold tracking-tight text-slate-900">
-								Order #{order.OrderNumber}
+							<h1 class="font-mono text-4xl font-bold tracking-tight text-slate-900">
+								{orderNumber(order)}
 							</h1>
 							<span
-								class={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide shadow-sm ring-1 backdrop-blur-md ${
+								class={`rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase shadow-sm ring-1 backdrop-blur-md ${
 									order.Status === 'COMPLETED'
 										? 'bg-emerald-50/50 text-emerald-600 ring-emerald-100'
 										: order.Status === 'PENDING'
@@ -240,11 +249,11 @@
 
 										<div class="relative z-10 flex items-center gap-4">
 											<div
-												class="flex h-12 min-w-[3rem] px-3 items-center justify-center rounded-2xl bg-white font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
+												class="flex h-12 min-w-[3rem] items-center justify-center rounded-2xl bg-white px-3 font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
 											>
 												{item.Quantity}x
 												{#if item.ReturnedQty > 0}
-													<span class="text-xs text-amber-500 ml-1">(-{item.ReturnedQty})</span>
+													<span class="ml-1 text-xs text-amber-500">(-{item.ReturnedQty})</span>
 												{/if}
 											</div>
 											<div>
@@ -253,7 +262,9 @@
 												</p>
 												<p class="text-sm text-slate-400">
 													{#if item.ReturnedQty > 0}
-														<span class="text-amber-600 font-medium">Net Qty: {item.Quantity - item.ReturnedQty}</span> • 
+														<span class="font-medium text-amber-600"
+															>Net Qty: {item.Quantity - item.ReturnedQty}</span
+														> •
 													{/if}
 													{formatCurrency(item.UnitPrice)} / unit
 												</p>
@@ -266,7 +277,7 @@
 											{#if item.ReturnedQty > 0}
 												<div class="mt-1 flex justify-end">
 													<span
-														class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-500 ring-1 ring-amber-100"
+														class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-500 uppercase ring-1 ring-amber-100"
 													>
 														{item.ReturnedQty} Returned
 													</span>
@@ -290,7 +301,7 @@
 							{#if order.Status === 'COMPLETED'}
 								{#if order.HasPendingReturn}
 									<div class="rounded-xl bg-amber-50/30 p-4 ring-1 ring-amber-100/50">
-										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-500">
+										<p class="mb-1 text-xs font-semibold tracking-wide text-amber-500 uppercase">
 											Return Pending
 										</p>
 										<p class="text-sm text-amber-700/80">A request is currently being processed.</p>
@@ -303,7 +314,7 @@
 									</button>
 								{:else if isReturnEligible}
 									<div class="rounded-xl bg-blue-50/30 p-4 ring-1 ring-blue-100/50">
-										<p class="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-500">
+										<p class="mb-1 text-xs font-semibold tracking-wide text-blue-500 uppercase">
 											Return Window Open
 										</p>
 										<p class="text-sm text-blue-700/80">
@@ -371,7 +382,7 @@
 				>
 					<button
 						onclick={() => (showReturnModal = false)}
-						class="absolute right-4 top-4 rounded-full bg-slate-50 p-1.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
+						class="absolute top-4 right-4 rounded-full bg-slate-50 p-1.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
 					>
 						✕
 					</button>
@@ -459,8 +470,8 @@
 							<span class="text-sm font-medium text-blue-700">Estimated Refund</span>
 							<span class="text-lg font-bold text-blue-800">{formatCurrency(estimatedRefund)}</span>
 						</div>
-						<p class="mt-2 text-xs text-slate-400 text-right">
-							Includes {($settings.tax_rate_percentage || 0)}% tax adjustment
+						<p class="mt-2 text-right text-xs text-slate-400">
+							Includes {$settings.tax_rate_percentage || 0}% tax adjustment
 						</p>
 					{/if}
 

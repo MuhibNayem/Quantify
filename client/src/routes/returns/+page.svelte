@@ -9,8 +9,10 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Undo2, Package, History, ShieldCheck, Search, Filter, Loader2 } from 'lucide-svelte';
 	import { fade, fly } from 'svelte/transition';
-	import { cn } from '$lib/utils';
+	import { cn, orderNumber } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
+	import TimeAgo from '$lib/components/ui/time-ago.svelte';
+	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import ReturnRequestModal from '$lib/components/returns/ReturnRequestModal.svelte';
 	import { goto } from '$app/navigation';
 	import AdminReturnList from '$lib/components/returns/AdminReturnList.svelte';
@@ -118,12 +120,12 @@
 
 <div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
 	<!-- Background -->
-	<div class="absolute left-0 top-0 -z-10 h-full w-full overflow-hidden bg-white/50">
+	<div class="absolute top-0 left-0 -z-10 h-full w-full overflow-hidden bg-white/50">
 		<div
-			class="animate-blob absolute -left-[10%] top-[20%] h-[50%] w-[50%] rounded-full bg-blue-100/60 blur-[100px]"
+			class="animate-blob absolute top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-blue-100/60 blur-[100px]"
 		></div>
 		<div
-			class="animate-blob animation-delay-2000 absolute -right-[10%] -top-[10%] h-[60%] w-[60%] rounded-full bg-purple-100/60 blur-[100px]"
+			class="animate-blob animation-delay-2000 absolute -top-[10%] -right-[10%] h-[60%] w-[60%] rounded-full bg-purple-100/60 blur-[100px]"
 		></div>
 	</div>
 
@@ -181,7 +183,7 @@
 				<!-- Search -->
 				<div class="flex items-center gap-4 rounded-2xl bg-white/60 p-4 shadow-sm backdrop-blur-md">
 					<div class="relative flex-1">
-						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
 						<Input
 							placeholder="Search by Order Number (e.g., ORD-12345...)"
 							class="border-slate-200 bg-white/50 pl-9 transition-all focus:bg-white"
@@ -224,14 +226,16 @@
 							<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
 								<div>
 									<div class="flex items-center gap-3">
-										<h3 class="text-lg font-bold text-slate-800">{order.OrderNumber}</h3>
+										<h3 class="font-mono text-lg font-bold text-slate-800">{orderNumber(order)}</h3>
 										<Badge variant={order.Status === 'COMPLETED' ? 'default' : 'secondary'}
 											>{order.Status}</Badge
 										>
 									</div>
 									<p class="text-sm text-slate-500">
-										Placed on {new Date(order.OrderDate).toLocaleDateString()} • {order.Items
-											?.length || 0} Items
+										{#if order.Customer}
+											{order.Customer.FirstName} {order.Customer.LastName} •
+										{/if}
+										Placed <TimeAgo date={order.OrderDate} /> • {order.Items?.length || 0} Items
 									</p>
 								</div>
 								<div class="flex items-center gap-4">
@@ -250,12 +254,12 @@
 							</div>
 						</div>
 					{:else}
-						<div
-							class="flex h-64 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white/40 text-center"
-						>
-							<Package size={48} class="mb-4 text-slate-300" />
-							<p class="text-lg font-medium text-slate-600">No orders found</p>
-							<p class="text-slate-400">Go make some purchases!</p>
+						<div class="rounded-3xl border border-dashed border-slate-300 bg-white/40">
+							<EmptyState
+								icon={Package}
+								title="No orders found"
+								description="Go make some purchases, then come back to request a return."
+							/>
 						</div>
 					{/each}
 				</div>

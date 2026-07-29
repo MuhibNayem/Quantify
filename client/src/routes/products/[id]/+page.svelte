@@ -22,6 +22,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { ArrowLeft, Info, History } from 'lucide-svelte';
 	import DataTable from '$lib/components/ui/data-table/DataTable.svelte';
+	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 	import type { PageData } from './$types';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -52,6 +53,15 @@
 
 <div class="mx-auto w-full max-w-7xl px-6 py-8">
 	<section class="space-y-8">
+		{#if product}
+			<Breadcrumbs
+				items={[
+					{ label: 'Catalog', href: '/catalog' },
+					{ label: 'Products', href: '/catalog' },
+					{ label: product.Name }
+				]}
+			/>
+		{/if}
 		<!-- HEADER -->
 		<div class="flex items-center justify-between">
 			<a
