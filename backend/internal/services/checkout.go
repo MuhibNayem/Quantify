@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,6 +11,7 @@ import (
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+	"inventory/backend/internal/units"
 )
 
 const discountAuditThresholdPct = 10.0
@@ -93,6 +95,27 @@ func (s *SalesService) processItems(
 			return 0, 0, nil, fmt.Errorf("product %d not found", item.ProductID)
 		}
 
+		if !product.AllowFractional && item.Quantity != math.Trunc(item.Quantity) {
+			return 0, 0, nil, fmt.Errorf("product %q cannot be sold in fractional quantities", product.Name)
+		}
+
+		// Resolve selling unit + conversion factor (default: base unit, factor 1).
+		sellingFactor := 1.0
+		var unitID *uint
+		var unitPriceOverride float64 // per selling unit, 0 = derive
+		if item.UnitID != nil {
+			pu, err := s.resolveProductUnit(tx, product, *item.UnitID)
+			if err != nil {
+				return 0, 0, nil, err
+			}
+			sellingFactor = pu.Factor
+			unitID = item.UnitID
+			unitPriceOverride = pu.Price
+		}
+
+		// Convert selling quantity → base stock quantity, deduct stock in BASE units.
+		baseQty := units.StockDeduction(item.Quantity, sellingFactor)
+
 		deductionLocationID := resolveDeductionLocation(product, req.RegisterLocationID)
 
 		var batches []*domain.Batch
@@ -107,19 +130,23 @@ func (s *SalesService) processItems(
 			batches = batchesByProduct[item.ProductID]
 		}
 
-		if _, err := s.allocateStock(tx, product, batches, deductionLocationID, item.Quantity, req.CustomerID, userID); err != nil {
+		if _, err := s.allocateStock(tx, product, batches, deductionLocationID, baseQty, req.CustomerID, userID); err != nil {
 			return 0, 0, nil, err
 		}
 
-		unitPrice, discount := s.calculateItemDiscount(product, item.Quantity, activePromotions)
+		// Price per SELLING unit: explicit ProductUnit.Price wins, else base price × factor.
+		baseUnitPrice := units.EffectivePrice(unitPriceOverride, product.SellingPrice, sellingFactor)
+		unitPrice, discount := s.applyPromotion(baseUnitPrice, product, item.Quantity, activePromotions)
 		totalDiscountFromPromotions += discount
 		totalAmount += unitPrice * item.Quantity
 
 		orderItems = append(orderItems, domain.OrderItem{
-			ProductID:  item.ProductID,
-			Quantity:   item.Quantity,
-			UnitPrice:  unitPrice,
-			TotalPrice: unitPrice * item.Quantity,
+			ProductID:    item.ProductID,
+			Quantity:     item.Quantity, // selling units (e.g. 14 inches)
+			UnitID:       unitID,
+			BaseQuantity: baseQty, // base units deducted (e.g. 1.1667 ft)
+			UnitPrice:    unitPrice,
+			TotalPrice:   units.RoundQty(unitPrice * item.Quantity),
 		})
 	}
 

@@ -36,6 +36,9 @@ type OrderItem struct {
 	ProductID   uint `gorm:"not null;index"`
 	Product     Product
 	Quantity    float64 `gorm:"not null"`
+	UnitID      *uint   `json:"UnitID"` // selling unit (nil = base unit)
+	Unit        Unit    `json:"Unit"`
+	BaseQuantity float64 `gorm:"type:numeric(14,4)" json:"BaseQuantity"` // quantity deducted in base stock units
 	UnitPrice   float64 `gorm:"not null"`
 	TotalPrice  float64 `gorm:"not null"`
 	IsReturned  bool    `gorm:"default:false"`

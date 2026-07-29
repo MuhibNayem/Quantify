@@ -19,6 +19,7 @@ type StockAdjustmentRequest struct {
 type CheckoutItem struct {
 	ProductID uint    `json:"productId" binding:"required"`
 	Quantity  float64 `json:"quantity" binding:"required,gt=0"`
+	UnitID    *uint   `json:"unitId"` // selling unit; nil/omitted = product base unit
 }
 
 type CheckoutRequest struct {

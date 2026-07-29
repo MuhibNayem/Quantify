@@ -6,22 +6,21 @@ import (
 	"inventory/backend/internal/domain"
 )
 
-func (s *SalesService) calculateItemDiscount(product domain.Product, quantity float64, activePromotions []domain.Promotion) (float64, float64) {
+func (s *SalesService) applyPromotion(baseUnitPrice float64, product domain.Product, quantity float64, activePromotions []domain.Promotion) (float64, float64) {
 	bestPromo := ResolvePromotion(activePromotions, product.ID, product.SubCategoryID, product.CategoryID)
 
-	unitPrice := product.SellingPrice
+	unitPrice := baseUnitPrice
 	discountTotal := 0.0
 	if bestPromo != nil {
 		if bestPromo.DiscountType == "PERCENTAGE" {
-			discount := unitPrice * (bestPromo.DiscountValue / 100.0)
-			unitPrice -= discount
+			unitPrice -= baseUnitPrice * (bestPromo.DiscountValue / 100.0)
 		} else if bestPromo.DiscountType == "FIXED_AMOUNT" {
 			unitPrice -= bestPromo.DiscountValue
 		}
 		if unitPrice < 0 {
 			unitPrice = 0
 		}
-		discountTotal = (product.SellingPrice - unitPrice) * quantity
+		discountTotal = (baseUnitPrice - unitPrice) * quantity
 	}
 	return unitPrice, discountTotal
 }
