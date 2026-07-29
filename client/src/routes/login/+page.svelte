@@ -3,13 +3,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import api from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
@@ -20,6 +13,7 @@
 	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { loginSchema } from '$lib/schemas/auth';
 	import { t } from '$lib/i18n';
+	import { BarChart3, Loader2 } from 'lucide-svelte';
 
 	const { form, errors, enhance, submitting } = superForm(
 		{ username: '', password: '' },
@@ -56,212 +50,170 @@
 			}
 		})();
 	});
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const labelClass = 'text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase';
+	const submitClass =
+		'h-10 w-full rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 </script>
 
-<div
-	class="flex min-h-screen w-full bg-gradient-to-br from-slate-50/90 via-sky-50/70 to-indigo-50/80"
->
-	<!-- Left side - Image section (60% width) -->
-	<div class="relative hidden overflow-hidden lg:flex lg:flex-[1.5]">
-		<!-- Background image covering the entire container -->
-		<picture class="absolute inset-0 h-full w-full">
-			<source srcset="/login-visual-feature.webp" type="image/webp" />
-			<img
-				src="/login-visual-feature.png"
-				alt="Inventory and ERP Visualization"
-				class="absolute inset-0 h-full w-full object-cover object-center"
-			/>
-		</picture>
+<div class="flex min-h-screen w-full">
+	<!-- Left panel — Ledger brand surface -->
+	<div
+		class="relative hidden w-[45%] flex-col justify-between overflow-hidden bg-primary p-10 lg:flex xl:p-12"
+	>
+		<!-- Spreadsheet hairlines + ghost totals column -->
+		<div class="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+			<div class="absolute inset-0 flex flex-col justify-between">
+				{#each Array(18) as _}
+					<div class="h-px w-full bg-primary-foreground/5"></div>
+				{/each}
+			</div>
+			<div class="absolute top-0 right-10 bottom-0 hidden flex-col justify-center gap-5 xl:flex">
+				{#each ['48,210.75', '12,086.00', '3,941.50', '128,400.25', '7,212.80'] as n}
+					<span class="num-mono text-xs text-primary-foreground/20">{n}</span>
+				{/each}
+			</div>
+		</div>
 
-		<!-- Stronger glass overlay for text legibility -->
-		<div
-			class="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent"
-		></div>
+		<!-- Brand -->
+		<div class="relative flex items-center gap-3">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-primary-foreground/20"
+			>
+				<BarChart3 class="h-5 w-5 text-primary-foreground" />
+			</div>
+			<span class="font-display text-xl font-semibold tracking-tight text-primary-foreground"
+				>Quantify</span
+			>
+		</div>
 
-		<div class="absolute right-12 bottom-20 left-12 max-w-2xl text-white">
-			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">{$t('auth.login.heroTitle')}</h2>
-			<p class="mt-6 text-xl font-medium text-slate-100 drop-shadow-lg">
+		<!-- Headline + ledger motif -->
+		<div class="relative">
+			<h1
+				class="font-display max-w-md text-4xl leading-[1.08] font-semibold tracking-tight text-primary-foreground xl:text-[2.75rem]"
+			>
+				{$t('auth.login.heroTitle')}
+			</h1>
+			<p class="mt-4 max-w-sm text-[0.9375rem] leading-relaxed text-primary-foreground/70">
 				{$t('auth.login.heroSubtitle')}
+			</p>
+
+			<div
+				class="mt-12 max-w-sm overflow-hidden rounded-lg border border-primary-foreground/15"
+				aria-hidden="true"
+			>
+				<div
+					class="flex items-center justify-between gap-6 bg-primary-foreground/5 px-4 py-2.5"
+				>
+					<div class="h-1.5 w-20 rounded-sm bg-primary-foreground/25"></div>
+					<div class="h-1.5 w-8 rounded-sm bg-primary-foreground/25"></div>
+					<div class="h-1.5 w-12 rounded-sm bg-primary-foreground/25"></div>
+				</div>
+				{#each [
+					{ w: 96, qty: '1,204', val: '8,412.00' },
+					{ w: 56, qty: '386', val: '2,093.50' },
+					{ w: 120, qty: '12,480', val: '86,140.75' },
+					{ w: 40, qty: '57', val: '341.10' }
+				] as { w, qty, val }}
+					<div
+						class="flex items-center justify-between gap-6 border-t border-primary-foreground/10 px-4 py-2.5"
+					>
+						<div class="h-1.5 rounded-sm bg-primary-foreground/15" style="width: {w}px"></div>
+						<span class="num-mono text-xs text-primary-foreground/35">{qty}</span>
+						<span class="num-mono text-xs text-primary-foreground/50">{val}</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+
+		<p class="relative text-xs font-medium tracking-wide text-primary-foreground/60">
+			{$t('auth.login.securedBy')}
+		</p>
+	</div>
+
+	<!-- Right panel — sign-in form -->
+	<div class="relative flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
+		<div class="w-full max-w-sm" in:fade={{ duration: 400 }}>
+			<!-- Mobile brand -->
+			<div class="mb-10 flex items-center gap-3 lg:hidden">
+				<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+					<BarChart3 class="h-5 w-5 text-primary-foreground" />
+				</div>
+				<span class="font-display text-xl font-semibold tracking-tight text-foreground"
+					>Quantify</span
+				>
+			</div>
+
+			<header>
+				<h2
+					class="font-display text-[1.625rem] font-semibold tracking-tight text-foreground"
+				>
+					{$t('auth.login.title')}
+				</h2>
+				<p class="mt-1.5 text-sm text-muted-foreground">{$t('auth.login.subtitle')}</p>
+			</header>
+
+			<form method="POST" use:enhance class="mt-8 space-y-5">
+				<div class="space-y-1.5">
+					<Label for="username" class={labelClass}>
+						{$t('auth.login.username')}
+					</Label>
+					<Input
+						id="username"
+						type="text"
+						placeholder={$t('auth.login.usernamePlaceholder')}
+						bind:value={$form.username}
+						class={inputClass}
+					/>
+					{#if $errors.username}
+						<p class="text-xs font-medium text-danger">{$errors.username}</p>
+					{/if}
+				</div>
+
+				<div class="space-y-1.5">
+					<div class="flex items-center justify-between">
+						<Label for="password" class={labelClass}>
+							{$t('auth.login.password')}
+						</Label>
+						<a
+							href="#"
+							class="text-xs font-medium text-primary underline-offset-4 transition-colors hover:underline"
+							>{$t('auth.login.forgotPassword')}</a
+						>
+					</div>
+					<Input
+						id="password"
+						type="password"
+						placeholder="••••••••"
+						bind:value={$form.password}
+						class={inputClass}
+					/>
+					{#if $errors.password}
+						<p class="text-xs font-medium text-danger">{$errors.password}</p>
+					{/if}
+				</div>
+
+				<Button type="submit" class={submitClass} disabled={$submitting}>
+					{#if $submitting}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						{$t('auth.login.submitting')}
+					{:else}
+						{$t('auth.login.submit')}
+					{/if}
+				</Button>
+			</form>
+
+			<p class="mt-6 text-center text-sm text-muted-foreground">
+				{$t('auth.login.noAccount')}{' '}
+				<a
+					href="/register"
+					class="font-medium text-primary underline-offset-4 transition-colors hover:underline"
+				>
+					{$t('auth.login.register')}
+				</a>
 			</p>
 		</div>
 	</div>
-
-	<!-- Right side - Login form (40% width) -->
-	<div class="relative flex flex-1 items-center justify-center overflow-hidden p-8 lg:p-12">
-		<!-- Exact Ambient Background from Time Tracking Route -->
-		<div class="absolute inset-0 -z-10 opacity-80">
-			<div class="absolute top-10 -left-36 h-80 w-80 rounded-full bg-sky-200/70 blur-[120px]"></div>
-			<div
-				class="absolute top-0 right-0 h-72 w-72 rounded-full bg-emerald-200/60 blur-[110px]"
-			></div>
-			<div
-				class="absolute -bottom-24 left-1/4 h-64 w-64 rounded-full bg-indigo-200/60 blur-[150px]"
-			></div>
-		</div>
-
-		<div class="relative z-10 w-full max-w-xl space-y-8" in:fade={{ duration: 400 }}>
-			<!-- Mobile logo -->
-			<div class="mb-8 flex justify-center lg:hidden">
-				<div class="flex items-center space-x-3">
-					<div
-						class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 text-white"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-					</div>
-					<span
-						class="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl font-bold text-transparent dark:from-white dark:to-slate-300"
-						>InventoryPro</span
-					>
-				</div>
-			</div>
-
-			<!-- True Liquid Glass Panel -->
-			<!-- 
-				Properties for "Liquid Physics":
-				- backdrop-saturate-150: Refracted colors pop
-				- border-t-white/80 border-l-white/60: Directional light source (top-left)
-				- inset ring/shadow: Specular highlights on edges
-			-->
-			<Card
-				class="relative overflow-hidden rounded-[40px] border border-white/20 bg-gradient-to-br from-white/70 to-white/30 p-0 shadow-[0_40px_100px_-20px_rgba(50,60,90,0.2),inset_0_1px_0_0_rgba(255,255,255,0.8),inset_0_-2px_5px_0_rgba(0,0,0,0.05)] backdrop-blur-3xl backdrop-saturate-[180%]"
-			>
-				<!-- Light flare overlay -->
-				<div
-					class="pointer-events-none absolute -top-1/2 -left-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
-				></div>
-
-				<CardHeader class="relative pt-12 pb-2 text-center">
-					<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
-						{$t('auth.login.title')}
-					</CardTitle>
-					<CardDescription class="text-lg font-medium text-slate-600">
-						{$t('auth.login.subtitle')}
-					</CardDescription>
-				</CardHeader>
-				<CardContent class="relative p-10 pt-8">
-					<form method="POST" use:enhance class="space-y-6">
-						<div class="space-y-6">
-							<div class="space-y-2">
-								<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-									{$t('auth.login.username')}
-								</Label>
-								<!-- Liquid Input: Looks like a cutout filled with denser liquid -->
-								<Input
-									id="username"
-									type="text"
-									placeholder={$t('auth.login.usernamePlaceholder')}
-									bind:value={$form.username}
-									class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-blue-500/30 focus:ring-4 focus:ring-blue-500/10"
-								/>
-								{#if $errors.username}
-									<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.username}</p>
-								{/if}
-							</div>
-							<div class="space-y-2">
-								<div class="flex items-center justify-between">
-									<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.login.password')}
-									</Label>
-									<a
-										href="#"
-										class="text-sm font-semibold text-blue-700 transition-colors hover:text-blue-600"
-										>{$t('auth.login.forgotPassword')}</a
-									>
-								</div>
-								<Input
-									id="password"
-									type="password"
-									placeholder="••••••••"
-									bind:value={$form.password}
-									class="h-14 rounded-2xl border-white/40 bg-white/60 px-5 text-lg font-medium text-slate-900 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] backdrop-blur-xl transition-all placeholder:text-slate-500 focus:border-blue-500/50 focus:bg-white/90 focus:ring-4 focus:ring-blue-500/10"
-								/>
-								{#if $errors.password}
-									<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.password}</p>
-								{/if}
-							</div>
-						</div>
-
-						<Button
-							type="submit"
-							class="glass-button mt-6 h-14 w-full rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(79,70,229,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] disabled:opacity-70"
-							disabled={$submitting}
-						>
-							{#if $submitting}
-								<svg
-									class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-								>
-									<circle
-										class="opacity-25"
-										cx="12"
-										cy="12"
-										r="10"
-										stroke="currentColor"
-										stroke-width="4"
-									></circle>
-									<path
-										class="opacity-75"
-										fill="currentColor"
-										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-									></path>
-								</svg>
-								{$t('auth.login.submitting')}
-							{:else}
-								{$t('auth.login.submit')}
-							{/if}
-						</Button>
-					</form>
-
-					<div class="mt-8 text-center text-sm font-medium text-slate-600">
-						{$t('auth.login.noAccount')}{' '}
-						<a
-							href="/register"
-							class="text-base font-bold text-blue-700 transition-colors hover:text-blue-600"
-						>
-							{$t('auth.login.register')}
-						</a>
-					</div>
-				</CardContent>
-			</Card>
-
-			<div class="mt-8 flex justify-center gap-6 opacity-80">
-				<!-- Trust indicators -->
-				<p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">
-					{$t('auth.login.securedBy')}
-				</p>
-			</div>
-		</div>
-	</div>
 </div>
-
-<style>
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.35;
-			filter: blur(70px);
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.55;
-			filter: blur(90px);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 12s ease-in-out infinite;
-	}
-</style>

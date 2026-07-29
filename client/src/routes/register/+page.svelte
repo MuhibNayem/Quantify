@@ -3,18 +3,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import api from '$lib/api';
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { fade, slide } from 'svelte/transition';
-	import { ArrowLeft, ArrowRight, ChevronDown, Check } from 'lucide-svelte';
+	import { ArrowLeft, ArrowRight, BarChart3, Check, ChevronDown, Loader2 } from 'lucide-svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { registerSchema } from '$lib/schemas/auth';
@@ -129,408 +122,370 @@
 			}
 		}
 	}
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const labelClass = 'text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase';
+	const primaryBtnClass =
+		'h-10 rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 </script>
 
 <svelte:window onclick={handleWindowClick} />
 
-<div
-	class="flex min-h-screen w-full bg-gradient-to-br from-slate-50/90 via-sky-50/70 to-indigo-50/80"
->
-	<!-- Left side - Image section (60% width) -->
-	<div class="relative hidden overflow-hidden lg:flex lg:flex-[1.5]">
-		<!-- Background image -->
-		<picture class="absolute inset-0 h-full w-full">
-			<source srcset="/register-visual-feature.webp" type="image/webp" />
-			<img
-				src="/register-visual-feature.png"
-				alt="POS and Growth Visualization"
-				class="absolute inset-0 h-full w-full object-cover object-center"
-			/>
-		</picture>
+<div class="flex min-h-screen w-full">
+	<!-- Left panel — Ledger brand surface -->
+	<div
+		class="relative hidden w-[45%] flex-col justify-between overflow-hidden bg-primary p-10 lg:flex xl:p-12"
+	>
+		<!-- Spreadsheet hairlines + ghost totals column -->
+		<div class="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+			<div class="absolute inset-0 flex flex-col justify-between">
+				{#each Array(18) as _}
+					<div class="h-px w-full bg-primary-foreground/5"></div>
+				{/each}
+			</div>
+			<div class="absolute top-0 right-10 bottom-0 hidden flex-col justify-center gap-5 xl:flex">
+				{#each ['9,412.00', '22,806.40', '1,204.90', '61,388.25', '4,072.10'] as n}
+					<span class="num-mono text-xs text-primary-foreground/20">{n}</span>
+				{/each}
+			</div>
+		</div>
 
-		<!-- Strong glass overlay -->
-		<div
-			class="absolute inset-0 bg-gradient-to-t from-emerald-900/80 via-transparent to-transparent"
-		></div>
+		<!-- Brand -->
+		<div class="relative flex items-center gap-3">
+			<div
+				class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 ring-1 ring-primary-foreground/20"
+			>
+				<BarChart3 class="h-5 w-5 text-primary-foreground" />
+			</div>
+			<span class="font-display text-xl font-semibold tracking-tight text-primary-foreground"
+				>Quantify</span
+			>
+		</div>
 
-		<div class="absolute right-12 bottom-20 left-12 max-w-2xl text-white">
-			<h2 class="text-5xl font-bold tracking-tight drop-shadow-xl">
+		<!-- Headline + ledger motif -->
+		<div class="relative">
+			<h1
+				class="font-display max-w-md text-4xl leading-[1.08] font-semibold tracking-tight text-primary-foreground xl:text-[2.75rem]"
+			>
 				{$t('auth.register.heroTitle')}
-			</h2>
-			<p class="mt-6 text-xl font-medium text-emerald-100 drop-shadow-lg">
+			</h1>
+			<p class="mt-4 max-w-sm text-[0.9375rem] leading-relaxed text-primary-foreground/70">
 				{$t('auth.register.heroSubtitle')}
 			</p>
+
+			<div
+				class="mt-12 max-w-sm overflow-hidden rounded-lg border border-primary-foreground/15"
+				aria-hidden="true"
+			>
+				<div
+					class="flex items-center justify-between gap-6 bg-primary-foreground/5 px-4 py-2.5"
+				>
+					<div class="h-1.5 w-20 rounded-sm bg-primary-foreground/25"></div>
+					<div class="h-1.5 w-8 rounded-sm bg-primary-foreground/25"></div>
+					<div class="h-1.5 w-12 rounded-sm bg-primary-foreground/25"></div>
+				</div>
+				{#each [
+					{ w: 72, qty: '2,048', val: '14,810.00' },
+					{ w: 104, qty: '9,306', val: '58,204.60' },
+					{ w: 48, qty: '127', val: '986.40' },
+					{ w: 88, qty: '4,715', val: '30,112.90' }
+				] as { w, qty, val }}
+					<div
+						class="flex items-center justify-between gap-6 border-t border-primary-foreground/10 px-4 py-2.5"
+					>
+						<div class="h-1.5 rounded-sm bg-primary-foreground/15" style="width: {w}px"></div>
+						<span class="num-mono text-xs text-primary-foreground/35">{qty}</span>
+						<span class="num-mono text-xs text-primary-foreground/50">{val}</span>
+					</div>
+				{/each}
+			</div>
 		</div>
+
+		<p class="relative text-xs font-medium tracking-wide text-primary-foreground/60">
+			{$t('auth.login.securedBy')}
+		</p>
 	</div>
 
-	<!-- Right side - Registration form (40% width) -->
-	<div class="relative flex flex-1 items-center justify-center overflow-hidden p-8 lg:p-12">
-		<!-- Ambient Background -->
-		<div class="absolute inset-0 -z-10 opacity-70">
-			<div
-				class="absolute -top-20 -right-20 h-[500px] w-[500px] rounded-full bg-emerald-200/50 blur-[100px]"
-			></div>
-			<div
-				class="absolute bottom-0 left-0 h-[400px] w-[400px] rounded-full bg-teal-200/50 blur-[100px]"
-			></div>
-			<div
-				class="absolute top-1/3 right-1/4 h-[300px] w-[300px] rounded-full bg-lime-100/40 blur-[80px]"
-			></div>
-		</div>
-
-		<div class="relative z-10 w-full max-w-xl space-y-8" in:fade={{ duration: 400 }}>
-			<!-- Mobile logo -->
-			<div class="mb-8 flex justify-center lg:hidden">
-				<div class="flex items-center space-x-3">
-					<div
-						class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 shadow-lg shadow-emerald-500/30"
-					>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 text-white"
-							viewBox="0 0 20 20"
-							fill="currentColor"
-						>
-							<path
-								d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"
-							/>
-						</svg>
-					</div>
-					<span
-						class="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-2xl font-bold text-transparent dark:from-white dark:to-slate-300"
-						>InventoryPro</span
-					>
+	<!-- Right panel — registration form -->
+	<div class="relative flex flex-1 items-center justify-center px-6 py-12 sm:px-10">
+		<div class="w-full max-w-md" in:fade={{ duration: 400 }}>
+			<!-- Mobile brand -->
+			<div class="mb-10 flex items-center gap-3 lg:hidden">
+				<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+					<BarChart3 class="h-5 w-5 text-primary-foreground" />
 				</div>
+				<span class="font-display text-xl font-semibold tracking-tight text-foreground"
+					>Quantify</span
+				>
 			</div>
 
-			<!-- True Liquid Glass Panel -->
-			<Card
-				class="relative overflow-visible rounded-[40px] border border-white/20 bg-gradient-to-br from-white/70 to-white/30 p-0 shadow-[0_40px_100px_-20px_rgba(16,185,129,0.15),inset_0_1px_0_0_rgba(255,255,255,0.8),inset_0_-2px_5px_0_rgba(0,0,0,0.05)] backdrop-blur-3xl backdrop-saturate-[180%]"
-			>
-				<!-- Light flare overlay (Clipped Container) -->
-				<div class="pointer-events-none absolute inset-0 overflow-hidden rounded-[40px]">
-					<div
-						class="absolute -top-1/2 -left-1/2 h-full w-full rotate-12 bg-gradient-to-b from-white/20 to-transparent blur-3xl"
-					></div>
-				</div>
-
-				<CardHeader class="relative pt-12 pb-2 text-center">
-					<div class="mb-6 flex justify-center gap-2">
+			<header>
+				<div class="mb-5 flex items-center gap-3">
+					<div class="flex flex-1 gap-1.5">
 						{#each Array(totalSteps) as _, i}
 							<div
-								class="h-1.5 w-10 rounded-full transition-all duration-300 {currentStep > i
-									? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
-									: 'bg-slate-300/50'}"
+								class="h-1 flex-1 rounded-sm transition-colors duration-300 {currentStep > i
+									? 'bg-primary'
+									: 'bg-border'}"
 							></div>
 						{/each}
 					</div>
-					<CardTitle class="text-4xl font-bold tracking-tight text-slate-900">
-						{currentStep === 1 ? $t('auth.register.title') : $t('auth.register.step2Title')}
-					</CardTitle>
-					<CardDescription class="text-lg font-medium text-slate-600">
-						{currentStep === 1 ? $t('auth.register.subtitle') : $t('auth.register.step2Subtitle')}
-					</CardDescription>
-				</CardHeader>
-				<CardContent class="relative p-10 pt-8">
-					<form method="POST" use:enhance class="space-y-6">
-						{#if currentStep === 1}
-							<div class="space-y-6" in:slide={{ axis: 'x', duration: 300 }}>
-								<div class="space-y-2">
-									<Label for="username" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.register.username')}
-									</Label>
-									<Input
-										id="username"
-										type="text"
-										placeholder={$t('auth.register.usernamePlaceholder')}
-										bind:value={$form.username}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-									{#if $errors.username}
-										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.username}</p>
-									{/if}
-								</div>
+					<span class="num-mono text-xs text-muted-foreground">0{currentStep}/0{totalSteps}</span>
+				</div>
+				<h2
+					class="font-display text-[1.625rem] font-semibold tracking-tight text-foreground"
+				>
+					{currentStep === 1 ? $t('auth.register.title') : $t('auth.register.step2Title')}
+				</h2>
+				<p class="mt-1.5 text-sm text-muted-foreground">
+					{currentStep === 1 ? $t('auth.register.subtitle') : $t('auth.register.step2Subtitle')}
+				</p>
+			</header>
 
-								<div class="space-y-2">
-									<Label for="password" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.register.password')}
-									</Label>
-									<Input
-										id="password"
-										type="password"
-										placeholder="••••••••"
-										bind:value={$form.password}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-									{#if $errors.password}
-										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.password}</p>
-									{/if}
-									{#if $form.password}
-										<div class="space-y-2 px-1 pt-2">
-											<div class="flex justify-between text-xs font-bold text-slate-600">
-												<span>{$t('auth.register.strength')}</span>
-												<span>{passwordStrength}%</span>
-											</div>
-											<div class="h-2 w-full rounded-full bg-slate-200/50">
-												<div
-													class="h-2 rounded-full shadow-sm transition-all duration-500 ease-out"
-													class:bg-rose-500={passwordStrength < 50}
-													class:bg-amber-500={passwordStrength >= 50 && passwordStrength < 75}
-													class:bg-emerald-500={passwordStrength >= 75}
-													style={`width: ${passwordStrength}%`}
-												></div>
-											</div>
-										</div>
-									{/if}
-								</div>
+			<form method="POST" use:enhance class="mt-8">
+				{#if currentStep === 1}
+					<div class="space-y-4" in:slide={{ axis: 'x', duration: 300 }}>
+						<div class="space-y-1.5">
+							<Label for="username" class={labelClass}>
+								{$t('auth.register.username')}
+							</Label>
+							<Input
+								id="username"
+								type="text"
+								placeholder={$t('auth.register.usernamePlaceholder')}
+								bind:value={$form.username}
+								class={inputClass}
+							/>
+							{#if $errors.username}
+								<p class="text-xs font-medium text-danger">{$errors.username}</p>
+							{/if}
+						</div>
 
-								<div class="space-y-2">
-									<Label
-										for="confirmPassword"
-										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-									>
-										{$t('auth.register.confirmPassword')}
-									</Label>
-									<Input
-										id="confirmPassword"
-										type="password"
-										placeholder="••••••••"
-										bind:value={$form.confirmPassword}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-									{#if $errors.confirmPassword}
-										<p class="ml-1 text-sm font-semibold text-rose-600">
-											{$errors.confirmPassword}
-										</p>
-									{/if}
-								</div>
-
-								<div class="relative space-y-2">
-									<Label for="role" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.register.role')}
-									</Label>
-
-									<!-- Custom Liquid Dropdown Trigger -->
-									<button
-										id="role-dropdown-trigger"
-										type="button"
-										onclick={toggleRoleDropdown}
-										class="flex h-14 w-full items-center justify-between rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all outline-none focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-										disabled={$submitting}
-									>
-										<span class="flex items-center gap-2">
-											{availableRoles.find((r) => r.value === $form.role)?.label}
+						<div class="space-y-1.5">
+							<Label for="password" class={labelClass}>
+								{$t('auth.register.password')}
+							</Label>
+							<Input
+								id="password"
+								type="password"
+								placeholder="••••••••"
+								bind:value={$form.password}
+								class={inputClass}
+							/>
+							{#if $errors.password}
+								<p class="text-xs font-medium text-danger">{$errors.password}</p>
+							{/if}
+							{#if $form.password}
+								<div class="space-y-1.5 pt-1">
+									<div class="flex items-center justify-between">
+										<span class="text-[0.625rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase">
+											{$t('auth.register.strength')}
 										</span>
-										<ChevronDown
-											class="h-5 w-5 text-slate-600 transition-transform duration-300 {isRoleDropdownOpen
-												? 'rotate-180'
-												: ''}"
-										/>
-									</button>
-
-									<!-- Custom Liquid Dropdown Menu -->
-									{#if isRoleDropdownOpen}
-										<div
-											id="role-dropdown-menu"
-											class="top-FULL absolute right-0 left-0 z-50 mt-2 overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.1),inset_0_1px_0_0_rgba(255,255,255,0.8)] ring-1 ring-white/40 backdrop-blur-2xl"
-											in:slide={{ duration: 200, axis: 'y' }}
-											out:fade={{ duration: 150 }}
-										>
-											<div class="space-y-1 p-1.5">
-												{#each availableRoles as role}
-													<button
-														type="button"
-														onclick={() => selectRole(role.value as any)}
-														class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left font-bold transition-colors hover:bg-emerald-500/10 {$form.role ===
-														role.value
-															? 'bg-emerald-500/10 text-emerald-800'
-															: 'text-slate-700 hover:text-emerald-700'}"
-													>
-														{role.label}
-														{#if $form.role === role.value}
-															<Check class="h-4 w-4 text-emerald-600" />
-														{/if}
-													</button>
-												{/each}
-											</div>
-										</div>
-									{/if}
+										<span class="num-mono text-xs text-muted-foreground">{passwordStrength}%</span>
+									</div>
+									<div class="flex gap-1">
+										{#each Array(4) as _, i}
+											<div
+												class="h-1.5 flex-1 rounded-sm transition-colors duration-300 {passwordStrength >
+												i * 25
+													? 'bg-primary'
+													: 'bg-muted'}"
+											></div>
+										{/each}
+									</div>
 								</div>
-								<Button
-									type="button"
-									onclick={nextStep}
-									class="glass-button h-14 w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-emerald-400 hover:to-teal-500 active:scale-[0.98]"
+							{/if}
+						</div>
+
+						<div class="space-y-1.5">
+							<Label for="confirmPassword" class={labelClass}>
+								{$t('auth.register.confirmPassword')}
+							</Label>
+							<Input
+								id="confirmPassword"
+								type="password"
+								placeholder="••••••••"
+								bind:value={$form.confirmPassword}
+								class={inputClass}
+							/>
+							{#if $errors.confirmPassword}
+								<p class="text-xs font-medium text-danger">{$errors.confirmPassword}</p>
+							{/if}
+						</div>
+
+						<div class="relative space-y-1.5">
+							<Label for="role" class={labelClass}>
+								{$t('auth.register.role')}
+							</Label>
+
+							<button
+								id="role-dropdown-trigger"
+								type="button"
+								onclick={toggleRoleDropdown}
+								disabled={$submitting}
+								class="liquid-input flex h-10 w-full items-center justify-between rounded-md bg-card px-3 text-sm font-normal text-foreground shadow-none transition-colors outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<span class="flex items-center gap-2">
+									{availableRoles.find((r) => r.value === $form.role)?.label}
+								</span>
+								<ChevronDown
+									class="h-4 w-4 text-muted-foreground transition-transform duration-300 {isRoleDropdownOpen
+										? 'rotate-180'
+										: ''}"
+								/>
+							</button>
+
+							{#if isRoleDropdownOpen}
+								<div
+									id="role-dropdown-menu"
+									class="absolute top-full right-0 left-0 z-50 mt-2 overflow-hidden rounded-md border border-border bg-popover p-1.5 shadow-pop"
+									in:slide={{ duration: 200, axis: 'y' }}
+									out:fade={{ duration: 150 }}
 								>
-									{$t('auth.register.nextStep')}
-									<ArrowRight class="ml-2 h-6 w-6" />
-								</Button>
-							</div>
-						{:else}
-							<div class="space-y-6" in:slide={{ axis: 'x', duration: 300 }}>
-								<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-									<div class="space-y-2">
-										<Label
-											for="firstName"
-											class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-										>
-											{$t('auth.register.firstName')}
-										</Label>
-										<Input
-											id="firstName"
-											type="text"
-											placeholder={$t('auth.register.firstNamePlaceholder')}
-											bind:value={$form.firstName}
-											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-										/>
-										{#if $errors.firstName}
-											<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.firstName}</p>
-										{/if}
-									</div>
-
-									<div class="space-y-2">
-										<Label
-											for="lastName"
-											class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-										>
-											{$t('auth.register.lastName')}
-										</Label>
-										<Input
-											id="lastName"
-											type="text"
-											placeholder={$t('auth.register.lastNamePlaceholder')}
-											bind:value={$form.lastName}
-											class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-										/>
-										{#if $errors.lastName}
-											<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.lastName}</p>
-										{/if}
-									</div>
-								</div>
-
-								<div class="space-y-2">
-									<Label for="email" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.register.email')}
-									</Label>
-									<Input
-										id="email"
-										type="email"
-										placeholder={$t('auth.register.emailPlaceholder')}
-										bind:value={$form.email}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-									{#if $errors.email}
-										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.email}</p>
-									{/if}
-								</div>
-
-								<div class="space-y-2">
-									<Label
-										for="phoneNumber"
-										class="ml-1 text-sm font-bold tracking-wide text-slate-800"
-									>
-										{$t('auth.register.phone')}
-									</Label>
-									<Input
-										id="phoneNumber"
-										type="tel"
-										placeholder={$t('auth.register.phonePlaceholder')}
-										bind:value={$form.phoneNumber}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-									{#if $errors.phoneNumber}
-										<p class="ml-1 text-sm font-semibold text-rose-600">{$errors.phoneNumber}</p>
-									{/if}
-								</div>
-
-								<div class="space-y-2">
-									<Label for="address" class="ml-1 text-sm font-bold tracking-wide text-slate-800">
-										{$t('auth.register.address')}
-									</Label>
-									<Input
-										id="address"
-										type="text"
-										placeholder={$t('auth.register.addressPlaceholder')}
-										bind:value={$form.address}
-										class="h-14 rounded-2xl border border-white/60 bg-gradient-to-br from-white/90 to-white/60 px-5 text-lg font-bold text-slate-900 shadow-[inset_0_2px_4px_rgba(255,255,255,0.9),0_4px_10px_rgba(0,0,0,0.05)] ring-1 ring-white/40 backdrop-blur-xl backdrop-saturate-[180%] transition-all placeholder:text-slate-500/80 focus:scale-[1.01] focus:border-emerald-500/30 focus:ring-4 focus:ring-emerald-500/10"
-									/>
-								</div>
-
-								<div class="flex gap-4 pt-4">
-									<Button
-										type="button"
-										variant="outline"
-										onclick={prevStep}
-										class="h-14 w-1/3 rounded-2xl border-white/60 bg-white/40 text-lg font-bold text-slate-700 hover:bg-white/60"
-									>
-										<ArrowLeft class="mr-2 h-5 w-5" />
-										{$t('auth.register.back')}
-									</Button>
-									<Button
-										type="submit"
-										class="glass-button h-14 flex-1 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-xl font-bold text-white shadow-[0_20px_40px_-15px_rgba(16,185,129,0.4),inset_0_1px_0_0_rgba(255,255,255,0.4)] transition-all hover:bg-gradient-to-r hover:from-emerald-400 hover:to-teal-500 active:scale-[0.98] disabled:opacity-70"
-										disabled={$submitting}
-									>
-										{#if $submitting}
-											<svg
-												class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
-												xmlns="http://www.w3.org/2000/svg"
-												fill="none"
-												viewBox="0 0 24 24"
+									<div class="space-y-0.5">
+										{#each availableRoles as role}
+											<button
+												type="button"
+												onclick={() => selectRole(role.value as any)}
+												class="flex w-full items-center justify-between rounded-sm px-3 py-2 text-left text-sm transition-colors {$form
+													.role === role.value
+													? 'bg-accent font-medium text-accent-foreground'
+													: 'text-foreground hover:bg-muted'}"
 											>
-												<circle
-													class="opacity-25"
-													cx="12"
-													cy="12"
-													r="10"
-													stroke="currentColor"
-													stroke-width="4"
-												></circle>
-												<path
-													class="opacity-75"
-													fill="currentColor"
-													d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-												></path>
-											</svg>
-											{$t('auth.register.creating')}
-										{:else}
-											{$t('auth.register.complete')}
-										{/if}
-									</Button>
+												{role.label}
+												{#if $form.role === role.value}
+													<Check class="h-4 w-4 text-primary" />
+												{/if}
+											</button>
+										{/each}
+									</div>
 								</div>
-							</div>
-						{/if}
-					</form>
+							{/if}
+						</div>
 
-					<div class="mt-8 text-center text-sm font-medium text-slate-600">
-						{$t('auth.register.haveAccount')}{' '}
-						<a
-							href="/login"
-							class="text-base font-bold text-emerald-700 transition-colors hover:text-emerald-600"
-						>
-							{$t('auth.register.signIn')}
-						</a>
+						<Button type="button" onclick={nextStep} class="{primaryBtnClass} mt-2 w-full">
+							{$t('auth.register.nextStep')}
+							<ArrowRight class="h-4 w-4" />
+						</Button>
 					</div>
-				</CardContent>
-			</Card>
+				{:else}
+					<div class="space-y-4" in:slide={{ axis: 'x', duration: 300 }}>
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div class="space-y-1.5">
+								<Label for="firstName" class={labelClass}>
+									{$t('auth.register.firstName')}
+								</Label>
+								<Input
+									id="firstName"
+									type="text"
+									placeholder={$t('auth.register.firstNamePlaceholder')}
+									bind:value={$form.firstName}
+									class={inputClass}
+								/>
+								{#if $errors.firstName}
+									<p class="text-xs font-medium text-danger">{$errors.firstName}</p>
+								{/if}
+							</div>
+
+							<div class="space-y-1.5">
+								<Label for="lastName" class={labelClass}>
+									{$t('auth.register.lastName')}
+								</Label>
+								<Input
+									id="lastName"
+									type="text"
+									placeholder={$t('auth.register.lastNamePlaceholder')}
+									bind:value={$form.lastName}
+									class={inputClass}
+								/>
+								{#if $errors.lastName}
+									<p class="text-xs font-medium text-danger">{$errors.lastName}</p>
+								{/if}
+							</div>
+						</div>
+
+						<div class="space-y-1.5">
+							<Label for="email" class={labelClass}>
+								{$t('auth.register.email')}
+							</Label>
+							<Input
+								id="email"
+								type="email"
+								placeholder={$t('auth.register.emailPlaceholder')}
+								bind:value={$form.email}
+								class={inputClass}
+							/>
+							{#if $errors.email}
+								<p class="text-xs font-medium text-danger">{$errors.email}</p>
+							{/if}
+						</div>
+
+						<div class="space-y-1.5">
+							<Label for="phoneNumber" class={labelClass}>
+								{$t('auth.register.phone')}
+							</Label>
+							<Input
+								id="phoneNumber"
+								type="tel"
+								placeholder={$t('auth.register.phonePlaceholder')}
+								bind:value={$form.phoneNumber}
+								class={inputClass}
+							/>
+							{#if $errors.phoneNumber}
+								<p class="text-xs font-medium text-danger">{$errors.phoneNumber}</p>
+							{/if}
+						</div>
+
+						<div class="space-y-1.5">
+							<Label for="address" class={labelClass}>
+								{$t('auth.register.address')}
+							</Label>
+							<Input
+								id="address"
+								type="text"
+								placeholder={$t('auth.register.addressPlaceholder')}
+								bind:value={$form.address}
+								class={inputClass}
+							/>
+						</div>
+
+						<div class="flex gap-3 pt-2">
+							<Button
+								type="button"
+								variant="outline"
+								onclick={prevStep}
+								class="h-10 w-1/3 rounded-md border-border bg-card bg-none text-sm font-medium text-foreground shadow-none backdrop-blur-none hover:bg-muted"
+							>
+								<ArrowLeft class="h-4 w-4" />
+								{$t('auth.register.back')}
+							</Button>
+							<Button
+								type="submit"
+								class="{primaryBtnClass} flex-1"
+								disabled={$submitting}
+							>
+								{#if $submitting}
+									<Loader2 class="h-4 w-4 animate-spin" />
+									{$t('auth.register.creating')}
+								{:else}
+									{$t('auth.register.complete')}
+								{/if}
+							</Button>
+						</div>
+					</div>
+				{/if}
+			</form>
+
+			<p class="mt-6 text-center text-sm text-muted-foreground">
+				{$t('auth.register.haveAccount')}{' '}
+				<a
+					href="/login"
+					class="font-medium text-primary underline-offset-4 transition-colors hover:underline"
+				>
+					{$t('auth.register.signIn')}
+				</a>
+			</p>
 		</div>
 	</div>
 </div>
-
-<style>
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.35;
-			filter: blur(70px);
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.55;
-			filter: blur(90px);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 12s ease-in-out infinite;
-	}
-</style>
