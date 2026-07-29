@@ -1,10 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import GlassCard from '$lib/components/ui/GlassCard.svelte';
 	import { formatCurrency, formatDate, orderNumber } from '$lib/utils';
 	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
-	import { adaptiveText, liquidGlass, glassCard } from '$lib/styles/liquid-glass';
 	import { fade, fly } from 'svelte/transition';
 	import api from '$lib/api';
 	import { auth } from '$lib/stores/auth';
@@ -128,25 +126,8 @@
 </script>
 
 <div
-	class="relative min-h-screen overflow-hidden bg-slate-50/50 p-8 font-sans text-slate-800 lg:p-12"
+	class="relative min-h-screen overflow-hidden p-8 lg:p-12"
 >
-	<!-- Background -->
-	<div
-		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/20 via-slate-50/20 to-white/20"
-	></div>
-	<!-- Organic Mesh Gradient Background (Apple-style) -->
-	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
-		<div
-			class="absolute top-[5%] left-[10%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
-		></div>
-		<div
-			class="absolute top-[30%] right-[5%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
-		></div>
-		<div
-			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
-		></div>
-	</div>
-
 	<div class="relative mx-auto max-w-5xl">
 		{#if order}
 			<div class="mb-4">
@@ -157,10 +138,10 @@
 		{/if}
 		<button
 			onclick={() => goto('/orders')}
-			class="group mb-8 flex items-center gap-2 text-sm font-medium text-slate-400 transition-colors hover:text-blue-500"
+			class="text-muted-foreground hover:text-primary group mb-8 flex items-center gap-2 text-sm font-medium transition-colors"
 		>
 			<div
-				class="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-100 transition-all group-hover:bg-blue-50 group-hover:text-blue-500 group-hover:ring-blue-100"
+				class="border-border bg-card flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition-all group-hover:bg-accent"
 			>
 				←
 			</div>
@@ -170,63 +151,61 @@
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
 				<div
-					class="h-10 w-10 animate-spin rounded-full border-4 border-slate-100 border-t-blue-400"
+					class="border-border border-t-primary h-10 w-10 animate-spin rounded-full border-4"
 				></div>
 			</div>
 		{:else if error}
-			<GlassCard class="border-red-100 bg-red-50/40 p-12 text-center backdrop-blur-xl">
+			<div class="liquid-panel border-danger/25 bg-danger/10 rounded-lg p-12 text-center">
 				<div
-					class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-400"
+					class="text-danger bg-danger/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg text-2xl font-bold"
 				>
 					!
 				</div>
-				<h3 class="text-lg font-semibold text-red-800">Unable to load order</h3>
-				<p class="mt-2 text-red-600/70">{error}</p>
-			</GlassCard>
+				<h3 class="text-foreground text-lg font-semibold">Unable to load order</h3>
+				<p class="text-danger mt-2">{error}</p>
+			</div>
 		{:else if order}
 			<div in:fade={{ duration: 300 }}>
 				<!-- Header Section -->
 				<div class="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-center">
 					<div>
 						<div class="flex items-center gap-4">
-							<h1 class="font-mono text-4xl font-bold tracking-tight text-slate-900">
+							<h1 class="num-mono font-display text-foreground text-4xl font-bold tracking-tight">
 								{orderNumber(order)}
 							</h1>
 							<span
-								class={`rounded-full px-3 py-1 text-xs font-bold tracking-wide uppercase shadow-sm ring-1 backdrop-blur-md ${
-									order.Status === 'COMPLETED'
-										? 'bg-emerald-50/50 text-emerald-600 ring-emerald-100'
-										: order.Status === 'PENDING'
-											? 'bg-amber-50/50 text-amber-600 ring-amber-100'
-											: 'bg-slate-50 text-slate-500 ring-slate-100'
-								}`}
+								class={order.Status === 'COMPLETED'
+									? 'badge-success'
+									: order.Status === 'PENDING'
+										? 'badge-warning'
+										: 'badge-neutral'}
 							>
 								{order.Status}
 							</span>
 						</div>
-						<div class="mt-2 flex items-center gap-4 text-sm text-slate-400">
+						<div class="text-muted-foreground mt-2 flex items-center gap-4 text-sm">
 							<span class="flex items-center gap-1.5">
-								📅 {formatDate(order.OrderDate)}
+								📅 <span class="num">{formatDate(order.OrderDate)}</span>
 							</span>
-							<span class="h-1 w-1 rounded-full bg-slate-200"></span>
+							<span class="bg-border h-1 w-1 rounded-full"></span>
 							<span class="flex items-center gap-1.5">
-								📦 {order.OrderItems?.length || 0} Items
+								📦 <span class="num">{order.OrderItems?.length || 0}</span> Items
 							</span>
 						</div>
 					</div>
 
 					<div class="flex flex-col items-end">
-						<span class="text-sm font-medium text-slate-500">Total Amount</span>
+						<span class="overline">Total Amount</span>
 						<div class="flex flex-col items-end">
 							{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
-								<span class="text-3xl font-bold tracking-tight text-slate-900">
+								<span class="kpi-num text-foreground text-3xl">
 									{formatCurrency(order.AdjustedTotal)}
 								</span>
-								<span class="text-sm font-medium text-slate-400 line-through decoration-slate-400">
+								<span class="text-muted-foreground num-mono text-sm font-medium line-through">
 									{formatCurrency(order.TotalAmount)}
 								</span>
 							{:else}
-								<span class="text-3xl font-bold tracking-tight text-slate-900">
+								<span class="kpi-num text-foreground text-3xl">
 									{formatCurrency(order.TotalAmount)}
 								</span>
 							{/if}
@@ -237,58 +216,45 @@
 				<div class="grid gap-8 lg:grid-cols-3">
 					<!-- Order Items -->
 					<div class="space-y-6 lg:col-span-2">
-						<GlassCard
-							class="liquid-panel overflow-hidden rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-0 shadow-[0_35px_90px_-60px_rgba(59,130,246,0.55)] transition-all hover:scale-[1.005]"
-						>
-							<div class="border-b border-white/20 bg-white/5 px-6 py-4 backdrop-blur-md">
-								<h3 class="font-semibold text-slate-800 drop-shadow-sm">Order Items</h3>
+						<div class="liquid-panel overflow-hidden rounded-lg p-0">
+							<div class="border-border bg-muted/50 border-b px-6 py-4">
+								<h3 class="font-display text-foreground font-semibold">Order Items</h3>
 							</div>
 							<div class="space-y-3 px-6 py-4">
 								{#each order.OrderItems as item}
 									<div
-										class="liquid-hoverable group relative flex items-center justify-between rounded-xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all duration-200 hover:bg-white/60"
+										class="liquid-hoverable group relative flex items-center justify-between rounded-md p-4"
 									>
-										<!-- Glass Highlight Top -->
-										<div
-											class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent opacity-50"
-										></div>
-										<!-- Glass Sheen -->
-										<div
-											class="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100"
-										></div>
-
 										<div class="relative z-10 flex items-center gap-4">
 											<div
-												class="flex h-12 min-w-[3rem] items-center justify-center rounded-2xl bg-white px-3 font-medium text-slate-500 shadow-sm ring-1 ring-slate-100"
+												class="bg-muted text-muted-foreground flex h-12 min-w-[3rem] items-center justify-center rounded-md px-3 font-medium"
 											>
-												{item.Quantity}x
+												<span class="num-mono">{item.Quantity}x</span>
 												{#if item.ReturnedQty > 0}
-													<span class="ml-1 text-xs text-amber-500">(-{item.ReturnedQty})</span>
+													<span class="text-warning ml-1 text-xs">(-{item.ReturnedQty})</span>
 												{/if}
 											</div>
 											<div>
-												<p class="font-semibold text-slate-900">
+												<p class="text-foreground font-semibold">
 													{item.Product?.Name || `Product #${item.ProductID}`}
 												</p>
-												<p class="text-sm text-slate-400">
+												<p class="text-muted-foreground text-sm">
 													{#if item.ReturnedQty > 0}
-														<span class="font-medium text-amber-600"
-															>Net Qty: {item.Quantity - item.ReturnedQty}</span
+														<span class="text-warning font-medium"
+															>Net Qty: <span class="num-mono">{item.Quantity - item.ReturnedQty}</span></span
 														> •
 													{/if}
-													{formatCurrency(item.UnitPrice)} / unit
+													<span class="num-mono">{formatCurrency(item.UnitPrice)}</span> / unit
 												</p>
 											</div>
 										</div>
 										<div class="relative z-10 text-right">
-											<div class="font-bold text-slate-900 drop-shadow-sm">
+											<div class="num-mono text-foreground font-bold">
 												{formatCurrency(item.TotalPrice)}
 											</div>
 											{#if item.ReturnedQty > 0}
 												<div class="mt-1 flex justify-end">
-													<span
-														class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-amber-500 uppercase ring-1 ring-amber-100"
-													>
+													<span class="badge-warning px-1.5 py-0 text-[10px] uppercase">
 														{item.ReturnedQty} Returned
 													</span>
 												</div>
@@ -297,89 +263,83 @@
 									</div>
 								{/each}
 							</div>
-						</GlassCard>
+						</div>
 					</div>
 
 					<!-- Sidebar -->
 					<div class="space-y-6">
 						<!-- Actions Card -->
-						<GlassCard
-							class="liquid-panel space-y-6 rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(59,130,246,0.55)] hover:scale-[1.01]"
-						>
-							<h3 class="border-b border-white/20 pb-2 font-semibold text-slate-800">Actions</h3>
+						<div class="liquid-panel space-y-6 rounded-lg p-6">
+							<h3 class="border-border font-display text-foreground border-b pb-2 font-semibold">Actions</h3>
 
 							{#if order.Status === 'COMPLETED'}
 								{#if order.HasPendingReturn}
-									<div class="rounded-xl bg-amber-50/30 p-4 ring-1 ring-amber-100/50">
-										<p class="mb-1 text-xs font-semibold tracking-wide text-amber-500 uppercase">
+									<div class="rounded-md border border-warning/25 bg-warning/10 p-4">
+										<p class="text-warning mb-1 text-xs font-semibold tracking-wide uppercase">
 											Return Pending
 										</p>
-										<p class="text-sm text-amber-700/80">A request is currently being processed.</p>
+										<p class="text-warning/80 text-sm">A request is currently being processed.</p>
 									</div>
 									<button
 										disabled
-										class="w-full cursor-not-allowed rounded-xl bg-slate-100 py-3.5 font-medium text-slate-400"
+										class="bg-muted text-muted-foreground w-full cursor-not-allowed rounded-md py-3.5 font-medium"
 									>
 										Return Requested
 									</button>
 								{:else if isReturnEligible}
-									<div class="rounded-xl bg-blue-50/30 p-4 ring-1 ring-blue-100/50">
-										<p class="mb-1 text-xs font-semibold tracking-wide text-blue-500 uppercase">
+									<div class="rounded-md border border-info/25 bg-info/10 p-4">
+										<p class="text-info mb-1 text-xs font-semibold tracking-wide uppercase">
 											Return Window Open
 										</p>
-										<p class="text-sm text-blue-700/80">
-											Until {returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}
+										<p class="text-info/80 text-sm">
+											Until <span class="num">{returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}</span>
 										</p>
 									</div>
 									<button
 										onclick={() => (showReturnModal = true)}
-										class="w-full transform rounded-xl bg-blue-500 py-3.5 font-medium text-white shadow-lg shadow-blue-200 transition-all hover:scale-[1.01] hover:bg-blue-600 active:scale-[0.99]"
+										class="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md py-3.5 font-medium shadow-sm transition-all active:scale-[0.99]"
 									>
 										Request Return
 									</button>
 								{:else}
-									<div class="rounded-xl bg-slate-50 p-4 text-center ring-1 ring-slate-100">
-										<p class="text-sm font-semibold text-slate-500">Return Window Closed</p>
-										<p class="mt-1 text-xs text-slate-400">
-											Deadline was {returnDeadline
+									<div class="border-border bg-muted rounded-md border p-4 text-center">
+										<p class="text-muted-foreground text-sm font-semibold">Return Window Closed</p>
+										<p class="text-muted-foreground mt-1 text-xs">
+											Deadline was <span class="num">{returnDeadline
 												? formatDate(returnDeadline.toISOString())
-												: 'N/A'}
+												: 'N/A'}</span>
 										</p>
 									</div>
 								{/if}
 							{:else}
-								<div class="rounded-xl bg-white/40 p-4 text-center ring-1 ring-white/60">
-									<p class="text-sm text-slate-500">Actions available when order is completed.</p>
+								<div class="border-border bg-muted/60 rounded-md border p-4 text-center">
+									<p class="text-muted-foreground text-sm">Actions available when order is completed.</p>
 								</div>
 							{/if}
-						</GlassCard>
+						</div>
 
 						<!-- Order Info -->
-						<GlassCard
-							class="liquid-panel space-y-4 rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(148,163,184,0.5)] hover:scale-[1.01]"
-						>
-							<h3 class="border-b border-white/20 pb-2 font-semibold text-slate-800">
+						<div class="liquid-panel space-y-4 rounded-lg p-6">
+							<h3 class="border-border font-display text-foreground border-b pb-2 font-semibold">
 								Payment Info
 							</h3>
 							<div class="flex justify-between text-sm">
-								<span class="text-slate-500">Method</span>
+								<span class="text-muted-foreground">Method</span>
 								<span
-									class="rounded-md bg-white/40 px-2 py-0.5 font-medium text-slate-800 shadow-sm ring-1 ring-black/5"
+									class="border-border bg-muted text-foreground num-mono rounded-md border px-2 py-0.5 font-medium"
 									>{order.PaymentMethod || 'N/A'}</span
 								>
 							</div>
 						<div class="flex justify-between text-sm">
-							<span class="text-slate-500">Status</span>
-							<span class="font-medium text-slate-800">{order.Status}</span>
+							<span class="text-muted-foreground">Status</span>
+							<span class="text-foreground font-medium">{order.Status}</span>
 						</div>
-					</GlassCard>
+					</div>
 
 					<!-- Activity History -->
-					<GlassCard
-						class="liquid-panel rounded-[28px] bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-6 shadow-[0_35px_90px_-60px_rgba(148,163,184,0.5)] transition-all hover:scale-[1.01]"
-					>
+					<div class="liquid-panel rounded-lg p-6">
 						<ActivityHistory entity="Order" entityId={order.ID ?? orderId} />
-					</GlassCard>
+					</div>
 				</div>
 				</div>
 			</div>
@@ -389,24 +349,24 @@
 	<!-- Return Modal -->
 	{#if showReturnModal && order}
 		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+			class="bg-foreground/50 fixed inset-0 z-50 flex items-center justify-center p-4"
 			transition:fade={{ duration: 200 }}
 		>
 			<div class="w-full max-w-lg" transition:fly={{ y: 20, duration: 300 }}>
-				<!-- Liquid Glass Modal -->
+				<!-- Ledger Modal -->
 				<div
-					class="liquid-panel relative rounded-[32px] bg-gradient-to-br from-white/95 via-blue-50/90 to-indigo-50/80 p-8 shadow-[0_45px_120px_-60px_rgba(0,0,0,0.3)] backdrop-blur-3xl"
+					class="liquid-panel relative rounded-lg p-8 shadow-lg"
 				>
 					<button
 						onclick={() => (showReturnModal = false)}
-						class="absolute top-4 right-4 rounded-full bg-slate-50 p-1.5 text-slate-300 transition-colors hover:bg-slate-100 hover:text-slate-500"
+						class="text-muted-foreground hover:text-foreground hover:bg-muted absolute top-4 right-4 rounded-md p-1.5 transition-colors"
 					>
 						✕
 					</button>
 
 					<div class="mb-6">
-						<h2 class="text-2xl font-bold tracking-tight text-slate-900">Request Return</h2>
-						<p class="text-sm text-slate-500">Select items and quantities to return</p>
+						<h2 class="font-display text-foreground text-2xl font-bold tracking-tight">Request Return</h2>
+						<p class="text-muted-foreground text-sm">Select items and quantities to return</p>
 					</div>
 
 					<div class="custom-scrollbar max-h-[60vh] space-y-3 overflow-y-auto pr-2">
@@ -414,10 +374,10 @@
 							{@const remainingQty = item.Quantity - item.ReturnedQty}
 							{#if remainingQty > 0}
 								<div
-									class={`liquid-hoverable rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 p-4 transition-all ${
+									class={`rounded-md border p-4 transition-all ${
 										selectedItems[item.ID]
-											? 'border-l-4 border-blue-400 bg-white/60'
-											: 'hover:bg-white/60'
+											? 'border-primary bg-accent/60 border-l-4'
+											: 'border-border hover:bg-muted/60'
 									}`}
 								>
 									<div class="flex items-center justify-between">
@@ -427,38 +387,38 @@
 													type="checkbox"
 													checked={!!selectedItems[item.ID]}
 													onchange={() => toggleItemSelection(item.ID, remainingQty)}
-													class="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-200 transition-all checked:border-blue-500 checked:bg-blue-500 hover:border-blue-400"
+													class="border-border peer h-5 w-5 cursor-pointer appearance-none rounded-md border transition-all checked:border-primary checked:bg-primary hover:border-primary/60"
 												/>
 												<div
-													class="pointer-events-none absolute text-xs text-white opacity-0 peer-checked:opacity-100"
+													class="text-primary-foreground pointer-events-none absolute text-xs opacity-0 peer-checked:opacity-100"
 												>
 													✓
 												</div>
 											</div>
 											<div>
-												<p class="font-medium text-slate-900">{item.Product?.Name}</p>
-												<p class="text-xs text-slate-500">
-													Max Return: {remainingQty}
+												<p class="text-foreground font-medium">{item.Product?.Name}</p>
+												<p class="text-muted-foreground text-xs">
+													Max Return: <span class="num-mono">{remainingQty}</span>
 												</p>
 											</div>
 										</div>
 
 										{#if selectedItems[item.ID]}
 											<div
-												class="flex items-center rounded-lg bg-white shadow-sm ring-1 ring-slate-100"
+												class="border-border bg-card flex items-center rounded-md border shadow-sm"
 											>
 												<button
-													class="h-7 w-7 rounded-l-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-blue-500"
+													class="text-muted-foreground hover:text-primary hover:bg-muted h-7 w-7 rounded-l-md transition-colors"
 													onclick={() =>
 														updateQuantity(item.ID, selectedItems[item.ID] - 1, remainingQty)}
 												>
 													-
 												</button>
-												<span class="w-8 text-center text-sm font-semibold text-slate-800">
+												<span class="num-mono text-foreground w-8 text-center text-sm font-semibold">
 													{selectedItems[item.ID]}
 												</span>
 												<button
-													class="h-7 w-7 rounded-r-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-blue-500"
+													class="text-muted-foreground hover:text-primary hover:bg-muted h-7 w-7 rounded-r-md transition-colors"
 													onclick={() =>
 														updateQuantity(item.ID, selectedItems[item.ID] + 1, remainingQty)}
 												>
@@ -472,10 +432,10 @@
 						{/each}
 
 						<div class="pt-4">
-							<label class="mb-2 block text-sm font-medium text-slate-700">Reason for Return</label>
+							<label class="text-foreground mb-2 block text-sm font-medium">Reason for Return</label>
 							<textarea
 								bind:value={returnReason}
-								class="liquid-textarea w-full px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400"
+								class="liquid-textarea text-foreground placeholder:text-muted-foreground w-full px-4 py-3 text-sm"
 								rows="3"
 								placeholder="Please tell us why you are returning these items..."
 							></textarea>
@@ -483,26 +443,26 @@
 					</div>
 
 					{#if Object.keys(selectedItems).length > 0}
-						<div class="mt-4 flex items-center justify-between rounded-xl bg-blue-50 p-4">
-							<span class="text-sm font-medium text-blue-700">Estimated Refund</span>
-							<span class="text-lg font-bold text-blue-800">{formatCurrency(estimatedRefund)}</span>
+						<div class="bg-accent text-accent-foreground mt-4 flex items-center justify-between rounded-md p-4">
+							<span class="text-sm font-medium">Estimated Refund</span>
+							<span class="num-mono text-lg font-bold">{formatCurrency(estimatedRefund)}</span>
 						</div>
-						<p class="mt-2 text-right text-xs text-slate-400">
+						<p class="text-muted-foreground mt-2 text-right text-xs">
 							Includes {$settings.tax_rate_percentage || 0}% tax adjustment
 						</p>
 					{/if}
 
-					<div class="mt-8 flex gap-3 border-t border-slate-50 pt-6">
+					<div class="border-border mt-8 flex gap-3 border-t pt-6">
 						<button
 							onclick={() => (showReturnModal = false)}
-							class="flex-1 rounded-xl border border-slate-100 bg-white py-3 font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+							class="border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted flex-1 rounded-md border py-3 font-medium transition-colors"
 						>
 							Cancel
 						</button>
 						<button
 							onclick={submitReturn}
 							disabled={Object.keys(selectedItems).length === 0 || !returnReason}
-							class="flex-1 rounded-xl bg-blue-500 py-3 font-medium text-white shadow-lg shadow-blue-200 transition-all hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+							class="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 rounded-md py-3 font-medium shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
 						>
 							Submit Request
 						</button>

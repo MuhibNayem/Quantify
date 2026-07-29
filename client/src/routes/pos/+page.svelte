@@ -4,13 +4,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import Kbd from '$lib/components/ui/kbd.svelte';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Search, Zap, CreditCard, ScanBarcode } from 'lucide-svelte';
 	import api from '$lib/api';
 	import { crmApi, promotionsApi, paymentApi, productsApi } from '$lib/api/resources';
@@ -46,6 +39,11 @@
 	let pointsToRedeem = $state(0);
 	let barcodeInput = $state('');
 	let barcodeRef = $state<HTMLInputElement | null>(null);
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'h-10 rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 
 	async function findProductByCode(code: string) {
 		const product = products.find((p) => p.BarcodeUPC === code || p.SKU === code);
@@ -110,30 +108,6 @@
 	onMount(() => {
 		Promise.all([fetchProducts(), fetchPromotions()]);
 		barcodeRef?.focus();
-
-		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
-		let ticking = false;
-
-		const handleScroll = () => {
-			if (!hero) return;
-			if (!ticking) {
-				window.requestAnimationFrame(() => {
-					const scrollY = window.scrollY || 0;
-					const translate = Math.min(scrollY * 0.25, 60);
-					const blur = Math.min(scrollY * 0.02, 6);
-					hero.style.transform = `translateY(${translate}px)`;
-					hero.style.filter = `blur(${blur}px)`;
-					ticking = false;
-				});
-				ticking = true;
-			}
-		};
-
-		window.addEventListener('scroll', handleScroll, { passive: true });
-
-		return () => {
-			window.removeEventListener('scroll', handleScroll);
-		};
 	});
 
 	const handleSearch = async () => {
@@ -439,280 +413,154 @@
 
 <svelte:window onkeydown={handlePosKeydown} />
 
-<!-- Page background gradient + hero -->
-<section
-	class="relative isolate min-h-screen w-full overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-slate-50"
->
-	<div
-		class="animate-gradientShift absolute inset-0 -z-20 bg-gradient-to-r from-indigo-100 via-sky-100 to-blue-100 bg-[length:220%_220%] opacity-70"
-	/>
-
-	<div
-		class="animate-pulseGlow pointer-events-none absolute -top-32 -left-24 h-80 w-80 rounded-full bg-indigo-200/40 blur-3xl"
-	/>
-	<div
-		class="animate-pulseGlow pointer-events-none absolute -right-24 -bottom-36 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl delay-700"
-	/>
-
-	<div
-		class="parallax-hero relative mx-auto max-w-7xl px-4 pt-14 pb-6 text-center sm:px-6 sm:pt-20 sm:pb-10 sm:text-left lg:px-8"
+<div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+	<!-- ── Terminal header ── -->
+	<header
+		class="flex flex-wrap items-center justify-between gap-4"
+		data-animate="fade-up"
 	>
-		<div
-			class="animate-cardFloat mb-3 inline-flex items-center justify-center gap-3 sm:justify-start"
-		>
+		<div class="flex items-center gap-3">
 			<span
-				class="inline-flex rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 p-2.5 shadow-md"
+				class="bg-primary text-primary-foreground inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg shadow-sm"
 			>
-				<CreditCard class="h-5 w-5 text-white" />
+				<CreditCard class="h-5 w-5" />
 			</span>
-			<div class="flex flex-col items-start">
-				<p
-					class="text-[0.65rem] font-semibold tracking-[0.22em] text-indigo-700 uppercase sm:text-xs"
-				>
-					{$t('pos.hero.label')}
-				</p>
-				<p class="text-[0.65rem] text-slate-500 sm:text-[0.7rem]">
-					{$t('pos.hero.sub_label')}
-				</p>
+			<div>
+				<p class="overline">{$t('pos.hero.label')} · {$t('pos.hero.sub_label')}</p>
+				<h1 class="font-display text-foreground text-2xl font-bold tracking-tight">
+					{$t('pos.hero.title')}
+				</h1>
+				<p class="text-muted-foreground mt-0.5 text-xs">{$t('pos.hero.subtitle')}</p>
 			</div>
 		</div>
 
-		<h1
-			class="mb-3 bg-gradient-to-r from-slate-900 via-indigo-700 to-sky-700 bg-clip-text text-3xl font-bold text-transparent sm:text-4xl lg:text-5xl"
-		>
-			{$t('pos.hero.title')}
-		</h1>
-		<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
-			{$t('pos.hero.subtitle')}
-		</p>
-
-		<div class="mt-6 flex flex-col justify-center gap-3 sm:flex-row sm:justify-start">
-			<Button
-				variant="secondary"
-				onclick={clearCart}
-				class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-5 py-2.5 font-medium text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-indigo-600 hover:to-sky-600 hover:shadow-xl focus:ring-2 focus:ring-indigo-300 sm:w-auto"
-			>
-				<Zap class="mr-2 h-4 w-4" />
-				{$t('pos.hero.new_sale_btn')}
-				<Kbd class="ml-2 border-white/25 bg-white/15 text-white">F9</Kbd>
-			</Button>
+		<div class="flex flex-wrap items-center gap-2">
 			<Button
 				variant="outline"
 				onclick={() => fetchProducts(searchTerm.trim())}
-				class="w-full rounded-xl border border-indigo-100 bg-white/80 px-5 py-2.5 font-medium text-indigo-700 shadow-md transition-all duration-300 hover:scale-105 hover:bg-indigo-50 hover:shadow-lg focus:ring-2 focus:ring-indigo-200 sm:w-auto"
+				class="glass-button h-10 rounded-md border-border bg-card px-4 text-sm font-medium text-foreground shadow-none backdrop-blur-none"
 			>
 				<Search class="mr-2 h-4 w-4" />
 				{$t('pos.hero.refresh_catalog_btn')}
 			</Button>
-		</div>
-	</div>
-
-	<!-- Main content -->
-	<div class="flex h-full min-h-0 flex-col px-4 py-4">
-		<div
-			class="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-200/60 bg-white/80 px-4 py-3 shadow-md backdrop-blur transition-all duration-300 focus-within:border-indigo-400 focus-within:shadow-lg focus-within:ring-2 focus-within:ring-indigo-200"
-		>
-			<ScanBarcode class="h-5 w-5 shrink-0 text-indigo-500" />
-			<input
-				bind:this={barcodeRef}
-				bind:value={barcodeInput}
-				onkeydown={handleBarcodeKeydown}
-				placeholder={$t('pos.barcode.placeholder')}
-				aria-label={$t('pos.barcode.aria_label')}
-				class="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
-			/>
-			<Kbd class="hidden border-slate-200 bg-slate-100/80 text-slate-400 sm:inline-block">F2</Kbd>
-			<span
-				class="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-medium text-emerald-600 sm:inline-flex"
+			<Button
+				variant="secondary"
+				onclick={clearCart}
+				class="bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-md bg-none px-4 text-sm font-medium shadow-none hover:bg-none"
 			>
-				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>
-				{$t('pos.barcode.scanner_ready')}
-			</span>
+				<Zap class="mr-2 h-4 w-4" />
+				{$t('pos.hero.new_sale_btn')}
+				<Kbd class="border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground ml-2">F9</Kbd>
+			</Button>
+		</div>
+	</header>
+
+	<!-- ── Barcode capture bar ── -->
+	<div
+		class="liquid-panel border-primary/40 mt-5 flex items-center gap-3 px-4 py-3 shadow-md"
+		data-animate="fade-up"
+		style="animation-delay:60ms"
+	>
+		<ScanBarcode class="text-primary h-5 w-5 shrink-0" />
+		<input
+			bind:this={barcodeRef}
+			bind:value={barcodeInput}
+			onkeydown={handleBarcodeKeydown}
+			placeholder={$t('pos.barcode.placeholder')}
+			aria-label={$t('pos.barcode.aria_label')}
+			class="text-foreground placeholder:text-muted-foreground flex-1 bg-transparent text-sm outline-none"
+		/>
+		<Kbd class="text-muted-foreground border-border bg-muted hidden sm:inline-block">F2</Kbd>
+		<span class="badge-success hidden sm:inline-flex">
+			<span class="live-dot" aria-hidden="true"></span>
+			{$t('pos.barcode.scanner_ready')}
+		</span>
+	</div>
+
+	<!-- ── Catalog search ── -->
+	<div class="liquid-panel mt-4 p-4" data-animate="fade-up" style="animation-delay:100ms">
+		<div class="flex flex-row items-center justify-between gap-3">
+			<div>
+				<h2 class="font-display text-foreground text-base font-semibold tracking-tight">
+					{$t('pos.header.title')}
+				</h2>
+				<p class="text-muted-foreground text-[0.75rem]">{$t('pos.header.description')}</p>
+			</div>
+			<div class="text-muted-foreground hidden items-center gap-2 text-[0.7rem] sm:flex">
+				<span class="badge-neutral">{$t('pos.header.super_shop_mode')}</span>
+			</div>
 		</div>
 
-		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-		>
-			<CardHeader class="flex flex-row items-center justify-between gap-3 pb-3">
-				<div>
-					<CardTitle
-						class="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900"
-					>
-						<span
-							class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600"
-						>
-							<CreditCard class="h-4 w-4" />
-						</span>
-						{$t('pos.header.title')}
-					</CardTitle>
-					<CardDescription class="text-[0.75rem] text-slate-500">
-						{$t('pos.header.description')}
-					</CardDescription>
-				</div>
-				<div class="hidden items-center gap-2 text-[0.7rem] text-slate-500 sm:flex">
-					<span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5"
-						>{$t('pos.header.super_shop_mode')}</span
-					>
-				</div>
-			</CardHeader>
-			<CardContent class="pt-0 pb-3">
-				<div class="flex flex-col items-stretch gap-3 sm:flex-row">
-					<div class="relative flex-1">
-						<Search class="absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-slate-400" />
-						<Input
-							bind:value={searchTerm}
-							placeholder={$t('pos.header.search_placeholder')}
-							class="rounded-xl border-slate-200 bg-slate-50/80 pl-8 text-sm focus-visible:ring-indigo-300"
-							onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-						/>
-					</div>
-
-					<Button
-						class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 text-white shadow-md hover:from-indigo-600 hover:to-sky-600"
-						onclick={handleSearch}
-					>
-						<Search class="mr-2 h-4 w-4" />
-						{$t('pos.header.search_btn')}
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
-		<div class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-4 px-4 py-4 lg:grid-cols-2">
-			<!-- LEFT STACK: Products + Cart -->
-			<div class="space-y-5" data-animate="fade-up" style="animation-delay:120ms">
-				<ProductGrid
-					{products}
-					bind:fetchStatus
-					bind:fetchLimit
-					{getProductPrice}
-					{getAvailableStock}
-					onAddToCart={addToCart}
-					onFilterChange={() => fetchProducts(searchTerm.trim())}
-				/>
-
-				<Cart
-					{cart}
-					{getProductPrice}
-					onRemove={removeFromCart}
-					onUpdateQuantity={updateQuantity}
-					onClear={clearCart}
+		<div class="mt-3 flex flex-col items-stretch gap-3 sm:flex-row">
+			<div class="relative flex-1">
+				<Search class="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+				<Input
+					bind:value={searchTerm}
+					placeholder={$t('pos.header.search_placeholder')}
+					class="{inputClass} pl-8"
+					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 				/>
 			</div>
 
-			<!-- RIGHT STACK: Customer + Payment + Summary -->
-			<div class="space-y-5">
-				<CustomerCard
-					{selectedCustomer}
-					bind:customerSearchTerm
-					onSearchCustomer={handleCustomerSearch}
-					onCreateCustomer={saveNewCustomer}
-				/>
-
-				<PaymentMethods
-					{paymentMethod}
-					{selectedCustomer}
-					bind:pointsToRedeem
-					onSelectPayment={setPayment}
-				/>
-
-				<CheckoutSummary
-					{subtotal}
-					{tax}
-					{total}
-					{taxRate}
-					cartLength={cart.length}
-					{paymentMethod}
-					{selectedCustomer}
-					{potentialPoints}
-					{canCompleteOrder}
-					{isProcessing}
-					onCompleteOrder={completeOrder}
-				/>
-			</div>
+			<Button class={btnPrimary} onclick={handleSearch}>
+				<Search class="mr-2 h-4 w-4" />
+				{$t('pos.header.search_btn')}
+			</Button>
 		</div>
 	</div>
-</section>
 
-<style lang="postcss">
-	* {
-		transition-property:
-			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
-			box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
+	<!-- ── Register grid ── -->
+	<div class="mt-5 grid w-full grid-cols-1 gap-4 lg:grid-cols-2">
+		<!-- LEFT STACK: Products + Cart -->
+		<div class="space-y-5" data-animate="fade-up" style="animation-delay:120ms">
+			<ProductGrid
+				{products}
+				bind:fetchStatus
+				bind:fetchLimit
+				{getProductPrice}
+				{getAvailableStock}
+				onAddToCart={addToCart}
+				onFilterChange={() => fetchProducts(searchTerm.trim())}
+			/>
 
-	.parallax-hero {
-		transform: translateY(0);
-		will-change: transform, filter;
-		transition:
-			transform 0.1s ease-out,
-			filter 0.2s ease-out;
-	}
+			<Cart
+				{cart}
+				{getProductPrice}
+				onRemove={removeFromCart}
+				onUpdateQuantity={updateQuantity}
+				onClear={clearCart}
+			/>
+		</div>
 
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 18s ease-in-out infinite;
-	}
+		<!-- RIGHT STACK: Customer + Payment + Summary -->
+		<div class="space-y-5">
+			<CustomerCard
+				{selectedCustomer}
+				bind:customerSearchTerm
+				onSearchCustomer={handleCustomerSearch}
+				onCreateCustomer={saveNewCustomer}
+			/>
 
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.45;
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.7;
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 12s ease-in-out infinite;
-	}
+			<PaymentMethods
+				{paymentMethod}
+				{selectedCustomer}
+				bind:pointsToRedeem
+				onSelectPayment={setPayment}
+			/>
 
-	@keyframes cardFloat {
-		0%,
-		100% {
-			transform: translateY(0);
-		}
-		50% {
-			transform: translateY(-4px);
-		}
-	}
-	.animate-cardFloat {
-		animation: cardFloat 4s ease-in-out infinite;
-	}
-
-	::-webkit-scrollbar {
-		width: 8px;
-		height: 8px;
-	}
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	::-webkit-scrollbar-thumb {
-		background: rgba(79, 70, 229, 0.25);
-		border-radius: 9999px;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		background: rgba(79, 70, 229, 0.35);
-	}
-
-	@media (max-width: 640px) {
-		.parallax-hero {
-			padding-top: 4.5rem;
-			padding-bottom: 2.5rem;
-		}
-	}
-</style>
+			<CheckoutSummary
+				{subtotal}
+				{tax}
+				{total}
+				{taxRate}
+				cartLength={cart.length}
+				{paymentMethod}
+				{selectedCustomer}
+				{potentialPoints}
+				{canCompleteOrder}
+				{isProcessing}
+				onCompleteOrder={completeOrder}
+			/>
+		</div>
+	</div>
+</div>

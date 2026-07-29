@@ -2,7 +2,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Textarea } from '$lib/components/ui/textarea';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
@@ -20,6 +19,13 @@
 	let reasons: Record<number, string> = {};
 	let conditions: Record<number, string> = {};
 	let isSubmitting = false;
+
+	const dialogClass =
+		'rounded-lg border-border bg-card bg-none shadow-lg backdrop-blur-none backdrop-saturate-100 from-card to-card';
+	const inputClass =
+		'liquid-input h-8 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 
 	const reasonOptions = [
 		{ value: 'DAMAGED', label: 'Damaged / Defective' },
@@ -73,18 +79,18 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-[600px]">
+	<Dialog.Content class="{dialogClass} sm:max-w-[600px]">
 		<Dialog.Header>
-			<Dialog.Title>Request Return for Order #{order.OrderNumber}</Dialog.Title>
+			<Dialog.Title>Request Return for Order <span class="num-mono">#{order.OrderNumber}</span></Dialog.Title>
 			<Dialog.Description>
 				Select the items you wish to return and specify the reason.
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
+		<div class="custom-scrollbar grid max-h-[60vh] gap-4 overflow-y-auto py-4 pr-2">
 			{#each order.Items as item}
 				<div
-					class="flex flex-col gap-3 rounded-xl border border-slate-200 p-4 transition-colors hover:bg-slate-50"
+					class="border-border hover:bg-muted/60 flex flex-col gap-3 rounded-md border p-4 transition-colors"
 				>
 					<div class="flex items-start gap-3">
 						<Checkbox
@@ -92,26 +98,26 @@
 							onCheckedChange={() => toggleItem(item.ID)}
 						/>
 						<div class="flex-1">
-							<p class="font-medium text-slate-900">{item.Product?.Name || 'Unknown Product'}</p>
-							<p class="text-sm text-slate-500">Qty: {item.Quantity} • ${item.UnitPrice}</p>
+							<p class="text-foreground font-medium">{item.Product?.Name || 'Unknown Product'}</p>
+							<p class="text-muted-foreground text-sm">Qty: <span class="num-mono">{item.Quantity}</span> • <span class="num-mono">${item.UnitPrice}</span></p>
 						</div>
 					</div>
 
 					{#if selectedItems[item.ID]}
-						<div class="ml-8 grid gap-3 pl-2 border-l-2 border-slate-100">
+						<div class="border-border ml-8 grid gap-3 border-l-2 pl-2">
 							<div class="grid grid-cols-2 gap-3">
 								<div class="space-y-1">
-									<Label class="text-xs">Quantity</Label>
+									<Label class="text-muted-foreground text-xs">Quantity</Label>
 									<Input
 										type="number"
 										min="1"
 										max={item.Quantity}
 										bind:value={quantities[item.ID]}
-										class="h-8"
+										class="{inputClass} num-mono"
 									/>
 								</div>
 								<div class="space-y-1">
-									<Label class="text-xs">Condition</Label>
+									<Label class="text-muted-foreground text-xs">Condition</Label>
 									<Select
 										options={conditionOptions}
 										bind:value={conditions[item.ID]}
@@ -120,7 +126,7 @@
 								</div>
 							</div>
 							<div class="space-y-1">
-								<Label class="text-xs">Reason</Label>
+								<Label class="text-muted-foreground text-xs">Reason</Label>
 								<Select options={reasonOptions} bind:value={reasons[item.ID]} style="h-8 text-sm" />
 							</div>
 						</div>
@@ -131,7 +137,7 @@
 
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
-			<Button onclick={submitReturn} disabled={isSubmitting}>
+			<Button onclick={submitReturn} disabled={isSubmitting} class={btnPrimary}>
 				{isSubmitting ? 'Submitting...' : 'Submit Request'}
 			</Button>
 		</Dialog.Footer>

@@ -21,7 +21,6 @@
 	import { cn, formatDate, formatCurrency, returnNumber } from '$lib/utils';
 	import { returnsApi } from '$lib/api/returns';
 	import { toast } from 'svelte-sonner';
-	import { liquidGlass } from '$lib/styles/liquid-glass';
 	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
 
 	let returnId = $page.params.id;
@@ -59,21 +58,8 @@
 </script>
 
 <div
-	class="relative min-h-screen overflow-hidden bg-[#F9FAFB] font-sans selection:bg-blue-100 selection:text-blue-900"
+	class="relative min-h-screen overflow-hidden"
 >
-	<!-- Organic Mesh Gradient Background -->
-	<div class="pointer-events-none absolute inset-0 overflow-hidden opacity-60">
-		<div
-			class="absolute top-[5%] left-[10%] h-[600px] w-[600px] rounded-full bg-gradient-to-br from-blue-200 via-cyan-100 to-transparent blur-[120px]"
-		></div>
-		<div
-			class="absolute top-[30%] right-[5%] h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-purple-200 via-pink-100 to-transparent blur-[100px]"
-		></div>
-		<div
-			class="absolute bottom-[10%] left-[30%] h-[400px] w-[400px] rounded-full bg-gradient-to-tl from-indigo-200 via-violet-100 to-transparent blur-[90px]"
-		></div>
-	</div>
-
 	<div class="relative mx-auto max-w-7xl px-6 py-10 lg:px-10">
 		{#if returnRequest}
 			<div class="mb-4">
@@ -88,10 +74,10 @@
 		<!-- Back to Orders -->
 		<button
 			onclick={() => goto('/orders')}
-			class="group mb-8 flex items-center gap-2 text-sm font-medium text-slate-500 transition-all hover:text-blue-600"
+			class="group text-muted-foreground hover:text-primary mb-8 flex items-center gap-2 text-sm font-medium transition-all"
 		>
 			<div
-				class="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 shadow-sm ring-1 ring-slate-200/50 transition-all group-hover:bg-blue-50 group-hover:ring-blue-200"
+				class="border-border bg-card flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition-all group-hover:bg-accent"
 			>
 				<ArrowLeft size={16} />
 			</div>
@@ -101,14 +87,14 @@
 		{#if loading}
 			<div class="flex h-[60vh] flex-col items-center justify-center gap-4">
 				<div class="relative h-12 w-12">
-					<div class="absolute inset-0 animate-ping rounded-full bg-blue-100"></div>
+					<div class="bg-primary/20 absolute inset-0 animate-ping rounded-full"></div>
 					<div
-						class="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg"
+						class="bg-primary text-primary-foreground relative flex h-full w-full items-center justify-center rounded-full shadow-md"
 					>
 						<Package size={20} class="animate-pulse" />
 					</div>
 				</div>
-				<p class="animate-pulse text-sm font-medium text-slate-500">Loading return details...</p>
+				<p class="text-muted-foreground animate-pulse text-sm font-medium">Loading return details...</p>
 			</div>
 		{:else if returnRequest}
 			<div in:fade={{ duration: 400, delay: 100 }} class="space-y-8 pb-32">
@@ -117,21 +103,18 @@
 					<div class="space-y-2">
 						<div class="flex items-center gap-4">
 							<h1
-								class="font-mono text-4xl font-extrabold tracking-tight text-slate-900 drop-shadow-sm"
+								class="num-mono font-display text-foreground text-4xl font-extrabold tracking-tight"
 							>
-								<span
-									class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent"
-									>{returnNumber(returnRequest.ID)}</span
-								>
+								{returnNumber(returnRequest.ID)}
 							</h1>
 							<div
 								class={cn(
-									'flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold tracking-wider uppercase shadow-sm ring-1 backdrop-blur-md ring-inset',
+									'uppercase',
 									returnRequest.Status === 'APPROVED'
-										? 'bg-emerald-50/60 text-emerald-600 ring-emerald-200/50'
+										? 'badge-success'
 										: returnRequest.Status === 'REJECTED'
-											? 'bg-red-50/60 text-red-600 ring-red-200/50'
-											: 'bg-amber-50/60 text-amber-600 ring-amber-200/50'
+											? 'badge-danger'
+											: 'badge-warning'
 								)}
 							>
 								{#if returnRequest.Status === 'APPROVED'}
@@ -144,23 +127,21 @@
 								{returnRequest.Status}
 							</div>
 						</div>
-						<div class="flex items-center gap-6 text-sm font-medium text-slate-500">
+						<div class="text-muted-foreground flex items-center gap-6 text-sm font-medium">
 							<div class="flex items-center gap-2">
-								<Calendar size={16} class="text-slate-400" />
-								Requested {formatDate(returnRequest.CreatedAt)}
+								<Calendar size={16} class="text-muted-foreground" />
+								Requested <span class="num">{formatDate(returnRequest.CreatedAt)}</span>
 							</div>
 							<div class="flex items-center gap-2">
-								<Package size={16} class="text-slate-400" />
-								{returnRequest.ReturnItems?.length || 0} Items
+								<Package size={16} class="text-muted-foreground" />
+								<span class="num">{returnRequest.ReturnItems?.length || 0}</span> Items
 							</div>
 						</div>
 					</div>
 
 					<div class="flex flex-col items-end gap-1">
-						<span class="text-xs font-bold tracking-wide text-slate-400 uppercase"
-							>Total Refund</span
-						>
-						<span class="text-4xl font-black tracking-tight text-slate-900 drop-shadow-sm">
+						<span class="overline">Total Refund</span>
+						<span class="kpi-num text-foreground text-4xl">
 							{formatCurrency(returnRequest.RefundAmount)}
 						</span>
 					</div>
@@ -168,38 +149,29 @@
 
 				<div class="grid gap-8 lg:grid-cols-2">
 					<!-- Request Details Card -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.background.light,
-							liquidGlass.blur.medium,
-							liquidGlass.border.light,
-							liquidGlass.shadow.medium,
-							'flex h-full flex-col overflow-hidden'
-						)}
-					>
-						<div class="border-b border-white/30 bg-white/10 px-6 py-4 backdrop-blur-md">
-							<h3 class="flex items-center gap-2 font-bold text-slate-800">
-								<Receipt size={18} class="text-blue-500" />
+					<div class="liquid-panel flex h-full flex-col overflow-hidden rounded-lg">
+						<div class="border-border bg-muted/50 border-b px-6 py-4">
+							<h3 class="text-foreground flex items-center gap-2 font-bold">
+								<Receipt size={18} class="text-info" />
 								Request Details
 							</h3>
 						</div>
 						<div class="flex-1 space-y-4 p-6">
-							<div class="flex items-center justify-between border-b border-slate-100 py-2">
-								<span class="text-sm font-medium text-slate-500">Return ID</span>
-								<span class="font-mono font-bold text-slate-800"
+							<div class="border-border flex items-center justify-between border-b py-2">
+								<span class="text-muted-foreground text-sm font-medium">Return ID</span>
+								<span class="num-mono text-foreground font-bold"
 									>{returnNumber(returnRequest.ID)}</span
 								>
 							</div>
-							<div class="flex items-center justify-between border-b border-slate-100 py-2">
-								<span class="text-sm font-medium text-slate-500">Date Requested</span>
-								<span class="font-medium text-slate-800">{formatDate(returnRequest.CreatedAt)}</span
+							<div class="border-border flex items-center justify-between border-b py-2">
+								<span class="text-muted-foreground text-sm font-medium">Date Requested</span>
+								<span class="text-foreground num font-medium">{formatDate(returnRequest.CreatedAt)}</span
 								>
 							</div>
 							<div>
-								<span class="mb-2 block text-sm font-medium text-slate-500">Reason for Return</span>
+								<span class="text-muted-foreground mb-2 block text-sm font-medium">Reason for Return</span>
 								<div
-									class="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700 italic"
+									class="border-border bg-muted text-foreground rounded-md border p-4 text-sm italic"
 								>
 									"{returnRequest.Reason}"
 								</div>
@@ -208,47 +180,38 @@
 					</div>
 
 					<!-- Order & Customer Card -->
-					<div
-						class={cn(
-							liquidGlass.radius.medium,
-							liquidGlass.background.light,
-							liquidGlass.blur.medium,
-							liquidGlass.border.light,
-							liquidGlass.shadow.medium,
-							'flex h-full flex-col overflow-hidden'
-						)}
-					>
-						<div class="border-b border-white/30 bg-white/10 px-6 py-4 backdrop-blur-md">
-							<h3 class="flex items-center gap-2 font-bold text-slate-800">
-								<User size={18} class="text-indigo-500" />
+					<div class="liquid-panel flex h-full flex-col overflow-hidden rounded-lg">
+						<div class="border-border bg-muted/50 border-b px-6 py-4">
+							<h3 class="text-foreground flex items-center gap-2 font-bold">
+								<User size={18} class="text-primary" />
 								Customer & Order
 							</h3>
 						</div>
 						<div class="flex-1 space-y-4 p-6">
-							<div class="flex items-center justify-between border-b border-slate-100 py-2">
-								<span class="text-sm font-medium text-slate-500">Order Number</span>
+							<div class="border-border flex items-center justify-between border-b py-2">
+								<span class="text-muted-foreground text-sm font-medium">Order Number</span>
 								<div class="flex items-center gap-2">
-									<Package size={14} class="text-slate-400" />
-									<span class="font-bold text-blue-600">{returnRequest.Order?.OrderNumber}</span>
+									<Package size={14} class="text-muted-foreground" />
+									<span class="num-mono text-primary font-bold">{returnRequest.Order?.OrderNumber}</span>
 								</div>
 							</div>
-							<div class="flex items-center justify-between border-b border-slate-100 py-2">
-								<span class="text-sm font-medium text-slate-500">Customer Name</span>
-								<span class="font-medium text-slate-800">
+							<div class="border-border flex items-center justify-between border-b py-2">
+								<span class="text-muted-foreground text-sm font-medium">Customer Name</span>
+								<span class="text-foreground font-medium">
 									{returnRequest.User?.FirstName}
 									{returnRequest.User?.LastName}
 								</span>
 							</div>
-							<div class="flex items-center justify-between border-b border-slate-100 py-2">
-								<span class="text-sm font-medium text-slate-500">Contact Email</span>
+							<div class="border-border flex items-center justify-between border-b py-2">
+								<span class="text-muted-foreground text-sm font-medium">Contact Email</span>
 								<div class="flex items-center gap-2">
-									<Mail size={14} class="text-slate-400" />
-									<span class="font-medium text-slate-800">{returnRequest.User?.Email}</span>
+									<Mail size={14} class="text-muted-foreground" />
+									<span class="text-foreground font-medium">{returnRequest.User?.Email}</span>
 								</div>
 							</div>
 							<div class="flex items-center justify-between py-2">
-								<span class="text-sm font-medium text-slate-500">Original Total</span>
-								<span class="font-bold text-slate-800"
+								<span class="text-muted-foreground text-sm font-medium">Original Total</span>
+								<span class="num-mono text-foreground font-bold"
 									>{formatCurrency(returnRequest.Order?.TotalAmount || 0)}</span
 								>
 							</div>
@@ -257,25 +220,16 @@
 				</div>
 
 				<!-- Items List -->
-				<div
-					class={cn(
-						liquidGlass.radius.medium,
-						liquidGlass.background.light,
-						liquidGlass.blur.heavy,
-						liquidGlass.border.light,
-						liquidGlass.shadow.medium,
-						'overflow-hidden'
-					)}
-				>
-					<div class="border-b border-white/30 bg-white/10 px-6 py-4 backdrop-blur-md">
-						<h3 class="flex items-center gap-2 font-bold text-slate-800">
-							<Package size={18} class="text-emerald-500" />
+				<div class="liquid-panel overflow-hidden rounded-lg">
+					<div class="border-border bg-muted/50 border-b px-6 py-4">
+						<h3 class="text-foreground flex items-center gap-2 font-bold">
+							<Package size={18} class="text-success" />
 							Items to Return
 						</h3>
 					</div>
 					<div class="p-2">
 						<div
-							class="hidden grid-cols-12 gap-4 border-b border-slate-100 px-4 py-3 text-xs font-bold tracking-wider text-slate-400 uppercase md:grid"
+							class="border-border text-muted-foreground hidden grid-cols-12 gap-4 border-b px-4 py-3 text-xs font-bold tracking-wider uppercase md:grid"
 						>
 							<div class="col-span-6">Product</div>
 							<div class="col-span-2 text-center">Condition</div>
@@ -285,12 +239,12 @@
 
 						{#each returnRequest.ReturnItems as item}
 							<div
-								class="group relative rounded-xl border-b border-slate-100 border-transparent p-4 transition-all last:border-0 hover:border-white/50 hover:bg-white/40 md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0"
+								class="hover:bg-muted/50 group relative rounded-md border-b border-transparent p-4 transition-all last:border-0 md:grid md:grid-cols-12 md:items-center md:gap-4 md:border-0"
 							>
 								<!-- Mobile: Product & Image -->
 								<div class="col-span-6 mb-4 flex items-center gap-4 md:mb-0">
 									<div
-										class="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-100"
+										class="border-border bg-card flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-md border shadow-sm"
 									>
 										{#if item.Product?.ImageURLs}
 											<img
@@ -299,14 +253,14 @@
 												class="h-full w-full object-cover"
 											/>
 										{:else}
-											<Package size={20} class="text-slate-300" />
+											<Package size={20} class="text-muted-foreground/50" />
 										{/if}
 									</div>
 									<div class="min-w-0">
-										<p class="truncate font-bold text-slate-800">{item.Product?.Name}</p>
-										<p class="text-xs font-medium text-slate-500">SKU: {item.Product?.SKU}</p>
+										<p class="text-foreground truncate font-bold">{item.Product?.Name}</p>
+										<p class="text-muted-foreground num-mono text-xs font-medium">SKU: {item.Product?.SKU}</p>
 										{#if item.Reason}
-											<p class="mt-1 text-xs text-amber-600/80 italic">"{item.Reason}"</p>
+											<p class="text-warning/80 mt-1 text-xs italic">"{item.Reason}"</p>
 										{/if}
 									</div>
 								</div>
@@ -317,30 +271,28 @@
 								>
 									<!-- Condition -->
 									<div class="col-span-1 flex flex-col md:col-span-2 md:items-center">
-										<span class="mb-1 text-[10px] font-bold text-slate-400 uppercase md:hidden"
+										<span class="text-muted-foreground mb-1 text-[10px] font-bold uppercase md:hidden"
 											>Condition</span
 										>
-										<span
-											class="inline-flex items-center justify-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200"
-										>
+										<span class="badge-neutral">
 											{item.Condition}
 										</span>
 									</div>
 
 									<!-- Quantity -->
 									<div class="col-span-1 flex flex-col md:col-span-2 md:items-center">
-										<span class="mb-1 text-[10px] font-bold text-slate-400 uppercase md:hidden"
+										<span class="text-muted-foreground mb-1 text-[10px] font-bold uppercase md:hidden"
 											>Qty</span
 										>
-										<span class="font-bold text-slate-800">x{item.Quantity}</span>
+										<span class="num-mono text-foreground font-bold">x{item.Quantity}</span>
 									</div>
 
 									<!-- Value -->
 									<div class="col-span-1 flex flex-col items-end md:col-span-2 md:items-end">
-										<span class="mb-1 text-[10px] font-bold text-slate-400 uppercase md:hidden"
+										<span class="text-muted-foreground mb-1 text-[10px] font-bold uppercase md:hidden"
 											>Value</span
 										>
-										<span class="font-bold text-slate-900"
+										<span class="num-mono text-foreground font-bold"
 											>{formatCurrency(item.Product?.SellingPrice * item.Quantity)}</span
 										>
 									</div>
@@ -355,24 +307,24 @@
 			{#if returnRequest.Status === 'PENDING'}
 				<div
 					in:fly={{ y: 50, duration: 400 }}
-					class="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-white/40 bg-white/80 p-2 pl-4 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.15)] backdrop-blur-2xl md:bottom-10"
+					class="liquid-panel fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg p-2 pl-4 shadow-lg md:bottom-10"
 				>
-					<div class="flex items-center gap-2 border-r border-slate-200 pr-4">
-						<ShieldAlert size={18} class="text-amber-500" />
-						<span class="text-sm font-bold text-slate-600">Action Required</span>
+					<div class="border-border flex items-center gap-2 border-r pr-4">
+						<ShieldAlert size={18} class="text-warning" />
+						<span class="text-foreground text-sm font-bold">Action Required</span>
 					</div>
 
 					<button
 						disabled={processing}
 						onclick={() => handleProcess('reject')}
-						class="rounded-xl px-5 py-2.5 text-sm font-bold text-red-600 transition-all hover:bg-red-50 disabled:opacity-50"
+						class="text-danger hover:bg-danger/10 rounded-md px-5 py-2.5 text-sm font-bold transition-all disabled:opacity-50"
 					>
 						Reject
 					</button>
 					<button
 						disabled={processing}
 						onclick={() => handleProcess('approve')}
-						class="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-200 transition-all hover:scale-105 hover:shadow-emerald-300 disabled:opacity-50 disabled:shadow-none"
+						class="bg-success flex items-center gap-2 rounded-md px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-success/90 disabled:opacity-50 disabled:shadow-none"
 					>
 						{#if processing}
 							<div
@@ -388,18 +340,18 @@
 		{:else if !loading && !returnRequest}
 			<div class="flex h-[50vh] flex-col items-center justify-center">
 				<div
-					class="liquid-panel rounded-[2rem] border-slate-200/50 bg-white/30 p-12 text-center backdrop-blur-xl"
+					class="liquid-panel rounded-lg p-12 text-center"
 				>
 					<div
-						class="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400"
+						class="bg-muted text-muted-foreground mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-lg"
 					>
 						<Package size={32} />
 					</div>
-					<h3 class="text-xl font-bold text-slate-800">Return Not Found</h3>
-					<p class="mt-2 text-slate-500">The requested return could not be located.</p>
+					<h3 class="text-foreground text-xl font-bold">Return Not Found</h3>
+					<p class="text-muted-foreground mt-2">The requested return could not be located.</p>
 					<button
 						onclick={() => goto('/orders')}
-						class="mt-6 rounded-xl bg-white px-6 py-2.5 text-sm font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 hover:shadow-md"
+						class="border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted mt-6 rounded-md border px-6 py-2.5 text-sm font-semibold shadow-sm transition-all"
 					>
 						Back to Orders
 					</button>

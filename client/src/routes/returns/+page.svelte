@@ -6,7 +6,6 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { Badge } from '$lib/components/ui/badge';
 	import { Undo2, Package, History, ShieldCheck, Search, Filter, Loader2 } from 'lucide-svelte';
 	import { fade, fly } from 'svelte/transition';
 	import { cn, orderNumber } from '$lib/utils';
@@ -26,6 +25,13 @@
 
 	let searchQuery = '';
 	let isSearching = false;
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const tabTriggerClass =
+		'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md';
 
 	$effect(() => {
 		if (!auth.hasPermission('returns.manage') && !auth.hasPermission('returns.request')) {
@@ -118,26 +124,16 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50 p-6 lg:p-10">
-	<!-- Background -->
-	<div class="absolute top-0 left-0 -z-10 h-full w-full overflow-hidden bg-white/50">
-		<div
-			class="animate-blob absolute top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-blue-100/60 blur-[100px]"
-		></div>
-		<div
-			class="animate-blob animation-delay-2000 absolute -top-[10%] -right-[10%] h-[60%] w-[60%] rounded-full bg-purple-100/60 blur-[100px]"
-		></div>
-	</div>
-
+<div class="relative min-h-screen overflow-hidden p-6 lg:p-10">
 	<div class="relative z-10 mx-auto max-w-7xl space-y-8">
 		<!-- Header -->
-		<div class="flex flex-col gap-2 backdrop-blur-sm">
+		<div class="flex flex-col gap-2" data-animate="fade-up">
 			<h1
-				class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-4xl font-bold tracking-tight text-transparent drop-shadow-sm"
+				class="font-display text-foreground text-3xl font-bold tracking-tight"
 			>
 				Returns Center
 			</h1>
-			<p class="font-medium text-slate-500">
+			<p class="text-muted-foreground font-medium">
 				Manage your orders, request returns, and track refunds.
 			</p>
 		</div>
@@ -148,11 +144,11 @@
 			onValueChange={(val) => (activeTab = val)}
 		>
 			<Tabs.List
-				class="inline-flex h-auto w-full rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-lg backdrop-blur-xl"
+				class="border-border bg-muted inline-flex h-auto w-full rounded-lg border p-1.5 shadow-none backdrop-blur-none"
 			>
 				<Tabs.Trigger
 					value="request"
-					class="flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md"
+					class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
 				>
 					<div class="flex items-center justify-center gap-2">
 						<Package size={18} /> Request Return
@@ -160,7 +156,7 @@
 				</Tabs.Trigger>
 				<Tabs.Trigger
 					value="history"
-					class="flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-md"
+					class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
 				>
 					<div class="flex items-center justify-center gap-2">
 						<History size={18} /> My Returns
@@ -169,7 +165,7 @@
 				{#if auth.hasPermission('returns.manage')}
 					<Tabs.Trigger
 						value="admin"
-						class="flex-1 rounded-xl py-3 text-sm font-medium transition-all duration-300 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md"
+						class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
 					>
 						<div class="flex items-center justify-center gap-2">
 							<ShieldCheck size={18} /> Manage Returns
@@ -181,19 +177,19 @@
 			<!-- Request Return Tab -->
 			<Tabs.Content value="request" class="space-y-6 pt-2 outline-none">
 				<!-- Search -->
-				<div class="flex items-center gap-4 rounded-2xl bg-white/60 p-4 shadow-sm backdrop-blur-md">
+				<div class="liquid-panel flex items-center gap-4 rounded-lg p-4">
 					<div class="relative flex-1">
-						<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
 							placeholder="Search by Order Number (e.g., ORD-12345...)"
-							class="border-slate-200 bg-white/50 pl-9 transition-all focus:bg-white"
+							class="{inputClass} pl-9"
 							bind:value={searchQuery}
 							onkeydown={(e) => e.key === 'Enter' && searchOrder()}
 						/>
 					</div>
 					<Button
 						variant="default"
-						class="bg-blue-600 shadow-md transition-all hover:bg-blue-700 hover:shadow-lg"
+						class={btnPrimary}
 						onclick={searchOrder}
 						disabled={isSearching}
 					>
@@ -206,7 +202,7 @@
 					{#if searchQuery}
 						<Button
 							variant="ghost"
-							class="text-slate-500 hover:text-slate-700"
+							class="text-muted-foreground hover:text-foreground"
 							onclick={() => {
 								searchQuery = '';
 								loadOrders();
@@ -221,30 +217,30 @@
 					<!-- Orders List -->
 					{#each orders as order}
 						<div
-							class="group relative overflow-hidden rounded-3xl border border-white/60 bg-white/60 p-6 shadow-xl backdrop-blur-2xl transition-all hover:bg-white/80"
+							class="liquid-panel group relative overflow-hidden rounded-lg p-6 transition-all hover:border-primary/35 hover:shadow-md"
 						>
 							<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
 								<div>
 									<div class="flex items-center gap-3">
-										<h3 class="font-mono text-lg font-bold text-slate-800">{orderNumber(order)}</h3>
-										<Badge variant={order.Status === 'COMPLETED' ? 'default' : 'secondary'}
-											>{order.Status}</Badge
+										<h3 class="num-mono text-foreground text-lg font-bold">{orderNumber(order)}</h3>
+										<span class={order.Status === 'COMPLETED' ? 'badge-success' : 'badge-neutral'}
+											>{order.Status}</span
 										>
 									</div>
-									<p class="text-sm text-slate-500">
+									<p class="text-muted-foreground text-sm">
 										{#if order.Customer}
 											{order.Customer.FirstName} {order.Customer.LastName} •
 										{/if}
-										Placed <TimeAgo date={order.OrderDate} /> • {order.Items?.length || 0} Items
+										Placed <TimeAgo date={order.OrderDate} /> • <span class="num">{order.Items?.length || 0}</span> Items
 									</p>
 								</div>
 								<div class="flex items-center gap-4">
 									<div class="text-right">
-										<p class="text-sm font-medium text-slate-500">Total</p>
-										<p class="text-xl font-bold text-slate-800">${order.TotalAmount.toFixed(2)}</p>
+										<p class="overline">Total</p>
+										<p class="num-mono text-foreground text-xl font-bold">${order.TotalAmount.toFixed(2)}</p>
 									</div>
 									<Button
-										class="rounded-xl bg-blue-600 text-white shadow-lg hover:bg-blue-700"
+										class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md bg-none shadow-sm hover:bg-none"
 										onclick={() => openRequestModal(order)}
 										disabled={order.Status !== 'COMPLETED'}
 									>
@@ -254,7 +250,7 @@
 							</div>
 						</div>
 					{:else}
-						<div class="rounded-3xl border border-dashed border-slate-300 bg-white/40">
+						<div class="border-border bg-muted/40 rounded-lg border border-dashed">
 							<EmptyState
 								icon={Package}
 								title="No orders found"
@@ -268,7 +264,7 @@
 			<!-- My Returns Tab -->
 			<Tabs.Content value="history" class="space-y-6 pt-2 outline-none">
 				<div in:fly={{ y: 20, duration: 300 }}>
-					<p class="text-center text-slate-500">Return history coming soon...</p>
+					<p class="text-muted-foreground text-center">Return history coming soon...</p>
 				</div>
 			</Tabs.Content>
 
@@ -289,24 +285,3 @@
 		on:submit={handleReturnSubmitted}
 	/>
 {/if}
-
-<style>
-	@keyframes blob {
-		0%,
-		100% {
-			transform: translate(0, 0) scale(1);
-		}
-		33% {
-			transform: translate(30px, -50px) scale(1.1);
-		}
-		66% {
-			transform: translate(-20px, 20px) scale(0.9);
-		}
-	}
-	.animate-blob {
-		animation: blob 15s infinite;
-	}
-	.animation-delay-2000 {
-		animation-delay: 2s;
-	}
-</style>

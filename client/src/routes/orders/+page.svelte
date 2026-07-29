@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import GlassCard from '$lib/components/ui/GlassCard.svelte';
 	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
 	import api from '$lib/api';
 	import { formatCurrency, orderNumber, returnNumber, poNumber } from '$lib/utils';
@@ -172,6 +171,11 @@
 	// State
 	// ... (State remains same) ...
 
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const tabsClass =
+		'rounded-lg border-border bg-card shadow-sm backdrop-blur-none';
+
 	// Data Loading
 	async function loadData() {
 		if (!auth.hasPermission('pos.view') && !auth.hasPermission('inventory.view')) {
@@ -332,13 +336,10 @@
 	// Helpers
 	function getStatusColor(status: string) {
 		const s = status?.toUpperCase();
-		if (['COMPLETED', 'RECEIVED', 'APPROVED'].includes(s))
-			return 'text-emerald-500 bg-emerald-50 border-emerald-200';
-		if (['PENDING', 'DRAFT', 'SENT', 'PARTIALLY_RECEIVED'].includes(s))
-			return 'text-amber-500 bg-amber-50 border-amber-200';
-		if (['CANCELLED', 'RETURNED', 'REJECTED'].includes(s))
-			return 'text-red-500 bg-red-50 border-red-200';
-		return 'text-slate-500 bg-slate-50 border-slate-200';
+		if (['COMPLETED', 'RECEIVED', 'APPROVED'].includes(s)) return 'badge-success';
+		if (['PENDING', 'DRAFT', 'SENT', 'PARTIALLY_RECEIVED'].includes(s)) return 'badge-warning';
+		if (['CANCELLED', 'RETURNED', 'REJECTED'].includes(s)) return 'badge-danger';
+		return 'badge-neutral';
 	}
 
 	function getStatusIcon(status: string) {
@@ -350,22 +351,18 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10">
-	<!-- Background -->
-	<div
-		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100/20 via-slate-50/20 to-white/20"
-	></div>
-
+<div class="relative min-h-screen overflow-hidden p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
 		<!-- Header -->
 		<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-			<div class="space-y-1">
+			<div class="space-y-1" data-animate="fade-up">
+				<p class="overline">{$t('orders.tabs.sales')} · {$t('orders.tabs.purchases')}</p>
 				<h1
-					class="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent"
+					class="font-display text-foreground text-3xl font-bold tracking-tight"
 				>
 					{$t('orders.title')}
 				</h1>
-				<p class="text-slate-500">
+				<p class="text-muted-foreground">
 					{$t('orders.subtitle')}
 				</p>
 			</div>
@@ -378,7 +375,7 @@
 						{ value: 'sales', label: $t('orders.tabs.sales') },
 						{ value: 'purchases', label: $t('orders.tabs.purchases') }
 					]}
-					class="self-start md:self-auto"
+					class="{tabsClass} self-start md:self-auto"
 				/>
 
 				<!-- Sub Tabs -->
@@ -391,6 +388,7 @@
 								{ value: 'orders', label: $t('orders.subtabs.sales_orders') },
 								{ value: 'returns', label: $t('orders.subtabs.customer_returns') }
 							]}
+							class={tabsClass}
 						/>
 					{:else}
 						<GlassTabs
@@ -399,6 +397,7 @@
 								{ value: 'orders', label: $t('orders.subtabs.purchase_orders') },
 								{ value: 'returns', label: $t('orders.subtabs.vendor_returns') }
 							]}
+							class={tabsClass}
 						/>
 					{/if}
 				</div>
@@ -407,10 +406,10 @@
 
 		<!-- Search & Actions -->
 		<div
-			class="liquid-panel flex items-center justify-between rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm"
+			class="liquid-panel flex items-center justify-between rounded-lg p-4"
 		>
 			<div class="relative max-w-md flex-1">
-				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+				<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 				<Input
 					bind:value={searchQuery}
 					placeholder={activeTab === 'sales'
@@ -418,7 +417,7 @@
 						: subTab === 'orders'
 							? $t('orders.search.pos')
 							: $t('orders.search.returns')}
-					class="border-slate-200 bg-white pl-9 shadow-none focus:border-blue-500 focus:ring-blue-500/20"
+					class="{inputClass} pl-9"
 				/>
 			</div>
 			{#if activeTab === 'sales' && subTab === 'orders'}
@@ -429,16 +428,16 @@
 		{#if loading}
 			<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 				{#each Array(6) as _}
-					<div class="h-48 animate-pulse rounded-2xl bg-white/50"></div>
+					<div class="bg-muted h-48 animate-pulse rounded-lg"></div>
 				{/each}
 			</div>
 		{:else if error}
 			<div
-				class="flex h-64 flex-col items-center justify-center rounded-2xl bg-red-50/50 text-red-500"
+				class="text-danger flex h-64 flex-col items-center justify-center rounded-lg border border-danger/25 bg-danger/10"
 			>
 				<AlertCircle class="mb-4 h-8 w-8" />
 				<p class="font-medium">{error}</p>
-				<Button variant="link" onclick={loadData} class="mt-2 text-red-600 underline"
+				<Button variant="link" onclick={loadData} class="text-danger mt-2 underline"
 					>{$t('orders.actions.try_again')}</Button
 				>
 			</div>
@@ -452,29 +451,24 @@
 					{#if activeTab === 'sales' && subTab === 'orders'}
 						{#each filteredSales as order (order.ID)}
 							<div
-								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg"
 							>
 								{#if order.HasPendingReturn}
 									<div
-										class="absolute top-0 right-0 rounded-bl-lg bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-600 shadow-sm"
+										class="bg-warning/15 text-warning absolute top-0 right-0 rounded-bl-md px-2 py-1 text-[10px] font-bold shadow-sm"
 									>
 										{$t('orders.status.return_pending')}
 									</div>
 								{/if}
-							<div class="flex items-start justify-between border-b border-slate-100 p-4">
+							<div class="border-border flex items-start justify-between border-b p-4">
 								<div>
-									<h3 class="font-mono text-sm font-bold text-slate-800">{orderNumber(order)}</h3>
+									<h3 class="num-mono text-foreground text-sm font-bold">{orderNumber(order)}</h3>
 									{#if salesVisible.has('date')}
-										<p class="text-xs text-slate-500"><TimeAgo date={order.OrderDate} /></p>
+										<p class="text-muted-foreground text-xs"><TimeAgo date={order.OrderDate} /></p>
 									{/if}
 								</div>
 								{#if salesVisible.has('status')}
-									<div
-										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
-											getStatusColor(order.Status)
-										)}
-									>
+									<div class={cn('uppercase', getStatusColor(order.Status))}>
 										<svelte:component this={getStatusIcon(order.Status)} size={12} />
 										{order.Status}
 									</div>
@@ -484,8 +478,8 @@
 							<div class="flex-1 space-y-3 p-4">
 								{#if salesVisible.has('customer')}
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.customer')}</span>
-										<span class="font-medium text-slate-700">
+										<span class="text-muted-foreground">{$t('orders.labels.customer')}</span>
+										<span class="text-foreground font-medium">
 											{order.Customer
 												? `${order.Customer.FirstName} ${order.Customer.LastName}`
 												: $t('orders.labels.guest')}
@@ -494,24 +488,24 @@
 								{/if}
 								{#if salesVisible.has('payment')}
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">Payment</span>
-										<span class="font-medium text-slate-700">{order.PaymentMethod || '—'}</span>
+										<span class="text-muted-foreground">Payment</span>
+										<span class="text-foreground font-medium">{order.PaymentMethod || '—'}</span>
 									</div>
 								{/if}
 								{#if salesVisible.has('items')}
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.items')}</span>
-										<span class="font-medium text-slate-700">{order.OrderItems.length}</span>
+										<span class="text-muted-foreground">{$t('orders.labels.items')}</span>
+										<span class="num text-foreground font-medium">{order.OrderItems.length}</span>
 									</div>
-									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
+									<div class="bg-muted text-muted-foreground space-y-1 rounded-md p-2 text-xs">
 										{#each order.OrderItems.slice(0, 2) as item}
 											<div class="flex justify-between">
 												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span>x{item.Quantity}</span>
+												<span class="num-mono">x{item.Quantity}</span>
 											</div>
 										{/each}
 										{#if order.OrderItems.length > 2}
-											<div class="text-[10px] text-slate-400 italic">
+											<div class="text-muted-foreground text-[10px] italic">
 												+{order.OrderItems.length - 2}
 												{$t('orders.labels.more')}
 											</div>
@@ -520,18 +514,18 @@
 								{/if}
 							</div>
 
-							<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
+							<div class="bg-muted/50 border-border mt-auto flex items-center justify-between border-t p-4">
 								<div>
 									{#if salesVisible.has('total')}
 										{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
-											<p class="text-lg font-bold text-emerald-600">
+											<p class="num-mono text-success text-lg font-bold">
 												{formatCurrency(order.AdjustedTotal)}
 											</p>
-											<p class="text-xs text-slate-400 line-through">
+											<p class="text-muted-foreground text-xs line-through">
 												{formatCurrency(order.TotalAmount)}
 											</p>
 										{:else}
-											<p class="text-lg font-bold text-slate-800">
+											<p class="num-mono text-foreground text-lg font-bold">
 												{formatCurrency(order.TotalAmount)}
 											</p>
 										{/if}
@@ -541,7 +535,7 @@
 									href="/orders/{order.OrderNumber}"
 									variant="ghost"
 									size="sm"
-									class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+									class="text-primary hover:bg-accent hover:text-accent-foreground"
 								>
 									{$t('orders.actions.view_details')}
 									<ArrowRight class="ml-1 h-3 w-3" />
@@ -563,63 +557,58 @@
 						<!-- Customer Returns List -->
 						{#each filteredCustomerReturns as ret (ret.ID)}
 							<div
-								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg"
 							>
-								<div class="flex items-start justify-between border-b border-slate-100 p-4">
+								<div class="border-border flex items-start justify-between border-b p-4">
 									<div>
-										<h3 class="font-mono text-sm font-bold text-slate-800">
+										<h3 class="num-mono text-foreground text-sm font-bold">
 											{returnNumber(ret.ID)}
 										</h3>
-										<p class="text-xs text-slate-500"><TimeAgo date={ret.CreatedAt} /></p>
+										<p class="text-muted-foreground text-xs"><TimeAgo date={ret.CreatedAt} /></p>
 									</div>
-									<div
-										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
-											getStatusColor(ret.Status)
-										)}
-									>
+									<div class={cn('uppercase', getStatusColor(ret.Status))}>
 										{ret.Status}
 									</div>
 								</div>
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.order')}</span>
-										<span class="font-mono font-medium text-slate-700">#{ret.OrderID}</span>
+										<span class="text-muted-foreground">{$t('orders.labels.order')}</span>
+										<span class="num-mono text-foreground font-medium">#{ret.OrderID}</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.refund')}</span>
-										<span class="font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</span>
+										<span class="text-muted-foreground">{$t('orders.labels.refund')}</span>
+										<span class="num-mono text-foreground font-bold">{formatCurrency(ret.RefundAmount)}</span>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.reason')}</span>
-										<span class="font-medium text-slate-700">{ret.Reason}</span>
+										<span class="text-muted-foreground">{$t('orders.labels.reason')}</span>
+										<span class="text-foreground font-medium">{ret.Reason}</span>
 									</div>
-									<div class="space-y-1 rounded-lg bg-orange-50/50 p-2 text-xs text-slate-600">
-										<p class="mb-1 font-semibold text-orange-800">
+									<div class="space-y-1 rounded-md border border-warning/25 bg-warning/10 p-2 text-xs">
+										<p class="text-warning mb-1 font-semibold">
 											{$t('orders.status.items_returned')}
 										</p>
 										{#if ret.ReturnItems && ret.ReturnItems.length > 0}
 											{#each ret.ReturnItems.slice(0, 2) as item}
-												<div class="flex justify-between">
+												<div class="text-muted-foreground flex justify-between">
 													<span class="truncate pr-2"
 														>{item.Product?.Name || `Item #${item.ProductID}`}</span
 													>
-													<span class="font-medium text-orange-600">x{item.Quantity}</span>
+													<span class="num-mono text-warning font-medium">x{item.Quantity}</span>
 												</div>
 											{/each}
 										{:else}
-											<p class="text-slate-400 italic">{$t('orders.status.no_items')}</p>
+											<p class="text-muted-foreground italic">{$t('orders.status.no_items')}</p>
 										{/if}
 									</div>
 								</div>
 
-								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
+								<div class="bg-muted/50 border-border mt-auto flex items-center justify-between border-t p-4">
 									<Button
 										href={`/admin/returns/${ret.ID}`}
 										variant="ghost"
 										size="sm"
-										class="w-full text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+										class="text-warning hover:bg-warning/10 hover:text-warning w-full"
 									>
 										{$t('orders.actions.view_details')}
 										<ArrowRight class="ml-1 h-3 w-3" />
@@ -638,19 +627,14 @@
 					{:else if subTab === 'orders'}
 						{#each filteredPurchases as po (po.ID)}
 							<div
-								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg"
 							>
-								<div class="flex items-start justify-between border-b border-slate-100 p-4">
+								<div class="border-border flex items-start justify-between border-b p-4">
 									<div>
-										<h3 class="font-mono text-sm font-bold text-slate-800">{poNumber(po.ID)}</h3>
-										<p class="text-xs text-slate-500"><TimeAgo date={po.OrderDate} /></p>
+										<h3 class="num-mono text-foreground text-sm font-bold">{poNumber(po.ID)}</h3>
+										<p class="text-muted-foreground text-xs"><TimeAgo date={po.OrderDate} /></p>
 									</div>
-									<div
-										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
-											getStatusColor(po.Status)
-										)}
-									>
+									<div class={cn('uppercase', getStatusColor(po.Status))}>
 										<svelte:component this={getStatusIcon(po.Status)} size={12} />
 										{po.Status}
 									</div>
@@ -658,22 +642,22 @@
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
-										<span class="font-medium text-slate-700"
+										<span class="text-muted-foreground">{$t('orders.labels.supplier')}</span>
+										<span class="text-foreground font-medium"
 											>{po.Supplier?.Name || $t('orders.labels.unknown')}</span
 										>
 									</div>
-									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
+									<div class="bg-muted space-y-1 rounded-md p-2 text-xs">
 										{#each po.PurchaseOrderItems.slice(0, 2) as item}
 											<div class="flex justify-between">
-												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-purple-600"
+												<span class="text-muted-foreground truncate pr-2">{item.Product?.Name || 'Product'}</span>
+												<span class="num-mono text-primary font-medium"
 													>{$t('orders.status.qty')}: {item.OrderedQuantity}</span
 												>
 											</div>
 										{/each}
 										{#if po.PurchaseOrderItems.length > 2}
-											<div class="text-[10px] text-slate-400 italic">
+											<div class="text-muted-foreground text-[10px] italic">
 												+{po.PurchaseOrderItems.length - 2}
 												{$t('orders.labels.more')}
 											</div>
@@ -681,14 +665,14 @@
 									</div>
 								</div>
 
-								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
+								<div class="bg-muted/50 border-border mt-auto flex items-center justify-between border-t p-4">
 									<div>
 										{#if po.PurchaseOrderItems.length > 0}
-											<p class="text-xs font-semibold text-slate-500">
-												{$t('orders.status.total_items')}: {po.PurchaseOrderItems.reduce(
+											<p class="text-muted-foreground text-xs font-semibold">
+												{$t('orders.status.total_items')}: <span class="num-mono">{po.PurchaseOrderItems.reduce(
 													(acc, item) => acc + item.OrderedQuantity,
 													0
-												)}
+												)}</span>
 											</p>
 										{/if}
 									</div>
@@ -696,7 +680,7 @@
 										href="/purchase-orders/{po.ID}"
 										variant="ghost"
 										size="sm"
-										class="text-purple-600 hover:bg-purple-50 hover:text-purple-700"
+										class="text-primary hover:bg-accent hover:text-accent-foreground"
 									>
 										{$t('orders.actions.manage_po')}
 										<ArrowRight class="ml-1 h-3 w-3" />
@@ -716,42 +700,37 @@
 						<!-- Vendor Returns List -->
 						{#each filteredReturns as ret (ret.ID)}
 							<div
-								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 via-white/30 to-white/10 transition-all duration-200 hover:bg-white/60"
+								class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg"
 							>
-								<div class="flex items-start justify-between border-b border-slate-100 p-4">
+								<div class="border-border flex items-start justify-between border-b p-4">
 									<div>
-										<h3 class="font-mono text-sm font-bold text-slate-800">
+										<h3 class="num-mono text-foreground text-sm font-bold">
 											{returnNumber(ret.ID)}
 										</h3>
-										<p class="text-xs text-slate-500"><TimeAgo date={ret.ReturnedAt} /></p>
+										<p class="text-muted-foreground text-xs"><TimeAgo date={ret.ReturnedAt} /></p>
 									</div>
-									<div
-										class={cn(
-											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
-											getStatusColor(ret.Status)
-										)}
-									>
+									<div class={cn('uppercase', getStatusColor(ret.Status))}>
 										{ret.Status}
 									</div>
 								</div>
 
 								<div class="flex-1 space-y-3 p-4">
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.supplier')}</span>
-										<span class="font-medium text-slate-700"
+										<span class="text-muted-foreground">{$t('orders.labels.supplier')}</span>
+										<span class="text-foreground font-medium"
 											>{ret.Supplier?.Name || $t('orders.labels.unknown')}</span
 										>
 									</div>
 									<div class="flex items-center justify-between text-sm">
-										<span class="text-slate-500">{$t('orders.labels.reason')}</span>
-										<span class="font-medium text-slate-700">{ret.Reason}</span>
+										<span class="text-muted-foreground">{$t('orders.labels.reason')}</span>
+										<span class="text-foreground font-medium">{ret.Reason}</span>
 									</div>
 
-									<div class="space-y-1 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
+									<div class="bg-muted space-y-1 rounded-md p-2 text-xs">
 										{#each ret.PurchaseReturnItems.slice(0, 2) as item}
 											<div class="flex justify-between">
-												<span class="truncate pr-2">{item.Product?.Name || 'Product'}</span>
-												<span class="font-medium text-red-600"
+												<span class="text-muted-foreground truncate pr-2">{item.Product?.Name || 'Product'}</span>
+												<span class="num-mono text-danger font-medium"
 													>{$t('orders.status.qty')}: -{item.Quantity}</span
 												>
 											</div>
@@ -759,9 +738,9 @@
 									</div>
 								</div>
 
-								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
-									<p class="text-lg font-bold text-slate-800">{formatCurrency(ret.RefundAmount)}</p>
-									<span class="text-xs font-semibold text-slate-400"
+								<div class="bg-muted/50 border-border mt-auto flex items-center justify-between border-t p-4">
+									<p class="num-mono text-foreground text-lg font-bold">{formatCurrency(ret.RefundAmount)}</p>
+									<span class="text-muted-foreground text-xs font-semibold"
 										>{$t('orders.status.refund_value')}</span
 									>
 								</div>
