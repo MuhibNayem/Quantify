@@ -33,6 +33,15 @@ import type {
 	TeamOverview,
 	WeeklySummary,
 	AuditLog,
+	Unit,
+	UnitDimension,
+	ProductUnit,
+	TrialBalanceRow,
+	IncomeStatement,
+	BalanceSheet,
+	AccountsReceivable,
+	ARAgingBucket,
+	Payment,
 } from '$lib/types';
 import type { AxiosRequestConfig } from 'axios';
 
@@ -388,4 +397,34 @@ export const auditApi = {
 		page?: number;
 		limit?: number;
 	}) => api.get<PaginatedResponse<AuditLog>>('/audit-logs', { params }).then((r) => r.data),
+};
+
+export const unitsApi = {
+	list: () => api.get<Unit[]>('/units').then((r) => r.data),
+	dimensions: () => api.get<UnitDimension[]>('/units/dimensions').then((r) => r.data),
+	productUnits: (productId: number) =>
+		api.get<ProductUnit[]>(`/products/${productId}/units`).then((r) => r.data),
+	saveProductUnit: (productId: number, data: Record<string, unknown>) =>
+		api.post<ProductUnit>(`/products/${productId}/units`, data).then((r) => r.data),
+	deleteProductUnit: (productId: number, unitId: number) =>
+		api.delete(`/products/${productId}/units/${unitId}`).then((r) => r.data),
+};
+
+export const financeApi = {
+	trialBalance: (params?: { from?: string; to?: string }) =>
+		api.get<{ rows: TrialBalanceRow[] }>('/finance/trial-balance', { params }).then((r) => r.data),
+	incomeStatement: (params?: { from?: string; to?: string }) =>
+		api.get<IncomeStatement>('/finance/income-statement', { params }).then((r) => r.data),
+	balanceSheet: (params?: { from?: string; to?: string }) =>
+		api.get<BalanceSheet>('/finance/balance-sheet', { params }).then((r) => r.data),
+	arAging: () => api.get<{ buckets: ARAgingBucket[] }>('/finance/ar-aging').then((r) => r.data),
+	receivables: (params?: { customerId?: number }) =>
+		api.get<{ receivables: AccountsReceivable[] }>('/finance/receivables', { params }).then((r) => r.data),
+	recordPayment: (data: {
+		customerId: number;
+		amount: number;
+		method: string;
+		notes?: string;
+		allocations?: { AccountsReceivableID: number; Amount: number }[];
+	}) => api.post<Payment>('/finance/payments', data).then((r) => r.data),
 };

@@ -517,3 +517,93 @@ export interface AuditLog {
 	UserAgent: string;
 	Timestamp: string;
 }
+
+// ── Units of measure ──
+export interface UnitDimension extends BaseEntity {
+	Code: string;
+	Name: string;
+	BaseUnitID?: number;
+}
+
+export interface Unit extends BaseEntity {
+	Code: string;
+	Name: string;
+	Symbol: string;
+	DimensionID: number;
+	Dimension?: UnitDimension;
+	Factor: number; // relative to dimension base unit
+	IsBase: boolean;
+}
+
+export interface ProductUnit extends BaseEntity {
+	ProductID: number;
+	UnitID: number;
+	Unit?: Unit;
+	Factor: number; // 1 of this unit = Factor base-stock-units
+	Price: number; // per this unit (0 → derive from base price)
+	PurchasePrice: number;
+	Barcode: string;
+	IsActive: boolean;
+}
+
+// ── General ledger / finance ──
+export interface Account extends BaseEntity {
+	Code: string;
+	Name: string;
+	Type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'REVENUE' | 'EXPENSE';
+	Description: string;
+	IsActive: boolean;
+	System: boolean;
+}
+
+export interface TrialBalanceRow {
+	AccountID: number;
+	Code: string;
+	Name: string;
+	Type: string;
+	TotalDebit: string;
+	TotalCredit: string;
+	Balance: string;
+}
+
+export interface IncomeStatement {
+	Revenue: string;
+	COGS: string;
+	GrossProfit: string;
+	Expenses: string;
+	NetIncome: string;
+}
+
+export interface BalanceSheet {
+	Assets: string;
+	Liabilities: string;
+	Equity: string;
+	RetainedEarnings: string;
+	TotalLiabilitiesAndEquity: string;
+	Balanced: boolean;
+}
+
+export interface AccountsReceivable extends BaseEntity {
+	CustomerID: number;
+	Customer?: { Username: string; Email: string };
+	OrderID: number;
+	Order?: { OrderNumber: string; OrderDate: string };
+	Amount: string;
+	PaidAmount: string;
+	Status: 'UNPAID' | 'PARTIAL' | 'PAID';
+	DueDate?: string;
+}
+
+export interface ARAgingBucket {
+	Label: string;
+	Amount: string;
+	Count: number;
+}
+
+export interface Payment extends BaseEntity {
+	CustomerID: number;
+	Amount: string;
+	Method: string;
+	ReceivedAt: string;
+	Notes: string;
+}

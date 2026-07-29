@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Label } from '$lib/components/ui/label';
 	import Kbd from '$lib/components/ui/kbd.svelte';
-	import { CreditCard, Banknote, QrCode, Wallet, Check } from 'lucide-svelte';
+	import { CreditCard, Banknote, QrCode, Wallet, Receipt, Check, AlertTriangle } from 'lucide-svelte';
 	import { settings } from '$lib/stores/settings';
 	import { formatCurrency } from '$lib/utils';
 	import { t } from '$lib/i18n';
@@ -10,6 +10,7 @@
 		paymentMethod: string | null;
 		selectedCustomer: any | null;
 		pointsToRedeem: number;
+		dueDate: string;
 		onSelectPayment: (method: string) => void;
 	};
 
@@ -17,6 +18,7 @@
 		paymentMethod,
 		selectedCustomer,
 		pointsToRedeem = $bindable(),
+		dueDate = $bindable(),
 		onSelectPayment
 	}: Props = $props();
 
@@ -46,6 +48,14 @@
 			shortcut: 'F6'
 		},
 		{
+			id: 'CREDIT',
+			label: $t('pos.payment.methods.credit'),
+			icon: Receipt,
+			color: 'text-warning',
+			sub: $t('pos.payment.sub.credit'),
+			shortcut: null
+		},
+		{
 			id: 'OTHER',
 			label: $t('pos.payment.methods.other'),
 			icon: Wallet,
@@ -68,7 +78,7 @@
 		</p>
 	</div>
 	<div class="p-4 pt-3">
-		<div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+		<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
 			{#each methods as method}
 				<button
 					type="button"
@@ -124,6 +134,31 @@
 				</button>
 			{/each}
 		</div>
+
+		<!-- Credit (unpaid) sale options -->
+		{#if paymentMethod === 'CREDIT'}
+			<div class="border-border mt-4 border-t pt-4">
+				{#if !selectedCustomer}
+					<div
+						class="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2.5 text-[0.75rem]"
+					>
+						<AlertTriangle class="text-warning mt-0.5 h-4 w-4 shrink-0" />
+						<span class="text-foreground font-medium">{$t('pos.payment.credit.customer_required')}</span>
+					</div>
+				{/if}
+
+				<div class="mt-3 flex items-center justify-between gap-3">
+					<Label class="text-muted-foreground text-[0.7rem] font-medium">
+						{$t('pos.payment.credit.due_date')}
+					</Label>
+					<input
+						type="date"
+						bind:value={dueDate}
+						class="liquid-input num-mono h-9 rounded-md px-2 text-right text-sm"
+					/>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Loyalty Redemption -->
 		{#if selectedCustomer && selectedCustomer.loyalty && selectedCustomer.loyalty.Points > 0}

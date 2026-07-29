@@ -6,7 +6,8 @@
 	import Kbd from '$lib/components/ui/kbd.svelte';
 	import { Search, Zap, CreditCard, ScanBarcode } from 'lucide-svelte';
 	import api from '$lib/api';
-	import { crmApi, promotionsApi, paymentApi, productsApi } from '$lib/api/resources';
+	import { crmApi, promotionsApi, paymentApi, productsApi, unitsApi } from '$lib/api/resources';
+	import type { ProductUnit } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
@@ -37,8 +38,11 @@
 	let paymentMethod = $state<string | null>(null);
 	let isProcessing = $state(false);
 	let pointsToRedeem = $state(0);
+	let dueDate = $state('');
 	let barcodeInput = $state('');
 	let barcodeRef = $state<HTMLInputElement | null>(null);
+
+	const unitCache: Record<number, ProductUnit[]> = {};
 
 	const inputClass =
 		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
@@ -198,7 +202,7 @@
 		return Math.max(0, currentStock - cartQty);
 	};
 
-	const addToCart = (product: any) => {
+	const addToCart = async (product: any) => {
 		const existingItem = cart.find((item) => item.id === product.ID);
 		const currentQty = existingItem ? existingItem.quantity : 0;
 		const stockLimit = product.stock ? product.stock.currentQuantity : 0;
@@ -212,12 +216,27 @@
 			existingItem.quantity++;
 			cart = [...cart];
 		} else {
+			let units: ProductUnit[] = [];
+			try {
+				if (unitCache[product.ID]) {
+					units = unitCache[product.ID];
+				} else {
+					units = (await unitsApi.productUnits(product.ID)).filter((u) => u.IsActive !== false);
+					unitCache[product.ID] = units;
+				}
+			} catch {
+				units = [];
+			}
 			cart = [
 				...cart,
 				{
 					...product,
 					id: product.ID,
-					quantity: 1
+					quantity: 1,
+					units,
+					unitId: undefined,
+					unitSymbol: undefined,
+					unitPrice: undefined
 				}
 			];
 		}
@@ -228,7 +247,7 @@
 	};
 
 	const updateQuantity = (productId: number, quantity: number) => {
-		if (!quantity || quantity < 1) quantity = 1;
+		if (!(quantity > 0)) quantity = 0.01;
 
 		const item = cart.find((item) => item.id === productId);
 		if (item) {
@@ -242,6 +261,23 @@
 			}
 			cart = [...cart];
 		}
+	};
+
+	const updateUnit = (productId: number, unitId: number | undefined) => {
+		const item = cart.find((item) => item.id === productId);
+		if (!item) return;
+
+		item.unitId = unitId;
+		if (unitId && item.units) {
+			const pu = item.units.find((u: ProductUnit) => u.UnitID === unitId);
+			const basePrice = getProductPrice(item).price;
+			item.unitSymbol = pu?.Unit?.Symbol;
+			item.unitPrice = pu ? (pu.Price > 0 ? pu.Price : basePrice * pu.Factor) : basePrice;
+		} else {
+			item.unitSymbol = undefined;
+			item.unitPrice = undefined;
+		}
+		cart = [...cart];
 	};
 
 	const clearCart = () => {
@@ -297,11 +333,11 @@
 		}
 	}
 
+	const getLinePrice = (item: any): number =>
+		item.unitId && item.unitPrice != null ? item.unitPrice : getProductPrice(item).price;
+
 	const subtotal = $derived(
-		cart.reduce((acc, item) => {
-			const { price } = getProductPrice(item);
-			return acc + price * item.quantity;
-		}, 0)
+		cart.reduce((acc, item) => acc + getLinePrice(item) * item.quantity, 0)
 	);
 	const taxRate = $derived(($settings.tax_rate_percentage || 0) / 100);
 	const tax = $derived(subtotal * taxRate);
@@ -311,7 +347,9 @@
 		Math.floor(subtotal * ($settings.loyalty_points_earning_rate || 0))
 	);
 
-	const canCompleteOrder = $derived(cart.length > 0 && !!paymentMethod);
+	const canCompleteOrder = $derived(
+		cart.length > 0 && !!paymentMethod && (paymentMethod !== 'CREDIT' || !!selectedCustomer)
+	);
 
 	const setPayment = (method: string) => {
 		paymentMethod = method;
@@ -319,6 +357,10 @@
 
 	const completeOrder = async () => {
 		if (!canCompleteOrder || isProcessing) return;
+		if (paymentMethod === 'CREDIT' && !selectedCustomer) {
+			toast.error($t('pos.toasts.customer_required_credit'));
+			return;
+		}
 		isProcessing = true;
 
 		const toastId = toast.loading($t('pos.toasts.processing'));
@@ -340,18 +382,23 @@
 				}
 			}
 
-			const payload = {
+			const payload: Record<string, unknown> = {
 				items: cart.map((item) => ({
 					productId: item.id,
-					quantity: item.quantity
+					quantity: item.quantity,
+					...(item.unitId ? { unitId: item.unitId } : {})
 				})),
 				customerId: selectedCustomer ? selectedCustomer.ID : null,
-				paymentMethod: paymentMethod,
+				paymentMethod: paymentMethod ? paymentMethod.toLowerCase() : paymentMethod,
 				pointsToRedeem: Math.min(
 					pointsToRedeem,
 					selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
 				)
 			};
+
+			if (paymentMethod === 'CREDIT' && dueDate) {
+				payload.dueDate = new Date(dueDate).toISOString();
+			}
 
 			await api.post('/sales/checkout', payload);
 
@@ -364,6 +411,7 @@
 			selectedCustomer = null;
 			customerSearchTerm = '';
 			pointsToRedeem = 0;
+			dueDate = '';
 
 			await fetchProducts();
 		} catch (error: any) {
@@ -526,8 +574,10 @@
 			<Cart
 				{cart}
 				{getProductPrice}
+				{getLinePrice}
 				onRemove={removeFromCart}
 				onUpdateQuantity={updateQuantity}
+				onUpdateUnit={updateUnit}
 				onClear={clearCart}
 			/>
 		</div>
@@ -545,6 +595,7 @@
 				{paymentMethod}
 				{selectedCustomer}
 				bind:pointsToRedeem
+				bind:dueDate
 				onSelectPayment={setPayment}
 			/>
 

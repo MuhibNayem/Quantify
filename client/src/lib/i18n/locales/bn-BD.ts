@@ -1025,6 +1025,7 @@ export default {
             items_desc: 'কার্টে {count} টি আইটেম',
             clear_btn: 'কার্ট মুছুন',
             empty_state: 'একটি নতুন অর্ডার শুরু করতে গ্রিড থেকে পণ্য যোগ করুন।',
+            base_unit: 'বেস একক',
             table: {
                 product: 'পণ্য',
                 price: 'দাম',
@@ -1048,13 +1049,19 @@ export default {
                 cash: 'নগদ',
                 card: 'কার্ড',
                 bkash: 'বিকাশ',
+                credit: 'বাকি',
                 other: 'অন্যান্য'
             },
             sub: {
                 physical: 'ফিজিক্যাল',
                 terminal: 'টার্মিনাল',
                 mobile: 'মোবাইল',
+                credit: 'অপরিশোধিত',
                 check_due: 'চেক/বাকি'
+            },
+            credit: {
+                customer_required: 'বাকি (অপরিশোধিত) বিক্রয়ের জন্য একজন কাস্টমার প্রয়োজন। চালিয়ে যেতে উপরে থেকে একজন নির্বাচন করুন।',
+                due_date: 'পরিশোধের তারিখ (ঐচ্ছিক)'
             }
         },
         loyalty: {
@@ -1094,6 +1101,7 @@ export default {
             access_denied: 'অ্যাক্সেস ডিনাইড',
             access_denied_desc: 'POS অ্যাক্সেস করার অনুমতি আপনার নেই।',
             customer_not_found: 'কাস্টমার পাওয়া যায়নি',
+            customer_required_credit: 'বাকি (অপরিশোধিত) বিক্রয় সম্পূর্ণ করতে একজন কাস্টমার নির্বাচন করুন',
             search_error: 'কাস্টমার অনুসন্ধানে ত্রুটি',
             out_of_stock: 'পণ্য স্টক আউট',
             stock_limit_reached: 'আরও যোগ করা সম্ভব নয়। শুধুমাত্র {stock} টি পণ্য স্টকে উপলব্ধ।',

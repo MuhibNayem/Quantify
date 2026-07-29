@@ -1025,6 +1025,7 @@ export default {
             items_desc: '{count} item{s} in cart',
             clear_btn: 'Clear cart',
             empty_state: 'Add products from the grid above to start a new order.',
+            base_unit: 'Base unit',
             table: {
                 product: 'Product',
                 price: 'Price',
@@ -1048,13 +1049,19 @@ export default {
                 cash: 'Cash',
                 card: 'Card',
                 bkash: 'bKash',
+                credit: 'Credit',
                 other: 'Other'
             },
             sub: {
                 physical: 'Physical',
                 terminal: 'Terminal',
                 mobile: 'Mobile',
+                credit: 'Unpaid',
                 check_due: 'Check/Due'
+            },
+            credit: {
+                customer_required: 'Credit (unpaid) sales require a customer. Select one above to continue.',
+                due_date: 'Due date (optional)'
             }
         },
         loyalty: {
@@ -1094,6 +1101,7 @@ export default {
             access_denied: 'Access Denied',
             access_denied_desc: 'You do not have permission to access POS.',
             customer_not_found: 'Customer not found',
+            customer_required_credit: 'Select a customer to complete a credit (unpaid) sale',
             search_error: 'Error searching for customer',
             out_of_stock: 'Product is out of stock',
             stock_limit_reached: 'Cannot add more. Only {stock} items available in stock.',
