@@ -24,6 +24,29 @@
 	import { cn } from '$lib/utils';
 	import TimeAgo from '$lib/components/ui/time-ago.svelte';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
+	import ColumnPicker from '$lib/components/ui/column-picker.svelte';
+	import { loadColumnPrefs, saveColumnPrefs, type ColumnDef } from '$lib/column-prefs';
+
+	const SALES_COLUMNS: ColumnDef[] = [
+		{ key: 'customer', label: 'Customer' },
+		{ key: 'date', label: 'Date' },
+		{ key: 'items', label: 'Items' },
+		{ key: 'total', label: 'Total' },
+		{ key: 'status', label: 'Status' },
+		{ key: 'payment', label: 'Payment' }
+	];
+
+	let salesVisible = $state(loadColumnPrefs('orders-sales', SALES_COLUMNS));
+
+	function toggleSalesColumn(key: string) {
+		if (salesVisible.has(key)) {
+			salesVisible.delete(key);
+		} else {
+			salesVisible.add(key);
+		}
+		salesVisible = new Set(salesVisible);
+		saveColumnPrefs('orders-sales', salesVisible);
+	}
 
 	// Types
 	interface Product {
@@ -396,7 +419,9 @@
 					class="border-slate-200 bg-white pl-9 shadow-none focus:border-blue-500 focus:ring-blue-500/20"
 				/>
 			</div>
-			<!-- Add create buttons later if needed -->
+			{#if activeTab === 'sales' && subTab === 'orders'}
+				<ColumnPicker columns={SALES_COLUMNS} visible={salesVisible} onToggle={toggleSalesColumn} />
+			{/if}
 		</div>
 
 		{#if loading}
@@ -434,11 +459,14 @@
 										{$t('orders.status.return_pending')}
 									</div>
 								{/if}
-								<div class="flex items-start justify-between border-b border-slate-100 p-4">
-									<div>
-										<h3 class="font-mono text-sm font-bold text-slate-800">{orderNumber(order)}</h3>
+							<div class="flex items-start justify-between border-b border-slate-100 p-4">
+								<div>
+									<h3 class="font-mono text-sm font-bold text-slate-800">{orderNumber(order)}</h3>
+									{#if salesVisible.has('date')}
 										<p class="text-xs text-slate-500"><TimeAgo date={order.OrderDate} /></p>
-									</div>
+									{/if}
+								</div>
+								{#if salesVisible.has('status')}
 									<div
 										class={cn(
 											'flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase',
@@ -448,9 +476,11 @@
 										<svelte:component this={getStatusIcon(order.Status)} size={12} />
 										{order.Status}
 									</div>
-								</div>
+								{/if}
+							</div>
 
-								<div class="flex-1 space-y-3 p-4">
+							<div class="flex-1 space-y-3 p-4">
+								{#if salesVisible.has('customer')}
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">{$t('orders.labels.customer')}</span>
 										<span class="font-medium text-slate-700">
@@ -459,6 +489,14 @@
 												: $t('orders.labels.guest')}
 										</span>
 									</div>
+								{/if}
+								{#if salesVisible.has('payment')}
+									<div class="flex items-center justify-between text-sm">
+										<span class="text-slate-500">Payment</span>
+										<span class="font-medium text-slate-700">{order.PaymentMethod || '—'}</span>
+									</div>
+								{/if}
+								{#if salesVisible.has('items')}
 									<div class="flex items-center justify-between text-sm">
 										<span class="text-slate-500">{$t('orders.labels.items')}</span>
 										<span class="font-medium text-slate-700">{order.OrderItems.length}</span>
@@ -477,10 +515,12 @@
 											</div>
 										{/if}
 									</div>
-								</div>
+								{/if}
+							</div>
 
-								<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
-									<div>
+							<div class="mt-auto flex items-center justify-between bg-slate-50/50 p-4">
+								<div>
+									{#if salesVisible.has('total')}
 										{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
 											<p class="text-lg font-bold text-emerald-600">
 												{formatCurrency(order.AdjustedTotal)}
@@ -493,17 +533,18 @@
 												{formatCurrency(order.TotalAmount)}
 											</p>
 										{/if}
-									</div>
-									<Button
-										href="/orders/{order.OrderNumber}"
-										variant="ghost"
-										size="sm"
-										class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-									>
-										{$t('orders.actions.view_details')}
-										<ArrowRight class="ml-1 h-3 w-3" />
-									</Button>
+									{/if}
 								</div>
+								<Button
+									href="/orders/{order.OrderNumber}"
+									variant="ghost"
+									size="sm"
+									class="text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+								>
+									{$t('orders.actions.view_details')}
+									<ArrowRight class="ml-1 h-3 w-3" />
+								</Button>
+							</div>
 							</div>
 						{:else}
 							<div class="col-span-full">
