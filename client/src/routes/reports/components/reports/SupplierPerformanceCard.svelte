@@ -12,41 +12,39 @@
 	let { supplierPerf }: Props = $props();
 </script>
 
-<div
-	class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-emerald-900/5 backdrop-blur-3xl"
->
-	<h3 class="mb-6 flex items-center gap-2 text-lg font-bold text-slate-700">
-		<DollarSign class="h-5 w-5 text-emerald-500" />
+<div class="liquid-panel rounded-lg p-6">
+	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
+		<DollarSign class="text-primary h-5 w-5" />
 		{$t('reports.supplier.title')}
 		<Tooltip.Root>
 			<Tooltip.Trigger>
-				<HelpCircle class="h-4 w-4 text-slate-400 transition-colors hover:text-emerald-500" />
+				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
 			</Tooltip.Trigger>
 			<Tooltip.Content>
 				<p class="max-w-xs">{$t('reports.supplier.description')}</p>
 			</Tooltip.Content>
 		</Tooltip.Root>
 	</h3>
-	<div class="space-y-3">
+	<div class="space-y-2">
 		{#each supplierPerf as sup}
 			<div
-				class="flex items-center justify-between rounded-[1.5rem] border border-white/40 bg-white/60 p-4 transition-all hover:bg-white/80"
+				class="border-border bg-card hover:bg-muted flex items-center justify-between rounded-md border p-4 transition-colors"
 			>
-				<span class="text-sm font-bold text-slate-700">{sup.supplierName}</span>
-				<div class="flex items-center gap-4">
-					<div class="min-w-[60px] rounded-xl bg-slate-50/50 p-2 text-right">
-						<div class="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+				<span class="text-foreground text-sm font-semibold">{sup.supplierName}</span>
+				<div class="flex items-center gap-3">
+					<div class="bg-muted/50 min-w-[64px] rounded-md p-2 text-right">
+						<div class="overline">
 							{$t('reports.supplier.time')}
 						</div>
-						<div class="font-medium text-slate-800">
+						<div class="text-foreground font-semibold num-mono">
 							{sup.averageLeadTimeDays}{$t('reports.supplier.days_suffix')}
 						</div>
 					</div>
-					<div class="min-w-[60px] rounded-xl bg-emerald-50/50 p-2 text-right">
-						<div class="text-[9px] font-bold tracking-wider text-emerald-600/60 uppercase">
+					<div class="bg-success/10 min-w-[64px] rounded-md p-2 text-right">
+						<div class="text-success overline">
 							{$t('reports.supplier.rate')}
 						</div>
-						<div class="font-bold text-emerald-600">
+						<div class="text-success font-semibold num-mono">
 							{formatPercent(sup.onTimeDeliveryRate)}
 						</div>
 					</div>

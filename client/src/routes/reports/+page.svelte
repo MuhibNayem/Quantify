@@ -227,25 +227,15 @@
 </script>
 
 <Tooltip.Provider>
-	<div
-		class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 font-sans selection:bg-blue-100 selection:text-blue-900 lg:p-10"
-	>
-		<!-- Dynamic Background Mesh -->
-		<div
-			class="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,_rgba(120,119,198,0.1),transparent_50%),radial-gradient(circle_at_0%_0%,_rgba(59,130,246,0.1),transparent_50%),radial-gradient(circle_at_100%_0%,_rgba(37,99,235,0.1),transparent_50%)]"
-		></div>
-		<div
-			class="pointer-events-none fixed inset-0 -z-10 bg-[url('/noise.png')] opacity-[0.015] mix-blend-overlay"
-		></div>
-
+	<div class="relative min-h-screen overflow-hidden bg-background p-6 lg:p-10">
 		<div class="mx-auto max-w-7xl space-y-8 pb-12">
 			<!-- Header -->
 			<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
 				<div class="space-y-1">
-					<h1 class="text-4xl font-bold tracking-tight text-slate-900 drop-shadow-sm">
+					<h1 class="font-display text-foreground text-4xl font-bold tracking-tight">
 						{$t('reports.title')}
 					</h1>
-					<p class="text-lg font-medium text-slate-500">
+					<p class="text-muted-foreground text-lg">
 						{$t('reports.subtitle')}
 					</p>
 				</div>

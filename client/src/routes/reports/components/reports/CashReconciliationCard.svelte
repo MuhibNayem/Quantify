@@ -12,36 +12,34 @@
 	let { cashReconciliation }: Props = $props();
 </script>
 
-<div
-	class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-emerald-900/5 backdrop-blur-3xl"
->
-	<h3 class="mb-6 flex items-center gap-3 text-lg font-bold text-slate-700">
-		<DollarSign class="h-5 w-5 text-emerald-500" />
+<div class="liquid-panel rounded-lg p-6">
+	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
+		<DollarSign class="text-primary h-5 w-5" />
 		{$t('reports.cash_reconciliation.title')}
 		<Tooltip.Root>
 			<Tooltip.Trigger>
-				<HelpCircle class="h-4 w-4 text-slate-400 transition-colors hover:text-emerald-500" />
+				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
 			</Tooltip.Trigger>
 			<Tooltip.Content>
 				<p class="max-w-xs">{$t('reports.cash_reconciliation.description')}</p>
 			</Tooltip.Content>
 		</Tooltip.Root>
 	</h3>
-	<div class="space-y-3">
+	<div class="space-y-2">
 		{#each cashReconciliation as item}
 			<div
-				class="flex items-center justify-between rounded-[1.5rem] border border-white/50 bg-white/60 p-4 transition-all hover:bg-white/80"
+				class="border-border bg-card hover:bg-muted flex items-center justify-between rounded-md border p-4 transition-colors"
 			>
-				<span class="pl-2 text-sm font-bold text-slate-700">{item.CashierName}</span>
+				<span class="text-foreground pl-2 text-sm font-semibold">{item.CashierName}</span>
 				<div class="text-right">
-					<div class="mb-0.5 text-[9px] font-bold tracking-wide text-slate-400 uppercase">
+					<div class="overline mb-0.5">
 						{$t('reports.cash_reconciliation.discrepancy')}
 					</div>
 					<div
-						class="rounded-xl border border-slate-100 bg-white/50 px-3 py-1 font-bold {item.Discrepancy <
+						class="border-border bg-muted/50 rounded-md border px-3 py-1 font-semibold num-mono {item.Discrepancy <
 						0
-							? 'text-red-500'
-							: 'text-emerald-600'}"
+							? 'text-danger'
+							: 'text-success'}"
 					>
 						{formatCurrency(item.Discrepancy)}
 					</div>

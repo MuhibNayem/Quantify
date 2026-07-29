@@ -18,106 +18,90 @@
 
 <div class="flex flex-wrap gap-4">
 	{#if gmroiStats}
-		<div
-			class="min-w-[200px] flex-1 rounded-[2rem] border border-white/50 bg-white/40 p-6 shadow-lg shadow-emerald-900/5 backdrop-blur-xl transition-transform hover:scale-[1.02]"
-		>
-			<div
-				class="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500 uppercase"
-			>
+		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
+			<div class="overline mb-2 flex items-center gap-2">
 				{$t('reports.financials.revenue')}
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="h-3.5 w-3.5 text-slate-400 transition-colors hover:text-emerald-500"
+							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="max-w-xs font-normal text-slate-700">
+						<p class="text-foreground max-w-xs font-normal">
 							{$t('reports.financials.revenue_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="text-xl font-black text-slate-800 md:text-2xl">
+			<div class="kpi-num text-foreground text-xl md:text-2xl">
 				{formatCurrency(gmroiStats.totalRevenue)}
 			</div>
 		</div>
-		<div
-			class="min-w-[200px] flex-1 rounded-[2rem] border border-white/50 bg-white/40 p-6 shadow-lg shadow-emerald-900/5 backdrop-blur-xl transition-transform hover:scale-[1.02]"
-		>
-			<div
-				class="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500 uppercase"
-			>
+		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
+			<div class="overline mb-2 flex items-center gap-2">
 				{$t('reports.financials.cogs')}
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="h-3.5 w-3.5 text-slate-400 transition-colors hover:text-emerald-500"
+							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="max-w-xs font-normal text-slate-700">
+						<p class="text-foreground max-w-xs font-normal">
 							{$t('reports.financials.cogs_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="text-xl font-black text-slate-600 md:text-2xl">
+			<div class="kpi-num text-foreground text-xl md:text-2xl">
 				{formatCurrency(gmroiStats.totalCost)}
 			</div>
 		</div>
-		<div
-			class="min-w-[200px] flex-1 rounded-[2rem] border border-white/50 bg-white/40 p-6 shadow-lg shadow-emerald-900/5 backdrop-blur-xl transition-transform hover:scale-[1.02]"
-		>
-			<div
-				class="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500 uppercase"
-			>
+		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
+			<div class="overline mb-2 flex items-center gap-2">
 				{$t('reports.financials.margin')}
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="h-3.5 w-3.5 text-slate-400 transition-colors hover:text-emerald-500"
+							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="max-w-xs font-normal text-slate-700">
+						<p class="text-foreground max-w-xs font-normal">
 							{$t('reports.financials.margin_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="text-xl font-black text-emerald-600 md:text-2xl">
+			<div class="kpi-num text-success text-xl md:text-2xl">
 				{formatPercent(gmroiStats.marginPercent)}
 			</div>
 		</div>
-		<div
-			class="min-w-[200px] flex-1 rounded-[2rem] border border-white/50 bg-white/40 p-6 shadow-lg shadow-emerald-900/5 backdrop-blur-xl transition-transform hover:scale-[1.02]"
-		>
-			<div
-				class="mb-2 flex items-center gap-2 text-xs font-bold tracking-wider text-slate-500 uppercase"
-			>
-				<span class="border-b border-dotted border-slate-400 decoration-slate-400"
+		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
+			<div class="overline mb-2 flex items-center gap-2">
+				<span class="border-muted-foreground border-b border-dotted"
 					>{$t('reports.financials.gmroi')}</span
 				>
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="h-3.5 w-3.5 text-slate-400 transition-colors hover:text-emerald-500"
+							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="max-w-xs font-normal text-slate-700">
+						<p class="text-foreground max-w-xs font-normal">
 							{$t('reports.financials.gmroi_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="text-xl font-black text-purple-600 md:text-2xl">
+			<div class="kpi-num text-primary text-xl md:text-2xl">
 				{gmroiStats.gmroiIndex.toFixed(2)}
 			</div>
 		</div>
 	{:else}
-		<div class="col-span-full py-8 text-center text-slate-500">
+		<div class="text-muted-foreground col-span-full py-8 text-center">
 			{$t('common.no_data_available')}
 		</div>
 	{/if}

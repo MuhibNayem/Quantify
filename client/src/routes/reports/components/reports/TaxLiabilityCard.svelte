@@ -12,15 +12,13 @@
 	let { taxLiability }: Props = $props();
 </script>
 
-<div
-	class="rounded-[2.5rem] border border-white/60 bg-white/40 p-8 shadow-2xl shadow-blue-900/5 backdrop-blur-3xl"
->
-	<h3 class="mb-6 flex items-center gap-2 text-lg font-bold text-slate-700">
-		<DollarSign class="h-5 w-5 text-blue-500" />
+<div class="liquid-panel rounded-lg p-6">
+	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
+		<DollarSign class="text-primary h-5 w-5" />
 		{$t('reports.tax.title')}
 		<Tooltip.Root>
 			<Tooltip.Trigger>
-				<HelpCircle class="h-4 w-4 text-slate-400 transition-colors hover:text-blue-500" />
+				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
 			</Tooltip.Trigger>
 			<Tooltip.Content>
 				<p class="max-w-xs">{$t('reports.tax.description')}</p>
@@ -29,33 +27,31 @@
 	</h3>
 	{#if taxLiability}
 		<div class="space-y-4">
-			<div
-				class="rounded-[2rem] bg-gradient-to-br from-blue-600 to-indigo-700 p-6 text-white shadow-xl shadow-blue-500/20"
-			>
-				<div class="mb-1 text-sm font-bold text-blue-100">
+			<div class="bg-primary text-primary-foreground rounded-lg p-6 shadow-sm">
+				<div class="text-primary-foreground/80 mb-1 text-sm font-semibold">
 					{$t('reports.tax.collected')}
 				</div>
-				<div class="text-3xl font-black">{formatCurrency(taxLiability.TotalTax)}</div>
+				<div class="kpi-num text-3xl">{formatCurrency(taxLiability.TotalTax)}</div>
 			</div>
 
-			<div class="space-y-3">
+			<div class="space-y-2">
 				{#each taxLiability.Breakdown as rate}
 					<div
-						class="flex items-center justify-between rounded-[1.5rem] border border-white/50 bg-white/60 p-4"
+						class="border-border bg-card flex items-center justify-between rounded-md border p-4"
 					>
 						<div>
-							<div class="text-xs font-bold tracking-wider text-slate-400 uppercase">
+							<div class="overline">
 								{$t('reports.tax.rate')}
 							</div>
-							<div class="font-bold text-slate-700">
+							<div class="text-foreground font-semibold">
 								{rate.RateName} ({formatPercent(rate.Rate / 100)})
 							</div>
 						</div>
 						<div class="text-right">
-							<div class="text-xs font-bold tracking-wider text-slate-400 uppercase">
+							<div class="overline">
 								{$t('reports.tax.taxable_sales')}
 							</div>
-							<div class="font-bold text-slate-700">
+							<div class="text-foreground font-semibold num-mono">
 								{formatCurrency(rate.TaxableAmount)}
 							</div>
 						</div>

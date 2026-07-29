@@ -2,23 +2,8 @@
     import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import HelpTip from '$lib/components/ui/help-tip.svelte';
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
@@ -29,6 +14,13 @@
 	import { goto } from '$app/navigation';
     import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
     import ChurnRiskWidget from '$lib/components/dashboard/ChurnRiskWidget.svelte';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
@@ -238,89 +230,84 @@
 </script>
 
 <!-- HERO -->
-<section
-	class="animate-gradientShift relative w-full overflow-hidden bg-gradient-to-r from-sky-50 via-blue-50 to-cyan-100 px-6 py-20 text-center"
->
-	<div class="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
-
-	<div
-		class="parallax-hero relative z-10 mx-auto flex max-w-3xl transform flex-col items-center justify-center space-y-4 transition-transform duration-700 ease-out will-change-transform"
-	>
+<section class="w-full">
+	<div class="mx-auto max-w-7xl px-6 pt-10 pb-6 sm:pt-14">
 		<div
-			class="animate-pulseGlow rounded-2xl bg-gradient-to-br from-sky-400 to-blue-500 p-4 shadow-lg"
+			class="parallax-hero space-y-2 transition-transform duration-700 ease-out will-change-transform"
+			data-animate="fade-up"
 		>
-			<BarChart3 class="h-8 w-8 text-white" />
+			<p class="overline flex items-center gap-2">
+				<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
+					<BarChart3 class="h-4 w-4" />
+				</span>
+				{$t('intelligence.hero.subtitle')}
+			</p>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
+				{$t('intelligence.hero.title')}
+			</h1>
 		</div>
-		<h1
-			class="animate-fadeUp bg-gradient-to-r from-sky-600 via-blue-600 to-cyan-600 bg-clip-text text-4xl font-bold text-transparent sm:text-5xl"
-		>
-			{$t('intelligence.hero.title')}
-		</h1>
-		<p class="animate-fadeUp text-base text-slate-600 delay-200">
-			{$t('intelligence.hero.subtitle')}
-		</p>
 	</div>
 </section>
 
 <!-- MAIN -->
-<section class="mx-auto max-w-7xl space-y-10 bg-white px-6 py-14">
+<section class="mx-auto max-w-7xl space-y-10 px-6 py-10">
 	<!-- Replenishment Dashboard -->
-	<Card class="rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-teal-100 shadow-lg transition-all duration-300 hover:shadow-xl">
-		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
-			<CardTitle class="flex items-center gap-2 text-slate-800">
-				<Package class="h-5 w-5 text-emerald-600" />
+	<div class="liquid-panel rounded-lg">
+		<div class="border-border space-y-1 border-b px-6 py-5">
+			<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+				<Package class="text-primary h-5 w-5" />
 				Replenishment Overview
-			</CardTitle>
-			<CardDescription class="text-slate-600">Quick stats for your replenishment pipeline</CardDescription>
-		</CardHeader>
-		<CardContent class="p-6">
+			</h2>
+			<p class="text-muted-foreground text-sm">Quick stats for your replenishment pipeline</p>
+		</div>
+		<div class="p-6">
 			{#if replenishmentLoading}
 				<div class="grid gap-4 sm:grid-cols-3">
 					{#each Array(3) as _}
-						<Skeleton class="h-24 w-full rounded-xl bg-white/70" />
+						<Skeleton class="bg-muted h-24 w-full rounded-md" />
 					{/each}
 				</div>
 			{:else if replenishmentDashboard}
 				<div class="grid gap-4 sm:grid-cols-3">
-					<div class="rounded-xl border border-emerald-200/60 bg-white/60 p-5 text-center shadow-sm">
-						<ClipboardList class="mx-auto mb-2 h-6 w-6 text-emerald-600" />
-						<p class="text-3xl font-bold text-slate-800">
+					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
+						<ClipboardList class="text-primary mx-auto mb-2 h-6 w-6" />
+						<p class="kpi-num text-foreground text-3xl">
 							{replenishmentDashboard.pendingSuggestions ?? replenishmentDashboard.PendingSuggestions ?? 0}
 						</p>
-						<p class="text-sm text-slate-500">Pending Suggestions</p>
+						<p class="text-muted-foreground text-sm">Pending Suggestions</p>
 					</div>
-					<div class="rounded-xl border border-teal-200/60 bg-white/60 p-5 text-center shadow-sm">
-						<ShoppingCart class="mx-auto mb-2 h-6 w-6 text-teal-600" />
-						<p class="text-3xl font-bold text-slate-800">
+					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
+						<ShoppingCart class="text-info mx-auto mb-2 h-6 w-6" />
+						<p class="kpi-num text-foreground text-3xl">
 							{replenishmentDashboard.openPOs ?? replenishmentDashboard.OpenPOs ?? 0}
 						</p>
-						<p class="text-sm text-slate-500">Open Purchase Orders</p>
+						<p class="text-muted-foreground text-sm">Open Purchase Orders</p>
 					</div>
-					<div class="rounded-xl border border-amber-200/60 bg-white/60 p-5 text-center shadow-sm">
-						<AlertTriangle class="mx-auto mb-2 h-6 w-6 text-amber-600" />
-						<p class="text-3xl font-bold text-slate-800">
+					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
+						<AlertTriangle class="text-warning mx-auto mb-2 h-6 w-6" />
+						<p class="kpi-num text-foreground text-3xl">
 							{replenishmentDashboard.lowStockItems ?? replenishmentDashboard.LowStockItems ?? 0}
 						</p>
-						<p class="text-sm text-slate-500">Low Stock Items</p>
+						<p class="text-muted-foreground text-sm">Low Stock Items</p>
 					</div>
 				</div>
 				<div class="mt-4 flex flex-wrap gap-3">
 					<a href="/intelligence" class="no-underline">
-						<Button variant="outline" size="sm" class="gap-1 rounded-lg border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+						<Button variant="outline" size="sm" class="{btnSecondary} gap-1">
 							View Suggestions <ArrowRight class="h-3.5 w-3.5" />
 						</Button>
 					</a>
 					<a href="/purchase-orders" class="no-underline">
-						<Button variant="outline" size="sm" class="gap-1 rounded-lg border-teal-200 text-teal-700 hover:bg-teal-50">
+						<Button variant="outline" size="sm" class="{btnSecondary} gap-1">
 							View Purchase Orders <ArrowRight class="h-3.5 w-3.5" />
 						</Button>
 					</a>
 				</div>
 			{:else}
-				<p class="py-4 text-center text-sm text-slate-500">Unable to load replenishment data.</p>
+				<p class="text-muted-foreground py-4 text-center text-sm">Unable to load replenishment data.</p>
 			{/if}
-		</CardContent>
-	</Card>
+		</div>
+	</div>
 
 	<!-- Forecast + Churn Risk -->
 	<div class="grid gap-8 lg:grid-cols-2">
@@ -336,49 +323,43 @@
 
     <!-- Report range -->
     <div class="mx-auto max-w-4xl">
-		<Card
-			class="rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
-		>
-			<CardHeader
-				class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-			>
-				<CardTitle class="text-slate-800">{$t('intelligence.report_range.title')}</CardTitle>
-				<CardDescription class="text-slate-600"
-					>{$t('intelligence.report_range.subtitle')}</CardDescription
-				>
-			</CardHeader>
-			<CardContent class="space-y-4 p-6">
+		<div class="liquid-panel rounded-lg">
+			<div class="border-border space-y-1 border-b px-6 py-5">
+				<h2 class="font-display text-foreground text-lg font-semibold">{$t('intelligence.report_range.title')}</h2>
+				<p class="text-muted-foreground text-sm">{$t('intelligence.report_range.subtitle')}</p>
+			</div>
+			<div class="space-y-4 p-6">
 				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
 					<Input
 						type="date"
 						bind:value={reportRange.startDate}
-						class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400"
+						class="{inputClass} num-mono"
 					/>
 					<Input
 						type="date"
 						bind:value={reportRange.endDate}
-						class="rounded-xl border-cyan-200 bg-white/90 focus:ring-2 focus:ring-cyan-400"
+						class="{inputClass} num-mono"
 					/>
 				</div>
 
 				<!-- Responsive 3-button group -->
 				<div class="flex flex-col gap-3 sm:flex-row">
 					<Button
-						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						class="{btnSecondary} flex-1"
 						variant="secondary"
 						onclick={() => runReport('sales')}
 					>
 						{$t('intelligence.report_range.sales_trends')}
 					</Button>
 					<Button
-						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						class="{btnSecondary} flex-1"
 						variant="secondary"
 						onclick={() => runReport('turnover')}
 					>
 						{$t('intelligence.report_range.turnover')}
 					</Button>
 					<Button
-						class="flex-1 rounded-xl border border-cyan-200 bg-white/80 font-medium text-cyan-700 shadow-sm transition-all hover:scale-105 hover:bg-cyan-50"
+						class="{btnSecondary} flex-1"
 						variant="secondary"
 						onclick={() => runReport('margin')}
 					>
@@ -386,29 +367,29 @@
 					</Button>
 				</div>
 
-				<div class="flex items-center gap-3 border-t border-cyan-100 pt-4">
-					<div class="flex items-center gap-1 rounded-xl border border-cyan-200 bg-white/80 p-1">
+				<div class="border-border flex items-center gap-3 border-t pt-4">
+					<div class="border-border bg-muted flex items-center gap-1 rounded-md border p-1">
 						<button
-							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'csv' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'csv' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
 							onclick={() => (exportFormat = 'csv')}
 						>
 							<FileText class="h-3.5 w-3.5" /> CSV
 						</button>
 						<button
-							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'pdf' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'pdf' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
 							onclick={() => (exportFormat = 'pdf')}
 						>
 							<FileText class="h-3.5 w-3.5" /> PDF
 						</button>
 						<button
-							class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all {exportFormat === 'excel' ? 'bg-cyan-600 text-white shadow-sm' : 'text-slate-600 hover:bg-cyan-50'}"
+							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'excel' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
 							onclick={() => (exportFormat = 'excel')}
 						>
 							<FileSpreadsheet class="h-3.5 w-3.5" /> Excel
 						</button>
 					</div>
 					<Button
-						class="rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 font-medium text-white shadow-md transition-all hover:scale-105 hover:from-cyan-500 hover:to-teal-500"
+						class={btnPrimary}
 						onclick={startExport}
 						disabled={exportStatus === 'pending' || exportStatus === 'processing'}
 					>
@@ -421,334 +402,252 @@
 						{/if}
 					</Button>
 					{#if exportStatus === 'complete'}
-						<span class="text-xs font-medium text-emerald-600">Ready</span>
+						<span class="text-success text-xs font-medium">Ready</span>
 					{:else if exportStatus === 'failed'}
-						<span class="text-xs font-medium text-red-500">Failed</span>
+						<span class="text-danger text-xs font-medium">Failed</span>
 					{/if}
 				</div>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
     </div>
 
 	<!-- Reorder suggestions -->
-	<Card
-		class="rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all duration-300 hover:shadow-xl"
-	>
-		<CardHeader class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur">
-			<div class="flex items-center justify-between">
-				<div>
-					<CardTitle class="flex items-center gap-2 text-slate-800">
-						<ShoppingCart class="h-5 w-5 text-emerald-600" />
-						{$t('intelligence.reorder_suggestions.title')}
-					</CardTitle>
-					<CardDescription class="text-slate-600">{$t('intelligence.reorder_suggestions.subtitle')}</CardDescription>
-				</div>
-				<Button
-					variant="outline"
-					size="sm"
-					class="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-					onclick={async () => {
-						suggestionsLoading = true;
-						try {
-							await replenishmentApi.generateSuggestions();
-							await loadSuggestions();
-							toast.success($t('intelligence.toasts.suggestions_refreshed'));
-						} catch (e) {
-							toast.error($t('intelligence.toasts.refresh_fail'));
-						} finally {
-							suggestionsLoading = false;
-						}
-					}}
-					disabled={suggestionsLoading}
-				>
-					<RefreshCw class={suggestionsLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-					{$t('intelligence.reorder_suggestions.refresh_btn')}
-				</Button>
+	<div class="liquid-panel overflow-hidden rounded-lg">
+		<div
+			class="border-border flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
+		>
+			<div>
+				<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+					<ShoppingCart class="text-primary h-5 w-5" />
+					{$t('intelligence.reorder_suggestions.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('intelligence.reorder_suggestions.subtitle')}</p>
 			</div>
-		</CardHeader>
-		<CardContent class="p-0">
-			<Table class="overflow-hidden rounded-2xl border border-amber-200/60">
-				<TableHeader class="bg-gradient-to-r from-amber-100 to-orange-100">
-					<TableRow>
-						<TableHead>{$t('intelligence.reorder_suggestions.table.product')}</TableHead>
-						<TableHead>{$t('intelligence.reorder_suggestions.table.supplier')}</TableHead>
-						<TableHead>
+			<Button
+				variant="outline"
+				size="sm"
+				class="{btnSecondary} gap-2"
+				onclick={async () => {
+					suggestionsLoading = true;
+					try {
+						await replenishmentApi.generateSuggestions();
+						await loadSuggestions();
+						toast.success($t('intelligence.toasts.suggestions_refreshed'));
+					} catch (e) {
+						toast.error($t('intelligence.toasts.refresh_fail'));
+					} finally {
+						suggestionsLoading = false;
+					}
+				}}
+				disabled={suggestionsLoading}
+			>
+				<RefreshCw class={suggestionsLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+				{$t('intelligence.reorder_suggestions.refresh_btn')}
+			</Button>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="ledger-table">
+				<thead>
+					<tr>
+						<th>{$t('intelligence.reorder_suggestions.table.product')}</th>
+						<th>{$t('intelligence.reorder_suggestions.table.supplier')}</th>
+						<th>
 							<span class="inline-flex items-center gap-1">
 								{$t('intelligence.reorder_suggestions.table.suggested_qty')}
 								<HelpTip text="Recommended reorder quantity based on recent sales velocity and lead time." />
 							</span>
-						</TableHead>
-						<TableHead>{$t('intelligence.reorder_suggestions.table.status')}</TableHead>
-						<TableHead class="text-right">{$t('intelligence.reorder_suggestions.table.actions')}</TableHead>
-					</TableRow>
-				</TableHeader>
-				<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/60">
+						</th>
+						<th>{$t('intelligence.reorder_suggestions.table.status')}</th>
+						<th class="text-right">{$t('intelligence.reorder_suggestions.table.actions')}</th>
+					</tr>
+				</thead>
+				<tbody>
 					{#if suggestionsLoading}
 						{#each Array(4) as _, i}
-							<TableRow>
-								<TableCell colspan={5} class="p-3"
-									><Skeleton class="h-6 w-full bg-white/70" /></TableCell
+							<tr>
+								<td colspan={5} class="p-3"
+									><Skeleton class="bg-muted h-6 w-full" /></td
 								>
-							</TableRow>
+							</tr>
 						{/each}
 					{:else if suggestions.length === 0}
-						<TableRow>
-							<TableCell colspan={5} class="py-6 text-center text-sm text-slate-500"
-								>{$t('intelligence.reorder_suggestions.table.empty')}</TableCell
+						<tr>
+							<td colspan={5} class="text-muted-foreground py-6 text-center text-sm"
+								>{$t('intelligence.reorder_suggestions.table.empty')}</td
 							>
-						</TableRow>
+						</tr>
 					{:else}
 						{#each suggestions as suggestion}
-							<TableRow class="transition-colors hover:bg-white/90">
-								<TableCell
-									>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</TableCell
+							<tr>
+								<td class="text-foreground"
+									>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</td
 								>
-								<TableCell>{suggestion.Supplier?.Name ?? String(suggestion.SupplierID)}</TableCell>
-								<TableCell>{suggestion.SuggestedOrderQuantity}</TableCell>
-								<TableCell>
-									<span
-										class="inline-flex items-center rounded-full bg-orange-200/60 px-2 py-0.5 text-xs capitalize text-orange-800"
-									>
+								<td class="text-foreground">{suggestion.Supplier?.Name ?? String(suggestion.SupplierID)}</td>
+								<td class="num-mono">{suggestion.SuggestedOrderQuantity}</td>
+								<td>
+									<span class="badge-warning capitalize">
 										{suggestion.Status}
 									</span>
-								</TableCell>
-								<TableCell class="text-right">
+								</td>
+								<td class="text-right">
 									<!-- Responsive action: single button stays compact -->
 									<Button
 										size="sm"
 										variant="ghost"
-										class="rounded-md px-3 py-1.5 text-amber-700 hover:bg-amber-50"
+										class="text-primary hover:bg-muted rounded-md px-3 py-1.5"
 										onclick={() => createPO(suggestion.ID)}
 									>
 										{$t('intelligence.reorder_suggestions.table.create_po')}
 									</Button>
-								</TableCell>
-							</TableRow>
+								</td>
+							</tr>
 						{/each}
 					{/if}
-				</TableBody>
-			</Table>
-		</CardContent>
-	</Card>
+				</tbody>
+			</table>
+		</div>
+	</div>
 
 	<!-- Reports payloads -->
 
 	<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
 		<!-- SALES REPORT -->
 		{#if auth.hasPermission('reports.sales')}
-			<Card
-				class="rounded-2xl border-0 bg-gradient-to-br from-sky-50 to-blue-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader
-					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-				>
+			<div class="liquid-panel rounded-lg">
+				<div class="border-border flex items-center justify-between border-b px-6 py-5">
 					<div>
-						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<TrendingUp class="h-5 w-5 text-sky-600" />
+						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+							<TrendingUp class="text-primary h-5 w-5" />
 							{$t('intelligence.reports.sales.title')}
-						</CardTitle>
-						<CardDescription class="text-slate-600">{$t('intelligence.reports.sales.subtitle')}</CardDescription
-						>
+						</h2>
+						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.sales.subtitle')}</p>
 					</div>
 					<button
-						class="rounded-full p-2 hover:bg-sky-100"
+						class="hover:bg-muted rounded-md p-2"
 						onclick={() => exportJSON(reportResults.sales, 'sales-report')}
 					>
-						<Download class="h-4 w-4 text-sky-700" />
+						<Download class="text-primary h-4 w-4" />
 					</button>
-				</CardHeader>
-				<CardContent class="space-y-4 p-6">
+				</div>
+				<div class="space-y-4 p-6">
 					<!-- Simple Line Chart (SVG sparkline) -->
 					<div class="relative h-24 w-full">
-						<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="absolute inset-0">
+						<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="text-primary absolute inset-0">
 							<polyline
 								points={generateSparkline(reportResults.sales?.salesTrends)}
 								fill="none"
-								stroke="url(#salesGrad)"
+								stroke="currentColor"
 								stroke-width="2.5"
 								stroke-linecap="round"
 							/>
-							<defs>
-								<linearGradient id="salesGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-									<stop offset="0%" stop-color="#38bdf8" />
-									<stop offset="100%" stop-color="#2563eb" />
-								</linearGradient>
-							</defs>
 						</svg>
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.sales.total_sales')}</p>
-						<p class="font-semibold text-sky-700">{fmt(reportResults.sales?.totalSales)}</p>
+						<p class="text-foreground font-semibold num-mono">{fmt(reportResults.sales?.totalSales)}</p>
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.sales.avg_daily_sales')}</p>
-						<p class="font-semibold text-blue-700">{fmt(reportResults.sales?.averageDailySales)}</p>
+						<p class="text-foreground font-semibold num-mono">{fmt(reportResults.sales?.averageDailySales)}</p>
 					</div>
-					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.sales?.period ?? '—' })}</p>
-				</CardContent>
-			</Card>
+					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.sales?.period ?? '—' })}</p>
+				</div>
+			</div>
 		{/if}
 
 		<!-- TURNOVER REPORT -->
 		{#if auth.hasPermission('reports.inventory')}
-			<Card
-				class="rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader
-					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-				>
+			<div class="liquid-panel rounded-lg">
+				<div class="border-border flex items-center justify-between border-b px-6 py-5">
 					<div>
-						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<RotateCcw class="h-5 w-5 text-teal-600" />
+						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+							<RotateCcw class="text-primary h-5 w-5" />
 							{$t('intelligence.reports.turnover.title')}
-						</CardTitle>
-						<CardDescription class="text-slate-600">{$t('intelligence.reports.turnover.subtitle')}</CardDescription>
+						</h2>
+						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.turnover.subtitle')}</p>
 					</div>
 					<button
-						class="rounded-full p-2 hover:bg-teal-100"
+						class="hover:bg-muted rounded-md p-2"
 						onclick={() => exportJSON(reportResults.turnover, 'turnover-report')}
 					>
-						<Download class="h-4 w-4 text-teal-700" />
+						<Download class="text-primary h-4 w-4" />
 					</button>
-				</CardHeader>
-				<CardContent class="space-y-4 p-6">
+				</div>
+				<div class="space-y-4 p-6">
 					<!-- Bar Chart -->
 					<div class="flex h-24 w-full items-end gap-1">
-						{#each [40, 25, 30, 15, 35, 22, 28] as height}
+						{#each [40, 25, 30, 15, 35, 22, 28] as height, i}
 							<div
-								class="flex-1 rounded-t-md bg-gradient-to-t from-teal-400 to-cyan-400 transition-all duration-500 ease-in-out hover:scale-105"
+								class="flex-1 rounded-t-md transition-all duration-500 ease-in-out hover:scale-105 {i === 6
+									? 'bg-primary'
+									: 'bg-primary/30'}"
 								style={`height: ${height}%;`}
 							></div>
 						{/each}
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.turnover.avg_inventory_value')}</p>
-						<p class="font-semibold text-teal-700">
+						<p class="text-foreground font-semibold num-mono">
 							${fmt(reportResults.turnover?.averageInventoryValue)}
 						</p>
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.turnover.turnover_rate')}</p>
-						<p class="font-semibold text-teal-700">
+						<p class="text-foreground font-semibold num-mono">
 							{fmt(reportResults.turnover?.inventoryTurnoverRate)}
 						</p>
 					</div>
-					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.turnover?.period ?? '—' })}</p>
-				</CardContent>
-			</Card>
+					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.turnover?.period ?? '—' })}</p>
+				</div>
+			</div>
 		{/if}
 
 		<!-- MARGIN REPORT -->
 		{#if auth.hasPermission('reports.financial')}
-			<Card
-				class="rounded-2xl border-0 bg-gradient-to-br from-pink-50 to-rose-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader
-					class="flex items-center justify-between rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-				>
+			<div class="liquid-panel rounded-lg">
+				<div class="border-border flex items-center justify-between border-b px-6 py-5">
 					<div>
-						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<Percent class="h-5 w-5 text-rose-600" />
+						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+							<Percent class="text-primary h-5 w-5" />
 							{$t('intelligence.reports.margin.title')}
-						</CardTitle>
-						<CardDescription class="text-slate-600">{$t('intelligence.reports.margin.subtitle')}</CardDescription>
+						</h2>
+						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.margin.subtitle')}</p>
 					</div>
 					<button
-						class="rounded-full p-2 hover:bg-pink-100"
+						class="hover:bg-muted rounded-md p-2"
 						onclick={() => exportJSON(reportResults.margin, 'margin-report')}
 					>
-						<Download class="h-4 w-4 text-rose-700" />
+						<Download class="text-primary h-4 w-4" />
 					</button>
-				</CardHeader>
-				<CardContent class="space-y-4 p-6">
+				</div>
+				<div class="space-y-4 p-6">
 					<!-- Semi-donut Chart -->
 					<div class="relative flex h-24 items-center justify-center">
-						<svg viewBox="0 0 36 18" class="h-12 w-24 rotate-180">
+						<svg viewBox="0 0 36 18" class="text-primary h-12 w-24 rotate-180">
 							<path
 								d="M2 18 A16 16 0 0 1 34 18"
 								fill="none"
-								stroke="url(#marginGrad)"
+								stroke="currentColor"
 								stroke-width="4"
 								stroke-linecap="round"
 								stroke-dasharray="{(reportResults.margin?.grossProfitMargin ?? 0) * 0.5},100"
 							/>
-							<defs>
-								<linearGradient id="marginGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-									<stop offset="0%" stop-color="#fb7185" />
-									<stop offset="100%" stop-color="#e11d48" />
-								</linearGradient>
-							</defs>
 						</svg>
-						<span class="absolute text-lg font-semibold text-rose-700">
+						<span class="text-primary absolute text-lg font-semibold num-mono">
 							{fmt(reportResults.margin?.grossProfitMargin)}%
 						</span>
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.margin.gross_profit')}</p>
-						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.grossProfit)}</p>
+						<p class="text-foreground font-semibold num-mono">${fmt(reportResults.margin?.grossProfit)}</p>
 					</div>
-					<div class="flex justify-between text-sm text-slate-600">
+					<div class="text-muted-foreground flex justify-between text-sm">
 						<p>{$t('intelligence.reports.margin.total_revenue')}</p>
-						<p class="font-semibold text-rose-700">${fmt(reportResults.margin?.totalRevenue)}</p>
+						<p class="text-foreground font-semibold num-mono">${fmt(reportResults.margin?.totalRevenue)}</p>
 					</div>
-					<p class="text-xs text-slate-500">{$t('intelligence.reports.period', { period: reportResults.margin?.period ?? '—' })}</p>
-				</CardContent>
-			</Card>
+					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.margin?.period ?? '—' })}</p>
+				</div>
+			</div>
 		{/if}
 	</div>
 </section>
-
-<style lang="postcss">
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 20s ease infinite;
-	}
-
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
-		}
-		50% {
-			transform: scale(1.08);
-			box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 8s ease-in-out infinite;
-	}
-
-	@keyframes fadeUp {
-		from {
-			opacity: 0;
-			transform: translateY(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-	.animate-fadeUp {
-		animation: fadeUp 1.5s ease forwards;
-	}
-
-	* {
-		transition-property:
-			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
-			box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
-</style>

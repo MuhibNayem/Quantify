@@ -8,27 +8,11 @@
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
 
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import { cn } from '$lib/utils';
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import UserSelector from '$lib/components/ui/user-selector.svelte';
 
@@ -45,6 +29,13 @@
 	} from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
 
 	const filters = $state({ type: '', status: 'ACTIVE' });
 	let alerts = $state<Alert[]>([]);
@@ -308,52 +299,27 @@
 </script>
 
 <!-- HERO -->
-<section
-	class="animate-gradientShift relative w-full overflow-hidden bg-gradient-to-r from-amber-50 via-orange-50 to-rose-100 px-4 py-16 sm:px-6 sm:py-20"
->
-	<!-- soft glass veil -->
-	<div class="absolute inset-0 bg-white/40 backdrop-blur-sm"></div>
-
-	<!-- floating blobs -->
-	<div class="pointer-events-none absolute inset-0">
+<section class="w-full">
+	<div class="mx-auto max-w-7xl px-6 pt-10 pb-6 sm:pt-14">
 		<div
-			class="animate-heroFloat absolute -top-16 -left-16 h-56 w-56 rounded-full bg-gradient-to-tr from-amber-200 to-orange-200 opacity-60 blur-3xl"
-		></div>
-		<div
-			class="animate-heroFloat absolute top-1/3 -right-10 h-48 w-48 rounded-full bg-gradient-to-tr from-rose-200 to-orange-200 opacity-50 blur-3xl delay-300"
-		></div>
-	</div>
-
-	<!-- content -->
-	<div class="relative z-10 mx-auto max-w-5xl text-center">
-		<div
-			class="parallax-hero transform transition-transform duration-700 ease-out will-change-transform"
+			class="parallax-hero space-y-2 transition-transform duration-700 ease-out will-change-transform"
+			data-animate="fade-up"
 		>
-			<div
-				class="animate-pulseGlow mx-auto mb-5 w-fit rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 p-4 shadow-lg"
-			>
-				<Bell class="h-8 w-8 text-white" />
-			</div>
-			<h1
-				class="animate-fadeUp bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 bg-clip-text text-3xl leading-tight font-extrabold text-transparent sm:text-5xl"
-			>
-				{$t('alerts.title')}
-			</h1>
-			<p class="animate-fadeUp mt-3 text-sm text-slate-600 delay-200 sm:text-base">
+			<p class="overline flex items-center gap-2">
+				<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
+					<Bell class="h-4 w-4" />
+				</span>
 				{$t('alerts.subtitle')}
 			</p>
-			<div class="animate-fadeUp mt-6 flex flex-wrap justify-center gap-3 delay-300">
-				<Button
-					variant="secondary"
-					class="rounded-xl border border-amber-200 bg-white/80 font-medium text-amber-700 shadow-sm transition-all hover:scale-105 hover:bg-amber-50 hover:shadow-md"
-					onclick={loadAlerts}
-				>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
+				{$t('alerts.title')}
+			</h1>
+			<div class="flex flex-wrap gap-3 pt-2">
+				<Button variant="secondary" class={btnSecondary} onclick={loadAlerts}>
 					{$t('alerts.refresh')}
 				</Button>
 				<a href="/operations">
-					<Button
-						class="rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md transition-all hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-lg"
-					>
+					<Button class={btnPrimary}>
 						{$t('alerts.go_to_ops')}
 					</Button>
 				</a>
@@ -372,24 +338,19 @@
 />
 
 <!-- MAIN -->
-<section class="mx-auto max-w-7xl space-y-8 px-4 py-12 sm:px-6">
+<section class="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6">
 	<!-- Filters + Live Alerts -->
-	<Card
-		class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all hover:shadow-xl"
-	>
-		<CardHeader
-			class="flex flex-col gap-4 border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur sm:flex-row sm:items-end sm:justify-between"
+	<div class="liquid-panel overflow-hidden rounded-lg">
+		<div
+			class="border-border flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-end sm:justify-between"
 		>
 			<div>
-				<CardTitle class="text-slate-800">{$t('alerts.live_alerts')}</CardTitle>
-				<CardDescription class="text-slate-600">{$t('alerts.live_alerts_desc')}</CardDescription>
+				<h2 class="font-display text-foreground text-lg font-semibold">{$t('alerts.live_alerts')}</h2>
+				<p class="text-muted-foreground text-sm">{$t('alerts.live_alerts_desc')}</p>
 			</div>
 			<div class="flex gap-2">
 				<div class="select-wrapper w-[200px]">
-					<select
-						class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400"
-						bind:value={filters.type}
-					>
+					<select bind:value={filters.type}>
 						<option value="">{$t('alerts.filters.placeholder_type')}</option>
 						<option value="LOW_STOCK">{$t('alerts.filters.type_options.low_stock')}</option>
 						<option value="OVERSTOCK">{$t('alerts.filters.type_options.overstock')}</option>
@@ -399,94 +360,83 @@
 				</div>
 
 				<div class="select-wrapper w-[150px]">
-					<select
-						class="rounded-xl border border-amber-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400"
-						bind:value={filters.status}
-					>
+					<select bind:value={filters.status}>
 						<option value="">{$t('alerts.filters.placeholder_status')}</option>
 						<option value="ACTIVE">{$t('alerts.filters.status_options.active')}</option>
 						<option value="RESOLVED">{$t('alerts.filters.status_options.resolved')}</option>
 					</select>
 				</div>
 
-				<Button
-					variant="secondary"
-					class="rounded-xl border border-amber-200 bg-white/90 text-amber-700 hover:bg-amber-50"
-					onclick={loadAlerts}
-				>
+				<Button variant="secondary" class={btnSecondary} onclick={loadAlerts}>
 					{$t('alerts.filters.refresh_btn')}
 				</Button>
 			</div>
-		</CardHeader>
-		<CardContent class="p-0">
-			<Table>
-				<TableHeader
-					class="sticky top-0 z-10 bg-gradient-to-r from-amber-100/85 to-orange-100/85 backdrop-blur"
-				>
-					<TableRow class="border-y border-amber-200/70">
-						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.type')}</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.product')}</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.message')}</TableHead>
-						<TableHead class="px-4 py-3 text-slate-700">{$t('alerts.table.status')}</TableHead>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="ledger-table">
+				<thead>
+					<tr>
+						<th>{$t('alerts.table.type')}</th>
+						<th>{$t('alerts.table.product')}</th>
+						<th>{$t('alerts.table.message')}</th>
+						<th>{$t('alerts.table.status')}</th>
 						{#if auth.hasPermission('alerts.manage')}
-							<TableHead class="px-4 py-3 text-right text-slate-700"
-								>{$t('alerts.table.action')}</TableHead
-							>
+							<th class="text-right">{$t('alerts.table.action')}</th>
 						{/if}
-					</TableRow>
-				</TableHeader>
-				<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+					</tr>
+				</thead>
+				<tbody>
 					{#if loading}
 						{#each Array(4) as _, i}
-							<TableRow class="hover:bg-white/80">
-								<TableCell colspan={auth.hasPermission('alerts.manage') ? 5 : 4} class="px-4 py-3">
-									<Skeleton class="h-6 w-full bg-white/70" />
-								</TableCell>
-							</TableRow>
+							<tr>
+								<td colspan={auth.hasPermission('alerts.manage') ? 5 : 4}>
+									<Skeleton class="bg-muted h-6 w-full" />
+								</td>
+							</tr>
 						{/each}
 					{:else if alerts.length === 0}
-						<TableRow>
-							<TableCell colspan={auth.hasPermission('alerts.manage') ? 5 : 4} class="p-0">
+						<tr>
+							<td colspan={auth.hasPermission('alerts.manage') ? 5 : 4} class="p-0">
 								<EmptyState
 									icon={Bell}
 									title="No alerts right now"
 									description="Stock, expiry and overstock alerts will appear here as they trigger."
 								/>
-							</TableCell>
-						</TableRow>
+							</td>
+						</tr>
 					{:else}
 						{#each alerts as alert}
-							<TableRow
-								class="cursor-pointer transition-colors hover:bg-white/90"
-								onclick={() => openAlertDetails(alert)}
-							>
-								<TableCell class="px-4 py-3 text-xs font-semibold text-slate-700"
-									>{alert.Type}</TableCell
-								>
-								<TableCell class="px-4 py-3 text-slate-800"
-									>{alert.Product?.Name ??
-										`${$t('alerts.table.product_fallback')} ${alert.ProductID}`}</TableCell
-								>
-								<TableCell class="px-4 py-3 text-sm text-slate-600">{alert.Message}</TableCell>
-								<TableCell class="px-4 py-3">
+							<tr class="cursor-pointer" onclick={() => openAlertDetails(alert)}>
+								<td>
 									<span
-										class={cn(
-											'rounded-full border px-2.5 py-1 text-xs capitalize shadow-sm',
-											alert.Status === 'ACTIVE'
-												? 'border-amber-200 bg-amber-100 text-amber-700'
-												: 'border-slate-200 bg-slate-100 text-slate-600'
-										)}
+										class="{alert.Type === 'OUT_OF_STOCK'
+											? 'badge-danger'
+											: alert.Type === 'OVERSTOCK'
+												? 'badge-info'
+												: 'badge-warning'} capitalize"
+									>
+										{alert.Type}
+									</span>
+								</td>
+								<td class="text-foreground"
+									>{alert.Product?.Name ??
+										`${$t('alerts.table.product_fallback')} ${alert.ProductID}`}</td
+								>
+								<td class="text-muted-foreground text-sm">{alert.Message}</td>
+								<td>
+									<span
+										class="{alert.Status === 'ACTIVE' ? 'badge-warning' : 'badge-neutral'} capitalize"
 									>
 										{alert.Status}
 									</span>
-								</TableCell>
+								</td>
 								{#if auth.hasPermission('alerts.manage')}
-									<TableCell class="px-4 py-3 text-right">
+									<td class="text-right">
 										{#if alert.Status !== 'RESOLVED'}
 											<Button
 												size="sm"
 												variant="ghost"
-												class="rounded-lg px-3 py-1.5 text-amber-700 hover:bg-amber-100"
+												class="text-primary hover:bg-muted rounded-md px-3 py-1.5"
 												onclick={(event) => {
 													event.stopPropagation();
 													resolveAlert(alert.ID);
@@ -495,32 +445,28 @@
 												{$t('alerts.table.resolve')}
 											</Button>
 										{/if}
-									</TableCell>
+									</td>
 								{/if}
-							</TableRow>
+							</tr>
 						{/each}
 					{/if}
-				</TableBody>
-			</Table>
-		</CardContent>
-	</Card>
+				</tbody>
+			</table>
+		</div>
+	</div>
 
 	<!-- Forms -->
 	{#if auth.hasPermission('alerts.manage')}
 		<div class="grid gap-8 lg:grid-cols-2">
 			<!-- Product thresholds -->
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-emerald-50 to-green-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-					<CardTitle class="text-slate-800">{$t('alerts.thresholds.title')}</CardTitle>
-					<CardDescription class="text-slate-600"
-						>{$t('alerts.thresholds.subtitle')}</CardDescription
-					>
-				</CardHeader>
-				<CardContent class="space-y-3 p-6">
+			<div class="liquid-panel rounded-lg">
+				<div class="border-border space-y-1 border-b px-6 py-5">
+					<h2 class="font-display text-foreground text-lg font-semibold">{$t('alerts.thresholds.title')}</h2>
+					<p class="text-muted-foreground text-sm">{$t('alerts.thresholds.subtitle')}</p>
+				</div>
+				<div class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700"
+						<label class="text-foreground text-sm font-medium"
 							>{$t('alerts.thresholds.product_label')}</label
 						>
 						<ProductSelector
@@ -534,62 +480,55 @@
 							type="number"
 							placeholder={$t('alerts.thresholds.low_stock')}
 							bind:value={productSettingsForm.lowStockLevel}
-							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+							class="{inputClass} num-mono"
 						/>
 						<Input
 							type="number"
 							placeholder={$t('alerts.thresholds.overstock')}
 							bind:value={productSettingsForm.overStockLevel}
-							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+							class="{inputClass} num-mono"
 						/>
 						<Input
 							type="number"
 							placeholder={$t('alerts.thresholds.expiry_days')}
 							bind:value={productSettingsForm.expiryAlertDays}
-							class="rounded-xl border-emerald-200 bg-white/90 focus:ring-2 focus:ring-emerald-400"
+							class="{inputClass} num-mono"
 						/>
 					</div>
-					<Button
-						class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 text-white shadow-md transition-all hover:scale-105 hover:from-emerald-600 hover:to-green-700 hover:shadow-lg"
-						onclick={updateProductSettings}
-					>
+					<Button class="{btnPrimary} w-full" onclick={updateProductSettings}>
 						{$t('alerts.thresholds.save')}
 					</Button>
-				</CardContent>
-			</Card>
+				</div>
+			</div>
 
 			<!-- User notifications -->
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader class="border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur">
-					<CardTitle class="text-slate-800">{$t('alerts.notifications.title')}</CardTitle>
-					<CardDescription class="text-slate-600"
-						>{$t('alerts.notifications.subtitle')}</CardDescription
-					>
-				</CardHeader>
-				<CardContent class="space-y-3 p-6">
+			<div class="liquid-panel rounded-lg">
+				<div class="border-border space-y-1 border-b px-6 py-5">
+					<h2 class="font-display text-foreground text-lg font-semibold">{$t('alerts.notifications.title')}</h2>
+					<p class="text-muted-foreground text-sm">{$t('alerts.notifications.subtitle')}</p>
+				</div>
+				<div class="space-y-3 p-6">
 					<div class="space-y-1">
-						<label class="text-sm font-medium text-slate-700"
+						<label class="text-foreground text-sm font-medium"
 							>{$t('alerts.notifications.user_label')}</label
 						>
 						<UserSelector
 							bind:value={userSettingsForm.userId}
 							placeholder={$t('alerts.notifications.user_placeholder')}
-							className="w-full border-violet-200"
+							className="w-full"
 						/>
 					</div>
 					<Input
 						placeholder={$t('alerts.notifications.email_placeholder')}
 						bind:value={userSettingsForm.emailAddress}
-						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
+						class={inputClass}
 					/>
 					<Input
 						placeholder={$t('alerts.notifications.phone_placeholder')}
 						bind:value={userSettingsForm.phoneNumber}
-						class="rounded-xl border-violet-200 bg-white/90 focus:ring-2 focus:ring-violet-400"
+						class={inputClass}
 					/>
-					<div class="flex flex-wrap items-center gap-4 text-sm">
+					<div class="text-foreground flex flex-wrap items-center gap-4 text-sm">
 						<label class="flex items-center gap-2">
 							<input type="checkbox" bind:checked={userSettingsForm.emailNotificationsEnabled} />
 							{$t('alerts.notifications.email_label')}
@@ -599,95 +538,85 @@
 							{$t('alerts.notifications.sms_label')}
 						</label>
 					</div>
-					<Button
-						class="w-full rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-md transition-all hover:scale-105 hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
-						onclick={updateUserSettings}
-					>
+					<Button class="{btnPrimary} w-full" onclick={updateUserSettings}>
 						{$t('alerts.notifications.save')}
 					</Button>
-				</CardContent>
-			</Card>
+				</div>
+			</div>
 		</div>
 	{/if}
 
 	{#if auth.hasPermission('alerts.manage')}
-		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-50 to-blue-100 shadow-lg transition-all hover:shadow-xl"
-		>
-			<CardHeader
-				class="flex flex-col gap-4 border-b border-white/60 bg-white/75 px-6 py-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+		<div class="liquid-panel overflow-hidden rounded-lg">
+			<div
+				class="border-border flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
 			>
 				<div>
-					<CardTitle class="flex items-center gap-2 text-slate-800">
-						<Users class="h-5 w-5 text-indigo-600" />
+					<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+						<Users class="text-primary h-5 w-5" />
 						Alert Role Subscriptions
-					</CardTitle>
-					<CardDescription class="text-slate-600">
+					</h2>
+					<p class="text-muted-foreground text-sm">
 						Configure which roles receive which alert types.
-					</CardDescription>
+					</p>
 				</div>
-				<Button
-					class="rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-md transition-all hover:scale-105 hover:from-indigo-600 hover:to-blue-700"
-					onclick={() => (addSubOpen = true)}
-				>
+				<Button class={btnPrimary} onclick={() => (addSubOpen = true)}>
 					<Plus class="mr-2 h-4 w-4" />
 					Add Subscription
 				</Button>
-			</CardHeader>
-			<CardContent class="p-0">
-				<Table>
-					<TableHeader class="bg-gradient-to-r from-indigo-100/85 to-blue-100/85 backdrop-blur">
-						<TableRow class="border-y border-indigo-200/70">
-							<TableHead class="px-4 py-3 text-slate-700">Alert Type</TableHead>
-							<TableHead class="px-4 py-3 text-slate-700">Role</TableHead>
-							<TableHead class="px-4 py-3 text-right text-slate-700">Actions</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody class="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white/50">
+			</div>
+			<div class="overflow-x-auto">
+				<table class="ledger-table">
+					<thead>
+						<tr>
+							<th>Alert Type</th>
+							<th>Role</th>
+							<th class="text-right">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
 						{#if roleSubsLoading}
 							{#each Array(3) as _}
-								<TableRow>
-									<TableCell colspan={3} class="px-4 py-3">
-										<Skeleton class="h-6 w-full bg-white/70" />
-									</TableCell>
-								</TableRow>
+								<tr>
+									<td colspan={3}>
+										<Skeleton class="bg-muted h-6 w-full" />
+									</td>
+								</tr>
 							{/each}
 						{:else if roleSubscriptions.length === 0}
-							<TableRow>
-								<TableCell colspan={3} class="py-6 text-center text-sm text-slate-500">
+							<tr>
+								<td colspan={3} class="text-muted-foreground py-6 text-center text-sm">
 									No role subscriptions configured.
-								</TableCell>
-							</TableRow>
+								</td>
+							</tr>
 						{:else}
 							{#each roleSubscriptions as sub}
-								<TableRow class="transition-colors hover:bg-white/90">
-									<TableCell class="px-4 py-3">
-										<span
-											class="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-1 text-xs font-semibold text-indigo-700"
-										>
+								<tr>
+									<td>
+										<span class="badge-info">
 											{sub.AlertType || sub.alertType}
 										</span>
-									</TableCell>
-									<TableCell class="px-4 py-3 text-slate-800">
+									</td>
+									<td class="text-foreground">
 										{sub.RoleName || sub.roleName || sub.Role?.Name || '—'}
-									</TableCell>
-									<TableCell class="px-4 py-3 text-right">
+									</td>
+									<td class="text-right">
 										<Button
 											size="sm"
 											variant="ghost"
-											class="rounded-lg px-3 py-1.5 text-rose-600 hover:bg-rose-50"
+											class="text-danger hover:bg-muted rounded-md px-3 py-1.5"
 											onclick={() => deleteRoleSubscription(sub.ID || sub.id)}
 										>
 											<Trash2 class="h-4 w-4" />
 										</Button>
-									</TableCell>
-								</TableRow>
+									</td>
+								</tr>
 							{/each}
 						{/if}
-					</TableBody>
-				</Table>
-			</CardContent>
-		</Card>
+					</tbody>
+				</table>
+			</div>
+		</div>
 	{/if}
 </section>
 
@@ -695,19 +624,16 @@
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
 			<Dialog.Title class="flex items-center gap-2">
-				<Users class="h-5 w-5 text-indigo-600" />
+				<Users class="text-primary h-5 w-5" />
 				Add Role Subscription
 			</Dialog.Title>
 			<Dialog.Description>Assign an alert type to a role.</Dialog.Description>
 		</Dialog.Header>
 		<div class="space-y-4 py-4">
 			<div class="space-y-2">
-				<label class="text-sm font-medium text-slate-700">Alert Type</label>
+				<label class="text-foreground text-sm font-medium">Alert Type</label>
 				<div class="select-wrapper">
-					<select
-						class="w-full rounded-xl border border-indigo-200 bg-white/90 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
-						bind:value={newSub.alertType}
-					>
+					<select bind:value={newSub.alertType}>
 						{#each ALERT_TYPES as type}
 							<option value={type}>{type}</option>
 						{/each}
@@ -715,21 +641,17 @@
 				</div>
 			</div>
 			<div class="space-y-2">
-				<label class="text-sm font-medium text-slate-700">Role Name</label>
+				<label class="text-foreground text-sm font-medium">Role Name</label>
 				<Input
 					bind:value={newSub.roleName}
 					placeholder="e.g. Admin, Manager, Staff"
-					class="rounded-xl border-indigo-200 bg-white/90 focus:ring-2 focus:ring-indigo-400"
+					class={inputClass}
 				/>
 			</div>
 		</div>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (addSubOpen = false)}>Cancel</Button>
-			<Button
-				class="bg-gradient-to-r from-indigo-500 to-blue-600 text-white hover:from-indigo-600 hover:to-blue-700"
-				onclick={createRoleSubscription}
-				disabled={creatingSub}
-			>
+			<Button class={btnPrimary} onclick={createRoleSubscription} disabled={creatingSub}>
 				{#if creatingSub}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}
@@ -738,88 +660,3 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
-
-<style lang="postcss">
-	@keyframes gradientShift {
-		0% {
-			background-position: 0% 50%;
-		}
-		50% {
-			background-position: 100% 50%;
-		}
-		100% {
-			background-position: 0% 50%;
-		}
-	}
-	.animate-gradientShift {
-		background-size: 200% 200%;
-		animation: gradientShift 22s ease infinite;
-	}
-
-	@keyframes heroFloat {
-		0%,
-		100% {
-			transform: translateY(0) scale(1);
-		}
-		50% {
-			transform: translateY(-6px) scale(1.02);
-		}
-	}
-	.animate-heroFloat {
-		animation: heroFloat 10s ease-in-out infinite;
-	}
-
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			box-shadow: 0 0 14px rgba(251, 191, 36, 0.28);
-		}
-		50% {
-			transform: scale(1.06);
-			box-shadow: 0 0 24px rgba(251, 146, 60, 0.45);
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 7.5s ease-in-out infinite;
-	}
-
-	@keyframes fadeUp {
-		from {
-			opacity: 0;
-			transform: translateY(18px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-	.animate-fadeUp {
-		animation: fadeUp 1s ease forwards;
-	}
-
-	/* Smooth material-like transitions */
-	* {
-		transition-property:
-			color, background-color, border-color, text-decoration-color, fill, stroke, opacity,
-			box-shadow, transform, filter, backdrop-filter;
-		transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-		transition-duration: 300ms;
-	}
-
-	/* Thin pastel scrollbar */
-	::-webkit-scrollbar {
-		width: 8px;
-		height: 8px;
-	}
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-	::-webkit-scrollbar-thumb {
-		background: rgba(251, 191, 36, 0.28);
-		border-radius: 9999px;
-	}
-	::-webkit-scrollbar-thumb:hover {
-		background: rgba(251, 146, 60, 0.4);
-	}
-</style>

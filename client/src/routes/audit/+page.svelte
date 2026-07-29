@@ -8,15 +8,6 @@
 	import { Input } from '$lib/components/ui/input';
 	import TimeAgo from '$lib/components/ui/time-ago.svelte';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
-	import Select from '$lib/components/ui/select/select.svelte';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
 	import {
 		ShieldCheck,
 		Search,
@@ -30,6 +21,11 @@
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
 	import type { AuditLog } from '$lib/types';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
 
 	let logs = $state<AuditLog[]>([]);
 	let loading = $state(true);
@@ -131,18 +127,18 @@
 	function getActionColor(action: string) {
 		switch (action) {
 			case 'CREATE':
-				return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+				return 'badge-success';
 			case 'UPDATE':
 			case 'SETTING_UPDATED':
 			case 'ROLE_PERMISSIONS_UPDATED':
-				return 'bg-blue-100 text-blue-700 border-blue-200';
+				return 'badge-info';
 			case 'DELETE':
-				return 'bg-red-100 text-red-700 border-red-200';
+				return 'badge-danger';
 			case 'VOID':
 			case 'DISCOUNT':
-				return 'bg-amber-100 text-amber-700 border-amber-200';
+				return 'badge-warning';
 			default:
-				return 'bg-slate-100 text-slate-700 border-slate-200';
+				return 'badge-neutral';
 		}
 	}
 
@@ -218,24 +214,18 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-slate-50/50 p-6 lg:p-10">
-	<div
-		class="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-100/20 via-slate-50/20 to-white/20"
-	></div>
-
+<div class="relative min-h-screen overflow-hidden bg-background p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
 		<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 			<div class="space-y-1">
-				<h1
-					class="bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 bg-clip-text text-3xl font-bold tracking-tight text-transparent"
-				>
+				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
 					Audit Trail
 				</h1>
-				<p class="text-slate-500">Track every action and change across the system</p>
+				<p class="text-muted-foreground">Track every action and change across the system</p>
 			</div>
 			<Button
 				variant="outline"
-				class="gap-2"
+				class="{btnSecondary} gap-2"
 				onclick={exportCsv}
 				disabled={loading || logs.length === 0}
 			>
@@ -245,53 +235,55 @@
 		</div>
 
 		<div
-			class="liquid-panel flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-white/40 via-white/20 to-white/5 p-4 backdrop-blur-sm lg:flex-row lg:items-center"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 lg:flex-row lg:items-center"
 		>
 			<div class="w-full lg:w-52">
-				<Select bind:value={actionFilter} options={actionOptions} placeholder="All Actions" />
+				<div class="select-wrapper">
+					<select bind:value={actionFilter}>
+						{#each actionOptions as opt}
+							<option value={opt.value}>{opt.label}</option>
+						{/each}
+					</select>
+				</div>
 			</div>
 			<div class="w-full lg:w-48">
-				<Select bind:value={entityFilter} options={entityOptions} placeholder="All Entities" />
+				<div class="select-wrapper">
+					<select bind:value={entityFilter}>
+						{#each entityOptions as opt}
+							<option value={opt.value}>{opt.label}</option>
+						{/each}
+					</select>
+				</div>
 			</div>
 			<div class="w-full lg:w-40">
-				<Input
-					type="date"
-					bind:value={start}
-					placeholder="Start date"
-					class="h-12 text-sm font-semibold"
-				/>
+				<Input type="date" bind:value={start} placeholder="Start date" class="{inputClass} num-mono" />
 			</div>
 			<div class="w-full lg:w-40">
-				<Input
-					type="date"
-					bind:value={end}
-					placeholder="End date"
-					class="h-12 text-sm font-semibold"
-				/>
+				<Input type="date" bind:value={end} placeholder="End date" class="{inputClass} num-mono" />
 			</div>
 			<div class="w-full lg:w-40">
 				<Input
 					type="number"
 					bind:value={userSearch}
 					placeholder="User ID"
-					class="h-12 text-sm font-semibold"
+					class="{inputClass} num-mono"
 				/>
 			</div>
 			<div class="flex items-center gap-2">
-				<Button variant="outline" size="sm" onclick={applyFilters} class="gap-1">
+				<Button variant="outline" size="sm" onclick={applyFilters} class="{btnSecondary} gap-1">
 					<Search class="h-3 w-3" />
 					Filter
 				</Button>
-				<Button variant="ghost" size="sm" onclick={resetFilters}>Reset</Button>
+				<Button variant="ghost" size="sm" onclick={resetFilters} class="rounded-md">Reset</Button>
 			</div>
 		</div>
 
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
-				<Loader2 class="h-8 w-8 animate-spin text-indigo-500" />
+				<Loader2 class="text-primary h-8 w-8 animate-spin" />
 			</div>
 		{:else if logs.length === 0}
-			<div class="rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl">
+			<div class="liquid-panel rounded-lg">
 				<EmptyState
 					icon={ShieldCheck}
 					title="No audit logs found"
@@ -301,113 +293,97 @@
 				/>
 			</div>
 		{:else}
-			<div
-				in:fly={{ y: 20, duration: 300 }}
-				class="overflow-hidden rounded-2xl border border-white/60 bg-white/70 shadow-lg backdrop-blur-xl"
-			>
-				<Table>
-					<TableHeader>
-						<TableRow class="border-slate-100 bg-slate-50/50">
-							<TableHead class="w-8"></TableHead>
-							<TableHead class="font-bold text-slate-600">Timestamp</TableHead>
-							<TableHead class="font-bold text-slate-600">User</TableHead>
-							<TableHead class="font-bold text-slate-600">Action</TableHead>
-							<TableHead class="font-bold text-slate-600">Entity</TableHead>
-							<TableHead class="font-bold text-slate-600">Changes</TableHead>
-							<TableHead class="font-bold text-slate-600">IP Address</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
+			<div in:fly={{ y: 20, duration: 300 }} class="liquid-panel overflow-hidden rounded-lg">
+				<table class="ledger-table">
+					<thead>
+						<tr>
+							<th class="w-8"></th>
+							<th>Timestamp</th>
+							<th>User</th>
+							<th>Action</th>
+							<th>Entity</th>
+							<th>Changes</th>
+							<th>IP Address</th>
+						</tr>
+					</thead>
+					<tbody>
 						{#each logs as log (log.ID)}
 							{@const changes = parseChanges(log.Changes)}
-							<TableRow
-								class="cursor-pointer border-slate-50 transition-colors hover:bg-indigo-50/30"
-								onclick={() => toggleExpand(log.ID)}
-							>
-								<TableCell>
+							<tr class="cursor-pointer" onclick={() => toggleExpand(log.ID)}>
+								<td>
 									<ChevronDown
 										class={cn(
-											'h-4 w-4 text-slate-400 transition-transform',
+											'text-muted-foreground h-4 w-4 transition-transform',
 											expandedId === log.ID && 'rotate-180'
 										)}
 									/>
-								</TableCell>
-								<TableCell class="whitespace-nowrap text-slate-500">
+								</td>
+								<td class="text-muted-foreground whitespace-nowrap num-mono">
 									<TimeAgo date={log.Timestamp} />
-								</TableCell>
-								<TableCell>
+								</td>
+								<td>
 									<div class="flex flex-col">
-										<span class="font-semibold text-slate-800">
+										<span class="text-foreground font-semibold">
 											{log.User?.Username || `User #${log.UserID}`}
 										</span>
 										{#if log.User?.Email}
-											<span class="text-xs text-slate-400">{log.User.Email}</span>
+											<span class="text-muted-foreground text-xs">{log.User.Email}</span>
 										{/if}
 									</div>
-								</TableCell>
-								<TableCell>
-									<span
-										class={cn(
-											'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase',
-											getActionColor(log.Action)
-										)}
-									>
+								</td>
+								<td>
+									<span class={cn(getActionColor(log.Action), 'uppercase tracking-wide')}>
 										{log.Action}
 									</span>
-								</TableCell>
-								<TableCell>
+								</td>
+								<td>
 									<div class="flex flex-col">
-										<span class="font-medium text-slate-700">{log.Entity}</span>
-										<span class="font-mono text-xs text-slate-400">#{log.EntityID}</span>
+										<span class="text-foreground font-medium">{log.Entity}</span>
+										<span class="text-muted-foreground text-xs num-mono">#{log.EntityID}</span>
 									</div>
-								</TableCell>
-								<TableCell class="text-slate-500">
+								</td>
+								<td class="text-muted-foreground">
 									{#if changes.length > 0}
 										<span class="text-xs font-medium">
 											{changes.length} field{changes.length === 1 ? '' : 's'} changed
 										</span>
 									{:else}
-										<span class="text-xs text-slate-400">—</span>
+										<span class="text-muted-foreground text-xs">—</span>
 									{/if}
-								</TableCell>
-								<TableCell class="font-mono text-xs text-slate-400">
+								</td>
+								<td class="text-muted-foreground text-xs num-mono">
 									{log.IPAddress || '—'}
-								</TableCell>
-							</TableRow>
+								</td>
+							</tr>
 
 							{#if expandedId === log.ID}
-								<TableRow class="bg-slate-50/60 hover:bg-slate-50/60">
-									<TableCell colspan={7} class="p-0">
-										<div
-											in:fly={{ y: -8, duration: 200 }}
-											class="space-y-4 px-6 py-4"
-										>
+								<tr class="bg-muted/50">
+									<td colspan={7} class="p-0">
+										<div in:fly={{ y: -8, duration: 200 }} class="space-y-4 px-6 py-4">
 											{#if changes.length > 0}
 												<div class="space-y-2">
-													<p class="text-xs font-bold tracking-wide text-slate-500 uppercase">
+													<p class="overline">
 														Changes
 													</p>
-													<div
-														class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
-													>
+													<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 														{#each changes as change}
 															<div
-																class="rounded-lg border border-slate-200 bg-white/80 px-3 py-2"
+																class="border-border bg-card rounded-md border px-3 py-2"
 															>
-																<p class="font-mono text-xs font-bold text-slate-600">
+																<p class="text-muted-foreground text-xs font-semibold num-mono">
 																	{change.key}
 																</p>
 																<div class="mt-1 flex flex-wrap items-center gap-2 text-sm">
 																	{#if change.from !== undefined}
 																		<span
-																			class="rounded bg-red-50 px-1.5 py-0.5 font-mono text-xs text-red-600 line-through"
+																			class="bg-danger/10 text-danger rounded px-1.5 py-0.5 text-xs line-through num-mono"
 																		>
 																			{formatValue(change.from)}
 																		</span>
-																		<ArrowRight class="h-3 w-3 text-slate-400" />
+																		<ArrowRight class="text-muted-foreground h-3 w-3" />
 																	{/if}
 																	<span
-																		class="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-xs text-emerald-700"
+																		class="bg-success/10 text-success rounded px-1.5 py-0.5 text-xs num-mono"
 																	>
 																		{formatValue(change.to)}
 																	</span>
@@ -417,33 +393,33 @@
 													</div>
 												</div>
 											{:else}
-												<p class="text-sm text-slate-400">No structured changes recorded.</p>
+												<p class="text-muted-foreground text-sm">No structured changes recorded.</p>
 											{/if}
 
-											<div class="grid gap-3 text-xs text-slate-500 sm:grid-cols-2">
+											<div class="text-muted-foreground grid gap-3 text-xs sm:grid-cols-2">
 												<div>
-													<span class="font-bold text-slate-600">Full timestamp:</span>
+													<span class="text-foreground font-semibold">Full timestamp:</span>
 													{formatDate(log.Timestamp)}
 												</div>
 												{#if log.UserAgent}
 													<div class="truncate">
-														<span class="font-bold text-slate-600">User agent:</span>
+														<span class="text-foreground font-semibold">User agent:</span>
 														{log.UserAgent}
 													</div>
 												{/if}
 											</div>
 										</div>
-									</TableCell>
-								</TableRow>
+									</td>
+								</tr>
 							{/if}
 						{/each}
-					</TableBody>
-				</Table>
+					</tbody>
+				</table>
 			</div>
 
 			{#if totalPages > 1}
 				<div class="flex items-center justify-between">
-					<p class="text-sm text-slate-500">
+					<p class="text-muted-foreground text-sm">
 						Showing {logs.length} of {total} events
 					</p>
 					<div class="flex items-center gap-2">
@@ -452,10 +428,11 @@
 							size="sm"
 							disabled={page <= 1}
 							onclick={() => goToPage(page - 1)}
+							class={btnSecondary}
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-sm font-medium text-slate-700">
+						<span class="text-foreground text-sm font-medium num-mono">
 							Page {page} of {totalPages}
 						</span>
 						<Button
@@ -463,6 +440,7 @@
 							size="sm"
 							disabled={page >= totalPages}
 							onclick={() => goToPage(page + 1)}
+							class={btnSecondary}
 						>
 							<ChevronRight class="h-4 w-4" />
 						</Button>
