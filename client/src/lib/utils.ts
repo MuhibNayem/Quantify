@@ -18,7 +18,7 @@ export type WithoutChildren<T> = Omit<T, 'children' | 'child'>;
 export type WithoutChild<T> = Omit<T, 'children' | 'child'>;
 
 // Format date to readable string
-export function formatDate(dateString: string): string {
+export function formatDate(dateString: string | Date): string {
 	if (!dateString) return '';
 	const date = new Date(dateString);
 	return date.toLocaleDateString(globalConfig.locale, {
@@ -74,4 +74,38 @@ export function debounce<T extends (...args: any[]) => void>(
 		clearTimeout(timeout);
 		timeout = setTimeout(() => func(...args), wait);
 	};
+}
+
+// Human-readable identifiers — users remember names, not IDs
+export function orderNumber(order: { OrderNumber?: string; ID: number }): string {
+	return order.OrderNumber || `ORD-${String(order.ID).padStart(6, '0')}`;
+}
+
+export function returnNumber(id: number): string {
+	return `RET-${String(id).padStart(6, '0')}`;
+}
+
+export function poNumber(id: number): string {
+	return `PO-${String(id).padStart(6, '0')}`;
+}
+
+// Relative time — "2h ago" instead of raw ISO
+export function timeAgo(dateStr: string | Date): string {
+	const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+	if (seconds < 60) return 'just now';
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${minutes}m ago`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days < 7) return `${days}d ago`;
+	const weeks = Math.floor(days / 7);
+	if (weeks < 5) return `${weeks}w ago`;
+	return formatDate(dateStr); // fall back to full date
+}
+
+// Truncate long names with ellipsis for tight layouts
+export function truncate(str: string, max: number): string {
+	return str.length > max ? str.slice(0, max - 1) + '…' : str;
 }
