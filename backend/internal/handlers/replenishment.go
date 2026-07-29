@@ -385,14 +385,14 @@ func (h *ReplenishmentHandler) ReceivePurchaseOrder(c *gin.Context) {
 	// Convert request items to anonymous struct expected by service
 	var serviceItems []struct {
 		PurchaseOrderItemID uint
-		ReceivedQuantity    int
+		ReceivedQuantity    float64
 		BatchNumber         string
 		ExpiryDate          *time.Time
 	}
 	for _, item := range req.Items {
 		serviceItems = append(serviceItems, struct {
 			PurchaseOrderItemID uint
-			ReceivedQuantity    int
+			ReceivedQuantity    float64
 			BatchNumber         string
 			ExpiryDate          *time.Time
 		}{

@@ -70,7 +70,7 @@ func TestPOReceive_CreatesStockAdjustment(t *testing.T) {
 		1, // userID
 		[]struct {
 			PurchaseOrderItemID uint
-			ReceivedQuantity    int
+			ReceivedQuantity    float64
 			BatchNumber         string
 			ExpiryDate          *time.Time
 		}{
@@ -99,7 +99,7 @@ func TestPOReceive_PartialReceive_CreatesAdjustment(t *testing.T) {
 		7, // userID
 		[]struct {
 			PurchaseOrderItemID uint
-			ReceivedQuantity    int
+			ReceivedQuantity    float64
 			BatchNumber         string
 			ExpiryDate          *time.Time
 		}{
@@ -133,7 +133,7 @@ func TestUpdatePO_RejectsNonDraftStatus(t *testing.T) {
 
 	var item domain.PurchaseOrderItem
 	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item).Error)
-	assert.Equal(t, 100, item.OrderedQuantity, "APPROVED PO ordered qty must remain unchanged")
+	assert.Equal(t, float64(100), item.OrderedQuantity, "APPROVED PO ordered qty must remain unchanged")
 }
 
 func TestUpdatePO_PreservesReceivedQuantity(t *testing.T) {
@@ -154,8 +154,8 @@ func TestUpdatePO_PreservesReceivedQuantity(t *testing.T) {
 
 	var item domain.PurchaseOrderItem
 	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item).Error)
-	assert.Equal(t, 30, item.ReceivedQuantity, "received qty must be preserved")
-	assert.Equal(t, 120, item.OrderedQuantity, "ordered qty updated")
+	assert.Equal(t, float64(30), item.ReceivedQuantity, "received qty must be preserved")
+	assert.Equal(t, float64(120), item.OrderedQuantity, "ordered qty updated")
 }
 
 func TestUpdatePO_RejectsDeleteOfReceivedItem(t *testing.T) {
@@ -177,7 +177,7 @@ func TestUpdatePO_RejectsDeleteOfReceivedItem(t *testing.T) {
 
 	var item1 domain.PurchaseOrderItem
 	require.NoError(t, db.Where("purchase_order_id = ? AND product_id = ?", po.ID, 1).First(&item1).Error)
-	assert.Equal(t, 30, item1.ReceivedQuantity, "received product must remain intact")
+	assert.Equal(t, float64(30), item1.ReceivedQuantity, "received product must remain intact")
 }
 
 func TestPOFromSuggestion_UsesLatestPurchasePrice(t *testing.T) {

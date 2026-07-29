@@ -66,7 +66,12 @@ func AutoMigrate() {
 
 		&domain.User{},
 
+		&domain.UnitDimension{},
+		&domain.Unit{},
+
 		&domain.Product{},
+
+		&domain.ProductUnit{},
 
 		&domain.Category{},
 
@@ -156,6 +161,12 @@ func seedData() {
 	// seedRoles(permMap)
 	// seedSettings()
 	// logrus.Info("System Data (Roles, Permissions, Settings) seeded")
+
+	// Universal unit catalog is reference data with base-unit wiring logic,
+	// so it's seeded in Go (idempotent). Safe on every boot.
+	if err := SeedUnits(db); err != nil {
+		logrus.Warnf("Failed to seed unit catalog: %v", err)
+	}
 }
 
 func seedPermissions() map[string]domain.Permission {

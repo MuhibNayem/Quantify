@@ -21,7 +21,7 @@ type PurchaseOrderService interface {
 	UpdatePurchaseOrder(poID string, updates map[string]interface{}, items []domain.PurchaseOrderItem) (*domain.PurchaseOrder, error)
 	ReceivePurchaseOrder(ctx context.Context, poID string, userID uint, receivedItems []struct {
 		PurchaseOrderItemID uint
-		ReceivedQuantity    int
+		ReceivedQuantity    float64
 		BatchNumber         string
 		ExpiryDate          *time.Time
 	}) (*domain.PurchaseOrder, error)
@@ -216,7 +216,7 @@ func (s *purchaseOrderService) UpdatePurchaseOrder(poID string, updates map[stri
 					continue
 				}
 				if ex.ReceivedQuantity > 0 {
-					return appErrors.NewAppError(fmt.Sprintf("Cannot remove product %d from PO: %d already received", prodID, ex.ReceivedQuantity), http.StatusConflict, nil)
+					return appErrors.NewAppError(fmt.Sprintf("Cannot remove product %d from PO: %v already received", prodID, ex.ReceivedQuantity), http.StatusConflict, nil)
 				}
 				if err := tx.Delete(&ex).Error; err != nil {
 					return appErrors.NewAppError("Failed to remove old PO item", http.StatusInternalServerError, err)
@@ -257,7 +257,7 @@ func (s *purchaseOrderService) UpdatePurchaseOrder(poID string, updates map[stri
 
 func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID string, userID uint, receivedItems []struct {
 	PurchaseOrderItemID uint
-	ReceivedQuantity    int
+	ReceivedQuantity    float64
 	BatchNumber         string
 	ExpiryDate          *time.Time
 }) (*domain.PurchaseOrder, error) {
@@ -285,7 +285,7 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 			}
 
 			if receivedItem.ReceivedQuantity > (poItem.OrderedQuantity - poItem.ReceivedQuantity) {
-				return appErrors.NewAppError(fmt.Sprintf("Received quantity %d for item %d exceeds remaining ordered quantity %d", receivedItem.ReceivedQuantity, poItem.ID, (poItem.OrderedQuantity-poItem.ReceivedQuantity)), http.StatusBadRequest, nil)
+				return appErrors.NewAppError(fmt.Sprintf("Received quantity %v for item %d exceeds remaining ordered quantity %v", receivedItem.ReceivedQuantity, poItem.ID, (poItem.OrderedQuantity-poItem.ReceivedQuantity)), http.StatusBadRequest, nil)
 			}
 
 			poItem.ReceivedQuantity += receivedItem.ReceivedQuantity

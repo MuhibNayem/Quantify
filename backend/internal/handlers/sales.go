@@ -101,7 +101,7 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		Name          string  `json:"Name"`
 		SKU           string  `json:"SKU"`
 		SellingPrice  float64 `json:"SellingPrice"`
-		StockQuantity int     `json:"StockQuantity"`
+		StockQuantity float64 `json:"StockQuantity"`
 		CategoryID    uint    `json:"CategoryID"`
 		SubCategoryID uint    `json:"SubCategoryID"`
 	}
@@ -251,7 +251,7 @@ type OrderItemDTO struct {
 	ID         uint           `json:"ID"`
 	ProductID  uint           `json:"ProductID"`
 	Product    ProductSummary `json:"Product"`
-	Quantity   int            `json:"Quantity"`
+	Quantity   float64        `json:"Quantity"`
 	UnitPrice  float64        `json:"UnitPrice"`
 	TotalPrice float64        `json:"TotalPrice"`
 }

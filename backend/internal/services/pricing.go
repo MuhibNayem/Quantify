@@ -6,7 +6,7 @@ import (
 	"inventory/backend/internal/domain"
 )
 
-func (s *SalesService) calculateItemDiscount(product domain.Product, quantity int, activePromotions []domain.Promotion) (float64, float64) {
+func (s *SalesService) calculateItemDiscount(product domain.Product, quantity float64, activePromotions []domain.Promotion) (float64, float64) {
 	bestPromo := ResolvePromotion(activePromotions, product.ID, product.SubCategoryID, product.CategoryID)
 
 	unitPrice := product.SellingPrice
@@ -21,7 +21,7 @@ func (s *SalesService) calculateItemDiscount(product domain.Product, quantity in
 		if unitPrice < 0 {
 			unitPrice = 0
 		}
-		discountTotal = (product.SellingPrice - unitPrice) * float64(quantity)
+		discountTotal = (product.SellingPrice - unitPrice) * quantity
 	}
 	return unitPrice, discountTotal
 }

@@ -160,8 +160,8 @@ func TestStockAdjustment_NoLostUpdates(t *testing.T) {
 	assert.Equal(t, concurrency, successCount,
 		"all concurrent STOCK_OUT requests should succeed")
 
-	var finalQty int
+	var finalQty float64
 	db.Model(&domain.Batch{}).Where("product_id = ?", prod.ID).
 		Select("COALESCE(SUM(quantity), 0)").Row().Scan(&finalQty)
-	assert.Equal(t, 750, finalQty, "no lost updates: 1000 - 50*5 = 750")
+	assert.Equal(t, float64(750), finalQty, "no lost updates: 1000 - 50*5 = 750")
 }

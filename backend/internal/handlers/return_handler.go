@@ -15,17 +15,17 @@ import (
 	"inventory/backend/internal/websocket"
 )
 
-func computeRefund(unitPrice float64, qty int, taxRate float64) float64 {
-	subtotal := unitPrice * float64(qty)
+func computeRefund(unitPrice float64, qty float64, taxRate float64) float64 {
+	subtotal := unitPrice * qty
 	tax := subtotal * taxRate
 	return math.Round((subtotal+tax)*100) / 100
 }
 
-func computeLoyaltyReversal(pointsRedeemed, itemQty, returnQty int) int {
+func computeLoyaltyReversal(pointsRedeemed int, itemQty, returnQty float64) int {
 	if pointsRedeemed == 0 || itemQty == 0 {
 		return 0
 	}
-	return pointsRedeemed * returnQty / itemQty
+	return int(float64(pointsRedeemed) * returnQty / itemQty)
 }
 
 type ReturnHandler struct {

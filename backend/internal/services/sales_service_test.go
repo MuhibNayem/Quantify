@@ -114,9 +114,9 @@ func seedProductWithLocation(t *testing.T, db *gorm.DB, sku string, defaultLocat
 
 func ptrUint(v uint) *uint { return &v }
 
-func assertBatchQty(t *testing.T, db *gorm.DB, batchID uint, want int) {
+func assertBatchQty(t *testing.T, db *gorm.DB, batchID uint, want float64) {
 	t.Helper()
-	var got int
+	var got float64
 	require.NoError(t, db.Model(&domain.Batch{}).Where("id = ?", batchID).Select("quantity").Scan(&got).Error)
 	assert.Equal(t, want, got, "batch %d quantity", batchID)
 }

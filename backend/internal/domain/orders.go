@@ -35,11 +35,11 @@ type OrderItem struct {
 	Order       Order
 	ProductID   uint `gorm:"not null;index"`
 	Product     Product
-	Quantity    int     `gorm:"not null"`
+	Quantity    float64 `gorm:"not null"`
 	UnitPrice   float64 `gorm:"not null"`
 	TotalPrice  float64 `gorm:"not null"`
 	IsReturned  bool    `gorm:"default:false"`
-	ReturnedQty int     `gorm:"default:0"`
+	ReturnedQty float64 `gorm:"default:0"`
 }
 
 // Return represents a return request or processed return.
@@ -66,7 +66,7 @@ type ReturnItem struct {
 	OrderItem   OrderItem
 	ProductID   uint `gorm:"not null"`
 	Product     Product
-	Quantity    int    `gorm:"not null"`
-	Condition   string `gorm:"default:'GOOD'"` // GOOD, DAMAGED, OPENED
-	Reason      string `gorm:"not null"`
+	Quantity    float64 `gorm:"not null"`
+	Condition   string  `gorm:"default:'GOOD'"` // GOOD, DAMAGED, OPENED
+	Reason      string  `gorm:"not null"`
 }

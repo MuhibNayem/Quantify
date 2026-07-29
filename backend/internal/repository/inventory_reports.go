@@ -80,7 +80,7 @@ type StockAgingItem struct {
 	ProductName string
 	SKU         string
 	AgeDays     int
-	Quantity    int
+	Quantity    float64
 	Value       float64
 }
 
@@ -106,7 +106,7 @@ func (r *reportsRepository) GetStockAgingReport() (map[string][]StockAgingItem, 
 			SKU:         b.Product.SKU,
 			AgeDays:     age,
 			Quantity:    b.Quantity,
-			Value:       float64(b.Quantity) * b.Product.PurchasePrice,
+			Value:       b.Quantity * b.Product.PurchasePrice,
 		}
 
 		if age <= 30 {
@@ -127,7 +127,7 @@ type DeadStockItem struct {
 	ProductID     uint
 	ProductName   string
 	SKU           string
-	CurrentStock  int
+	CurrentStock  float64
 	LastSaleDate  *time.Time
 	DaysSinceSale int
 	Value         float64
@@ -177,7 +177,7 @@ func (r *reportsRepository) GetDeadStockReport(daysThreshold int) ([]DeadStockIt
 		} else {
 			item.DaysSinceSale = -1
 		}
-		item.Value = float64(item.CurrentStock) * price
+		item.Value = item.CurrentStock * price
 		items = append(items, item)
 	}
 

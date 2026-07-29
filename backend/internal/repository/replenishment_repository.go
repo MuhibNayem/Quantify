@@ -13,7 +13,7 @@ type ReplenishmentRepository interface {
 	GetPendingPO(productID uint) (*domain.PurchaseOrder, error)
 	CreateReorderSuggestion(suggestion *domain.ReorderSuggestion) error
 	GetSupplierForProduct(productID uint) (*domain.Supplier, error)
-	GetStockLevels(productIDs []uint) (map[uint]int, error)
+	GetStockLevels(productIDs []uint) (map[uint]float64, error)
 	GetPendingSuggestionsMap(productIDs []uint) (map[uint]bool, error)
 	GetPendingPOsMap(productIDs []uint) (map[uint]bool, error)
 	ListReorderSuggestions(status string, supplierID string) ([]domain.ReorderSuggestion, error)
@@ -100,10 +100,10 @@ func (r *replenishmentRepository) GetSupplierForProduct(productID uint) (*domain
 	return &product.Supplier, nil
 }
 
-func (r *replenishmentRepository) GetStockLevels(productIDs []uint) (map[uint]int, error) {
+func (r *replenishmentRepository) GetStockLevels(productIDs []uint) (map[uint]float64, error) {
 	type Result struct {
 		ProductID uint
-		Total     int
+		Total     float64
 	}
 	var results []Result
 	err := r.db.Model(&domain.Batch{}).
@@ -116,7 +116,7 @@ func (r *replenishmentRepository) GetStockLevels(productIDs []uint) (map[uint]in
 		return nil, err
 	}
 
-	stockMap := make(map[uint]int)
+	stockMap := make(map[uint]float64)
 	for _, res := range results {
 		stockMap[res.ProductID] = res.Total
 	}

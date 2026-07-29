@@ -21,7 +21,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func seedBatch(t *testing.T, db *gorm.DB, productID, locationID uint, quantity int, expiryDate time.Time) domain.Batch {
+func seedBatch(t *testing.T, db *gorm.DB, productID, locationID uint, quantity float64, expiryDate time.Time) domain.Batch {
 	t.Helper()
 	batch := domain.Batch{
 		ProductID:   productID,
@@ -49,9 +49,9 @@ func TestStockTransfer_UpdatesBatches(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	var srcQty, dstQty int
+	var srcQty, dstQty float64
 	db.Model(&domain.Batch{}).Where("id = ?", srcBatch.ID).Select("quantity").Scan(&srcQty)
 	db.Model(&domain.Batch{}).Where("id = ?", dstBatch.ID).Select("quantity").Scan(&dstQty)
-	assert.Equal(t, 75, srcQty, "source batch should be decremented")
-	assert.Equal(t, 25, dstQty, "destination batch should be incremented")
+	assert.Equal(t, float64(75), srcQty, "source batch should be decremented")
+	assert.Equal(t, float64(25), dstQty, "destination batch should be incremented")
 }

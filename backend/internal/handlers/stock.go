@@ -20,10 +20,10 @@ import (
 
 // StockAdjustedEventPayload defines the payload for stock adjustment events.
 type StockAdjustedEventPayload struct {
-	ProductID uint   `json:"productId"`
-	Quantity  int    `json:"quantity"`
-	Type      string `json:"type"`
-	Reason    string `json:"reason"`
+	ProductID uint    `json:"productId"`
+	Quantity  float64 `json:"quantity"`
+	Type      string  `json:"type"`
+	Reason    string  `json:"reason"`
 }
 
 // CreateBatch godoc
@@ -111,7 +111,7 @@ func GetProductStock(c *gin.Context) {
 	}
 
 	// Optimize total quantity calculation using DB aggregation
-	var totalQuantity int64
+	var totalQuantity float64
 	// Use a new session for aggregation to avoid polluting the base query or subsequent queries
 	if err := db.Session(&gorm.Session{}).Model(&domain.Batch{}).Select("COALESCE(SUM(quantity), 0)").Row().Scan(&totalQuantity); err != nil {
 		c.Error(appErrors.NewAppError("Failed to calculate total stock", http.StatusInternalServerError, err))
@@ -196,7 +196,7 @@ func CreateStockAdjustment(c *gin.Context) {
 		// on a stale SUM read. The lock is honored by PostgreSQL/MySQL;
 		// SQLite ignores it, which is why this handler's correctness
 		// must additionally be verified on the production DB.
-		var currentQuantity int
+		var currentQuantity float64
 		tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Model(&domain.Batch{}).Where("product_id = ?", productID).
 			Select("COALESCE(SUM(quantity), 0)").Row().Scan(&currentQuantity)

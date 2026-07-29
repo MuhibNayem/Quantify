@@ -27,6 +27,15 @@ type Product struct {
 	Status        string `gorm:"default:'Active';index"` // Index for status filters (Active, Archived, Discontinued)
 	LocationID    uint   `gorm:"index"`                  // Index for location filters
 	Location      Location
+	// BaseUnit is the unit stock is tracked in. nil → countable "each".
+	// SellingPrice/PurchasePrice are expressed PER BASE UNIT by default.
+	BaseUnitID *uint `gorm:"index" json:"BaseUnitID"`
+	BaseUnit   Unit  `json:"BaseUnit"`
+	// AllowFractional marks measured goods (wire, fabric, fuel) that can be
+	// sold in non-whole quantities (1.2 ft, 14 in). Countable goods stay whole.
+	AllowFractional bool `gorm:"default:false" json:"AllowFractional"`
+	// ProductUnits are the alternate units this product can be sold/purchased in.
+	ProductUnits []ProductUnit `gorm:"foreignKey:ProductID" json:"ProductUnits"`
 }
 
 // GetID implements the Searchable interface for Product.
@@ -114,7 +123,7 @@ type Batch struct {
 	LocationID  uint `gorm:"index:idx_product_location"`
 	Location    Location
 	BatchNumber string     `gorm:"not null"`
-	Quantity    int        `gorm:"not null"`
+	Quantity    float64    `gorm:"not null"`
 	ExpiryDate  *time.Time // Pointer to allow null for non-perishable
 }
 
@@ -126,13 +135,13 @@ type StockAdjustment struct {
 	LocationID       uint
 	Location         Location
 	Type             string `gorm:"not null"` // e.g., "STOCK_IN", "STOCK_OUT"
-	Quantity         int    `gorm:"not null"`
-	ReasonCode       string `gorm:"not null"` // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
+	Quantity         float64 `gorm:"not null"`
+	ReasonCode       string  `gorm:"not null"` // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
 	Notes            string
 	AdjustedBy       uint      // UserID of the person who made the adjustment
 	AdjustedAt       time.Time `gorm:"index"`
-	PreviousQuantity int       // Snapshot of quantity before adjustment
-	NewQuantity      int       // Snapshot of quantity after adjustment
+	PreviousQuantity float64   // Snapshot of quantity before adjustment
+	NewQuantity      float64   // Snapshot of quantity after adjustment
 }
 
 // Alert represents a stock-related alert.
@@ -219,7 +228,7 @@ type DemandForecast struct {
 	ProductID       uint `gorm:"not null"`
 	Product         Product
 	ForecastPeriod  string `gorm:"not null"` // e.g., "30_DAYS", "90_DAYS"
-	PredictedDemand int    `gorm:"not null"`
+	PredictedDemand float64 `gorm:"not null"`
 	ConfidenceScore float64
 	Reasoning       string
 	GeneratedAt     time.Time
@@ -232,9 +241,9 @@ type ReorderSuggestion struct {
 	Product                Product
 	SupplierID             uint `gorm:"not null"`
 	Supplier               Supplier
-	CurrentStock           int
-	PredictedDemand        int
-	SuggestedOrderQuantity int     `gorm:"not null"`
+	CurrentStock           float64
+	PredictedDemand        float64
+	SuggestedOrderQuantity float64 `gorm:"not null"`
 	LeadTimeDays           int
 	SnapshotPrice          float64 `gorm:"type:decimal(12,2);default:0"` // Product.PurchasePrice at the time the suggestion was generated; used to detect price drift when the PO is created
 	Status                 string  `gorm:"default:'PENDING'"`             // PENDING, APPROVED, REJECTED, PO_CREATED
@@ -264,8 +273,8 @@ type StockTransfer struct {
 	SourceLocation   Location
 	DestLocationID   uint `gorm:"not null"`
 	DestLocation     Location
-	Quantity         int    `gorm:"not null"`
-	Status           string `gorm:"default:'PENDING'"` // PENDING, COMPLETED, CANCELLED
+	Quantity         float64 `gorm:"not null"`
+	Status           string  `gorm:"default:'PENDING'"` // PENDING, COMPLETED, CANCELLED
 	TransferredBy    uint   // UserID of the person who initiated the transfer
 	TransferredAt    time.Time
 }
@@ -285,8 +294,8 @@ type PurchaseOrderItem struct {
 	PurchaseOrder    PurchaseOrder
 	ProductID        uint `gorm:"not null"`
 	Product          Product
-	OrderedQuantity  int     `gorm:"not null"`
-	ReceivedQuantity int     `gorm:"default:0"` // Quantity actually received
+	OrderedQuantity  float64 `gorm:"not null"`
+	ReceivedQuantity float64 `gorm:"default:0"` // Quantity actually received
 	UnitPrice        float64 `gorm:"not null"`
 }
 
@@ -392,9 +401,9 @@ type PurchaseReturnItem struct {
 	PurchaseReturn   PurchaseReturn
 	ProductID        uint `gorm:"not null"`
 	Product          Product
-	Quantity         int    `gorm:"not null"`
-	Reason           string `gorm:"not null"`
-	BatchID          *uint  // Specific batch being returned (critical for stock deduction)
+	Quantity         float64 `gorm:"not null"`
+	Reason           string  `gorm:"not null"`
+	BatchID          *uint   // Specific batch being returned (critical for stock deduction)
 	Batch            *Batch
 }
 

@@ -57,7 +57,7 @@ func (s *replenishmentService) GenerateReorderSuggestions() error {
 	for _, setting := range settings {
 		currentStock := stockMap[setting.ProductID] // Default 0 if not found
 
-		if currentStock <= setting.LowStockLevel {
+		if currentStock <= float64(setting.LowStockLevel) {
 			// Check for pending suggestions
 			if pendingSuggestions[setting.ProductID] {
 				continue // Already suggested
@@ -71,9 +71,9 @@ func (s *replenishmentService) GenerateReorderSuggestions() error {
 			// Create Suggestion
 			// Calculate quantity: Target (OverStockLevel) - Current
 			// If OverStockLevel is 0 or less than LowStock, use a default or just LowStock * 2
-			targetStock := setting.OverStockLevel
-			if targetStock <= setting.LowStockLevel {
-				targetStock = setting.LowStockLevel * 3 // Default heuristic
+			targetStock := float64(setting.OverStockLevel)
+			if targetStock <= float64(setting.LowStockLevel) {
+				targetStock = float64(setting.LowStockLevel) * 3 // Default heuristic
 			}
 			suggestedQty := targetStock - currentStock
 			if suggestedQty <= 0 {
@@ -109,7 +109,7 @@ func (s *replenishmentService) GenerateReorderSuggestions() error {
 			if err := s.repo.CreateReorderSuggestion(suggestion); err != nil {
 				logrus.Errorf("Failed to create suggestion for product %d: %v", setting.ProductID, err)
 			} else {
-				logrus.Infof("Created reorder suggestion for product %d, qty %d", setting.ProductID, suggestedQty)
+				logrus.Infof("Created reorder suggestion for product %d, qty %v", setting.ProductID, suggestedQty)
 			}
 		}
 	}

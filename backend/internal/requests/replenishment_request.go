@@ -30,7 +30,7 @@ type UpdatePORequest struct {
 // POItemRequest represents an item within a purchase order update request.
 type POItemRequest struct {
 	ProductID       uint    `json:"productId" binding:"required"`
-	OrderedQuantity int     `json:"orderedQuantity" binding:"required,gt=0"`
+	OrderedQuantity float64 `json:"orderedQuantity" binding:"required,gt=0"`
 	UnitPrice       float64 `json:"unitPrice" binding:"required,gt=0"`
 }
 
@@ -42,7 +42,7 @@ type ReceivePORequest struct {
 // ReceivePOItemRequest represents an item being received for a purchase order.
 type ReceivePOItemRequest struct {
 	PurchaseOrderItemID uint       `json:"purchaseOrderItemId" binding:"required"`
-	ReceivedQuantity    int        `json:"receivedQuantity" binding:"required,gt=0"`
+	ReceivedQuantity    float64    `json:"receivedQuantity" binding:"required,gt=0"`
 	BatchNumber         string     `json:"batchNumber" binding:"required"`
 	ExpiryDate          *time.Time `json:"expiryDate"`
 }

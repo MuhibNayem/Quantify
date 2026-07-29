@@ -300,19 +300,19 @@ func checkAndTriggerAlertsForSettings(db *gorm.DB, s *domain.ProductAlertSetting
 		return
 	}
 
-	var currentQuantity int
+	var currentQuantity float64
 	db.Model(&domain.Batch{}).Where("product_id = ?", s.ProductID).Select("sum(quantity)").Row().Scan(&currentQuantity)
 
-	if s.LowStockLevel > 0 && currentQuantity <= s.LowStockLevel {
-		triggerAlert(db, s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %d", product.Name, currentQuantity), nil)
+	if s.LowStockLevel > 0 && currentQuantity <= float64(s.LowStockLevel) {
+		triggerAlert(db, s.ProductID, "LOW_STOCK", fmt.Sprintf("Product %s is running low. Current quantity: %v", product.Name, currentQuantity), nil)
 	}
 
 	if currentQuantity == 0 {
 		triggerAlert(db, s.ProductID, "OUT_OF_STOCK", fmt.Sprintf("Product %s is out of stock.", product.Name), nil)
 	}
 
-	if s.OverStockLevel > 0 && currentQuantity >= s.OverStockLevel {
-		triggerAlert(db, s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %d", product.Name, currentQuantity), nil)
+	if s.OverStockLevel > 0 && currentQuantity >= float64(s.OverStockLevel) {
+		triggerAlert(db, s.ProductID, "OVERSTOCK", fmt.Sprintf("Product %s is overstocked. Current quantity: %v", product.Name, currentQuantity), nil)
 	}
 
 	if s.ExpiryAlertDays > 0 {

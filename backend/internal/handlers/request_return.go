@@ -16,10 +16,10 @@ import (
 type ReturnRequest struct {
 	OrderNumber string `json:"order_number" binding:"required"`
 	Items       []struct {
-		OrderItemID uint   `json:"order_item_id" binding:"required"`
-		Quantity    int    `json:"quantity" binding:"required"`
-		Condition   string `json:"condition"`
-		Reason      string `json:"reason" binding:"required"`
+		OrderItemID uint    `json:"order_item_id" binding:"required"`
+		Quantity    float64 `json:"quantity" binding:"required,gt=0"`
+		Condition   string  `json:"condition"`
+		Reason      string  `json:"reason" binding:"required"`
 	} `json:"items" binding:"required"`
 }
 

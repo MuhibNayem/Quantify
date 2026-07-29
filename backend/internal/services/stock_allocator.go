@@ -9,6 +9,7 @@ import (
 
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/requests"
+	"inventory/backend/internal/units"
 )
 
 func resolveDeductionLocation(product domain.Product, registerLocationID *uint) uint {
@@ -85,11 +86,11 @@ func (s *SalesService) allocateStock(
 	product domain.Product,
 	batches []*domain.Batch,
 	locationID uint,
-	quantity int,
+	quantity float64,
 	customerID *uint,
 	userID uint,
-) (int, error) {
-	availableStock := 0
+) (float64, error) {
+	availableStock := 0.0
 	for _, b := range batches {
 		availableStock += b.Quantity
 	}
@@ -99,7 +100,7 @@ func (s *SalesService) allocateStock(
 		if locationID != 0 {
 			locLabel = fmt.Sprintf("location %d", locationID)
 		}
-		return 0, fmt.Errorf("insufficient stock for product '%s' at %s (Available: %d, Requested: %d)", product.Name, locLabel, availableStock, quantity)
+		return 0, fmt.Errorf("insufficient stock for product '%s' at %s (Available: %v, Requested: %v)", product.Name, locLabel, availableStock, quantity)
 	}
 
 	qtyToReduce := quantity
@@ -108,10 +109,10 @@ func (s *SalesService) allocateStock(
 			break
 		}
 		if batch.Quantity >= qtyToReduce {
-			batch.Quantity -= qtyToReduce
+			batch.Quantity = units.RoundQty(batch.Quantity - qtyToReduce)
 			qtyToReduce = 0
 		} else {
-			qtyToReduce -= batch.Quantity
+			qtyToReduce = units.RoundQty(qtyToReduce - batch.Quantity)
 			batch.Quantity = 0
 		}
 		if err := tx.Save(batch).Error; err != nil {
@@ -129,7 +130,7 @@ func (s *SalesService) allocateStock(
 		AdjustedBy:       userID,
 		AdjustedAt:       time.Now(),
 		PreviousQuantity: availableStock,
-		NewQuantity:      availableStock - quantity,
+		NewQuantity:      units.RoundQty(availableStock - quantity),
 	}
 	if err := tx.Create(&adjustment).Error; err != nil {
 		return 0, fmt.Errorf("failed to create stock adjustment: %w", err)

@@ -15,7 +15,7 @@ type StockTransferRequest struct {
 	ProductID        uint
 	SourceLocationID uint
 	DestLocationID   uint
-	Quantity         int
+	Quantity         float64
 	Reason           string
 	UserID           uint
 }

@@ -113,13 +113,13 @@ func (s *SalesService) processItems(
 
 		unitPrice, discount := s.calculateItemDiscount(product, item.Quantity, activePromotions)
 		totalDiscountFromPromotions += discount
-		totalAmount += unitPrice * float64(item.Quantity)
+		totalAmount += unitPrice * item.Quantity
 
 		orderItems = append(orderItems, domain.OrderItem{
 			ProductID:  item.ProductID,
 			Quantity:   item.Quantity,
 			UnitPrice:  unitPrice,
-			TotalPrice: unitPrice * float64(item.Quantity),
+			TotalPrice: unitPrice * item.Quantity,
 		})
 	}
 

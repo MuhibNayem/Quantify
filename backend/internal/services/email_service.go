@@ -43,7 +43,7 @@ func (s *emailService) SendPurchaseOrderEmail(po domain.PurchaseOrder) error {
 		if productName == "" {
 			productName = fmt.Sprintf("Product ID %d", item.ProductID)
 		}
-		body.WriteString(fmt.Sprintf("- %s (SKU: %s): %d units @ $%.2f\n", productName, item.Product.SKU, item.OrderedQuantity, item.UnitPrice))
+		body.WriteString(fmt.Sprintf("- %s (SKU: %s): %v units @ $%.2f\n", productName, item.Product.SKU, item.OrderedQuantity, item.UnitPrice))
 	}
 
 	body.WriteString("\nExpected Delivery: ")

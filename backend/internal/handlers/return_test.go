@@ -114,7 +114,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	var order domain.Order
 	db.Preload("OrderItems").First(&order)
 	assert.Equal(t, 1, len(order.OrderItems))
-	assert.Equal(t, 2, order.OrderItems[0].Quantity)
+	assert.Equal(t, float64(2), order.OrderItems[0].Quantity)
 	assert.Equal(t, "COMPLETED", order.Status)
 
 	// 2. Request Return
@@ -154,7 +154,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	// Verify Stock Adjustment (Stock In)
 	var adjustment domain.StockAdjustment
 	db.Where("type = ? AND reason_code = ?", "STOCK_IN", "RETURN").First(&adjustment)
-	assert.Equal(t, 1, adjustment.Quantity)
+	assert.Equal(t, float64(1), adjustment.Quantity)
 
 	// Verify Refund Transaction
 	var transaction domain.Transaction
@@ -164,6 +164,6 @@ func TestRefundReturnFlow(t *testing.T) {
 	// Verify Order Item Returned Qty
 	var orderItem domain.OrderItem
 	db.First(&orderItem, order.OrderItems[0].ID)
-	assert.Equal(t, 1, orderItem.ReturnedQty)
+	assert.Equal(t, float64(1), orderItem.ReturnedQty)
 	assert.True(t, orderItem.IsReturned)
 }

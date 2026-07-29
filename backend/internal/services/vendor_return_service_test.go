@@ -64,10 +64,10 @@ func validVendorReturnRequest(supplierID, productID, batchID uint) CreatePurchas
 		SupplierID:      supplierID,
 		Reason:          "Damaged on arrival",
 		Items: []struct {
-			ProductID uint   `json:"product_id"`
-			Quantity  int    `json:"quantity"`
-			BatchID   uint   `json:"batch_id"`
-			Reason    string `json:"reason"`
+			ProductID uint    `json:"product_id"`
+			Quantity  float64 `json:"quantity"`
+			BatchID   uint    `json:"batch_id"`
+			Reason    string  `json:"reason"`
 		}{
 			{ProductID: productID, Quantity: 10, BatchID: batchID, Reason: "Damaged"},
 		},
@@ -86,7 +86,7 @@ func TestVendorReturn_DefaultsPending(t *testing.T) {
 	// Stock and refund amount must NOT be touched at create time.
 	var batch domain.Batch
 	require.NoError(t, db.First(&batch, batchID).Error)
-	assert.Equal(t, 100, batch.Quantity, "stock must remain unchanged while PENDING")
+	assert.Equal(t, float64(100), batch.Quantity, "stock must remain unchanged while PENDING")
 
 	var adjCount int64
 	db.Model(&domain.StockAdjustment{}).Count(&adjCount)
@@ -143,7 +143,7 @@ func TestVendorReturn_CompleteAfterApprove(t *testing.T) {
 
 	var batchMid domain.Batch
 	require.NoError(t, db.First(&batchMid, batchID).Error)
-	assert.Equal(t, 100, batchMid.Quantity, "Approve must not touch stock")
+	assert.Equal(t, float64(100), batchMid.Quantity, "Approve must not touch stock")
 
 	require.NoError(t, svc.CompletePurchaseReturn(context.Background(), ret.ID))
 
@@ -155,7 +155,7 @@ func TestVendorReturn_CompleteAfterApprove(t *testing.T) {
 	// Stock must be deducted and an audit row written on completion.
 	var batch domain.Batch
 	require.NoError(t, db.First(&batch, batchID).Error)
-	assert.Equal(t, 90, batch.Quantity, "stock must be deducted on Complete")
+	assert.Equal(t, float64(90), batch.Quantity, "stock must be deducted on Complete")
 
 	var adj domain.StockAdjustment
 	require.NoError(t, db.Where("notes LIKE ?", fmt.Sprintf("%%Vendor Return ID: %d%%", ret.ID)).
@@ -201,7 +201,7 @@ func TestVendorReturn_CancelFromPending(t *testing.T) {
 	// Cancel from PENDING must not affect stock (none was deducted).
 	var batch domain.Batch
 	require.NoError(t, db.First(&batch, batchID).Error)
-	assert.Equal(t, 100, batch.Quantity)
+	assert.Equal(t, float64(100), batch.Quantity)
 }
 
 func TestVendorReturn_CannotCompleteTwice(t *testing.T) {

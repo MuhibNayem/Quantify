@@ -10,6 +10,7 @@ import (
 	"inventory/backend/internal/config"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
+	"inventory/backend/internal/units"
 
 	"github.com/sirupsen/logrus"
 )
@@ -91,7 +92,7 @@ func (s *forecastingService) generateAIForecast(productID uint, periodInDays int
 	}
 
 	var result struct {
-		PredictedDemand int     `json:"predicted_demand"`
+		PredictedDemand float64 `json:"predicted_demand"`
 		ConfidenceScore float64 `json:"confidence_score"`
 		Reasoning       string  `json:"reasoning"`
 	}
@@ -113,7 +114,7 @@ func (s *forecastingService) generateAIForecast(productID uint, periodInDays int
 		return nil, fmt.Errorf("failed to save AI forecast: %w", err)
 	}
 
-	logrus.Infof("Generated AI forecast for product %d: PredictedDemand=%d", productID, result.PredictedDemand)
+	logrus.Infof("Generated AI forecast for product %d: PredictedDemand=%v", productID, result.PredictedDemand)
 	return &forecast, nil
 }
 
@@ -127,7 +128,7 @@ func (s *forecastingService) processForecastForProducts(products []domain.Produc
 		}
 
 		// Map sales to dates to handle missing days (0 sales)
-		salesMap := make(map[string]int)
+		salesMap := make(map[string]float64)
 		for _, sale := range salesData {
 			dateStr := sale.AdjustedAt.Format("2006-01-02")
 			salesMap[dateStr] += sale.Quantity
@@ -157,14 +158,14 @@ func (s *forecastingService) processForecastForProducts(products []domain.Produc
 			quantity := salesMap[dateStr] // 0 if missing
 
 			weight := float64(i + 1)
-			weightedSum += float64(quantity) * weight
+			weightedSum += quantity * weight
 			weightSum += weight
 		}
 
-		var predictedDemand int
+		var predictedDemand float64
 		if weightSum > 0 {
 			dailyDemand := weightedSum / weightSum
-			predictedDemand = int(dailyDemand * float64(periodInDays))
+			predictedDemand = units.RoundQty(dailyDemand * float64(periodInDays))
 		} else {
 			predictedDemand = 0
 		}
@@ -179,7 +180,7 @@ func (s *forecastingService) processForecastForProducts(products []domain.Produc
 			logrus.Errorf("Failed to save demand forecast for product %d: %v", product.ID, err)
 			continue
 		}
-		logrus.Infof("Generated forecast for product %d: PredictedDemand=%d", product.ID, predictedDemand)
+		logrus.Infof("Generated forecast for product %d: PredictedDemand=%v", product.ID, predictedDemand)
 		lastForecast = &forecast
 	}
 

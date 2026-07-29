@@ -44,10 +44,10 @@ type CreatePurchaseReturnRequest struct {
 	SupplierID      uint   `json:"supplier_id"`
 	Reason          string `json:"reason"`
 	Items           []struct {
-		ProductID uint   `json:"product_id"`
-		Quantity  int    `json:"quantity"`
-		BatchID   uint   `json:"batch_id"`
-		Reason    string `json:"reason"`
+		ProductID uint    `json:"product_id"`
+		Quantity  float64 `json:"quantity"`
+		BatchID   uint    `json:"batch_id"`
+		Reason    string  `json:"reason"`
 	} `json:"items"`
 }
 
@@ -182,7 +182,7 @@ func (s *vendorReturnService) CompletePurchaseReturn(ctx context.Context, id uin
 			if err := tx.First(&product, item.ProductID).Error; err != nil {
 				return appErrors.NewAppError("failed to load product for refund", http.StatusInternalServerError, err)
 			}
-			totalRefund += product.PurchasePrice * float64(item.Quantity)
+			totalRefund += product.PurchasePrice * item.Quantity
 
 			adj := domain.StockAdjustment{
 				ProductID:   item.ProductID,
