@@ -127,6 +127,12 @@ func AutoMigrate() {
 		&domain.Promotion{},
 		&domain.PurchaseReturn{},
 		&domain.PurchaseReturnItem{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
+		&domain.AccountsReceivable{},
+		&domain.Payment{},
+		&domain.PaymentAllocation{},
 	)
 
 	if err != nil {
@@ -166,6 +172,11 @@ func seedData() {
 	// so it's seeded in Go (idempotent). Safe on every boot.
 	if err := SeedUnits(db); err != nil {
 		logrus.Warnf("Failed to seed unit catalog: %v", err)
+	}
+
+	// Chart of accounts for the double-entry ledger (idempotent).
+	if err := SeedChartOfAccounts(db); err != nil {
+		logrus.Warnf("Failed to seed chart of accounts: %v", err)
 	}
 }
 
