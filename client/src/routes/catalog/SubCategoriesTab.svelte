@@ -3,10 +3,8 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4 } from 'sveltekit-superforms/adapters';
 	import { subCategorySchema } from '$lib/schemas/category';
-	import { TableCell } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import EntityTable from './components/EntityTable.svelte';
 	import { categoriesApi, subCategoriesApi } from '$lib/api/resources';
 	import type { Category, SubCategory } from '$lib/types';
@@ -26,6 +24,13 @@
 	let categories = $state<Category[]>([]);
 	let subCategories = $state<SubCategory[]>([]);
 	let editingSubCategory = $state<SubCategory | null>(null);
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
 
 	const { form, errors, enhance } = superForm(
 		{ name: '', categoryId: '' },
@@ -115,15 +120,16 @@
 >
 	<div class="flex flex-col gap-6">
 		<div
-			class="flex flex-col gap-4 rounded-2xl border border-amber-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<div class="space-y-1">
-				<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.sub_categories.title')}</h2>
-				<p class="text-sm text-slate-500">{$t('catalog.sub_categories.subtitle')}</p>
+				<h2 class="font-display text-foreground text-lg font-semibold">
+					{$t('catalog.sub_categories.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('catalog.sub_categories.subtitle')}</p>
 			</div>
 			<div class="select-wrapper w-full sm:w-1/2">
 				<select
-					class="w-full rounded-xl border border-amber-200 bg-white/80 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-400"
 					bind:value={$form.categoryId}
 					onchange={(e) => loadSubCategories(Number(e.currentTarget.value))}
 				>
@@ -141,11 +147,11 @@
 
 		{#if !$form.categoryId}
 			<div
-				class="rounded-2xl border-2 border-dashed border-amber-200/50 bg-white/40 py-12 text-center text-slate-500"
+				class="border-border bg-card text-muted-foreground rounded-lg border-2 border-dashed py-12 text-center shadow-sm"
 			>
-				<Layers class="mx-auto mb-3 h-12 w-12 text-amber-200" />
-				<p class="text-base font-medium">{$t('catalog.sub_categories.empty_state')}</p>
-				<p class="text-sm text-slate-400">{$t('catalog.sub_categories.empty_subtitle')}</p>
+				<Layers class="text-muted-foreground/40 mx-auto mb-3 h-12 w-12" />
+				<p class="text-foreground text-base font-medium">{$t('catalog.sub_categories.empty_state')}</p>
+				<p class="text-muted-foreground text-sm">{$t('catalog.sub_categories.empty_subtitle')}</p>
 			</div>
 		{:else}
 			<EntityTable
@@ -155,14 +161,14 @@
 				onRowClick={(subCategory) => onViewDetails(subCategory, 'sub-categories')}
 			>
 				{#snippet children(subCategory)}
-					<TableCell class="font-medium text-slate-800">{subCategory.Name}</TableCell>
+					<td class="text-foreground font-medium">{subCategory.Name}</td>
 					{#if auth.hasPermission('categories.write')}
-						<TableCell class="text-right">
+						<td class="text-right">
 							<div class="flex items-center justify-end gap-1">
 								<Button
 									size="sm"
 									variant="ghost"
-									class="h-8 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+									class="h-8 text-primary hover:bg-muted hover:text-foreground"
 									onclick={(event) => {
 										event.stopPropagation();
 										editingSubCategory = subCategory;
@@ -175,7 +181,7 @@
 								<Button
 									size="sm"
 									variant="ghost"
-									class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+									class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
 									onclick={(event) => {
 										event.stopPropagation();
 										deleteSubCategory(subCategory);
@@ -184,7 +190,7 @@
 									Delete
 								</Button>
 							</div>
-						</TableCell>
+						</td>
 					{/if}
 				{/snippet}
 			</EntityTable>
@@ -192,54 +198,50 @@
 	</div>
 
 	{#if auth.hasPermission('categories.write')}
-		<Card
-			class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-amber-50 to-orange-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
+		<div
+			class="liquid-panel overflow-hidden rounded-lg"
 			data-animate="fade-up"
 			style="animation-delay:180ms"
 		>
-			<CardHeader class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur">
-				<CardTitle class="text-slate-800"
+			<div class="border-border space-y-1 border-b px-6 py-5">
+				<h3 class="text-foreground font-display text-lg font-semibold"
 					>{editingSubCategory
 						? $t('catalog.sub_categories.form.update_title')
-						: $t('catalog.sub_categories.form.create_title')}</CardTitle
+						: $t('catalog.sub_categories.form.create_title')}</h3
 				>
-			</CardHeader>
-			<CardContent class="p-6">
+			</div>
+			<div class="p-6">
 				<form method="POST" use:enhance class="space-y-4">
 					<div class="space-y-1">
 						<Input
-							class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
+							class={inputClass}
 							placeholder={$t('catalog.sub_categories.form.name')}
 							bind:value={$form.name}
 						/>
 						{#if $errors.name}
-							<p class="text-xs font-medium text-rose-600">{$errors.name}</p>
+							<p class="text-danger text-xs font-medium">{$errors.name}</p>
 						{/if}
 					</div>
 					<div class="space-y-1">
-						<select
-							class="w-full rounded-xl border border-amber-200 bg-white/90 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-amber-400"
-							bind:value={$form.categoryId}
-						>
-							<option value="">{$t('catalog.sub_categories.form.select_category')}</option>
-							{#each categories as category (category.ID)}
-								<option value={category.ID}>{category.Name}</option>
-							{/each}
-						</select>
+						<div class="select-wrapper">
+							<select bind:value={$form.categoryId}>
+								<option value="">{$t('catalog.sub_categories.form.select_category')}</option>
+								{#each categories as category (category.ID)}
+									<option value={category.ID}>{category.Name}</option>
+								{/each}
+							</select>
+						</div>
 						{#if $errors.categoryId}
-							<p class="text-xs font-medium text-rose-600">{$errors.categoryId}</p>
+							<p class="text-danger text-xs font-medium">{$errors.categoryId}</p>
 						{/if}
 					</div>
 					<div class="flex flex-col gap-3 pt-1 sm:flex-row">
-						<Button
-							type="submit"
-							class="w-full rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 py-2.5 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-amber-600 hover:to-orange-700 hover:shadow-xl sm:w-1/2"
-						>
+						<Button type="submit" class="{btnPrimary} w-full py-2.5 sm:w-1/2">
 							{editingSubCategory ? $t('catalog.common.update') : $t('catalog.common.create')}
 						</Button>
 						<Button
 							type="button"
-							class="w-full rounded-xl border border-amber-200 py-2.5 text-amber-700 transition hover:bg-amber-50 sm:w-1/2"
+							class="{btnSecondary} w-full py-2.5 sm:w-1/2"
 							onclick={() => {
 								$form.name = '';
 								editingSubCategory = null;
@@ -249,7 +251,7 @@
 						</Button>
 					</div>
 				</form>
-			</CardContent>
-		</Card>
+			</div>
+		</div>
 	{/if}
 </div>

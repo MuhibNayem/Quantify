@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { TableCell } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import EntityTable from './components/EntityTable.svelte';
@@ -22,6 +21,11 @@
 	let categories = $state<Category[]>([]);
 	let editingCategory = $state<Category | null>(null);
 	let categorySearchTerm = $state('');
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 
 	const categoryColumns = $derived([
 		{ header: $t('catalog.categories.form.name'), accessorKey: 'Name' },
@@ -90,25 +94,26 @@
 >
 	<div class="flex flex-col gap-6">
 		<div
-			class="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<div class="space-y-1">
-				<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.categories.title')}</h2>
-				<p class="text-sm text-slate-500">{$t('catalog.categories.subtitle')}</p>
+				<h2 class="font-display text-foreground text-lg font-semibold">
+					{$t('catalog.categories.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('catalog.categories.subtitle')}</p>
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				<Input
-					class="w-full rounded-xl border-emerald-200 bg-white/80 px-3 text-sm focus:ring-2 focus:ring-emerald-400 sm:w-48"
+					class="{inputClass} sm:w-48"
 					placeholder={$t('catalog.categories.search_placeholder')}
 					bind:value={categorySearchTerm}
 				/>
-				<Button
-					class="rounded-xl bg-emerald-500 px-4 py-2 text-white hover:bg-emerald-600"
-					onclick={handleCategorySearch}>{$t('catalog.common.search')}</Button
+				<Button class={btnPrimary} onclick={handleCategorySearch}
+					>{$t('catalog.common.search')}</Button
 				>
 				<Button
 					variant="ghost"
-					class="rounded-xl px-4 py-2 text-emerald-600 hover:bg-emerald-50"
+					class="text-primary hover:bg-muted hover:text-foreground rounded-md px-4 py-2"
 					onclick={clearCategorySearch}>{$t('catalog.common.clear')}</Button
 				>
 			</div>
@@ -121,14 +126,14 @@
 			onRowClick={(category) => onViewDetails(category, 'categories')}
 		>
 			{#snippet children(category)}
-				<TableCell class="font-medium text-slate-800">{category.Name}</TableCell>
+				<td class="text-foreground font-medium">{category.Name}</td>
 				{#if auth.hasPermission('categories.write')}
-					<TableCell class="text-right">
+					<td class="text-right">
 						<div class="flex items-center justify-end gap-1">
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+								class="h-8 text-primary hover:bg-muted hover:text-foreground"
 								onclick={(event) => {
 									event.stopPropagation();
 									editingCategory = category;
@@ -139,7 +144,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+								class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
 								onclick={(event) => {
 									event.stopPropagation();
 									deleteCategory(category);
@@ -148,7 +153,7 @@
 								{$t('catalog.common.delete')}
 							</Button>
 						</div>
-					</TableCell>
+					</td>
 				{/if}
 			{/snippet}
 		</EntityTable>

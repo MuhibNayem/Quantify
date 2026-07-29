@@ -10,13 +10,6 @@
 		BulkExportResult
 	} from '$lib/types';
 	import { toast } from 'svelte-sonner';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -27,7 +20,6 @@
 		Loader,
 		Download,
 		Search,
-		FileText,
 		Clock,
 		RefreshCw,
 		X,
@@ -37,14 +29,6 @@
 		AlertCircle,
 		Check
 	} from 'lucide-svelte';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table';
 	import { Tabs, TabsContent, TabsList, TabsTrigger } from '$lib/components/ui/tabs';
 	import { onMount } from 'svelte';
 
@@ -61,6 +45,15 @@
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
 	import { goto } from '$app/navigation';
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+	const tabTriggerClass =
+		'rounded-md data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none';
 
 	// --- State: Import Wizard ---
 	let file = $state<File | null>(null);
@@ -366,54 +359,39 @@
 	});
 </script>
 
-<!-- Wrapper with animated gradient + hero consistency -->
-<div
-	class="relative isolate min-h-[100dvh] overflow-hidden bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-100"
->
-	<div
-		class="animate-pulseGlow absolute -left-24 -top-32 h-[28rem] w-[28rem] rounded-full bg-sky-200/40 blur-3xl"
-	></div>
-	<div
-		class="animate-pulseGlow absolute -bottom-28 -right-24 h-[24rem] w-[24rem] rounded-full bg-cyan-200/30 blur-3xl delay-700"
-	></div>
-
-	<div class="container relative mx-auto max-w-6xl px-4 pb-20 pt-16">
-		<header class="mb-10 text-center sm:text-left">
-			<h1
-				class="mb-2 bg-gradient-to-r from-sky-700 via-blue-700 to-cyan-700 bg-clip-text text-4xl font-extrabold text-transparent"
-			>
+<div class="min-h-[100dvh]">
+	<div class="container relative mx-auto max-w-6xl px-4 pt-10 pb-20 sm:pt-14">
+		<header class="mb-8 space-y-2" data-animate="fade-up">
+			<p class="overline">{$t('bulk.subtitle')}</p>
+			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
 				{$t('bulk.title')}
 			</h1>
-			<p class="mx-auto max-w-2xl text-sm text-slate-600 sm:mx-0 sm:text-base">
-				{$t('bulk.subtitle')}
-			</p>
 		</header>
 
 		<Tabs value="import" class="w-full space-y-8">
 			<TabsList
-				class="grid w-full grid-cols-3 border border-sky-100 bg-white/60 backdrop-blur-sm lg:w-[400px]"
+				class="h-11 w-full rounded-lg border border-border bg-card p-1 shadow-sm backdrop-blur-none lg:w-[400px]"
 			>
-				<TabsTrigger value="import">{$t('bulk.tabs.import')}</TabsTrigger>
-				<TabsTrigger value="export">{$t('bulk.tabs.export')}</TabsTrigger>
-				<TabsTrigger value="status">{$t('bulk.tabs.status')}</TabsTrigger>
+				<TabsTrigger value="import" class={tabTriggerClass}>{$t('bulk.tabs.import')}</TabsTrigger>
+				<TabsTrigger value="export" class={tabTriggerClass}>{$t('bulk.tabs.export')}</TabsTrigger>
+				<TabsTrigger value="status" class={tabTriggerClass}>{$t('bulk.tabs.status')}</TabsTrigger>
 			</TabsList>
 
 			<!-- IMPORT TAB -->
 			<TabsContent value="import" class="space-y-8 outline-none">
 				<!-- Step Indicator -->
 				<ol
-					class="flex items-center justify-center overflow-x-auto rounded-2xl border border-sky-100 bg-white/70 px-4 py-3 shadow-sm backdrop-blur-sm sm:justify-start"
+					class="liquid-panel custom-scrollbar flex items-center justify-center overflow-x-auto rounded-lg px-4 py-3 sm:justify-start"
 				>
 					{#each [$t('bulk.steps.download'), $t('bulk.steps.upload'), $t('bulk.steps.validate'), $t('bulk.steps.import'), $t('bulk.steps.done')] as label, i}
 						<li class="relative flex items-center">
 							<div
-								class="mr-2 grid size-8 place-items-center rounded-full border text-xs font-semibold shadow-sm transition-all duration-300"
-								class:bg-gradient-to-r={i <= stepIndex(currentStep)}
-								class:from-sky-500={i <= stepIndex(currentStep)}
-								class:to-blue-600={i <= stepIndex(currentStep)}
-								class:text-white={i <= stepIndex(currentStep)}
-								class:border-sky-200={i > stepIndex(currentStep)}
-								class:text-slate-500={i > stepIndex(currentStep)}
+								class="num mr-2 grid size-8 shrink-0 place-items-center rounded-md border text-xs font-semibold transition-colors duration-300"
+								class:bg-primary={i <= stepIndex(currentStep)}
+								class:text-primary-foreground={i <= stepIndex(currentStep)}
+								class:border-primary={i <= stepIndex(currentStep)}
+								class:border-border={i > stepIndex(currentStep)}
+								class:text-muted-foreground={i > stepIndex(currentStep)}
 							>
 								{#if i < stepIndex(currentStep)}
 									<CheckCircle class="size-4" />
@@ -421,119 +399,105 @@
 									<span>{i + 1}</span>
 								{/if}
 							</div>
-							<span class="mr-3 whitespace-nowrap text-xs text-slate-700 sm:text-sm">{label}</span>
-							{#if i < 4}<div class="h-[2px] w-8 bg-slate-200/70"></div>{/if}
+							<span class="text-foreground mr-3 text-xs whitespace-nowrap sm:text-sm">{label}</span>
+							{#if i < 4}<div class="bg-border h-[2px] w-8"></div>{/if}
 						</li>
 					{/each}
 				</ol>
 
-				<div class="grid gap-8 lg:grid-cols-2">
+				<div class="grid gap-6 lg:grid-cols-2">
 					<!-- Step 1 -->
-					<Card
-						class="rounded-2xl bg-gradient-to-br from-sky-50 to-blue-100 shadow-md transition-all duration-300 hover:shadow-xl"
-					>
-						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
-							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<FileDown class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step1_title')}
-							</CardTitle>
-							<CardDescription class="text-slate-600"
-								>{$t('bulk.steps.step1_desc')}</CardDescription
-							>
-						</CardHeader>
-						<CardContent class="p-6">
-							<Button
-								onclick={downloadTemplate}
-								class="w-full rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-5 py-2.5 text-white shadow-md hover:from-sky-600 hover:to-blue-700 hover:shadow-lg sm:w-auto"
+					<div class="liquid-panel rounded-lg">
+						<div class="border-border space-y-1 border-b px-6 py-5">
+							<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
+								<FileDown class="text-primary h-5 w-5" /> {$t('bulk.steps.step1_title')}
+							</h2>
+							<p class="text-muted-foreground text-sm">{$t('bulk.steps.step1_desc')}</p>
+						</div>
+						<div class="p-6">
+							<Button onclick={downloadTemplate} class="{btnPrimary} w-full sm:w-auto"
 								>{$t('bulk.buttons.download_template')}</Button
 							>
-						</CardContent>
-					</Card>
+						</div>
+					</div>
 
 					<!-- Step 2 -->
-					<Card
-						class="rounded-2xl bg-gradient-to-br from-blue-50 to-sky-100 shadow-md transition-all duration-300 hover:shadow-xl"
-					>
-						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
-							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<Upload class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step2_title')}
-							</CardTitle>
-							<CardDescription class="text-slate-600"
-								>{$t('bulk.steps.step2_desc')}</CardDescription
-							>
-						</CardHeader>
-						<CardContent class="flex flex-col items-center gap-4 p-6 sm:flex-row">
+					<div class="liquid-panel rounded-lg">
+						<div class="border-border space-y-1 border-b px-6 py-5">
+							<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
+								<Upload class="text-primary h-5 w-5" /> {$t('bulk.steps.step2_title')}
+							</h2>
+							<p class="text-muted-foreground text-sm">{$t('bulk.steps.step2_desc')}</p>
+						</div>
+						<div class="flex flex-col items-center gap-4 p-6 sm:flex-row">
 							<Input
 								type="file"
 								accept=".csv"
 								onchange={handleFileChange}
 								disabled={currentStep !== 'idle'}
-								class="rounded-xl border border-sky-200 bg-white/90 focus:ring-2 focus:ring-sky-400"
+								class="{inputClass} h-auto py-2"
 							/>
 							<Button
 								onclick={uploadFile}
 								disabled={!file || currentStep !== 'idle'}
-								class="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 px-6 py-2.5 text-white shadow-md hover:shadow-lg sm:w-auto"
+								class="{btnPrimary} flex w-full items-center justify-center sm:w-auto"
 							>
 								{#if currentStep === 'uploading'}<Loader class="mr-2 h-4 w-4 animate-spin" />{/if}
 								{$t('bulk.buttons.upload_validate')}
 							</Button>
-						</CardContent>
-					</Card>
+						</div>
+					</div>
 				</div>
 
 				<!-- Step 3: Validation & Progress -->
 				{#if ['validating', 'importing', 'complete', 'failed'].includes(currentStep)}
-					<Card
-						class="rounded-2xl bg-gradient-to-br from-white/90 to-sky-50 shadow-md transition-all duration-300 hover:shadow-xl"
-					>
-						<CardHeader class="border-b border-white/60 bg-white/70 backdrop-blur-sm">
-							<CardTitle class="flex items-center gap-2 text-slate-800">
-								<CheckCircle class="h-5 w-5 text-sky-600" /> {$t('bulk.steps.step3_title')}
-							</CardTitle>
-							<CardDescription class="text-slate-600"
-								>{$t('bulk.steps.step3_desc')}</CardDescription
-							>
-						</CardHeader>
-						<CardContent class="space-y-6 p-6">
+					<div class="liquid-panel rounded-lg">
+						<div class="border-border space-y-1 border-b px-6 py-5">
+							<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
+								<CheckCircle class="text-primary h-5 w-5" /> {$t('bulk.steps.step3_title')}
+							</h2>
+							<p class="text-muted-foreground text-sm">{$t('bulk.steps.step3_desc')}</p>
+						</div>
+						<div class="space-y-6 p-6">
 							{#if currentStep === 'validating'}
-								<div class="flex items-center gap-2 text-sky-700">
+								<div class="text-info flex items-center gap-2">
 									<Loader class="h-4 w-4 animate-spin" /> {$t('bulk.status.validating')}
 								</div>
 							{/if}
 
 							{#if validationResult}
 								<div class="grid gap-4 sm:grid-cols-3">
-									<div class="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-center">
-										<p class="text-xs text-slate-500">{$t('bulk.labels.valid')}</p>
-										<p class="text-xl font-bold text-sky-700">{validationResult.validRecords}</p>
+									<div class="rounded-lg border border-success/25 bg-success/10 p-4 text-center">
+										<p class="overline">{$t('bulk.labels.valid')}</p>
+										<p class="kpi-num text-success mt-1 text-xl">{validationResult.validRecords}</p>
 									</div>
-									<div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
-										<p class="text-xs text-slate-500">{$t('bulk.labels.invalid')}</p>
-										<p class="text-xl font-bold text-rose-700">{validationResult.invalidRecords}</p>
+									<div class="rounded-lg border border-danger/25 bg-danger/10 p-4 text-center">
+										<p class="overline">{$t('bulk.labels.invalid')}</p>
+										<p class="kpi-num text-danger mt-1 text-xl">{validationResult.invalidRecords}</p>
 									</div>
-									<div class="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-center">
-										<p class="text-xs text-slate-500">{$t('bulk.labels.total')}</p>
-										<p class="text-xl font-bold text-amber-700">{validationResult.totalRecords}</p>
+									<div class="border-border bg-muted/50 rounded-lg border p-4 text-center">
+										<p class="overline">{$t('bulk.labels.total')}</p>
+										<p class="kpi-num text-foreground mt-1 text-xl">{validationResult.totalRecords}</p>
 									</div>
 								</div>
 
 								{#if validationResult.newEntities}
 									<div class="grid grid-cols-3 gap-4">
-										<div class="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-center">
-											<p class="text-xs font-medium text-indigo-600">{$t('bulk.labels.new_categories')}</p>
-											<p class="text-lg font-bold text-indigo-800">
+										<div class="border-border bg-muted/50 rounded-md border p-3 text-center">
+											<p class="text-muted-foreground text-xs font-medium">{$t('bulk.labels.new_categories')}</p>
+											<p class="num-mono text-foreground text-lg font-bold">
 												{Object.keys(validationResult.newEntities.categories || {}).length}
 											</p>
 										</div>
-										<div class="rounded-xl border border-fuchsia-100 bg-fuchsia-50 p-3 text-center">
-											<p class="text-xs font-medium text-fuchsia-600">{$t('bulk.labels.new_suppliers')}</p>
-											<p class="text-lg font-bold text-fuchsia-800">
+										<div class="border-border bg-muted/50 rounded-md border p-3 text-center">
+											<p class="text-muted-foreground text-xs font-medium">{$t('bulk.labels.new_suppliers')}</p>
+											<p class="num-mono text-foreground text-lg font-bold">
 												{Object.keys(validationResult.newEntities.suppliers || {}).length}
 											</p>
 										</div>
-										<div class="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-											<p class="text-xs font-medium text-emerald-600">{$t('bulk.labels.new_locations')}</p>
-											<p class="text-lg font-bold text-emerald-800">
+										<div class="border-border bg-muted/50 rounded-md border p-3 text-center">
+											<p class="text-muted-foreground text-xs font-medium">{$t('bulk.labels.new_locations')}</p>
+											<p class="num-mono text-foreground text-lg font-bold">
 												{Object.keys(validationResult.newEntities.locations || {}).length}
 											</p>
 										</div>
@@ -541,9 +505,7 @@
 								{/if}
 
 								{#if validationResult.errors?.length}
-									<div
-										class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
-									>
+									<div class="rounded-md border border-danger/25 bg-danger/10 p-3 text-danger text-sm">
 										<ul class="list-inside list-disc space-y-1">
 											{#each validationResult.errors as e}<li>{e}</li>{/each}
 										</ul>
@@ -551,158 +513,152 @@
 								{/if}
 
 								{#if validationResult.validProducts?.length}
-									<div class="max-h-64 overflow-y-auto rounded-xl border bg-white/70">
-										<Table>
-											<TableHeader
-												class="bg-gradient-to-r from-sky-100/70 to-blue-100/70 backdrop-blur"
-											>
-												<TableRow
-													><TableHead>SKU</TableHead><TableHead>Name</TableHead><TableHead
-														>Category</TableHead
-													><TableHead>Supplier</TableHead><TableHead class="text-right"
-														>Price</TableHead
-													></TableRow
-												>
-											</TableHeader>
-											<TableBody
-												>{#each validationResult.validProducts as p}<TableRow
-														class="hover:bg-sky-50"
-														><TableCell>{p.SKU}</TableCell><TableCell>{p.Name}</TableCell><TableCell
-															>{p.CategoryName}</TableCell
-														><TableCell>{p.SupplierName}</TableCell><TableCell class="text-right"
-															>{p.SellingPrice}</TableCell
-														></TableRow
-													>{/each}</TableBody
-											>
-										</Table>
+									<div class="liquid-panel custom-scrollbar max-h-64 overflow-y-auto rounded-lg">
+										<table class="ledger-table min-w-[36rem]">
+											<thead>
+												<tr>
+													<th>SKU</th>
+													<th>Name</th>
+													<th>Category</th>
+													<th>Supplier</th>
+													<th class="text-right">Price</th>
+												</tr>
+											</thead>
+											<tbody>
+												{#each validationResult.validProducts as p}
+													<tr>
+														<td class="num-mono text-muted-foreground text-xs">{p.SKU}</td>
+														<td class="text-foreground">{p.Name}</td>
+														<td>{p.CategoryName}</td>
+														<td>{p.SupplierName}</td>
+														<td class="col-num">{p.SellingPrice}</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
 									</div>
 								{/if}
 							{/if}
 
 							{#if currentStep === 'importing'}
-								<p class="flex items-center gap-2 text-sky-700">
+								<p class="text-info flex items-center gap-2">
 									<Loader class="h-4 w-4 animate-spin" /> {$t('bulk.status.importing')}
 								</p>
 							{/if}
 
 							{#if currentStep === 'complete'}
-								<div class="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
-									<CheckCircle class="mx-auto h-12 w-12 text-green-600" />
-									<h3 class="mt-2 text-lg font-semibold text-green-700">{$t('bulk.status.import_complete')}</h3>
-									<p class="mt-1 text-slate-600">
+								<div class="rounded-lg border border-success/25 bg-success/10 p-6 text-center">
+									<CheckCircle class="text-success mx-auto h-12 w-12" />
+									<h3 class="text-success mt-2 text-lg font-semibold">{$t('bulk.status.import_complete')}</h3>
+									<p class="text-muted-foreground mt-1">
 										{importJob?.message || $t('bulk.status.success')}
 									</p>
-									<Button
-										onclick={resetImportState}
-										class="mt-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-white hover:brightness-110"
+									<Button onclick={resetImportState} class="{btnPrimary} mt-4"
 										>{$t('bulk.buttons.new_import')}</Button
 									>
 								</div>
 							{/if}
 
 							{#if currentStep === 'failed'}
-								<div class="rounded-2xl border border-rose-200 bg-rose-50 p-6 text-center">
-									<AlertTriangle class="mx-auto h-12 w-12 text-rose-600" />
-									<h3 class="mt-2 text-lg font-semibold text-rose-700">{$t('bulk.status.import_failed')}</h3>
-									<p class="mt-1 text-slate-600">
+								<div class="rounded-lg border border-danger/25 bg-danger/10 p-6 text-center">
+									<AlertTriangle class="text-danger mx-auto h-12 w-12" />
+									<h3 class="text-danger mt-2 text-lg font-semibold">{$t('bulk.status.import_failed')}</h3>
+									<p class="text-muted-foreground mt-1">
 										{importJob?.lastError || 'Unknown error occurred.'}
 									</p>
 									<Button
 										onclick={resetImportState}
-										class="mt-4 rounded-xl bg-gradient-to-r from-rose-500 to-orange-500 px-5 py-2.5 text-white hover:brightness-110"
+										class="mt-4 rounded-md bg-destructive px-4 text-sm font-medium text-white shadow-none hover:bg-destructive/90"
 										>{$t('bulk.buttons.try_again')}</Button
 									>
 								</div>
 							{/if}
-						</CardContent>
-					</Card>
+						</div>
+					</div>
 				{/if}
 			</TabsContent>
 
 			<!-- EXPORT TAB -->
 			<TabsContent value="export" class="outline-none">
-				<Card
-					class="rounded-2xl border-0 bg-gradient-to-br from-violet-50 to-purple-100 shadow-lg transition-all duration-300 hover:shadow-xl"
-				>
-					<CardHeader
-						class="rounded-t-2xl border-b border-white/60 bg-white/80 px-6 py-5 backdrop-blur"
-					>
-						<CardTitle class="flex items-center gap-2 text-slate-800">
-							<Download class="h-5 w-5 text-violet-600" /> {$t('bulk.tabs.export')}
-						</CardTitle>
-						<CardDescription class="text-slate-600"
-							>{$t('bulk.subtitle')}</CardDescription
-						>
-					</CardHeader>
-					<CardContent class="space-y-6 p-6">
+				<div class="liquid-panel rounded-lg">
+					<div class="border-border space-y-1 border-b px-6 py-5">
+						<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
+							<Download class="text-primary h-5 w-5" /> {$t('bulk.tabs.export')}
+						</h2>
+						<p class="text-muted-foreground text-sm">{$t('bulk.subtitle')}</p>
+					</div>
+					<div class="space-y-6 p-6">
 						<div class="grid gap-4 sm:grid-cols-3">
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.format')}</label>
-								<select
-									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-									bind:value={exportParams.format}
+								<label class="text-foreground text-sm font-medium" for="export-format"
+									>{$t('bulk.labels.format')}</label
 								>
-									<option value="csv">CSV</option>
-									<option value="excel">Excel</option>
-								</select>
+								<div class="select-wrapper">
+									<select id="export-format" bind:value={exportParams.format}>
+										<option value="csv">CSV</option>
+										<option value="excel">Excel</option>
+									</select>
+								</div>
 							</div>
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.category')}</label>
-								<select
-									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-									bind:value={exportParams.category}
+								<label class="text-foreground text-sm font-medium" for="export-category"
+									>{$t('bulk.labels.category')}</label
 								>
-									<option value="">{$t('bulk.labels.all_categories')}</option>
-									{#each categories as cat}
-										<option value={cat.ID.toString()}>{cat.Name}</option>
-									{/each}
-								</select>
+								<div class="select-wrapper">
+									<select id="export-category" bind:value={exportParams.category}>
+										<option value="">{$t('bulk.labels.all_categories')}</option>
+										{#each categories as cat}
+											<option value={cat.ID.toString()}>{cat.Name}</option>
+										{/each}
+									</select>
+								</div>
 							</div>
 							<div class="space-y-2">
-								<label class="text-sm font-medium text-slate-700">{$t('bulk.labels.supplier')}</label>
-								<select
-									class="w-full rounded-xl border border-violet-200 bg-white/90 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
-									bind:value={exportParams.supplier}
+								<label class="text-foreground text-sm font-medium" for="export-supplier"
+									>{$t('bulk.labels.supplier')}</label
 								>
-									<option value="">{$t('bulk.labels.all_suppliers')}</option>
-									{#each suppliers as sup}
-										<option value={sup.ID.toString()}>{sup.Name}</option>
-									{/each}
-								</select>
+								<div class="select-wrapper">
+									<select id="export-supplier" bind:value={exportParams.supplier}>
+										<option value="">{$t('bulk.labels.all_suppliers')}</option>
+										{#each suppliers as sup}
+											<option value={sup.ID.toString()}>{sup.Name}</option>
+										{/each}
+									</select>
+								</div>
 							</div>
 						</div>
 						<Button
-							class="flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 font-semibold text-white shadow-md transition-all hover:scale-[1.02] hover:from-violet-600 hover:to-purple-700 hover:shadow-lg"
+							class="{btnPrimary} flex w-full items-center justify-center"
 							onclick={exportCatalog}
 							disabled={exporting}
 						>
 							{#if exporting}<Loader class="mr-2 h-4 w-4 animate-spin" />{/if}
 							{$t('bulk.buttons.generate_export')}
 						</Button>
-					</CardContent>
-				</Card>
+					</div>
+				</div>
 			</TabsContent>
 
 			<!-- STATUS TAB -->
 			<TabsContent value="status" class="space-y-6 outline-none">
 				<!-- Header / Search -->
 				<div
-					class="flex flex-col items-center justify-between gap-4 rounded-2xl border border-sky-100 bg-white/60 p-4 backdrop-blur-sm sm:flex-row"
+					class="liquid-panel flex flex-col items-center justify-between gap-4 rounded-lg p-4 sm:flex-row"
 				>
 					<div class="relative w-full sm:w-72">
-						<Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+						<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 						<Input
 							placeholder={$t('bulk.labels.search_placeholder')}
 							bind:value={jobIdQuery}
 							onkeydown={(e) => e.key === 'Enter' && loadJobStatus()}
-							class="rounded-xl border-slate-200 bg-white/80 pl-10 focus:ring-sky-200"
+							class="{inputClass} num-mono pl-10"
 						/>
 					</div>
 					<Button
 						variant="outline"
 						size="sm"
 						onclick={refreshJobs}
-						class="gap-2 rounded-xl border-slate-200 text-slate-600 hover:bg-sky-50 hover:text-sky-700"
+						class="{btnSecondary} h-9 gap-2"
 					>
 						<RefreshCw class="h-4 w-4" /> {$t('bulk.buttons.refresh')}
 					</Button>
@@ -713,20 +669,18 @@
 					<div class="space-y-4 lg:col-span-2">
 						{#if lookupLoading}
 							<div class="p-12 text-center">
-								<Loader class="mx-auto mb-3 h-8 w-8 animate-spin text-sky-500" />
-								<p class="font-medium text-slate-500">Loading jobs...</p>
+								<Loader class="text-primary mx-auto mb-3 h-8 w-8 animate-spin" />
+								<p class="text-muted-foreground font-medium">Loading jobs...</p>
 							</div>
 						{:else if recentJobs.length === 0}
 							<div
-								class="rounded-3xl border border-dashed border-slate-300 bg-white/40 p-12 text-center"
+								class="border-border bg-card rounded-lg border border-dashed p-12 text-center shadow-sm"
 							>
-								<div
-									class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-50"
-								>
-									<Clock class="h-8 w-8 text-slate-300" />
+								<div class="bg-muted text-muted-foreground/50 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md">
+									<Clock class="h-8 w-8" />
 								</div>
-								<h3 class="text-lg font-medium text-slate-700">{$t('bulk.labels.no_history')}</h3>
-								<p class="text-slate-500">{$t('bulk.labels.no_history_desc')}</p>
+								<h3 class="text-foreground text-lg font-medium">{$t('bulk.labels.no_history')}</h3>
+								<p class="text-muted-foreground">{$t('bulk.labels.no_history_desc')}</p>
 							</div>
 						{:else}
 							<div class="space-y-3">
@@ -737,19 +691,16 @@
 										tabindex="0"
 										onclick={() => viewJobDetails(job)}
 										onkeydown={(e) => e.key === 'Enter' && viewJobDetails(job)}
-										class="group relative cursor-pointer overflow-hidden rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm transition-all duration-300 hover:border-sky-200 hover:bg-white hover:shadow-md"
+										class="liquid-hoverable group relative cursor-pointer rounded-lg p-4"
 									>
-										<!-- Hover Gradient -->
-										<div
-											class="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-sky-50/50 opacity-0 transition-opacity group-hover:opacity-100"
-										></div>
-
 										<div class="relative flex items-center justify-between gap-4">
 											<div class="flex items-center gap-4">
 												<!-- Icon Box -->
 												<div
-													class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl
-													{job.type === 'BULK_IMPORT' ? 'bg-blue-50 text-blue-600' : 'bg-violet-50 text-violet-600'}"
+													class="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-md
+													{job.type === 'BULK_IMPORT'
+														? 'bg-primary/10 text-primary'
+														: 'bg-info/10 text-info'}"
 												>
 													{#if job.type === 'BULK_IMPORT'}
 														<Package class="h-6 w-6" />
@@ -759,26 +710,26 @@
 
 													<!-- Status Indicator Dot -->
 													<div
-														class="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-white
+														class="absolute -top-1 -right-1 h-3 w-3 rounded-full border-2 border-white
 														{job.status === 'COMPLETED'
-															? 'bg-emerald-500'
+															? 'bg-success'
 															: job.status === 'FAILED'
-																? 'bg-rose-500'
+																? 'bg-danger'
 																: job.status === 'PROCESSING'
-																	? 'animate-pulse bg-sky-500'
-																	: 'bg-amber-500'}"
+																	? 'bg-info animate-pulse'
+																	: 'bg-warning'}"
 													></div>
 												</div>
 
 												<div>
 													<div class="mb-0.5 flex items-center gap-2">
-														<span class="font-bold text-slate-700">#{job.ID}</span>
-														<span class="text-xs font-medium text-slate-400">•</span>
-														<span class="text-sm font-medium capitalize text-slate-600"
+														<span class="num-mono text-foreground font-bold">#{job.ID}</span>
+														<span class="text-muted-foreground text-xs font-medium">•</span>
+														<span class="text-muted-foreground text-sm font-medium capitalize"
 															>{(job.type || '').toLowerCase().replace('_', ' ')}</span
 														>
 													</div>
-													<div class="flex items-center gap-2 text-xs text-slate-500">
+													<div class="text-muted-foreground flex items-center gap-2 text-xs">
 														<Clock class="h-3 w-3" />
 														<span
 															>{new Date(job.CreatedAt || '').toLocaleDateString()}
@@ -794,26 +745,26 @@
 											<div class="flex items-center gap-4">
 												<div class="hidden text-right sm:block">
 													<div
-														class="mb-1 text-xs font-semibold uppercase tracking-wider
+														class="overline mb-1
 														{job.status === 'COMPLETED'
-															? 'text-emerald-600'
+															? 'text-success'
 															: job.status === 'FAILED'
-																? 'text-rose-600'
+																? 'text-danger'
 																: job.status === 'PROCESSING'
-																	? 'text-sky-600'
-																	: 'text-amber-600'}"
+																	? 'text-info'
+																	: 'text-warning'}"
 													>
 														{(job.status || '').replace('_', ' ')}
 													</div>
 													{#if job.status === 'FAILED'}
-														<p class="max-w-[150px] truncate text-[10px] text-rose-400">
+														<p class="text-danger/70 max-w-[150px] truncate text-[10px]">
 															Check details
 														</p>
 													{:else if job.status === 'COMPLETED'}
-														<p class="text-[10px] text-slate-400">{$t('bulk.status.success')}</p>
+														<p class="text-muted-foreground text-[10px]">{$t('bulk.status.success')}</p>
 													{/if}
 												</div>
-												<div class="text-slate-300 transition-colors group-hover:text-sky-400">
+												<div class="text-muted-foreground/40 transition-colors group-hover:text-primary">
 													<ArrowRight class="h-5 w-5" />
 												</div>
 											</div>
@@ -829,22 +780,18 @@
 						{#if lookupJob}
 							{@const summary = parseValidationResult(lookupJob.result)}
 							<div
-								class="animate-in slide-in-from-right-4 sticky top-24 overflow-hidden rounded-3xl border border-sky-100 bg-white/80 shadow-xl backdrop-blur-md duration-300"
+								class="animate-in slide-in-from-right-4 liquid-panel sticky top-24 overflow-hidden rounded-lg duration-300"
 							>
 								<!-- Header -->
-								<div
-									class="flex items-start justify-between border-b border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100 p-5"
-								>
+								<div class="border-border bg-muted/50 flex items-start justify-between border-b p-5">
 									<div>
-										<p class="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-											Job Details
-										</p>
-										<h2 class="text-2xl font-extrabold text-slate-800">#{lookupJob.ID}</h2>
+										<p class="overline mb-1">Job Details</p>
+										<h2 class="num-mono text-foreground text-2xl font-bold">#{lookupJob.ID}</h2>
 									</div>
 									<Button
 										variant="ghost"
 										size="icon"
-										class="h-8 w-8 rounded-full hover:bg-white hover:text-rose-500"
+										class="text-muted-foreground hover:bg-muted hover:text-danger h-8 w-8 rounded-md"
 										onclick={() => (lookupJob = null)}
 									>
 										<X class="h-4 w-4" />
@@ -854,12 +801,12 @@
 								<div class="space-y-6 p-6">
 									<!-- Status Badge Large -->
 									<div
-										class="flex items-center gap-3 rounded-2xl p-3
+										class="flex items-center gap-3 rounded-lg p-3
 										{lookupJob.status === 'COMPLETED'
-											? 'border border-emerald-100 bg-emerald-50 text-emerald-800'
+											? 'border border-success/25 bg-success/10 text-success'
 											: lookupJob.status === 'FAILED'
-												? 'border border-rose-100 bg-rose-50 text-rose-800'
-												: 'border border-amber-100 bg-amber-50 text-amber-800'}"
+												? 'border border-danger/25 bg-danger/10 text-danger'
+												: 'border border-warning/25 bg-warning/10 text-warning'}"
 									>
 										{#if lookupJob.status === 'COMPLETED'}
 											<CheckCircle class="h-5 w-5 shrink-0" />
@@ -879,7 +826,7 @@
 									<!-- Actions -->
 									{#if lookupJob.type === 'BULK_EXPORT' && lookupJob.status === 'COMPLETED'}
 										<Button
-											class="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-violet-200 hover:from-violet-700 hover:to-indigo-700"
+											class="{btnPrimary} w-full"
 											onclick={() => lookupJob && downloadExport(lookupJob)}
 										>
 											<Download class="mr-2 h-4 w-4" /> {$t('bulk.buttons.download_export')}
@@ -889,17 +836,13 @@
 									<!-- Stats Grid -->
 									{#if summary}
 										<div class="grid grid-cols-2 gap-3">
-											<div
-												class="rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm"
-											>
-												<p class="mb-1 text-xs font-medium text-slate-400">{$t('bulk.labels.processed')}</p>
-												<p class="text-2xl font-bold text-slate-700">{summary.totalRecords || 0}</p>
+											<div class="border-border bg-muted/50 rounded-lg border p-3 text-center">
+												<p class="overline mb-1">{$t('bulk.labels.processed')}</p>
+												<p class="kpi-num text-foreground text-2xl">{summary.totalRecords || 0}</p>
 											</div>
-											<div
-												class="rounded-2xl border border-slate-100 bg-white p-3 text-center shadow-sm"
-											>
-												<p class="mb-1 text-xs font-medium text-slate-400">Success Rate</p>
-												<p class="text-2xl font-bold text-emerald-600">
+											<div class="border-border bg-muted/50 rounded-lg border p-3 text-center">
+												<p class="overline mb-1">Success Rate</p>
+												<p class="kpi-num text-success text-2xl">
 													{summary.totalRecords
 														? Math.round((summary.validRecords / summary.totalRecords) * 100)
 														: 0}%
@@ -909,56 +852,46 @@
 
 										<!-- Breakdown -->
 										<div class="space-y-3">
-											<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
-												{$t('bulk.labels.breakdown')}
-											</h4>
+											<h4 class="overline">{$t('bulk.labels.breakdown')}</h4>
 
 											<div
-												class="flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"
+												class="flex items-center justify-between rounded-md border border-success/25 bg-success/10 p-3"
 											>
 												<div class="flex items-center gap-2">
-													<Check class="h-4 w-4 text-emerald-600" />
-													<span class="text-sm font-medium text-emerald-900">{$t('bulk.labels.valid_records')}</span>
+													<Check class="text-success h-4 w-4" />
+													<span class="text-success text-sm font-medium">{$t('bulk.labels.valid_records')}</span>
 												</div>
-												<span class="font-bold text-emerald-700">{summary.validRecords}</span>
+												<span class="num-mono text-success font-bold">{summary.validRecords}</span>
 											</div>
 
 											<div
-												class="flex items-center justify-between rounded-xl border border-rose-100 bg-rose-50/50 p-3"
+												class="flex items-center justify-between rounded-md border border-danger/25 bg-danger/10 p-3"
 											>
 												<div class="flex items-center gap-2">
-													<AlertCircle class="h-4 w-4 text-rose-600" />
-													<span class="text-sm font-medium text-rose-900">{$t('bulk.labels.invalid_records')}</span>
+													<AlertCircle class="text-danger h-4 w-4" />
+													<span class="text-danger text-sm font-medium">{$t('bulk.labels.invalid_records')}</span>
 												</div>
-												<span class="font-bold text-rose-700">{summary.invalidRecords}</span>
+												<span class="num-mono text-danger font-bold">{summary.invalidRecords}</span>
 											</div>
 										</div>
 
 										<!-- New Entities -->
 										{#if summary.newEntities && (Object.keys(summary.newEntities.categories || {}).length > 0 || Object.keys(summary.newEntities.suppliers || {}).length > 0)}
 											<div class="space-y-3">
-												<h4 class="text-xs font-bold uppercase tracking-widest text-slate-400">
-													{$t('bulk.labels.changes')}
-												</h4>
+												<h4 class="overline">{$t('bulk.labels.changes')}</h4>
 												<div class="flex flex-wrap gap-2">
 													{#if Object.keys(summary.newEntities.categories || {}).length > 0}
-														<span
-															class="inline-flex items-center rounded-lg border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700"
-														>
+														<span class="badge-neutral">
 															+{Object.keys(summary.newEntities.categories || {}).length} Categories
 														</span>
 													{/if}
 													{#if Object.keys(summary.newEntities.suppliers || {}).length > 0}
-														<span
-															class="inline-flex items-center rounded-lg border border-fuchsia-100 bg-fuchsia-50 px-2.5 py-1 text-xs font-medium text-fuchsia-700"
-														>
+														<span class="badge-info">
 															+{Object.keys(summary.newEntities.suppliers || {}).length} Suppliers
 														</span>
 													{/if}
 													{#if Object.keys(summary.newEntities.locations || {}).length > 0}
-														<span
-															class="inline-flex items-center rounded-lg border border-cyan-100 bg-cyan-50 px-2.5 py-1 text-xs font-medium text-cyan-700"
-														>
+														<span class="badge-success">
 															+{Object.keys(summary.newEntities.locations || {}).length} Locations
 														</span>
 													{/if}
@@ -971,14 +904,12 @@
 						{:else}
 							<!-- Empty State for Details -->
 							<div
-								class="hidden h-full min-h-[400px] flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white/30 p-8 text-center lg:flex"
+								class="border-border bg-card hidden h-full min-h-[400px] flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center shadow-sm lg:flex"
 							>
-								<div
-									class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-300"
-								>
+								<div class="bg-muted text-muted-foreground/50 mb-4 flex h-16 w-16 items-center justify-center rounded-md">
 									<ArrowRight class="h-6 w-6" />
 								</div>
-								<p class="font-medium text-slate-500">{$t('bulk.labels.select_job')}</p>
+								<p class="text-muted-foreground font-medium">{$t('bulk.labels.select_job')}</p>
 							</div>
 						{/if}
 					</div>
@@ -987,20 +918,3 @@
 		</Tabs>
 	</div>
 </div>
-
-<style lang="postcss">
-	@keyframes pulseGlow {
-		0%,
-		100% {
-			transform: scale(1);
-			opacity: 0.45;
-		}
-		50% {
-			transform: scale(1.08);
-			opacity: 0.7;
-		}
-	}
-	.animate-pulseGlow {
-		animation: pulseGlow 12s ease-in-out infinite;
-	}
-</style>

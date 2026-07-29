@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { TableCell } from '$lib/components/ui/table';
 	import { Button } from '$lib/components/ui/button';
 	import EntityTable from './components/EntityTable.svelte';
 	import LocationForm from './components/LocationForm.svelte';
@@ -65,12 +64,12 @@
 		: 'grid-cols-1'}"
 >
 	<div class="flex flex-col gap-6">
-		<div
-			class="flex flex-col gap-4 rounded-2xl border border-teal-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
-		>
+		<div class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
 			<div class="space-y-1">
-				<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.locations.title')}</h2>
-				<p class="text-sm text-slate-500">{$t('catalog.locations.subtitle')}</p>
+				<h2 class="font-display text-foreground text-lg font-semibold">
+					{$t('catalog.locations.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('catalog.locations.subtitle')}</p>
 			</div>
 		</div>
 
@@ -81,15 +80,15 @@
 			onRowClick={(location) => onViewDetails(location, 'locations')}
 		>
 			{#snippet children(location)}
-				<TableCell class="font-medium text-slate-800">{location.Name}</TableCell>
-				<TableCell class="text-slate-600">{location.Address ?? '—'}</TableCell>
+				<td class="text-foreground font-medium">{location.Name}</td>
+				<td class="text-muted-foreground">{location.Address ?? '—'}</td>
 				{#if auth.hasPermission('locations.write')}
-					<TableCell class="text-right">
+					<td class="text-right">
 						<div class="flex items-center justify-end gap-1">
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-teal-600 hover:bg-teal-50 hover:text-teal-700"
+								class="h-8 text-primary hover:bg-muted hover:text-foreground"
 								onclick={(event) => {
 									event.stopPropagation();
 									editingLocation = location;
@@ -100,7 +99,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+								class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
 								onclick={(event) => {
 									event.stopPropagation();
 									deleteLocation(location);
@@ -109,7 +108,7 @@
 								{$t('catalog.common.delete')}
 							</Button>
 						</div>
-					</TableCell>
+					</td>
 				{/if}
 			{/snippet}
 		</EntityTable>

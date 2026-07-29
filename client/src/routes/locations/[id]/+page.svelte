@@ -1,13 +1,6 @@
 <!-- client/src/routes/locations/[id]/+page.svelte -->
 <script lang="ts">
 	import { page } from '$app/stores';
-	import {
-		Card,
-		CardContent,
-		CardDescription,
-		CardHeader,
-		CardTitle
-	} from '$lib/components/ui/card';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { ArrowLeft, MapPin } from 'lucide-svelte';
 	import Breadcrumbs from '$lib/components/ui/breadcrumbs.svelte';
@@ -33,31 +26,29 @@
 		<div class="flex items-center justify-between">
 			<a
 				href="/catalog"
-				class="flex items-center text-cyan-600 transition-colors hover:text-cyan-800"
+				class="text-primary hover:text-foreground flex items-center text-sm font-medium transition-colors"
 			>
-				<ArrowLeft class="mr-2 h-5 w-5" />
+				<ArrowLeft class="mr-2 h-4 w-4" />
 				Back to Catalog
 			</a>
 		</div>
 
 		{#if location}
-			<Card
-				class="overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-cyan-50 to-teal-100 shadow-lg transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
-			>
-				<CardHeader class="space-y-1 border-b border-white/60 bg-white/70 px-6 py-5 backdrop-blur">
-					<CardTitle class="flex items-center text-slate-800">
-						<MapPin class="mr-2 h-5 w-5 text-cyan-600" />
+			<div class="liquid-panel overflow-hidden rounded-lg">
+				<div class="border-border space-y-1 border-b px-6 py-5">
+					<h1 class="text-foreground flex items-center font-display text-xl font-semibold">
+						<MapPin class="text-primary mr-2 h-5 w-5" />
 						{location.Name}
-					</CardTitle>
-					<CardDescription class="text-slate-600">Location Details</CardDescription>
-				</CardHeader>
-				<CardContent class="p-6 text-sm">
+					</h1>
+					<p class="text-muted-foreground text-sm">Location Details</p>
+				</div>
+				<div class="p-6 text-sm">
 					<div>
-						<p class="font-medium text-slate-500">Address</p>
-						<p class="text-slate-800">{location.Address || 'N/A'}</p>
+						<p class="overline">Address</p>
+						<p class="text-foreground mt-0.5">{location.Address || 'N/A'}</p>
 					</div>
-				</CardContent>
-			</Card>
+				</div>
+			</div>
 		{:else}
 			<!-- Loading State -->
 			<Skeleton class="h-48 w-full" />

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { TableCell } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Checkbox } from '$lib/components/ui/checkbox';
@@ -48,6 +47,13 @@
 	const selectedCount = $derived(selectedIds.size);
 	const allSelected = $derived(products.length > 0 && selectedIds.size === products.length);
 	const someSelected = $derived(selectedIds.size > 0);
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const btnSecondary =
+		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
 
 	function toggleSelect(id: number) {
 		const next = new Set(selectedIds);
@@ -136,8 +142,8 @@
 	const productColumns = $derived([
 		{ header: $t('catalog.products.columns.sku'), accessorKey: 'SKU' },
 		{ header: $t('catalog.products.columns.name'), accessorKey: 'Name' },
-		{ header: $t('catalog.products.columns.selling_price'), accessorKey: 'SellingPrice' },
-		{ header: $t('catalog.products.columns.purchase_price'), accessorKey: 'PurchasePrice' },
+		{ header: $t('catalog.products.columns.selling_price'), accessorKey: 'SellingPrice', class: 'text-right' },
+		{ header: $t('catalog.products.columns.purchase_price'), accessorKey: 'PurchasePrice', class: 'text-right' },
 		{ header: $t('catalog.products.columns.status'), accessorKey: 'Status' },
 		...(auth.hasPermission('products.write') || auth.hasPermission('products.delete')
 			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
@@ -276,35 +282,30 @@
 >
 	<div class="flex flex-col gap-6">
 		<div
-			class="flex gap-4 rounded-2xl border border-sky-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<div class="space-y-1">
-				<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.products.title')}</h2>
-				<p class="text-sm text-slate-500">{$t('catalog.products.subtitle')}</p>
+				<h2 class="font-display text-foreground text-lg font-semibold">
+					{$t('catalog.products.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('catalog.products.subtitle')}</p>
 			</div>
 			<div class="flex flex-col gap-3 sm:flex-row">
 				<div class="relative flex-1">
-					<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" />
+					<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
 					<Input
 						placeholder={$t('catalog.products.search_placeholder')}
 						bind:value={search.term}
 						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-						class="rounded-xl border-sky-200 bg-white/90 pl-9 focus:ring-2 focus:ring-sky-400"
+						class="{inputClass} pl-9"
 					/>
 				</div>
 				<div class="flex gap-2">
-					<Button
-						variant="secondary"
-						onclick={handleSearch}
-						class="rounded-xl border border-sky-200 bg-white text-sky-700 hover:bg-sky-50"
-					>
+					<Button variant="secondary" onclick={handleSearch} class={btnSecondary}>
 						{$t('catalog.common.search')}
 					</Button>
 					{#if auth.hasPermission('products.write')}
-						<Button
-							onclick={() => (editingProduct = null)}
-							class="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 text-white shadow-md transition-all hover:from-sky-600 hover:to-indigo-700 hover:shadow-lg"
-						>
+						<Button onclick={() => (editingProduct = null)} class={btnPrimary}>
 							<PlusCircle class="mr-2 h-4 w-4" />
 							{$t('catalog.products.add_button')}
 						</Button>
@@ -315,33 +316,44 @@
 
 		{#if selectedCount > 0}
 			<div
-				class="flex items-center gap-3 rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 shadow-sm backdrop-blur"
+				class="flex items-center gap-3 rounded-lg border border-primary/25 bg-accent px-4 py-3 shadow-sm"
 			>
-				<span class="text-sm font-semibold text-sky-800">{selectedCount} selected</span>
+				<span class="text-accent-foreground text-sm font-semibold">{selectedCount} selected</span>
 				<div class="ml-auto flex items-center gap-2">
 					{#if auth.hasPermission('products.write')}
-						<Button size="sm" variant="outline" onclick={() => (bulkEditOpen = true)}>
+						<Button size="sm" variant="outline" onclick={() => (bulkEditOpen = true)} class="{btnSecondary} h-9">
 							<Pencil class="mr-1.5 h-3.5 w-3.5" />
 							Edit
 						</Button>
 					{/if}
-					<Button size="sm" variant="outline" onclick={bulkExport}>
+					<Button size="sm" variant="outline" onclick={bulkExport} class="{btnSecondary} h-9">
 						<Download class="mr-1.5 h-3.5 w-3.5" />
 						Export
 					</Button>
 					{#if auth.hasPermission('products.delete')}
-						<Button size="sm" variant="destructive" onclick={() => (bulkDeleteOpen = true)}>
+						<Button
+							size="sm"
+							variant="destructive"
+							onclick={() => (bulkDeleteOpen = true)}
+							class="rounded-md"
+						>
 							<Trash2 class="mr-1.5 h-3.5 w-3.5" />
 							Delete
 						</Button>
 					{/if}
-					<Button size="sm" variant="ghost" onclick={() => (selectedIds = new Set())}>Clear</Button>
+					<Button
+						size="sm"
+						variant="ghost"
+						onclick={() => (selectedIds = new Set())}
+						class="text-muted-foreground hover:bg-muted hover:text-foreground"
+						>Clear</Button
+					>
 				</div>
 			</div>
 		{/if}
 
 		{#if !loading && products.length === 0}
-			<div class="rounded-2xl border border-sky-100 bg-white/50 shadow-sm backdrop-blur">
+			<div class="liquid-panel rounded-lg">
 				<EmptyState
 					icon={Package}
 					title="Add your first product"
@@ -368,74 +380,68 @@
 				onSelectAll={toggleSelectAll}
 			>
 				{#snippet children(product)}
-					<TableCell class="w-12 px-4" onclick={(e) => e.stopPropagation()}>
+					{@const badge = statusBadge(product.Status)}
+					<td class="w-12" onclick={(e) => e.stopPropagation()}>
 						<Checkbox
 							checked={selectedIds.has(product.ID)}
 							onCheckedChange={() => toggleSelect(product.ID)}
 						/>
-					</TableCell>
-					<TableCell class="font-mono text-xs text-slate-600">{product.SKU}</TableCell>
-				<TableCell class="font-medium text-slate-900">{product.Name}</TableCell>
-				<TableCell class="px-6 py-4" onclick={(e) => e.stopPropagation()}>
-					{#if canEditPrices}
-						<EditableCell
-							type="number"
-							value={product.SellingPrice ?? 0}
-							display={formatMoney(product.SellingPrice)}
-							prefix={$settings.currency_symbol}
-							onSave={(v) => savePrice(product, 'SellingPrice', Number(v))}
-						/>
-					{:else}
-						<span class="text-sm font-semibold text-slate-700">
-							<span class="mr-0.5 text-xs font-medium text-slate-400">
-								{$settings.currency_symbol}
+					</td>
+					<td class="num-mono text-muted-foreground text-xs">{product.SKU}</td>
+					<td class="text-foreground font-medium">{product.Name}</td>
+					<td class="col-num" onclick={(e) => e.stopPropagation()}>
+						{#if canEditPrices}
+							<EditableCell
+								type="number"
+								value={product.SellingPrice ?? 0}
+								display={formatMoney(product.SellingPrice)}
+								prefix={$settings.currency_symbol}
+								onSave={(v) => savePrice(product, 'SellingPrice', Number(v))}
+							/>
+						{:else}
+							<span class="text-foreground text-sm font-semibold">
+								<span class="text-muted-foreground mr-0.5 text-xs font-medium">
+									{$settings.currency_symbol}
+								</span>
+								{formatMoney(product.SellingPrice)}
 							</span>
-							{formatMoney(product.SellingPrice)}
-						</span>
-					{/if}
-				</TableCell>
-				<TableCell class="px-6 py-4" onclick={(e) => e.stopPropagation()}>
-					{#if canEditPrices}
-						<EditableCell
-							type="number"
-							value={product.PurchasePrice ?? 0}
-							display={formatMoney(product.PurchasePrice)}
-							prefix={$settings.currency_symbol}
-							onSave={(v) => savePrice(product, 'PurchasePrice', Number(v))}
-						/>
-					{:else}
-						<span class="text-sm font-semibold text-slate-700">
-							<span class="mr-0.5 text-xs font-medium text-slate-400">
-								{$settings.currency_symbol}
+						{/if}
+					</td>
+					<td class="col-num" onclick={(e) => e.stopPropagation()}>
+						{#if canEditPrices}
+							<EditableCell
+								type="number"
+								value={product.PurchasePrice ?? 0}
+								display={formatMoney(product.PurchasePrice)}
+								prefix={$settings.currency_symbol}
+								onSave={(v) => savePrice(product, 'PurchasePrice', Number(v))}
+							/>
+						{:else}
+							<span class="text-foreground text-sm font-semibold">
+								<span class="text-muted-foreground mr-0.5 text-xs font-medium">
+									{$settings.currency_symbol}
+								</span>
+								{formatMoney(product.PurchasePrice)}
 							</span>
-							{formatMoney(product.PurchasePrice)}
-						</span>
-					{/if}
-				</TableCell>
-				<TableCell>
-						{@const badge = statusBadge(product.Status)}
+						{/if}
+					</td>
+					<td>
 						{#if badge}
-							<span
-								class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize shadow-sm
-							{badge.variant === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}
-							{badge.variant === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-700' : ''}
-							{badge.variant === 'danger' ? 'border-rose-200 bg-rose-50 text-rose-700' : ''}
-							{badge.variant === 'info' ? 'border-sky-200 bg-sky-50 text-sky-700' : ''}"
-							>
+							<span class="badge-{badge.variant} capitalize">
 								{badge.text}
 							</span>
 						{:else}
-							<span class="text-slate-400">—</span>
+							<span class="text-muted-foreground">—</span>
 						{/if}
-					</TableCell>
+					</td>
 					{#if auth.hasPermission('products.write') || auth.hasPermission('products.delete')}
-						<TableCell class="text-right">
+						<td class="text-right">
 							<div class="flex items-center justify-end gap-1">
 								{#if auth.hasPermission('products.write')}
 									<Button
 										size="sm"
 										variant="ghost"
-										class="h-8 text-sky-600 hover:bg-sky-50 hover:text-sky-700"
+										class="h-8 text-primary hover:bg-muted hover:text-foreground"
 										onclick={(event) => {
 											event.stopPropagation();
 											editProduct(product);
@@ -448,7 +454,7 @@
 									<Button
 										size="sm"
 										variant="ghost"
-										class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+										class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
 										onclick={(event) => {
 											event.stopPropagation();
 											deleteProduct(product);
@@ -458,7 +464,7 @@
 									</Button>
 								{/if}
 							</div>
-						</TableCell>
+						</td>
 					{/if}
 				{/snippet}
 			</EntityTable>
@@ -490,44 +496,45 @@
 {#if bulkEditOpen}
 	<div class="fixed inset-0 z-50 flex items-center justify-center">
 		<button
-			class="absolute inset-0 bg-black/40 backdrop-blur-sm"
+			class="bg-black/40 absolute inset-0"
 			onclick={() => (bulkEditOpen = false)}
 			aria-label="Close"
 		></button>
 		<div
-			class="relative z-10 w-full max-w-sm space-y-4 rounded-3xl border border-white/50 bg-white/90 p-6 shadow-2xl backdrop-blur-xl"
+			class="bg-card border-border relative z-10 w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-lg"
 		>
-			<h3 class="text-lg font-semibold text-slate-900">Bulk edit ({selectedCount} selected)</h3>
+			<h3 class="text-foreground text-lg font-semibold">Bulk edit ({selectedCount} selected)</h3>
 			<div class="space-y-3">
 				<div class="space-y-1">
-					<label class="text-sm font-medium text-slate-600" for="bulk-category">Category</label>
-					<select
-						id="bulk-category"
-						bind:value={bulkEditCategory}
-						class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-					>
-						<option value="">No change</option>
-						{#each categories as cat}
-							<option value={cat.ID}>{cat.Name}</option>
-						{/each}
-					</select>
+					<label class="text-muted-foreground text-sm font-medium" for="bulk-category">Category</label>
+					<div class="select-wrapper">
+						<select id="bulk-category" bind:value={bulkEditCategory}>
+							<option value="">No change</option>
+							{#each categories as cat}
+								<option value={cat.ID}>{cat.Name}</option>
+							{/each}
+						</select>
+					</div>
 				</div>
 				<div class="space-y-1">
-					<label class="text-sm font-medium text-slate-600" for="bulk-status">Status</label>
-					<select
-						id="bulk-status"
-						bind:value={bulkEditStatus}
-						class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-					>
-						<option value="">No change</option>
-						<option value="active">Active</option>
-						<option value="inactive">Inactive</option>
-					</select>
+					<label class="text-muted-foreground text-sm font-medium" for="bulk-status">Status</label>
+					<div class="select-wrapper">
+						<select id="bulk-status" bind:value={bulkEditStatus}>
+							<option value="">No change</option>
+							<option value="active">Active</option>
+							<option value="inactive">Inactive</option>
+						</select>
+					</div>
 				</div>
 			</div>
 			<div class="flex justify-end gap-2">
-				<Button variant="outline" onclick={() => (bulkEditOpen = false)}>Cancel</Button>
-				<Button onclick={bulkEditApply}>Apply</Button>
+				<Button
+					variant="outline"
+					onclick={() => (bulkEditOpen = false)}
+					class="rounded-md border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted"
+					>Cancel</Button
+				>
+				<Button onclick={bulkEditApply} class={btnPrimary}>Apply</Button>
 			</div>
 		</div>
 	</div>

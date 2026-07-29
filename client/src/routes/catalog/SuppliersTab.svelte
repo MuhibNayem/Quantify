@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
-	import { TableCell } from '$lib/components/ui/table';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import EntityTable from './components/EntityTable.svelte';
@@ -22,6 +21,11 @@
 	let suppliers = $state<Supplier[]>([]);
 	let editingSupplier = $state<Supplier | null>(null);
 	let supplierSearchTerm = $state('');
+
+	const inputClass =
+		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
+	const btnPrimary =
+		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
 
 	const supplierColumns = $derived([
 		{ header: $t('catalog.suppliers.form.name'), accessorKey: 'Name' },
@@ -91,25 +95,26 @@
 >
 	<div class="flex flex-col gap-6">
 		<div
-			class="flex flex-col gap-4 rounded-2xl border border-violet-100 bg-white/50 p-4 shadow-sm backdrop-blur sm:flex-row sm:items-center sm:justify-between"
+			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
 		>
 			<div class="space-y-1">
-				<h2 class="text-lg font-semibold text-slate-800">{$t('catalog.suppliers.title')}</h2>
-				<p class="text-sm text-slate-500">{$t('catalog.suppliers.subtitle')}</p>
+				<h2 class="font-display text-foreground text-lg font-semibold">
+					{$t('catalog.suppliers.title')}
+				</h2>
+				<p class="text-muted-foreground text-sm">{$t('catalog.suppliers.subtitle')}</p>
 			</div>
 			<div class="flex flex-wrap items-center gap-2">
 				<Input
-					class="w-full rounded-xl border-violet-200 bg-white/80 px-3 text-sm focus:ring-2 focus:ring-violet-400 sm:w-48"
+					class="{inputClass} sm:w-48"
 					placeholder={$t('catalog.suppliers.search_placeholder')}
 					bind:value={supplierSearchTerm}
 				/>
-				<Button
-					class="rounded-xl bg-violet-500 px-4 py-2 text-white hover:bg-violet-600"
-					onclick={handleSupplierSearch}>{$t('catalog.common.search')}</Button
+				<Button class={btnPrimary} onclick={handleSupplierSearch}
+					>{$t('catalog.common.search')}</Button
 				>
 				<Button
 					variant="ghost"
-					class="rounded-xl px-4 py-2 text-violet-600 hover:bg-violet-50"
+					class="text-primary hover:bg-muted hover:text-foreground rounded-md px-4 py-2"
 					onclick={clearSupplierSearch}>{$t('catalog.common.clear')}</Button
 				>
 			</div>
@@ -122,18 +127,18 @@
 			onRowClick={(supplier) => onViewDetails(supplier, 'suppliers')}
 		>
 			{#snippet children(supplier)}
-				<TableCell class="font-medium text-slate-800">{supplier.Name}</TableCell>
-				<TableCell>
-					<p class="text-sm font-medium text-slate-700">{supplier.ContactPerson ?? '—'}</p>
-					<p class="text-xs text-slate-500">{supplier.Email ?? supplier.Phone ?? ''}</p>
-				</TableCell>
+				<td class="text-foreground font-medium">{supplier.Name}</td>
+				<td>
+					<p class="text-foreground text-sm font-medium">{supplier.ContactPerson ?? '—'}</p>
+					<p class="text-muted-foreground text-xs">{supplier.Email ?? supplier.Phone ?? ''}</p>
+				</td>
 				{#if auth.hasPermission('suppliers.write')}
-					<TableCell class="text-right">
+					<td class="text-right">
 						<div class="flex items-center justify-end gap-1">
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-violet-600 hover:bg-violet-50 hover:text-violet-700"
+								class="h-8 text-primary hover:bg-muted hover:text-foreground"
 								onclick={(event) => {
 									event.stopPropagation();
 									editingSupplier = supplier;
@@ -144,7 +149,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+								class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
 								onclick={(event) => {
 									event.stopPropagation();
 									deleteSupplier(supplier);
@@ -153,7 +158,7 @@
 								{$t('catalog.common.delete')}
 							</Button>
 						</div>
-					</TableCell>
+					</td>
 				{/if}
 			{/snippet}
 		</EntityTable>
