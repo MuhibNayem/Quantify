@@ -1,17 +1,13 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree, Sun, Moon, Rows2, Rows3 } from 'lucide-svelte';
+	import { Search, Loader2, Package, Users, Truck, FolderTree, Sun, Moon, Rows2, Rows3, RefreshCcw } from 'lucide-svelte';
 	import { toggleMode } from 'mode-watcher';
-	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { searchApi } from '$lib/api/resources';
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
 	import { density } from '$lib/stores/density';
 
 	const { user = null } = $props<{ user?: { Username?: string } | null }>();
-	const dispatch = createEventDispatcher<{ toggleSidebar: void }>();
 
 	let search = $state('');
 	let searchFocused = $state(false);
@@ -23,9 +19,9 @@
 
 	const typeConfig: Record<string, { label: string; icon: typeof Package; route: (id: any) => string }> = {
 		product: { label: 'Products', icon: Package, route: (id) => `/products/${id}` },
-		user: { label: 'Users', icon: Users, route: (id) => `/users` },
-		supplier: { label: 'Suppliers', icon: Truck, route: (id) => `/suppliers` },
-		category: { label: 'Categories', icon: FolderTree, route: (id) => `/catalog` },
+		user: { label: 'Users', icon: Users, route: () => `/users` },
+		supplier: { label: 'Suppliers', icon: Truck, route: () => `/suppliers` },
+		category: { label: 'Categories', icon: FolderTree, route: () => `/catalog` }
 	};
 
 	const groupedResults = $derived.by(() => {
@@ -75,152 +71,123 @@
 		search = '';
 	};
 
-	const getDisplayName = (hit: any) => hit.name || hit.Name || hit.title || hit.matchedContent || `#${hit.id || hit.ID || hit.entityId}`;
+	const getDisplayName = (hit: any) =>
+		hit.name || hit.Name || hit.title || hit.matchedContent || `#${hit.id || hit.ID || hit.entityId}`;
 </script>
 
 <header
-	class="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-white/40 bg-gradient-to-r from-white/80 via-indigo-50/70 to-sky-50/80 px-3 backdrop-blur-2xl transition-all duration-500 dark:border-white/10 dark:from-slate-900/80 dark:via-slate-900/70 dark:to-slate-800/80 sm:px-6"
+	class="sticky top-0 z-40 flex h-14 items-center justify-between gap-4 border-b border-border bg-card px-4 sm:px-6"
 >
-	<!-- Left section -->
-	<div class="lg:ml-16">
-		<!-- Search bar -->
-		<div class="group relative hidden sm:block">
-			<Input
-				data-search-input
-				class="liquid-input peer h-10 w-64 pl-11 pr-12 text-sm text-slate-800 placeholder:text-transparent transition-all duration-300 focus:w-80 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:border-transparent focus-visible:outline-none focus-visible:shadow-[0_30px_70px_-30px_rgba(59,130,246,0.45)]"
-				placeholder="Search inventory"
-				value={search}
-				onfocus={() => (searchFocused = true)}
-				onblur={() => setTimeout(() => (searchFocused = false), 150)}
-				oninput={onInput}
-				onkeydown={(event) => event.key === 'Enter' && runGlobalSearch()}
-			/>
-			<div class="pointer-events-none absolute left-4 top-1/2 flex -translate-y-1/2 items-center gap-2">
-				{#if searching}
-					<Loader2 class="h-4 w-4 animate-spin text-emerald-500" />
-				{:else}
-					<Search
-						class="h-4 w-4 text-slate-500 drop-shadow-[0_2px_8px_rgba(255,255,255,0.65)] transition-colors group-focus-within:text-emerald-500"
-					/>
-				{/if}
-				{#if !search && !searchFocused}
-					<span class="text-sm text-slate-500">Search inventory</span>
-				{/if}
-			</div>
-			<kbd
-				class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[0.65rem] font-medium text-slate-400 peer-focus:hidden dark:border-slate-600 dark:bg-slate-800 sm:block"
-			>
-				⌘K
-			</kbd>
+	<!-- Search -->
+	<div class="relative hidden w-full max-w-sm sm:block">
+		<Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+		{#if searching}
+			<Loader2 class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-primary" />
+		{/if}
+		<Input
+			data-search-input
+			class="liquid-input h-9 w-full pl-9 pr-12 text-sm"
+			placeholder="Search products, suppliers, users…"
+			value={search}
+			onfocus={() => (searchFocused = true)}
+			onblur={() => setTimeout(() => (searchFocused = false), 150)}
+			oninput={onInput}
+			onkeydown={(event) => event.key === 'Enter' && runGlobalSearch()}
+		/>
+		<kbd
+			class="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block"
+		>
+			⌘K
+		</kbd>
 
-			{#if searchFocused && hasSearched && !searching}
-				<div class="absolute left-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">
-					{#if searchResults.length === 0}
-						<div class="px-4 py-6 text-center text-sm text-slate-500">
-							No results found for "{search}"
-						</div>
-					{:else}
-						<div class="max-h-80 overflow-y-auto p-2">
-							{#each Object.entries(groupedResults) as [type, hits]}
-								{@const config = typeConfig[type]}
-								<div class="mb-1">
-									<div class="flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+		{#if searchFocused && hasSearched && !searching}
+			<div class="absolute left-0 top-11 z-50 w-full overflow-hidden rounded-md border border-border bg-popover shadow-lg">
+				{#if searchResults.length === 0}
+					<div class="px-4 py-6 text-center text-sm text-muted-foreground">
+						No results for “{search}”
+					</div>
+				{:else}
+					<div class="custom-scrollbar max-h-80 overflow-y-auto p-1.5">
+						{#each Object.entries(groupedResults) as [type, hits]}
+							{@const config = typeConfig[type]}
+							<div class="mb-1">
+								<div class="overline flex items-center gap-1.5 px-2.5 py-1.5">
 									{#if config}
 										{@const Icon = config.icon}
 										<Icon class="h-3 w-3" />
 									{/if}
-										{config?.label || type}
-									</div>
-									{#each hits as hit}
-										<button
-											class="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
-											onmousedown={() => navigateToResult(hit)}
-										>
-											<span class="truncate font-medium">{getDisplayName(hit)}</span>
-											{#if hit.matchedContent}
-												<span class="ml-auto truncate text-xs text-slate-400">{hit.matchedContent}</span>
-											{/if}
-										</button>
-									{/each}
+									{config?.label || type}
 								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			{/if}
-		</div>
+								{#each hits as hit}
+									<button
+										class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-muted"
+										onmousedown={() => navigateToResult(hit)}
+									>
+										<span class="truncate font-medium">{getDisplayName(hit)}</span>
+										{#if hit.matchedContent}
+											<span class="ml-auto truncate text-xs text-muted-foreground">{hit.matchedContent}</span>
+										{/if}
+									</button>
+								{/each}
+							</div>
+						{/each}
+					</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
-	<!-- Right section -->
-	<div class="flex items-center gap-1">
-		<Button
-			variant="ghost"
-			size="icon"
-			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200 sm:flex"
+	<!-- Actions -->
+	<div class="ml-auto flex items-center gap-1">
+		<button
+			class="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
 			onclick={() => window.location.reload()}
 			aria-label="Refresh data"
+			title="Refresh"
 		>
 			<RefreshCcw class="h-4 w-4" />
-		</Button>
+		</button>
 
-		<Button
-			variant="ghost"
-			size="icon"
-			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200 sm:flex"
+		<button
+			class="hidden h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
 			onclick={() => density.toggle()}
 			aria-label="Toggle table density"
+			title="Toggle density"
 		>
 			{#if $density === 'comfortable'}
 				<Rows3 class="h-4 w-4" />
 			{:else}
 				<Rows2 class="h-4 w-4" />
 			{/if}
-		</Button>
+		</button>
 
-		<Button
-			variant="ghost"
-			size="icon"
-			class="h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200"
+		<button
+			class="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 			onclick={toggleMode}
 			aria-label="Toggle dark mode"
+			title="Toggle theme"
 		>
 			<Sun class="h-4 w-4 dark:hidden" />
 			<Moon class="hidden h-4 w-4 dark:block" />
-		</Button>
+		</button>
 
 		<NotificationBell />
 
-		<div class="ml-2 h-6 w-px bg-white/60"></div>
+		<div class="mx-2 h-5 w-px bg-border"></div>
 
-		<!-- User badge -->
-		<div class="ml-2 flex cursor-pointer items-center gap-3 rounded-full border border-white/40 bg-white/55 py-1 pl-1 pr-3 shadow-[0_8px_30px_-20px_rgba(15,23,42,0.8)] transition hover:bg-white/75">
-			<div class="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-xs font-medium text-white shadow-[0_8px_18px_-8px_rgba(147,51,234,0.65)] ring-2 ring-white">
+		<!-- User -->
+		<div class="flex items-center gap-2.5">
+			<div
+				class="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary"
+			>
 				{user?.Username?.slice(0, 2)?.toUpperCase() ?? '??'}
 			</div>
-			<div class="hidden text-left sm:block">
-				<p class="text-xs font-medium leading-none text-slate-700">
-					{user?.Username ?? 'Guest'}
-				</p>
-				<p class="mt-0.5 text-[10px] text-slate-500">
-					{user ? 'Online' : 'Offline'}
+			<div class="hidden leading-tight md:block">
+				<p class="text-sm font-medium text-foreground">{user?.Username ?? 'Guest'}</p>
+				<p class="flex items-center gap-1 text-[11px] text-muted-foreground">
+					<span class="live-dot" style="width:5px;height:5px"></span> Online
 				</p>
 			</div>
 		</div>
 	</div>
 </header>
-
-<style>
-	/* Optional subtle glow motion for a soft ambient effect */
-	@keyframes ambientGlow {
-		0%,
-		100% {
-			box-shadow: 0 0 12px rgba(147, 197, 253, 0.15);
-		}
-		50% {
-			box-shadow: 0 0 24px rgba(147, 197, 253, 0.35);
-		}
-	}
-	.animate-ambientGlow {
-		animation: ambientGlow 6s ease-in-out infinite;
-	}
-</style>

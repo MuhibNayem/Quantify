@@ -52,7 +52,21 @@ const config = {
         sm: 'calc(var(--radius) - 4px)'
       },
       fontFamily: {
-        sans: ['Inter', ...require('tailwindcss/defaultTheme').fontFamily.sans]
+        sans: ['IBM Plex Sans', ...require('tailwindcss/defaultTheme').fontFamily.sans],
+        display: ['Space Grotesk', 'IBM Plex Sans', 'system-ui', 'sans-serif'],
+        mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'monospace']
+      },
+      colors: {
+        success: 'hsl(var(--success))',
+        warning: 'hsl(var(--warning))',
+        danger: 'hsl(var(--danger))',
+        info: 'hsl(var(--info))'
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        card: 'var(--shadow-sm)',
+        lift: 'var(--shadow-md)',
+        pop: 'var(--shadow-lg)'
       }
     }
   },

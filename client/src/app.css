@@ -1,3 +1,23 @@
+/* ─────────────────────────────────────────────────────────────
+   QUANTIFY · "LEDGER" DESIGN SYSTEM
+   A professional, data-first design language for an inventory
+   & POS platform. Light-first, ledger-green accent, dense tables,
+   tabular figures, crisp opaque surfaces. No glassmorphism.
+   ───────────────────────────────────────────────────────────── */
+
+/* Self-hosted typefaces (work offline via PWA) */
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
+@import '@fontsource/ibm-plex-sans/700.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
 @import 'tailwindcss';
 @tailwind base;
 @tailwind components;
@@ -5,108 +25,101 @@
 
 @layer base {
 	:root {
-		--background: 0 0% 100%;
-		--foreground: 222.2 84% 4.9%;
+		/* ── Ledger palette · Light (default) ── */
+		--background: 60 27% 97%; /* warm paper  #FAFAF7 */
+		--foreground: 60 8% 11%; /* ink         #1C1C19 */
 
-		--card: 0 0% 100%;
-		--card-foreground: 222.2 84% 4.9%;
+		--card: 0 0% 100%; /* pure white surface */
+		--card-foreground: 60 8% 11%;
 
 		--popover: 0 0% 100%;
-		--popover-foreground: 222.2 84% 4.9%;
+		--popover-foreground: 60 8% 11%;
 
-		--primary: 142.1 76.2% 36.3%;
-		--primary-foreground: 210 40% 98%;
+		--primary: 165 80% 26%; /* ledger green #0C7A5E */
+		--primary-foreground: 0 0% 100%;
 
-		--secondary: 210 40% 96.1%;
-		--secondary-foreground: 222.2 47.4% 11.2%;
+		--secondary: 60 17% 93%; /* warm light gray */
+		--secondary-foreground: 60 8% 14%;
 
-		--muted: 210 40% 96.1%;
-		--muted-foreground: 215.4 16.3% 46.9%;
+		--muted: 60 17% 93%;
+		--muted-foreground: 60 4% 42%; /* warm mid gray */
 
-		--accent: 210 40% 96.1%;
-		--accent-foreground: 222.2 47.4% 11.2%;
+		--accent: 165 45% 93%; /* green-tinted wash */
+		--accent-foreground: 165 80% 20%;
 
-		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
+		--destructive: 0 72% 48%;
+		--destructive-foreground: 0 0% 100%;
 
-		--border: 214.3 31.8% 91.4%;
-		--input: 214.3 31.8% 91.4%;
-		--ring: 142.1 76.2% 36.3%;
+		--border: 60 14% 87%; /* warm hairline #E4E4DA */
+		--input: 60 14% 84%;
+		--ring: 165 80% 26%;
 
-		--radius: 1.25rem;
-		--glass-light: rgba(255, 255, 255, 0.82);
-		--glass-light-soft: rgba(255, 255, 255, 0.65);
-		--glass-border: rgba(255, 255, 255, 0.55);
-		--glass-shadow: 0 40px 80px -48px rgba(15, 23, 42, 0.55);
-		--glow-sky: rgba(14, 165, 233, 0.35);
-		--glow-violet: rgba(147, 51, 234, 0.28);
-		--glow-emerald: rgba(16, 185, 129, 0.3);
-		--edge-highlight: linear-gradient(
-			125deg,
-			rgba(14, 165, 233, 0.35),
-			rgba(59, 130, 246, 0.35),
-			rgba(99, 102, 241, 0.28),
-			rgba(168, 85, 247, 0.3)
-		);
-		--edge-highlight-strong: linear-gradient(
-			125deg,
-			rgba(14, 165, 233, 0.55),
-			rgba(59, 130, 246, 0.55),
-			rgba(99, 102, 241, 0.48),
-			rgba(168, 85, 247, 0.5)
-		);
+		/* Semantic status — the working colors of inventory */
+		--success: 142 72% 29%; /* in stock   #15803D */
+		--warning: 26 91% 37%; /* low stock  #B45309 */
+		--danger: 0 72% 48%; /* out/void   #D21F1F */
+		--info: 224 76% 46%; /* info       #1A56DB */
+
+		--radius: 0.375rem; /* 6px — crisp, not pillowy */
+
+		/* Ledger grid texture (graph paper) */
+		--grid-line: 60 12% 84%;
+		--grid-opacity: 0.5;
+
+		/* Shadows — layered but restrained, never a glow */
+		--shadow-xs: 0 1px 2px 0 rgb(28 28 25 / 0.05);
+		--shadow-sm: 0 1px 3px 0 rgb(28 28 25 / 0.07), 0 1px 2px -1px rgb(28 28 25 / 0.05);
+		--shadow-md: 0 4px 12px -2px rgb(28 28 25 / 0.08), 0 2px 4px -2px rgb(28 28 25 / 0.05);
+		--shadow-lg: 0 12px 32px -8px rgb(28 28 25 / 0.12);
+
+		/* Type */
+		--font-display: 'Space Grotesk', 'IBM Plex Sans', system-ui, sans-serif;
+		--font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+		--font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
 	}
 
 	:root.dark {
-		--background: 230 25% 7%;
-		--foreground: 210 40% 98%;
+		/* ── Ledger palette · Dark ── */
+		--background: 60 6% 7%; /* warm near-black #121210 */
+		--foreground: 60 20% 91%; /* #ECECE4 */
 
-		--card: 230 25% 10%;
-		--card-foreground: 210 40% 98%;
+		--card: 60 6% 10%; /* #1A1A17 */
+		--card-foreground: 60 20% 91%;
 
-		--popover: 230 25% 10%;
-		--popover-foreground: 210 40% 98%;
+		--popover: 60 6% 10%;
+		--popover-foreground: 60 20% 91%;
 
-		--primary: 142.1 76.2% 36.3%;
-		--primary-foreground: 210 40% 98%;
+		--primary: 160 60% 50%; /* brighter ledger green for dark */
+		--primary-foreground: 60 8% 8%;
 
-		--secondary: 230 25% 14%;
-		--secondary-foreground: 210 40% 98%;
+		--secondary: 60 5% 15%;
+		--secondary-foreground: 60 20% 91%;
 
-		--muted: 230 25% 14%;
-		--muted-foreground: 215 20% 65%;
+		--muted: 60 5% 15%;
+		--muted-foreground: 60 6% 60%;
 
-		--accent: 230 25% 14%;
-		--accent-foreground: 210 40% 98%;
+		--accent: 160 30% 16%;
+		--accent-foreground: 160 60% 70%;
 
-		--destructive: 0 62.8% 50.6%;
-		--destructive-foreground: 210 40% 98%;
+		--destructive: 0 72% 55%;
+		--destructive-foreground: 0 0% 100%;
 
-		--border: 230 20% 20%;
-		--input: 230 20% 20%;
-		--ring: 142.1 76.2% 36.3%;
+		--border: 60 6% 18%;
+		--input: 60 6% 22%;
+		--ring: 160 60% 50%;
 
-		--glass-light: rgba(30, 30, 46, 0.82);
-		--glass-light-soft: rgba(30, 30, 46, 0.65);
-		--glass-border: rgba(255, 255, 255, 0.1);
-		--glass-shadow: 0 40px 80px -48px rgba(0, 0, 0, 0.7);
-		--glow-sky: rgba(14, 165, 233, 0.15);
-		--glow-violet: rgba(147, 51, 234, 0.12);
-		--glow-emerald: rgba(16, 185, 129, 0.12);
-		--edge-highlight: linear-gradient(
-			125deg,
-			rgba(14, 165, 233, 0.2),
-			rgba(59, 130, 246, 0.2),
-			rgba(99, 102, 241, 0.15),
-			rgba(168, 85, 247, 0.18)
-		);
-		--edge-highlight-strong: linear-gradient(
-			125deg,
-			rgba(14, 165, 233, 0.35),
-			rgba(59, 130, 246, 0.35),
-			rgba(99, 102, 241, 0.3),
-			rgba(168, 85, 247, 0.32)
-		);
+		--success: 142 60% 45%;
+		--warning: 32 90% 55%;
+		--danger: 0 72% 58%;
+		--info: 224 80% 65%;
+
+		--grid-line: 60 6% 15%;
+		--grid-opacity: 0.6;
+
+		--shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+		--shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+		--shadow-md: 0 4px 12px -2px rgb(0 0 0 / 0.45);
+		--shadow-lg: 0 12px 32px -8px rgb(0 0 0 / 0.55);
 	}
 
 	html,
@@ -116,51 +129,32 @@
 	}
 
 	body {
-		font-family:
-			'SF Pro Display',
-			'SF Pro Text',
-			-apple-system,
-			BlinkMacSystemFont,
-			'Segoe UI',
-			sans-serif;
+		font-family: var(--font-sans);
 		background-color: hsl(var(--background));
 		color: hsl(var(--foreground));
 		text-rendering: optimizeLegibility;
 		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
 		position: relative;
 		overflow-x: hidden;
+		font-size: 15px;
+		line-height: 1.5;
 	}
 
-	body::before,
-	body::after {
+	/* Ambient ledger-grid texture — the visual language of measurement.
+	   A faint graph-paper field behind all content. Subtle, never noisy. */
+	body::before {
 		content: '';
 		position: fixed;
 		inset: 0;
-		z-index: -2;
-		pointer-events: none;
-		opacity: 0.9;
-	}
-
-	body::before {
-		background-image:
-			radial-gradient(circle at 15% 15%, var(--glow-sky), transparent 45%),
-			radial-gradient(circle at 80% 0%, var(--glow-violet), transparent 50%),
-			radial-gradient(circle at 65% 80%, var(--glow-emerald), transparent 55%);
-		filter: blur(60px);
-		transform: translate3d(0, 0, 0);
-	}
-
-	body::after {
 		z-index: -1;
-		opacity: 0.65;
-		background: linear-gradient(135deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
-		mix-blend-mode: screen;
-	}
-
-	:root.dark body::after {
-		background: linear-gradient(135deg, rgba(30, 30, 46, 0.4), rgba(0, 0, 0, 0));
-		mix-blend-mode: normal;
-		opacity: 0.3;
+		pointer-events: none;
+		opacity: var(--grid-opacity);
+		background-image:
+			linear-gradient(hsl(var(--grid-line)) 1px, transparent 1px),
+			linear-gradient(90deg, hsl(var(--grid-line)) 1px, transparent 1px);
+		background-size: 32px 32px;
+		mask-image: radial-gradient(ellipse 120% 90% at 50% 0%, black 30%, transparent 85%);
 	}
 
 	*:focus-visible {
@@ -168,83 +162,109 @@
 		outline-offset: 2px;
 	}
 
-	/* Safari-friendly select reset and modern styling */
-	select {
-		@apply w-full appearance-none rounded-2xl border border-white/20 bg-white/70 px-4 py-2.5 text-sm text-slate-700 transition duration-200 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-400;
-		background-image: none;
+	::selection {
+		background: hsl(var(--primary) / 0.18);
 	}
 
+	/* ── Typography utilities ── */
+	.font-display {
+		font-family: var(--font-display);
+		letter-spacing: -0.01em;
+	}
+
+	/* Tabular figures for all numeric data — columns align, numbers feel solid */
+	.num {
+		font-variant-numeric: tabular-nums lining-nums;
+	}
+	.num-mono {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+	}
+
+	/* KPI display numbers — large, confident, tabular */
+	.kpi-num {
+		font-family: var(--font-display);
+		font-variant-numeric: tabular-nums lining-nums;
+		font-weight: 600;
+		letter-spacing: -0.02em;
+		line-height: 1.1;
+	}
+
+	/* Overline label — small caps for data labels */
+	.overline {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: hsl(var(--muted-foreground));
+	}
+
+	/* Crisp select reset */
+	select {
+		width: 100%;
+		appearance: none;
+		border-radius: var(--radius);
+		border: 1px solid hsl(var(--input));
+		background-color: hsl(var(--card));
+		padding: 0.5rem 0.75rem;
+		font-size: 0.875rem;
+		color: hsl(var(--foreground));
+		transition: border-color 0.15s ease;
+		outline: none;
+		background-image: none;
+	}
+	select:focus {
+		border-color: hsl(var(--primary));
+		box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
+	}
 	select::-ms-expand {
 		display: none;
 	}
-
 	.select-wrapper {
 		position: relative;
 		display: inline-block;
 		width: 100%;
 	}
-
 	.select-wrapper::after {
 		content: '';
 		position: absolute;
 		top: 50%;
-		right: 1rem;
-		width: 0.6rem;
-		height: 0.6rem;
+		right: 0.875rem;
+		width: 0.45rem;
+		height: 0.45rem;
 		pointer-events: none;
-		border-left: 2px solid rgba(14, 165, 233, 0.8);
-		border-bottom: 2px solid rgba(14, 165, 233, 0.8);
+		border-left: 1.5px solid hsl(var(--muted-foreground));
+		border-bottom: 1.5px solid hsl(var(--muted-foreground));
 		transform: rotate(-45deg) translateY(-50%);
-		transition: transform 0.2s ease;
+		transition: transform 0.15s ease;
 	}
-
 	.select-wrapper:focus-within::after {
 		transform: rotate(-225deg) translateY(-50%);
-	}
-
-	:root.dark select {
-		@apply border-white/10 bg-slate-800/70 text-slate-200;
+		border-color: hsl(var(--primary));
 	}
 }
 
 @layer components {
-	.liquid-shell {
-		position: relative;
-		background:
-			radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.55), transparent 55%),
-			radial-gradient(circle at 80% 0%, rgba(147, 197, 253, 0.45), transparent 55%),
-			linear-gradient(180deg, rgba(255, 255, 255, 0.8), transparent 60%);
+	/* ── Surfaces — crisp, opaque, hairline-bordered ── */
+
+	/* Primary card / panel. Replaces the old frosted glass panel. */
+	.liquid-panel {
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-sm);
+		transition:
+			box-shadow 0.2s ease,
+			border-color 0.2s ease;
 	}
 
-	.liquid-panel {
-		background: linear-gradient(135deg, var(--glass-light), var(--glass-light-soft));
-		/* Angle-based border reflection using individual border colors to simulate light from top-left */
-		border-top: 1px solid rgba(255, 255, 255, 0.65);
-		border-left: 1px solid rgba(255, 255, 255, 0.45);
-		border-right: 1px solid rgba(255, 255, 255, 0.15);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-
-		/* Complex shadow layering:
-       1. Inner highlight (reflection) 
-       2. Soft drop shadow (elevation)
-       3. Colored glow ambient
-    */
-		box-shadow:
-			inset 0 1px 0 0 rgba(255, 255, 255, 0.4),
-			inset 1px 0 0 0 rgba(255, 255, 255, 0.2),
-			0 20px 40px -10px rgba(0, 0, 0, 0.1),
-			0 0 15px -3px rgba(255, 255, 255, 0.1);
-
-		backdrop-filter: blur(40px) saturate(180%);
-		-webkit-backdrop-filter: blur(40px) saturate(180%);
-		transition:
-			transform 0.3s ease,
-			box-shadow 0.3s ease;
+	.liquid-shell {
+		position: relative;
+		background: hsl(var(--background));
 	}
 
 	.liquid-divider {
-		background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.8), transparent);
-		opacity: 0.35;
+		background: hsl(var(--border));
 		height: 1px;
 	}
 
@@ -252,237 +272,254 @@
 		position: relative;
 		isolation: isolate;
 	}
-
 	.liquid-spotlight::after {
-		content: '';
-		position: absolute;
-		inset: -35%;
-		background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 60%);
-		opacity: 0.4;
-		filter: blur(80px);
-		z-index: -1;
+		content: none; /* glow removed */
 	}
 
+	/* Interactive card — subtle lift, no glow, no blur */
+	.liquid-hoverable {
+		position: relative;
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-xs);
+		transition:
+			transform 0.18s cubic-bezier(0.2, 0, 0, 1),
+			box-shadow 0.18s ease,
+			border-color 0.18s ease;
+		will-change: transform;
+	}
+	.liquid-hoverable::before,
+	.liquid-hoverable::after {
+		content: none; /* gradient glows removed */
+	}
+	.liquid-hoverable:hover {
+		transform: translateY(-2px);
+		box-shadow: var(--shadow-md);
+		border-color: hsl(var(--primary) / 0.35);
+	}
+	.liquid-hoverable:focus-visible {
+		border-color: hsl(var(--primary));
+	}
+
+	/* Button surface — crisp, flat, confident */
 	.glass-button {
-		background: linear-gradient(120deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.25));
-		border-top: 1px solid rgba(255, 255, 255, 0.8);
-		border-left: 1px solid rgba(255, 255, 255, 0.6);
-		border-right: 1px solid rgba(255, 255, 255, 0.3);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.6),
-			0 4px 10px rgba(0, 0, 0, 0.05);
-		backdrop-filter: blur(20px);
-		-webkit-backdrop-filter: blur(20px);
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-xs);
+		transition:
+			background 0.15s ease,
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+	.glass-button:hover {
+		background: hsl(var(--muted));
+		border-color: hsl(var(--input));
 	}
 
+	/* Active tab / toggle — ledger-green accent, not a gradient pill */
 	.glass-toggle-active {
 		position: relative;
-		border-radius: 1.25rem;
-		border: 1px solid rgba(255, 255, 255, 0.55);
-		background:
-			linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(241, 245, 249, 0.6)) padding-box,
-			linear-gradient(145deg, rgba(59, 130, 246, 0.35), rgba(147, 197, 253, 0.45)) border-box;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.75),
-			0 25px 55px -35px rgba(15, 23, 42, 0.65);
-		backdrop-filter: blur(24px);
-		-webkit-backdrop-filter: blur(24px);
+		border-radius: var(--radius);
+		border: 1px solid hsl(var(--primary) / 0.4);
+		background: hsl(var(--accent));
+		color: hsl(var(--accent-foreground));
+		box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.12);
 	}
-
-	.glass-toggle-active::before {
-		content: '';
-		position: absolute;
-		inset: 3px;
-		border-radius: inherit;
-		background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.7), transparent 60%);
-		opacity: 0.85;
-		pointer-events: none;
-	}
-
+	.glass-toggle-active::before,
 	.glass-toggle-active::after {
-		content: '';
-		position: absolute;
-		inset: -6px;
-		border-radius: inherit;
-		background: radial-gradient(circle, rgba(99, 179, 237, 0.25), transparent 65%);
-		filter: blur(18px);
-		opacity: 0.9;
-		pointer-events: none;
-		z-index: -1;
+		content: none;
 	}
 
+	/* Inputs — crisp, bordered, green focus ring */
 	.liquid-input {
-		position: relative;
-		border-radius: 9999px;
-		border: 1px solid transparent;
-		background:
-			linear-gradient(140deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.65)) padding-box,
-			linear-gradient(
-					140deg,
-					rgba(167, 243, 208, 0.35),
-					rgba(59, 130, 246, 0.35),
-					rgba(99, 102, 241, 0.3)
-				)
-				border-box;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.75),
-			0 18px 45px -32px rgba(15, 23, 42, 0.75);
-		backdrop-filter: blur(22px);
-		-webkit-backdrop-filter: blur(22px);
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--input));
+		border-radius: var(--radius);
 		color: hsl(var(--foreground));
 		transition:
-			background 0.25s ease,
-			box-shadow 0.35s ease,
-			border-color 0.25s ease;
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
 	}
-
+	.liquid-input::placeholder {
+		color: hsl(var(--muted-foreground));
+	}
 	.liquid-input:hover {
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.8),
-			0 25px 55px -32px rgba(59, 130, 246, 0.35);
+		border-color: hsl(var(--muted-foreground) / 0.5);
 	}
-
 	.liquid-input:focus-visible {
 		outline: none;
-		background:
-			linear-gradient(140deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.75)) padding-box,
-			linear-gradient(
-					140deg,
-					rgba(59, 130, 246, 0.55),
-					rgba(99, 102, 241, 0.45),
-					rgba(168, 85, 247, 0.4)
-				)
-				border-box;
-		box-shadow:
-			inset 0 1px 0 rgba(255, 255, 255, 0.85),
-			0 30px 65px -30px rgba(59, 130, 246, 0.4);
+		border-color: hsl(var(--primary));
+		box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
 	}
 
 	.liquid-textarea {
-		position: relative;
-		border-radius: 1rem;
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--input));
+		border-radius: var(--radius);
 		resize: none;
-		backdrop-filter: blur(22px);
-		-webkit-backdrop-filter: blur(22px);
 		color: hsl(var(--foreground));
-		transition: background 0.25s ease;
-
-		background:
-			linear-gradient(140deg, rgba(248, 250, 252, 0.6), rgba(255, 255, 255, 0.4)) padding-box,
-			linear-gradient(140deg, rgba(59, 130, 246, 0.2), rgba(255, 255, 255, 0.2));
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
 	}
-
-	.liquid-textarea:hover {
-		/* No shadow on hover, just background transition from base class */
-	}
-
 	.liquid-textarea:focus-visible {
 		outline: none;
-		background:
-			linear-gradient(140deg, rgba(248, 250, 252, 0.92), rgba(248, 250, 252, 0.75)) padding-box,
-			linear-gradient(
-					140deg,
-					rgba(59, 130, 246, 0.55),
-					rgba(99, 102, 241, 0.45),
-					rgba(168, 85, 247, 0.4)
-				)
-				border-box;
+		border-color: hsl(var(--primary));
+		box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
 	}
 
-	.liquid-hoverable {
-		position: relative;
-		isolation: isolate;
-		overflow: hidden;
-
-		/* 3D Border Effect */
-		border-top: 1px solid rgba(255, 255, 255, 0.6);
-		border-left: 1px solid rgba(255, 255, 255, 0.4);
-		border-right: 1px solid rgba(255, 255, 255, 0.1);
-		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-
-		box-shadow:
-			0 4px 6px -1px rgba(0, 0, 0, 0.05),
-			inset 0 1px 0 rgba(255, 255, 255, 0.3);
-
-		transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-		will-change: transform, box-shadow;
-		z-index: 0;
+	/* ── Semantic status badges ── */
+	.badge-success,
+	.badge-warning,
+	.badge-danger,
+	.badge-info,
+	.badge-neutral {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		border-radius: var(--radius);
+		padding: 0.125rem 0.5rem;
+		font-size: 0.75rem;
+		font-weight: 600;
+		line-height: 1.4;
+		white-space: nowrap;
+	}
+	.badge-success {
+		background: hsl(var(--success) / 0.12);
+		color: hsl(var(--success));
+		border: 1px solid hsl(var(--success) / 0.25);
+	}
+	.badge-warning {
+		background: hsl(var(--warning) / 0.12);
+		color: hsl(var(--warning));
+		border: 1px solid hsl(var(--warning) / 0.25);
+	}
+	.badge-danger {
+		background: hsl(var(--danger) / 0.1);
+		color: hsl(var(--danger));
+		border: 1px solid hsl(var(--danger) / 0.25);
+	}
+	.badge-info {
+		background: hsl(var(--info) / 0.1);
+		color: hsl(var(--info));
+		border: 1px solid hsl(var(--info) / 0.25);
+	}
+	.badge-neutral {
+		background: hsl(var(--muted));
+		color: hsl(var(--muted-foreground));
+		border: 1px solid hsl(var(--border));
 	}
 
-	.liquid-hoverable::before {
-		content: '';
-		position: absolute;
-		inset: -4px;
-		border-radius: inherit;
-		background:
-			radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.55), transparent 52%),
-			radial-gradient(circle at 88% 10%, rgba(59, 130, 246, 0.25), transparent 55%),
-			radial-gradient(circle at 10% 88%, rgba(16, 185, 129, 0.2), transparent 60%),
-			radial-gradient(circle at 92% 92%, rgba(15, 23, 42, 0.28), transparent 62%);
-		mix-blend-mode: soft-light;
-		opacity: 0;
-		transform: translate3d(0, 0, 0) scale(0.96);
-		transition:
-			opacity 0.45s ease,
-			transform 0.45s ease;
-		pointer-events: none;
-		z-index: -2;
+	/* ── Data table — the heart of an inventory tool ── */
+	.ledger-table {
+		width: 100%;
+		font-size: 0.875rem;
+		border-collapse: collapse;
+	}
+	.ledger-table thead th {
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		text-align: left;
+		color: hsl(var(--muted-foreground));
+		padding: 0.625rem 0.875rem;
+		border-bottom: 1px solid hsl(var(--border));
+		background: hsl(var(--muted) / 0.5);
+		position: sticky;
+		top: 0;
+		z-index: 5;
+		white-space: nowrap;
+	}
+	.ledger-table tbody td {
+		padding: 0.625rem 0.875rem;
+		border-bottom: 1px solid hsl(var(--border) / 0.7);
+		vertical-align: middle;
+	}
+	.ledger-table tbody tr {
+		transition: background 0.12s ease;
+	}
+	.ledger-table tbody tr:hover {
+		background: hsl(var(--muted) / 0.45);
+	}
+	.ledger-table tbody tr:last-child td {
+		border-bottom: none;
+	}
+	/* Numeric columns right-align, tabular */
+	.ledger-table .col-num {
+		font-family: var(--font-mono);
+		font-variant-numeric: tabular-nums;
+		text-align: right;
+		font-size: 0.8125rem;
 	}
 
-	.liquid-hoverable:hover {
-		transform: translateY(-2px) scale(1.005);
-		box-shadow:
-			0 10px 30px -5px rgba(0, 0, 0, 0.1),
-			inset 0 1px 0 rgba(255, 255, 255, 0.5);
-		border-top-color: rgba(255, 255, 255, 0.9);
+	/* Sparkline container */
+	.spark {
+		display: inline-flex;
+		align-items: flex-end;
+		gap: 2px;
+		height: 28px;
 	}
-
-	.liquid-hoverable:hover::before,
-	.liquid-hoverable:focus-visible::before {
-		opacity: 0.92;
-		transform: translate3d(0, -1px, 0) scale(1);
+	.spark span {
+		flex: 1;
+		min-width: 3px;
+		border-radius: 1px;
+		background: hsl(var(--primary) / 0.35);
+		transition: background 0.15s ease;
 	}
-
-	.liquid-hoverable::after {
-		content: '';
-		position: absolute;
-		inset: -2px;
-		border-radius: inherit;
-		background: var(--edge-highlight);
-		opacity: 0;
-		transform: scale(0.9);
-		filter: blur(14px);
-		transition:
-			opacity 0.42s ease,
-			transform 0.42s ease;
-		pointer-events: none;
-		mix-blend-mode: screen;
-		z-index: -1;
-	}
-
-	.liquid-hoverable:hover::after,
-	.liquid-hoverable:focus-visible::after {
-		opacity: 0.85;
-		transform: scale(1.02);
+	.spark span:last-child {
+		background: hsl(var(--primary));
 	}
 }
 
+/* ── Motion — purposeful, restrained ── */
 @keyframes fadeUp {
 	from {
 		opacity: 0;
-		transform: translateY(12px);
+		transform: translateY(10px);
 	}
 	to {
 		opacity: 1;
 		transform: translateY(0);
 	}
 }
-
 [data-animate='fade-up'] {
 	opacity: 0;
-	transform: translateY(12px);
-	animation: fadeUp 0.6s ease-out forwards;
+	transform: translateY(10px);
+	animation: fadeUp 0.45s cubic-bezier(0.2, 0, 0, 1) forwards;
+}
+
+@keyframes countPulse {
+	0% {
+		opacity: 0.4;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+[data-animate='count'] {
+	animation: countPulse 0.3s ease-out;
+}
+
+/* Live "breathing" indicator dot for real-time data */
+@keyframes livePulse {
+	0%,
+	100% {
+		box-shadow: 0 0 0 0 hsl(var(--success) / 0.5);
+	}
+	50% {
+		box-shadow: 0 0 0 5px hsl(var(--success) / 0);
+	}
+}
+.live-dot {
+	display: inline-block;
+	width: 0.5rem;
+	height: 0.5rem;
+	border-radius: 9999px;
+	background: hsl(var(--success));
+	animation: livePulse 2s ease-in-out infinite;
 }
 
 .grid-cols-24 {
@@ -490,23 +527,35 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-	width: 4px;
+	width: 6px;
+	height: 6px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
-	background: rgba(255, 255, 255, 0.1);
+	background: transparent;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-	background: rgba(203, 213, 225, 0.4);
-	border-radius: 10px;
+	background: hsl(var(--border));
+	border-radius: 3px;
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-	background: rgba(148, 163, 184, 0.6);
+	background: hsl(var(--muted-foreground) / 0.5);
 }
 
 [data-density='compact'] td {
-	padding-block: 0.25rem;
+	padding-block: 0.3rem;
 	font-size: 0.8rem;
 }
 [data-density='compact'] th {
-	padding-block: 0.35rem;
+	padding-block: 0.4rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-animate='fade-up'],
+	[data-animate='count'],
+	.live-dot {
+		animation: none;
+	}
+	.liquid-hoverable:hover {
+		transform: none;
+	}
 }
