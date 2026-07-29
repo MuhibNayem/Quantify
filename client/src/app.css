@@ -502,3 +502,11 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 	background: rgba(148, 163, 184, 0.6);
 }
+
+[data-density='compact'] td {
+	padding-block: 0.25rem;
+	font-size: 0.8rem;
+}
+[data-density='compact'] th {
+	padding-block: 0.35rem;
+}

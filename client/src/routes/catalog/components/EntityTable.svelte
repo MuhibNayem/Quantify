@@ -19,6 +19,10 @@
 		onPageChange?: (page: number) => void;
 		onRowClick?: (row: T) => void;
 		children?: Snippet<[T]>;
+		selectable?: boolean;
+		allSelected?: boolean;
+		someSelected?: boolean;
+		onSelectAll?: () => void;
 	};
 
 	let {
@@ -30,7 +34,11 @@
 		currentPage = 1,
 		onPageChange,
 		onRowClick,
-		children
+		children,
+		selectable = false,
+		allSelected = false,
+		someSelected = false,
+		onSelectAll
 	}: Props = $props();
 </script>
 
@@ -44,4 +52,8 @@
 	{onPageChange}
 	{onRowClick}
 	{children}
+	{selectable}
+	{allSelected}
+	{someSelected}
+	{onSelectAll}
 />

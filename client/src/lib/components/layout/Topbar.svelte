@@ -2,12 +2,13 @@
 	import { createEventDispatcher } from 'svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
-	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree, Sun, Moon } from 'lucide-svelte';
+	import { Menu, RefreshCcw, Search, Loader2, Package, Users, Truck, FolderTree, Sun, Moon, Rows2, Rows3 } from 'lucide-svelte';
 	import { toggleMode } from 'mode-watcher';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 	import { searchApi } from '$lib/api/resources';
 	import NotificationBell from '$lib/components/notifications/NotificationBell.svelte';
+	import { density } from '$lib/stores/density';
 
 	const { user = null } = $props<{ user?: { Username?: string } | null }>();
 	const dispatch = createEventDispatcher<{ toggleSidebar: void }>();
@@ -160,6 +161,20 @@
 			aria-label="Refresh data"
 		>
 			<RefreshCcw class="h-4 w-4" />
+		</Button>
+
+		<Button
+			variant="ghost"
+			size="icon"
+			class="hidden h-9 w-9 rounded-2xl text-slate-500 hover:bg-white/70 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/70 dark:hover:text-slate-200 sm:flex"
+			onclick={() => density.toggle()}
+			aria-label="Toggle table density"
+		>
+			{#if $density === 'comfortable'}
+				<Rows3 class="h-4 w-4" />
+			{:else}
+				<Rows2 class="h-4 w-4" />
+			{/if}
 		</Button>
 
 		<Button

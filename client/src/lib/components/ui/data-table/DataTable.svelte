@@ -8,6 +8,7 @@
 		TableRow
 	} from '$lib/components/ui/table';
 	import { Button } from '$lib/components/ui/button';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Pagination from '$lib/components/ui/pagination';
 	import { ArrowUpDown, Loader2, FileQuestion } from 'lucide-svelte';
 	import type { Snippet } from 'svelte';
@@ -28,6 +29,10 @@
 		loading?: boolean;
 		onRowClick?: (row: T) => void;
 		children?: Snippet<[T]>;
+		selectable?: boolean;
+		allSelected?: boolean;
+		someSelected?: boolean;
+		onSelectAll?: () => void;
 	};
 
 	let {
@@ -39,7 +44,11 @@
 		onPageChange,
 		loading = false,
 		onRowClick,
-		children
+		children,
+		selectable = false,
+		allSelected = false,
+		someSelected = false,
+		onSelectAll
 	} = $props<Props>();
 
 	let totalPages = $derived(Math.ceil(totalItems / pageSize));
@@ -65,6 +74,15 @@
 		<Table>
 			<TableHeader class="border-b border-white/30 bg-white/40 backdrop-blur-xl">
 				<TableRow class="border-b border-white/20 shadow-none hover:bg-transparent">
+					{#if selectable}
+						<TableHead class="w-12 px-4">
+							<Checkbox
+								checked={allSelected}
+								indeterminate={someSelected && !allSelected}
+								onCheckedChange={() => onSelectAll?.()}
+							/>
+						</TableHead>
+					{/if}
 					{#each columns as col}
 						<TableHead
 							class="h-14 px-6 text-xs font-bold uppercase tracking-widest text-slate-600 {col.class ??
@@ -96,6 +114,9 @@
 				{#if loading}
 					{#each Array(pageSize) as _, i}
 						<TableRow class="border-b border-white/10 hover:bg-transparent">
+							{#if selectable}
+								<TableCell class="px-4 py-4"></TableCell>
+							{/if}
 							{#each columns as _}
 								<TableCell class="px-6 py-4">
 									<div
@@ -108,7 +129,7 @@
 					{/each}
 				{:else if data.length === 0}
 					<TableRow>
-						<TableCell colspan={columns.length} class="h-[400px] text-center">
+						<TableCell colspan={columns.length + (selectable ? 1 : 0)} class="h-[400px] text-center">
 							<div class="flex flex-col items-center justify-center gap-4 text-slate-300">
 								<div class="rounded-full bg-slate-50 p-6 shadow-inner">
 									<FileQuestion class="h-10 w-10 text-slate-400" />

@@ -16,6 +16,7 @@
 	import { Skeleton } from '$lib/components/ui/skeleton';
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
 	import type { DetailBuilderContext, DetailSection } from '$lib/components/DetailsModal.svelte';
+	import ConfirmDialog from '$lib/components/ui/confirm-dialog.svelte';
 	import { UserCheck, Shield, ClipboardList, CheckCircle2, Pencil } from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
@@ -247,24 +248,32 @@
 		}
 	};
 
-	const deleteUser = async (userId?: number, username?: string) => {
-		const targetId = userId ?? selectedUser?.ID;
-		if (!targetId) return;
+	let deleteDialogOpen = $state(false);
+	let deleteTargetUser = $state<{ id: number; username: string } | null>(null);
 
-		if (confirm(`Are you sure you want to delete ${username ?? selectedUser?.Username}?`)) {
-			try {
-				await usersApi.remove(targetId);
-				toast.success('User removed');
-				if (selectedUser?.ID === targetId) {
-					selectedUser = null;
-					applyFormFromUser(null);
-				}
-				await loadUsers();
-			} catch (error: any) {
-				const errorMessage = error.response?.data?.error || 'Unable to delete user';
-				toast.error('Failed to Delete User', { description: errorMessage });
+	const deleteUser = (userId?: number, username?: string) => {
+		const targetId = userId ?? selectedUser?.ID;
+		const targetUsername = username ?? selectedUser?.Username ?? '';
+		if (!targetId) return;
+		deleteTargetUser = { id: targetId, username: targetUsername };
+		deleteDialogOpen = true;
+	};
+
+	const confirmDeleteUser = async () => {
+		if (!deleteTargetUser) return;
+		try {
+			await usersApi.remove(deleteTargetUser.id);
+			toast.success('User removed');
+			if (selectedUser?.ID === deleteTargetUser.id) {
+				selectedUser = null;
+				applyFormFromUser(null);
 			}
+			await loadUsers();
+		} catch (error: any) {
+			const errorMessage = error.response?.data?.error || 'Unable to delete user';
+			toast.error('Failed to Delete User', { description: errorMessage });
 		}
+		deleteTargetUser = null;
 	};
 
 	// --- Parallax Hero Motion ---
@@ -583,6 +592,17 @@
 		{/if}
 	</Card>
 </section>
+
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title="Delete user"
+	description={deleteTargetUser
+		? `This will permanently delete the user "${deleteTargetUser.username}". This action cannot be undone.`
+		: ''}
+	confirmText={deleteTargetUser?.username ?? ''}
+	confirmLabel="Delete"
+	onConfirm={confirmDeleteUser}
+/>
 
 <style lang="postcss">
 	@keyframes gradientShift {
