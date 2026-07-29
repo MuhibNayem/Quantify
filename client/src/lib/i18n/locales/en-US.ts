@@ -580,6 +580,8 @@ export default {
             columns: {
                 sku: 'SKU',
                 name: 'Name',
+                selling_price: 'Selling Price',
+                purchase_price: 'Purchase Price',
                 status: 'Status'
             },
             form: {

@@ -580,6 +580,8 @@ export default {
             columns: {
                 sku: 'এসকিউ',
                 name: 'নাম',
+                selling_price: 'বিক্রয় মূল্য',
+                purchase_price: 'ক্রয় মূল্য',
                 status: 'স্ট্যাটাস'
             },
             form: {

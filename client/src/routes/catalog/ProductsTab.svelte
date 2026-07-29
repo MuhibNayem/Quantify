@@ -15,8 +15,10 @@
 	import { auth } from '$lib/stores/auth';
 	import { t } from '$lib/i18n';
 	import EmptyState from '$lib/components/ui/empty-state.svelte';
+	import EditableCell from '$lib/components/ui/editable-cell.svelte';
 	import { saveView, loadView } from '$lib/saved-views';
 	import { deleteWithUndo } from '$lib/undo';
+	import { settings } from '$lib/stores/settings';
 
 	type Props = {
 		refreshToken?: number;
@@ -134,6 +136,8 @@
 	const productColumns = $derived([
 		{ header: $t('catalog.products.columns.sku'), accessorKey: 'SKU' },
 		{ header: $t('catalog.products.columns.name'), accessorKey: 'Name' },
+		{ header: $t('catalog.products.columns.selling_price'), accessorKey: 'SellingPrice' },
+		{ header: $t('catalog.products.columns.purchase_price'), accessorKey: 'PurchasePrice' },
 		{ header: $t('catalog.products.columns.status'), accessorKey: 'Status' },
 		...(auth.hasPermission('products.write') || auth.hasPermission('products.delete')
 			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
@@ -215,6 +219,35 @@
 	const editProduct = (product: Product) => {
 		editingProduct = product;
 	};
+
+	const canEditPrices = $derived(auth.hasPermission('products.write'));
+
+	function formatMoney(amount?: number): string {
+		return new Intl.NumberFormat($settings.locale, {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		}).format(amount ?? 0);
+	}
+
+	async function savePrice(
+		product: Product,
+		field: 'SellingPrice' | 'PurchasePrice',
+		newValue: number
+	) {
+		const previous = product[field];
+		product[field] = newValue;
+		try {
+			await productsApi.update(product.ID, { [field]: newValue });
+			toast.success(`${field === 'SellingPrice' ? 'Selling' : 'Purchase'} price updated`, {
+				description: `${product.Name} → ${$settings.currency_symbol}${formatMoney(newValue)}`
+			});
+		} catch (error: any) {
+			product[field] = previous;
+			const errorMessage = error.response?.data?.error || 'Unable to update price';
+			toast.error('Price update failed', { description: errorMessage });
+			throw error;
+		}
+	}
 
 	const deleteProduct = (product: Product) => {
 		const snapshot = products;
@@ -342,8 +375,44 @@
 						/>
 					</TableCell>
 					<TableCell class="font-mono text-xs text-slate-600">{product.SKU}</TableCell>
-					<TableCell class="font-medium text-slate-900">{product.Name}</TableCell>
-					<TableCell>
+				<TableCell class="font-medium text-slate-900">{product.Name}</TableCell>
+				<TableCell class="px-6 py-4" onclick={(e) => e.stopPropagation()}>
+					{#if canEditPrices}
+						<EditableCell
+							type="number"
+							value={product.SellingPrice ?? 0}
+							display={formatMoney(product.SellingPrice)}
+							prefix={$settings.currency_symbol}
+							onSave={(v) => savePrice(product, 'SellingPrice', Number(v))}
+						/>
+					{:else}
+						<span class="text-sm font-semibold text-slate-700">
+							<span class="mr-0.5 text-xs font-medium text-slate-400">
+								{$settings.currency_symbol}
+							</span>
+							{formatMoney(product.SellingPrice)}
+						</span>
+					{/if}
+				</TableCell>
+				<TableCell class="px-6 py-4" onclick={(e) => e.stopPropagation()}>
+					{#if canEditPrices}
+						<EditableCell
+							type="number"
+							value={product.PurchasePrice ?? 0}
+							display={formatMoney(product.PurchasePrice)}
+							prefix={$settings.currency_symbol}
+							onSave={(v) => savePrice(product, 'PurchasePrice', Number(v))}
+						/>
+					{:else}
+						<span class="text-sm font-semibold text-slate-700">
+							<span class="mr-0.5 text-xs font-medium text-slate-400">
+								{$settings.currency_symbol}
+							</span>
+							{formatMoney(product.PurchasePrice)}
+						</span>
+					{/if}
+				</TableCell>
+				<TableCell>
 						{@const badge = statusBadge(product.Status)}
 						{#if badge}
 							<span
