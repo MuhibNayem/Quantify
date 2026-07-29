@@ -85,7 +85,8 @@
 		<!-- Search bar -->
 		<div class="group relative hidden sm:block">
 			<Input
-				class="liquid-input peer h-10 w-64 pl-11 pr-4 text-sm text-slate-800 placeholder:text-transparent transition-all duration-300 focus:w-80 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:border-transparent focus-visible:outline-none focus-visible:shadow-[0_30px_70px_-30px_rgba(59,130,246,0.45)]"
+				data-search-input
+				class="liquid-input peer h-10 w-64 pl-11 pr-12 text-sm text-slate-800 placeholder:text-transparent transition-all duration-300 focus:w-80 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:border-transparent focus-visible:outline-none focus-visible:shadow-[0_30px_70px_-30px_rgba(59,130,246,0.45)]"
 				placeholder="Search inventory"
 				value={search}
 				onfocus={() => (searchFocused = true)}
@@ -105,6 +106,11 @@
 					<span class="text-sm text-slate-500">Search inventory</span>
 				{/if}
 			</div>
+			<kbd
+				class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[0.65rem] font-medium text-slate-400 peer-focus:hidden dark:border-slate-600 dark:bg-slate-800 sm:block"
+			>
+				⌘K
+			</kbd>
 
 			{#if searchFocused && hasSearched && !searching}
 				<div class="absolute left-0 top-12 z-50 w-80 overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-2xl shadow-slate-900/10 backdrop-blur-xl">

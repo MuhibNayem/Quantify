@@ -1102,7 +1102,14 @@ export default {
             transaction_fail: 'Transaction Failed',
             name_required: 'Name is required',
             customer_created: 'Customer created and selected!',
-            create_fail: 'Failed to create customer'
+            create_fail: 'Failed to create customer',
+            barcode_added: 'Added {name}',
+            barcode_not_found: 'No product found for "{code}"'
+        },
+        barcode: {
+            placeholder: 'Scan barcode or type SKU, then press Enter…',
+            aria_label: 'Scan barcode',
+            scanner_ready: 'Scanner ready'
         }
     },
     orders: {

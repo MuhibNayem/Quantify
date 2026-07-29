@@ -10,9 +10,9 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card';
-	import { Search, Zap, CreditCard } from 'lucide-svelte';
+	import { Search, Zap, CreditCard, ScanBarcode } from 'lucide-svelte';
 	import api from '$lib/api';
-	import { crmApi, promotionsApi, paymentApi } from '$lib/api/resources';
+	import { crmApi, promotionsApi, paymentApi, productsApi } from '$lib/api/resources';
 	import { toast } from 'svelte-sonner';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
@@ -43,6 +43,40 @@
 	let paymentMethod = $state<string | null>(null);
 	let isProcessing = $state(false);
 	let pointsToRedeem = $state(0);
+	let barcodeInput = $state('');
+	let barcodeRef = $state<HTMLInputElement | null>(null);
+
+	async function findProductByCode(code: string) {
+		const product = products.find((p) => p.BarcodeUPC === code || p.SKU === code);
+		if (product) return product;
+		try {
+			return await productsApi.getByBarcode(code);
+		} catch {
+			return null;
+		}
+	}
+
+	async function handleBarcodeKeydown(e: KeyboardEvent) {
+		if (e.key !== 'Enter') return;
+		e.preventDefault();
+		const code = barcodeInput.trim();
+		if (!code) return;
+		try {
+			const product = await findProductByCode(code);
+			if (product) {
+				const mapped = product.stock
+					? product
+					: { ...product, stock: { currentQuantity: product.StockQuantity ?? 0 } };
+				addToCart(mapped);
+				toast.success($t('pos.toasts.barcode_added', { name: product.Name }));
+			} else {
+				toast.error($t('pos.toasts.barcode_not_found', { code }));
+			}
+		} finally {
+			barcodeInput = '';
+			barcodeRef?.focus();
+		}
+	}
 
 	const fetchPromotions = async () => {
 		try {
@@ -74,6 +108,7 @@
 
 	onMount(() => {
 		Promise.all([fetchProducts(), fetchPromotions()]);
+		barcodeRef?.focus();
 
 		const hero = document.querySelector('.parallax-hero') as HTMLElement | null;
 		let ticking = false;
@@ -421,6 +456,26 @@
 
 	<!-- Main content -->
 	<div class="flex h-full min-h-0 flex-col px-4 py-4">
+		<div
+			class="mb-4 flex items-center gap-3 rounded-2xl border border-indigo-200/60 bg-white/80 px-4 py-3 shadow-md backdrop-blur transition-all duration-300 focus-within:border-indigo-400 focus-within:shadow-lg focus-within:ring-2 focus-within:ring-indigo-200"
+		>
+			<ScanBarcode class="h-5 w-5 shrink-0 text-indigo-500" />
+			<input
+				bind:this={barcodeRef}
+				bind:value={barcodeInput}
+				onkeydown={handleBarcodeKeydown}
+				placeholder={$t('pos.barcode.placeholder')}
+				aria-label={$t('pos.barcode.aria_label')}
+				class="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+			/>
+			<span
+				class="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-medium text-emerald-600 sm:inline-flex"
+			>
+				<span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>
+				{$t('pos.barcode.scanner_ready')}
+			</span>
+		</div>
+
 		<Card
 			class="overflow-hidden rounded-2xl border-0 bg-white/80 shadow-lg backdrop-blur transition-all duration-300 hover:scale-[1.01] hover:shadow-xl"
 		>

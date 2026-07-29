@@ -56,6 +56,7 @@ export const productsApi = {
 		cachedGet<PaginatedProducts>(`products:list:${page}:${limit}:${search ?? ''}`, `/products?page=${page}&limit=${limit}${search ? `&search=${search}` : ''}`),
 	get: async (id: number) => cachedGet<Product>(`products:get:${id}`, `/products/${id}`),
 	getBySku: async (sku: string) => cachedGet<Product>(`products:sku:${sku}`, `/products/sku/${sku}`),
+	getByBarcode: async (barcode: string) => (await api.get<Product>(`/products/barcode/${barcode}`)).data,
 	create: async (payload: Record<string, unknown>) => {
 		const data = (await api.post<Product>('/products', payload)).data;
 		invalidateCache('products:');

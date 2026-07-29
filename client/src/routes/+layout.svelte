@@ -5,6 +5,7 @@
 	import { Toaster } from '$lib/components/ui/sonner';
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import Topbar from '$lib/components/layout/Topbar.svelte';
+	import CommandPalette from '$lib/components/command-palette.svelte';
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
@@ -16,8 +17,25 @@
 
 	const publicRoutes = ['/login', '/register'];
 	let sidebarOpen = $state(false);
+	let paletteOpen = $state(false);
 	const isPublicRoute = $derived(publicRoutes.includes($page.url.pathname));
 	const authState = $derived($auth);
+
+	function isTyping(el: EventTarget | null): boolean {
+		return el instanceof HTMLElement && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+	}
+
+	function handleGlobalKeydown(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+			e.preventDefault();
+			paletteOpen = !paletteOpen;
+		}
+		if (e.key === '/' && !isTyping(e.target)) {
+			e.preventDefault();
+			document.querySelector<HTMLElement>('[data-search-input]')?.focus();
+		}
+		if (e.key === 'Escape') paletteOpen = false;
+	}
 
 	$effect(() => {
 		if (authState.user) {
@@ -27,6 +45,8 @@
 </script>
 
 <ModeWatcher />
+<svelte:window onkeydown={handleGlobalKeydown} />
+<CommandPalette bind:open={paletteOpen} />
 
 {#if isPublicRoute}
 	{@render children?.()}

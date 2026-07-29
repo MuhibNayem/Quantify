@@ -1102,7 +1102,14 @@ export default {
             transaction_fail: 'লেনদেন ব্যর্থ হয়েছে',
             name_required: 'নাম আবশ্যক',
             customer_created: 'কাস্টমার তৈরি এবং নির্বাচন করা হয়েছে!',
-            create_fail: 'কাস্টমার তৈরি করতে ব্যর্থ'
+            create_fail: 'কাস্টমার তৈরি করতে ব্যর্থ',
+            barcode_added: '{name} যোগ করা হয়েছে',
+            barcode_not_found: '"{code}" এর জন্য কোনো পণ্য পাওয়া যায়নি'
+        },
+        barcode: {
+            placeholder: 'বারকোড স্ক্যান করুন অথবা SKU টাইপ করে Enter চাপুন…',
+            aria_label: 'বারকোড স্ক্যান',
+            scanner_ready: 'স্ক্যানার প্রস্তুত'
         }
     },
     orders: {
