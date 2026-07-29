@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { settingsApi } from '$lib/api/settings';
 	import { notificationsApi } from '$lib/api/resources';
+	import { optimistic } from '$lib/optimistic';
 	import { toast } from 'svelte-sonner';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import GlassTabs from '$lib/components/ui/glass-tabs.svelte';
@@ -109,13 +110,21 @@
 
 	const toggleSubscription = async (type: string, enabled: boolean) => {
 		if (!$auth.user) return;
+		const userId = $auth.user.ID;
+		const previousValue = subscriptions[type] ?? true;
 		try {
-			await notificationsApi.updateSubscription($auth.user.ID, type, enabled);
-			subscriptions[type] = enabled;
-			toast.success('Subscription updated');
-		} catch (e) {
-			subscriptions[type] = !enabled;
-			toast.error('Failed to update subscription');
+			await optimistic(
+				() => {
+					subscriptions[type] = enabled;
+				},
+				() => {
+					subscriptions[type] = previousValue;
+				},
+				() => notificationsApi.updateSubscription(userId, type, enabled),
+				{ success: 'Subscription updated', error: 'Failed to update subscription' }
+			);
+		} catch {
+			// optimistic() already rolled back and toasted
 		}
 	};
 

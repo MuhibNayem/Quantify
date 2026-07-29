@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { alertsApi } from '$lib/api/resources';
+	import { optimistic } from '$lib/optimistic';
 	import type { Alert } from '$lib/types';
 	import { t } from '$lib/i18n';
 	import DetailsModal from '$lib/components/DetailsModal.svelte';
@@ -188,13 +189,22 @@
 	};
 
 	const resolveAlert = async (alertId: number) => {
+		const previousAlerts = alerts.map((a) => ({ ...a }));
 		try {
-			await alertsApi.resolve(alertId);
-			toast.success($t('alerts.toasts.resolve_success'));
-			await loadAlerts();
-		} catch (error: any) {
-			const errorMessage = error?.response?.data?.error || $t('alerts.toasts.resolve_fail');
-			toast.error($t('alerts.toasts.resolve_fail'), { description: errorMessage });
+			await optimistic(
+				() => {
+					alerts = alerts.map((a) =>
+						a.ID === alertId ? { ...a, Status: 'RESOLVED', UpdatedAt: new Date().toISOString() } : a
+					);
+				},
+				() => {
+					alerts = previousAlerts;
+				},
+				() => alertsApi.resolve(alertId),
+				{ success: $t('alerts.toasts.resolve_success'), error: $t('alerts.toasts.resolve_fail') }
+			);
+		} catch {
+			// optimistic() already rolled back and toasted
 		}
 	};
 

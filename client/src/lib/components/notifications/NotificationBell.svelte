@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { notifications } from '$lib/stores/notifications';
 	import { auth } from '$lib/stores/auth';
+	import { notificationsApi } from '$lib/api/resources';
+	import { optimistic } from '$lib/optimistic';
 	import { Popover, PopoverTrigger, PopoverContent } from '$lib/components/ui/popover';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
@@ -18,24 +20,76 @@
 			toast.error('Permission denied', { description: 'You cannot manage notifications.' });
 			return;
 		}
+		const userId = $auth.user?.ID;
+		if (!userId) return;
+
+		const previousItems = $notifications.items.map((i) => ({ ...i }));
+		const previousUnread = $notifications.unreadCount;
+
 		try {
-			await notifications.markAllAsRead();
-			toast.success('Notifications cleared');
-		} catch (error: any) {
-			const message =
-				error?.response?.data?.error || error?.message || 'Unable to mark notifications';
-			toast.error('Action failed', { description: message });
+			await optimistic(
+				() => {
+					notifications.update((state) => ({
+						...state,
+						items: state.items.map((item) =>
+							item.IsRead ? item : { ...item, IsRead: true, ReadAt: new Date().toISOString() }
+						),
+						unreadCount: 0
+					}));
+				},
+				() => {
+					notifications.update((state) => ({
+						...state,
+						items: previousItems,
+						unreadCount: previousUnread
+					}));
+				},
+				() => notificationsApi.markAllRead(userId),
+				{ success: 'Notifications cleared', error: 'Failed to mark notifications' }
+			);
+		} catch {
+			// optimistic() already rolled back and toasted
 		}
 	};
 
 	const handleMarkRead = async (notificationId: number) => {
 		if (!$auth.permissions.includes('notifications.write')) return;
+		const userId = $auth.user?.ID;
+		if (!userId) return;
+
+		const target = $notifications.items.find((n) => n.ID === notificationId);
+		const wasUnread = target ? !target.IsRead : false;
+
 		try {
-			await notifications.markNotificationRead(notificationId);
-		} catch (error: any) {
-			const message =
-				error?.response?.data?.error || error?.message || 'Unable to mark notification';
-			toast.error('Action failed', { description: message });
+			await optimistic(
+				() => {
+					notifications.update((state) => {
+						const items = state.items.map((item) =>
+							item.ID === notificationId && !item.IsRead
+								? { ...item, IsRead: true, ReadAt: new Date().toISOString() }
+								: item
+						);
+						return {
+							...state,
+							items,
+							unreadCount: Math.max(0, state.unreadCount - (wasUnread ? 1 : 0))
+						};
+					});
+				},
+				() => {
+					if (!wasUnread) return;
+					notifications.update((state) => {
+						const items = state.items.map((item) =>
+							item.ID === notificationId ? { ...item, IsRead: false, ReadAt: null } : item
+						);
+						return { ...state, items, unreadCount: state.unreadCount + 1 };
+					});
+				},
+				() => notificationsApi.markRead(userId, notificationId),
+				{ success: 'Marked as read', error: 'Failed to mark notification' }
+			);
+		} catch {
+			// optimistic() already rolled back and toasted
 		}
 	};
 

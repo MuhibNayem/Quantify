@@ -231,6 +231,7 @@ function createNotificationStore() {
 
 	return {
 		subscribe,
+		update,
 		markNotificationRead,
 		markAllAsRead,
 		refresh,
