@@ -151,7 +151,7 @@ func NewApp(cfg *config.Config) *App {
 	c.BarcodeHandler = handlers.NewBarcodeHandler(c.BarcodeSvc)
 	c.CRMHandler = handlers.NewCRMHandler(c.CRMService, c.DB)
 	c.TimeTrackingHandler = handlers.NewTimeTrackingHandler(c.TimeTrackingSvc)
-	c.Report = handlers.NewReportHandler(c.Reporting, c.Jobs)
+	c.Report = handlers.NewReportHandler(c.Reporting, c.Jobs, c.DB)
 	c.Bulk = handlers.NewBulkHandler(c.Jobs, c.Uploader)
 	c.Notification = handlers.NewNotificationHandler(c.Notifications).WithDB(c.DB)
 	c.User = handlers.NewUserHandler(c.Users, cfg)

@@ -389,6 +389,9 @@ func SetupRouter(c *app.Container) *gin.Engine {
 			timeTracking.GET("/team-overview", middleware.RequirePermission(roleRepo, "users.manage"), timeTrackingHandler.GetTeamOverview)
 		}
 
+		// Audit Logs
+		api.GET("/audit-logs", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.ListAuditLogs)
+
 		// Global Search
 		api.GET("/search", searchHandler.Search) // Open search? Or inventory.read? Let's keep open for authenticated.
 

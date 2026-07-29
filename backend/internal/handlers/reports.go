@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 
 	appErrors "inventory/backend/internal/errors"
 )
@@ -20,10 +21,11 @@ import (
 type ReportHandler struct {
 	reportingService *services.ReportingService
 	jobRepo          repository.JobRepository
+	db               *gorm.DB
 }
 
-func NewReportHandler(reportingService *services.ReportingService, jobRepo repository.JobRepository) *ReportHandler {
-	return &ReportHandler{reportingService: reportingService, jobRepo: jobRepo}
+func NewReportHandler(reportingService *services.ReportingService, jobRepo repository.JobRepository, db *gorm.DB) *ReportHandler {
+	return &ReportHandler{reportingService: reportingService, jobRepo: jobRepo, db: db}
 }
 
 // GetSalesTrendsReport godoc
@@ -478,6 +480,95 @@ func (h *ReportHandler) GetVoidDiscountAuditReport(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, report)
+}
+
+// ListAuditLogs godoc
+// @Summary      List audit logs
+// @Description  Returns paginated, filtered audit logs (newest first).
+// @Tags         audit
+// @Produce      json
+// @Param        action query string false "Filter by action"
+// @Param        entity query string false "Filter by entity"
+// @Param        userId query int false "Filter by user ID"
+// @Param        start query string false "Start date (RFC3339)"
+// @Param        end query string false "End date (RFC3339)"
+// @Param        page query int false "Page"
+// @Param        limit query int false "Limit"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]interface{} "Bad Request"
+// @Failure      500 {object} map[string]interface{} "Internal Server Error"
+// @Security     BearerAuth
+// @Router       /audit-logs [get]
+func (h *ReportHandler) ListAuditLogs(c *gin.Context) {
+	filter := repository.AuditLogFilter{
+		Action: c.Query("action"),
+		Entity: c.Query("entity"),
+	}
+
+	if v := c.Query("userId"); v != "" {
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid userId", http.StatusBadRequest, err))
+			return
+		}
+		filter.UserID = uint(id)
+	}
+
+	if v := c.Query("start"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid start date, expected RFC3339", http.StatusBadRequest, err))
+			return
+		}
+		filter.Start = t
+	}
+
+	if v := c.Query("end"); v != "" {
+		t, err := time.Parse(time.RFC3339, v)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid end date, expected RFC3339", http.StatusBadRequest, err))
+			return
+		}
+		filter.End = t
+	}
+
+	if v := c.Query("page"); v != "" {
+		p, err := strconv.Atoi(v)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid page", http.StatusBadRequest, err))
+			return
+		}
+		filter.Page = p
+	}
+
+	if v := c.Query("limit"); v != "" {
+		l, err := strconv.Atoi(v)
+		if err != nil {
+			c.Error(appErrors.NewAppError("Invalid limit", http.StatusBadRequest, err))
+			return
+		}
+		filter.Limit = l
+	}
+
+	logs, total, err := repository.ListAuditLogs(c.Request.Context(), h.db, filter)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to list audit logs", http.StatusInternalServerError, err))
+		return
+	}
+
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Limit < 1 || filter.Limit > 200 {
+		filter.Limit = 50
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":  logs,
+		"total": total,
+		"page":  filter.Page,
+		"limit": filter.Limit,
+	})
 }
 
 // GetTaxLiabilityReport godoc
