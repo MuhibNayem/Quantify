@@ -32,6 +32,7 @@ import type {
 	TeamStatus,
 	TeamOverview,
 	WeeklySummary,
+	AuditLog,
 } from '$lib/types';
 import type { AxiosRequestConfig } from 'axios';
 
@@ -375,4 +376,16 @@ export const purchaseReturnsApi = {
 	approve: async (id: number) => (await api.post(`/replenishment/returns/${id}/approve`)).data,
 	complete: async (id: number) => (await api.post(`/replenishment/returns/${id}/complete`)).data,
 	cancel: async (id: number) => (await api.post(`/replenishment/returns/${id}/cancel`)).data,
+};
+
+export const auditApi = {
+	list: (params?: {
+		action?: string;
+		entity?: string;
+		userId?: number;
+		start?: string;
+		end?: string;
+		page?: number;
+		limit?: number;
+	}) => api.get<PaginatedResponse<AuditLog>>('/audit-logs', { params }).then((r) => r.data),
 };

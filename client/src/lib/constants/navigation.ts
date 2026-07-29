@@ -15,7 +15,8 @@ import {
 	ShoppingBag,
 	ShoppingCart,
 	Tag,
-	PackageMinus
+	PackageMinus,
+	ShieldCheck
 } from 'lucide-svelte';
 
 export type NavItem = {
@@ -152,6 +153,13 @@ export const navSections: NavSection[] = [
 				href: '/users',
 				icon: Users2,
 				permission: 'users.view',
+			},
+			{
+				label: 'Audit Trail',
+				description: 'Activity & change history',
+				href: '/audit',
+				icon: ShieldCheck,
+				permission: 'reports.financial',
 			},
 			{
 				label: 'Settings',

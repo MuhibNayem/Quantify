@@ -504,3 +504,16 @@ export interface PurchaseReturnItem {
 	UnitPrice: number;
 	Product?: Product;
 }
+
+export interface AuditLog {
+	ID: number;
+	Action: string;
+	Entity: string;
+	EntityID: string;
+	UserID: number;
+	User?: { Username: string; Email: string };
+	Changes: string;
+	IPAddress: string;
+	UserAgent: string;
+	Timestamp: string;
+}
