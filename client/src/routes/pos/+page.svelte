@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
+	import Kbd from '$lib/components/ui/kbd.svelte';
 	import {
 		Card,
 		CardContent,
@@ -273,6 +274,55 @@
 		cart = [];
 	};
 
+	const adjustLastItemQty = (delta: number) => {
+		const lastItem = cart[cart.length - 1];
+		if (!lastItem) return;
+		updateQuantity(lastItem.id, lastItem.quantity + delta);
+	};
+
+	function focusBarcodeInput() {
+		barcodeRef?.focus();
+		barcodeRef?.select();
+	}
+
+	function handlePosKeydown(e: KeyboardEvent) {
+		const el = e.target as HTMLElement;
+		const isTyping = el && ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+		switch (e.key) {
+			case 'F2':
+				e.preventDefault();
+				focusBarcodeInput();
+				break;
+			case 'F4':
+				e.preventDefault();
+				if (!isTyping) setPayment('CASH');
+				break;
+			case 'F5':
+				e.preventDefault();
+				if (!isTyping) setPayment('CARD');
+				break;
+			case 'F6':
+				e.preventDefault();
+				if (!isTyping) setPayment('BKASH');
+				break;
+			case 'F8':
+				e.preventDefault();
+				if (!isTyping && cart.length) completeOrder();
+				break;
+			case 'F9':
+				e.preventDefault();
+				if (!isTyping) clearCart();
+				break;
+			case '+':
+			case '=':
+				if (!isTyping) adjustLastItemQty(1);
+				break;
+			case '-':
+				if (!isTyping) adjustLastItemQty(-1);
+				break;
+		}
+	}
+
 	const subtotal = $derived(
 		cart.reduce((acc, item) => {
 			const { price } = getProductPrice(item);
@@ -387,6 +437,8 @@
 	};
 </script>
 
+<svelte:window onkeydown={handlePosKeydown} />
+
 <!-- Page background gradient + hero -->
 <section
 	class="relative isolate min-h-screen w-full overflow-hidden bg-gradient-to-br from-indigo-50 via-sky-50 to-slate-50"
@@ -442,6 +494,7 @@
 			>
 				<Zap class="mr-2 h-4 w-4" />
 				{$t('pos.hero.new_sale_btn')}
+				<Kbd class="ml-2 border-white/25 bg-white/15 text-white">F9</Kbd>
 			</Button>
 			<Button
 				variant="outline"
@@ -468,6 +521,7 @@
 				aria-label={$t('pos.barcode.aria_label')}
 				class="flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
 			/>
+			<Kbd class="hidden border-slate-200 bg-slate-100/80 text-slate-400 sm:inline-block">F2</Kbd>
 			<span
 				class="hidden items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[0.65rem] font-medium text-emerald-600 sm:inline-flex"
 			>

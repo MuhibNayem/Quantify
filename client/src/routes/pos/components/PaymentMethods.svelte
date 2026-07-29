@@ -8,6 +8,7 @@
 		CardTitle
 	} from '$lib/components/ui/card';
 	import { Label } from '$lib/components/ui/label';
+	import Kbd from '$lib/components/ui/kbd.svelte';
 	import { CreditCard, Banknote, QrCode, Wallet, Check } from 'lucide-svelte';
 	import { settings } from '$lib/stores/settings';
 	import { formatCurrency } from '$lib/utils';
@@ -33,28 +34,32 @@
 			label: $t('pos.payment.methods.cash'),
 			icon: Banknote,
 			color: 'text-emerald-500',
-			sub: $t('pos.payment.sub.physical')
+			sub: $t('pos.payment.sub.physical'),
+			shortcut: 'F4'
 		},
 		{
 			id: 'CARD',
 			label: $t('pos.payment.methods.card'),
 			icon: CreditCard,
 			color: 'text-violet-500',
-			sub: $t('pos.payment.sub.terminal')
+			sub: $t('pos.payment.sub.terminal'),
+			shortcut: 'F5'
 		},
 		{
 			id: 'BKASH',
 			label: $t('pos.payment.methods.bkash'),
 			icon: QrCode,
 			color: 'text-pink-500',
-			sub: $t('pos.payment.sub.mobile')
+			sub: $t('pos.payment.sub.mobile'),
+			shortcut: 'F6'
 		},
 		{
 			id: 'OTHER',
 			label: $t('pos.payment.methods.other'),
 			icon: Wallet,
 			color: 'text-orange-500',
-			sub: $t('pos.payment.sub.check_due')
+			sub: $t('pos.payment.sub.check_due'),
+			shortcut: null
 		}
 	]);
 </script>
@@ -82,11 +87,21 @@
 							: 'border-slate-100 bg-white/50 text-slate-600 hover:border-indigo-100 hover:bg-white'
 					}`}
 				>
-					{#if paymentMethod === method.id}
-						<div class="absolute top-2 right-2 rounded-full bg-white/20 p-0.5">
-							<Check class="h-3 w-3 text-white" />
-						</div>
-					{/if}
+				{#if paymentMethod === method.id}
+					<div class="absolute top-2 right-2 rounded-full bg-white/20 p-0.5">
+						<Check class="h-3 w-3 text-white" />
+					</div>
+				{/if}
+
+				{#if method.shortcut}
+					<Kbd
+						class="absolute top-1.5 left-1.5 {paymentMethod === method.id
+							? 'border-white/25 bg-white/15 text-white'
+							: 'border-slate-200 bg-slate-100/80 text-slate-400'}"
+					>
+						{method.shortcut}
+					</Kbd>
+				{/if}
 
 					<div
 						class={`rounded-xl p-2.5 transition-colors ${

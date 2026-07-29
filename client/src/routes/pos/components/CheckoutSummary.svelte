@@ -9,6 +9,7 @@
 		CardTitle
 	} from '$lib/components/ui/card';
 	import { Zap, Loader2 } from 'lucide-svelte';
+	import Kbd from '$lib/components/ui/kbd.svelte';
 	import { formatCurrency } from '$lib/utils';
 	import { t } from '$lib/i18n';
 
@@ -114,6 +115,7 @@
 				{:else}
 					{$t('pos.summary.complete_btn')}
 				{/if}
+				<Kbd class="ml-2 border-white/25 bg-white/15 text-white">F8</Kbd>
 			</Button>
 		</CardFooter>
 	</div>
