@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/domain"
@@ -47,7 +48,7 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 			return err
 		}
 
-		subtotal, totalDiscountFromPromotions, orderItems, err := s.processItems(tx, req, products, batchesByProduct, activePromotions, userID)
+		subtotal, totalDiscountFromPromotions, cogs, orderItems, err := s.processItems(tx, req, products, batchesByProduct, activePromotions, userID)
 		if err != nil {
 			return err
 		}
@@ -62,7 +63,7 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 			return err
 		}
 
-		return s.createOrderAndTransaction(tx, req, userID, subtotal, taxAmount, discountAmount, totalDiscountFromPromotions, pointsRedeemed, orderItems)
+		return s.createOrderAndTransaction(tx, req, userID, subtotal, taxAmount, discountAmount, totalDiscountFromPromotions, pointsRedeemed, cogs, orderItems)
 	})
 }
 
@@ -84,19 +85,20 @@ func (s *SalesService) processItems(
 	batchesByProduct map[uint][]*domain.Batch,
 	activePromotions []domain.Promotion,
 	userID uint,
-) (float64, float64, []domain.OrderItem, error) {
+) (float64, float64, float64, []domain.OrderItem, error) {
 	var totalAmount float64
 	var totalDiscountFromPromotions float64
+	var totalCOGS float64
 	var orderItems []domain.OrderItem
 
 	for _, item := range req.Items {
 		product, ok := productMap[item.ProductID]
 		if !ok {
-			return 0, 0, nil, fmt.Errorf("product %d not found", item.ProductID)
+			return 0, 0, 0, nil, fmt.Errorf("product %d not found", item.ProductID)
 		}
 
 		if !product.AllowFractional && item.Quantity != math.Trunc(item.Quantity) {
-			return 0, 0, nil, fmt.Errorf("product %q cannot be sold in fractional quantities", product.Name)
+			return 0, 0, 0, nil, fmt.Errorf("product %q cannot be sold in fractional quantities", product.Name)
 		}
 
 		// Resolve selling unit + conversion factor (default: base unit, factor 1).
@@ -106,7 +108,7 @@ func (s *SalesService) processItems(
 		if item.UnitID != nil {
 			pu, err := s.resolveProductUnit(tx, product, *item.UnitID)
 			if err != nil {
-				return 0, 0, nil, err
+				return 0, 0, 0, nil, err
 			}
 			sellingFactor = pu.Factor
 			unitID = item.UnitID
@@ -122,7 +124,7 @@ func (s *SalesService) processItems(
 		if deductionLocationID != 0 {
 			local, err := s.fetchBatchesForLocation(tx, product.ID, deductionLocationID)
 			if err != nil {
-				return 0, 0, nil, err
+				return 0, 0, 0, nil, err
 			}
 			batches = local
 		}
@@ -131,7 +133,7 @@ func (s *SalesService) processItems(
 		}
 
 		if _, err := s.allocateStock(tx, product, batches, deductionLocationID, baseQty, req.CustomerID, userID); err != nil {
-			return 0, 0, nil, err
+			return 0, 0, 0, nil, err
 		}
 
 		// Price per SELLING unit: explicit ProductUnit.Price wins, else base price × factor.
@@ -139,6 +141,9 @@ func (s *SalesService) processItems(
 		unitPrice, discount := s.applyPromotion(baseUnitPrice, product, item.Quantity, activePromotions)
 		totalDiscountFromPromotions += discount
 		totalAmount += unitPrice * item.Quantity
+
+		// Cost of goods sold: base quantity deducted × purchase price per base unit.
+		totalCOGS += baseQty * product.PurchasePrice
 
 		orderItems = append(orderItems, domain.OrderItem{
 			ProductID:    item.ProductID,
@@ -150,7 +155,7 @@ func (s *SalesService) processItems(
 		})
 	}
 
-	return totalAmount, totalDiscountFromPromotions, orderItems, nil
+	return totalAmount, totalDiscountFromPromotions, totalCOGS, orderItems, nil
 }
 
 func (s *SalesService) createOrderAndTransaction(
@@ -162,10 +167,17 @@ func (s *SalesService) createOrderAndTransaction(
 	discountAmount float64,
 	totalDiscountFromPromotions float64,
 	pointsRedeemed int,
+	cogs float64,
 	orderItems []domain.OrderItem,
 ) error {
 	orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
 	finalTotal := subtotal + taxAmount - discountAmount
+	onCredit := req.PaymentMethod == "credit"
+	// A credit (unpaid) sale stays PENDING until paid; other methods complete now.
+	status := "COMPLETED"
+	if onCredit {
+		status = "PENDING"
+	}
 	order := domain.Order{
 		OrderNumber:    orderNumber,
 		UserID:         userID,
@@ -173,7 +185,7 @@ func (s *SalesService) createOrderAndTransaction(
 		Subtotal:       subtotal,
 		TaxAmount:      taxAmount,
 		TotalAmount:    finalTotal,
-		Status:         "COMPLETED",
+		Status:         status,
 		PaymentMethod:  req.PaymentMethod,
 		OrderDate:      time.Now(),
 		PointsRedeemed: pointsRedeemed,
@@ -196,12 +208,39 @@ func (s *SalesService) createOrderAndTransaction(
 		Amount:               int64(finalTotal * 100),
 		Currency:             "USD",
 		PaymentMethod:        req.PaymentMethod,
-		Status:               "COMPLETED",
+		Status:               status,
 		GatewayTransactionID: fmt.Sprintf("GW-%d", time.Now().UnixNano()),
 	}
 
 	if err := tx.Create(&saletransaction).Error; err != nil {
 		return fmt.Errorf("failed to record transaction: %w", err)
+	}
+
+	// Post the double-entry ledger entry for the sale (DR Cash/AR, CR Revenue,
+	// DR COGS, CR Inventory). This keeps income and cost mathematically balanced.
+	ledger := NewLedgerService(s.DB)
+	entry, err := ledger.PostSale(tx, &order, cogs, onCredit, userID)
+	if err != nil {
+		return fmt.Errorf("failed to post sale to ledger: %w", err)
+	}
+
+	// For an unpaid (credit) delivery, record the amount the customer owes.
+	if onCredit {
+		if req.CustomerID == nil {
+			return fmt.Errorf("credit sales require a customer")
+		}
+		ar := domain.AccountsReceivable{
+			CustomerID:     *req.CustomerID,
+			OrderID:        order.ID,
+			Amount:         decimal.NewFromFloat(finalTotal).Round(4),
+			PaidAmount:     decimal.Zero,
+			Status:         "UNPAID",
+			DueDate:        req.DueDate,
+			JournalEntryID: entry.ID,
+		}
+		if err := tx.Create(&ar).Error; err != nil {
+			return fmt.Errorf("failed to create accounts receivable: %w", err)
+		}
 	}
 
 	s.emitDiscountAuditIfSignificant(tx, orderNumber, userID, subtotal, discountAmount, totalDiscountFromPromotions)

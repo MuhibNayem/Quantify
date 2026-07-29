@@ -210,3 +210,81 @@ func (s *LedgerService) TrialBalance(from, to *time.Time) ([]TrialBalanceRow, er
 	}
 	return rows, nil
 }
+
+// IncomeStatement summarizes revenue and expenses for a period.
+type IncomeStatement struct {
+	Revenue   decimal.Decimal `json:"Revenue"`
+	COGS      decimal.Decimal `json:"COGS"`
+	GrossProfit decimal.Decimal `json:"GrossProfit"`
+	Expenses  decimal.Decimal `json:"Expenses"` // non-COGS expenses
+	NetIncome decimal.Decimal `json:"NetIncome"`
+}
+
+// IncomeStatement computes revenue, COGS, and net income for the period.
+func (s *LedgerService) IncomeStatement(from, to *time.Time) (*IncomeStatement, error) {
+	rows, err := s.TrialBalance(from, to)
+	if err != nil {
+		return nil, err
+	}
+	stmt := &IncomeStatement{}
+	cogs := decimal.Zero
+	expenses := decimal.Zero
+	for _, r := range rows {
+		switch r.Type {
+		case string(domain.AccountRevenue):
+			stmt.Revenue = stmt.Revenue.Add(r.Balance)
+		case string(domain.AccountExpense):
+			if r.Code == domain.AccountCodeCOGS {
+				cogs = cogs.Add(r.Balance)
+			} else {
+				expenses = expenses.Add(r.Balance)
+			}
+		}
+	}
+	stmt.COGS = cogs
+	stmt.Expenses = expenses
+	stmt.GrossProfit = stmt.Revenue.Sub(stmt.COGS)
+	stmt.NetIncome = stmt.GrossProfit.Sub(stmt.Expenses)
+	return stmt, nil
+}
+
+// BalanceSheet summarizes the accounting equation: Assets = Liabilities + Equity.
+type BalanceSheet struct {
+	Assets        decimal.Decimal `json:"Assets"`
+	Liabilities   decimal.Decimal `json:"Liabilities"`
+	Equity        decimal.Decimal `json:"Equity"`
+	RetainedEarnings decimal.Decimal `json:"RetainedEarnings"` // net income rolled into equity
+	TotalLiabilitiesAndEquity decimal.Decimal `json:"TotalLiabilitiesAndEquity"`
+	Balanced      bool            `json:"Balanced"`
+}
+
+// BalanceSheet computes assets, liabilities, and equity as of the period end.
+// Net income for the period is included in equity as retained earnings so the
+// equation Assets = Liabilities + Equity holds.
+func (s *LedgerService) BalanceSheet(from, to *time.Time) (*BalanceSheet, error) {
+	rows, err := s.TrialBalance(from, to)
+	if err != nil {
+		return nil, err
+	}
+	bs := &BalanceSheet{}
+	for _, r := range rows {
+		switch r.Type {
+		case string(domain.AccountAsset):
+			bs.Assets = bs.Assets.Add(r.Balance)
+		case string(domain.AccountLiability):
+			bs.Liabilities = bs.Liabilities.Add(r.Balance)
+		case string(domain.AccountEquity):
+			bs.Equity = bs.Equity.Add(r.Balance)
+		}
+	}
+	// Roll net income into equity (retained earnings) to balance the equation.
+	income, err := s.IncomeStatement(from, to)
+	if err != nil {
+		return nil, err
+	}
+	bs.RetainedEarnings = income.NetIncome
+	bs.Equity = bs.Equity.Add(income.NetIncome)
+	bs.TotalLiabilitiesAndEquity = bs.Liabilities.Add(bs.Equity)
+	bs.Balanced = bs.Assets.Equal(bs.TotalLiabilitiesAndEquity)
+	return bs, nil
+}

@@ -65,6 +65,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 
 	// Public routes (no tenant middleware)
 	readyHandler := handlers.NewReadyHandler(c.DB, c.Redis, c.AMQP, c.Uploader)
+	financeHandler := handlers.NewFinanceHandler(c.DB)
 
 	publicRoutes := r.Group("/")
 	{
@@ -272,6 +273,17 @@ func SetupRouter(c *app.Container) *gin.Engine {
 			reports.GET("/returns-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerReturnAnalysisReport)
 			reports.GET("/basket-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetBasketAnalysisReport)
 			reports.GET("/product-performance", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetProductPerformanceAnalytics)
+		}
+
+		// Finance — general ledger & accounts receivable
+		finance := api.Group("/finance")
+		{
+			finance.GET("/trial-balance", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetTrialBalance)
+			finance.GET("/income-statement", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetIncomeStatement)
+			finance.GET("/balance-sheet", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetBalanceSheet)
+			finance.GET("/ar-aging", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetARAging)
+			finance.GET("/receivables", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetOutstandingAR)
+			finance.POST("/payments", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.RecordPayment)
 		}
 
 		// Alerts
