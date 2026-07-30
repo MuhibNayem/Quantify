@@ -1,17 +1,14 @@
 package router
 
 import (
-	"inventory/backend/internal/app"
-	"inventory/backend/internal/handlers"
-	"inventory/backend/internal/middleware"
-	"net/http"
 	"time"
+
+	"inventory/backend/internal/app"
+	"inventory/backend/internal/middleware"
+	"inventory/backend/internal/router/groups"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	_ "inventory/backend/api"
@@ -31,420 +28,46 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	}
 
 	r.Use(middleware.RequestID())
-
 	r.Use(otelgin.Middleware("quantify-backend"))
-
 	r.Use(middleware.Metrics())
-
 	r.Use(cors.New(corsConfig))
-
 	r.Use(middleware.SecurityHeaders())
-
 	r.Use(middleware.ErrorHandler())
 
-	productHandler := c.Product
-	categoryHandler := c.Category
-	supplierHandler := c.Supplier
-	paymentHandler := c.PaymentHandler
-	replenishmentHandler := c.ReplenishmentHandler
-	barcodeHandler := c.BarcodeHandler
-	crmHandler := c.CRMHandler
-	timeTrackingHandler := c.TimeTrackingHandler
-	reportHandler := c.Report
-	bulkHandler := c.Bulk
-	notificationHandler := c.Notification
-	userHandler := c.User
-	searchHandler := c.SearchHandler
-	dashboardHandler := c.DashboardHandler
-	settingsHandler := c.SettingsHandler
-	roleHandler := c.RoleHandler
-	returnHandler := c.Return
-	promotionHandler := c.Promotion
-	salesHandler := c.SalesHandler
 	roleRepo := c.Roles
 
-	// Public routes (no tenant middleware)
-	readyHandler := handlers.NewReadyHandler(c.DB, c.Redis, c.AMQP, c.Uploader)
-	financeHandler := handlers.NewFinanceHandler(c.DB)
-	unitsHandler := handlers.NewUnitsHandler(c.DB)
-
-	publicRoutes := r.Group("/")
-	{
-		publicRoutes.GET("/health", handlers.HealthCheck)
-		publicRoutes.GET("/ready", readyHandler.Ready)
-	publicRoutes.GET("/ws", func(ctx *gin.Context) {
-		handlers.ServeWs(c.Hub, ctx, c.Notifications, roleRepo, c.Cfg)
-	})
-		publicRoutes.GET("/metrics", gin.WrapH(promhttp.Handler()))
-		// Swagger UI
-		publicRoutes.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-	}
-
-	// Webhook routes
-	webhookRoutes := r.Group("/webhooks")
-	{
-		webhookRoutes.POST("/:name", c.Integrations.HandleWebhook)
-	}
-
-	// Payment routes
-	paymentRoutes := r.Group("/payment")
-	{
-		paymentRoutes.POST("/create", paymentHandler.CreatePayment)
-		paymentRoutes.POST("/success", paymentHandler.PaymentSuccess)
-		paymentRoutes.POST("/fail", paymentHandler.PaymentFail)
-		paymentRoutes.POST("/cancel", paymentHandler.PaymentCancel)
-		paymentRoutes.POST("/ipn", paymentHandler.HandleSSLCommerzIPN) // Updated IPN handler
-	}
-
-	// Public API routes (no auth middleware)
-	publicAPI := r.Group("/api/v1")
-	{
-		userRoutes := publicAPI.Group("/users")
-		{
-			userRoutes.POST("/register", userHandler.RegisterUser)
-			userRoutes.POST("/login", userHandler.LoginUser)
-		}
-	}
+	groups.RegisterPublic(r, c, roleRepo)
 
 	api := r.Group("/api/v1")
-	{
-		// Auth middleware will be applied to all routes in this group
-		api.Use(middleware.AuthMiddleware())
-		api.Use(middleware.CSRFMiddleware())
+	api.Use(middleware.AuthMiddleware())
+	api.Use(middleware.CSRFMiddleware())
 
-		// Jobs (Manager/Admin)
-		jobs := api.Group("/jobs")
-		jobs.Use(middleware.AuthorizeMiddleware("Admin", "Manager"))
-		{
-			jobs.POST("/:jobId/cancel", reportHandler.CancelJob)
-		}
-
-		// Dashboard
-		api.GET("/dashboard/summary", middleware.RequirePermission(roleRepo, "dashboard.view"), dashboardHandler.GetDashboardSummary)
-
-		// Products
-		products := api.Group("/products")
-		{
-			products.POST("", middleware.RequirePermission(roleRepo, "products.write"), productHandler.CreateProduct)
-			products.GET("", middleware.RequirePermission(roleRepo, "products.read"), productHandler.ListProducts)
-			products.GET("/:productId", middleware.RequirePermission(roleRepo, "products.read"), productHandler.GetProduct)
-			products.GET("/sku/:sku", middleware.RequirePermission(roleRepo, "products.read"), productHandler.GetProductBySKU)
-			products.GET("/barcode/:barcode", middleware.RequirePermission(roleRepo, "products.read"), productHandler.GetProductByBarcode)
-			products.PUT("/:productId", middleware.RequirePermission(roleRepo, "products.write"), productHandler.UpdateProduct)
-			products.DELETE("/:productId", middleware.RequirePermission(roleRepo, "products.delete"), productHandler.DeleteProduct)
-			products.GET("/:productId/stock", middleware.RequirePermission(roleRepo, "products.read"), handlers.GetProductStock)
-			products.POST("/:productId/stock/batches", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateBatch)
-			products.POST("/:productId/stock/adjustments", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateStockAdjustment)
-			products.GET("/:productId/history", middleware.RequirePermission(roleRepo, "products.read"), handlers.ListStockHistory)
-			// Per-product selling units (unit-of-measure)
-			products.GET("/:productId/units", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListProductUnits)
-			products.POST("/:productId/units", middleware.RequirePermission(roleRepo, "products.write"), unitsHandler.SaveProductUnit)
-			products.DELETE("/:productId/units/:unitId", middleware.RequirePermission(roleRepo, "products.write"), unitsHandler.DeleteProductUnit)
-		}
-
-		// Units of measure catalog
-		units := api.Group("/units")
-		{
-			units.GET("", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListUnits)
-			units.GET("/dimensions", middleware.RequirePermission(roleRepo, "products.read"), unitsHandler.ListDimensions)
-		}
-
-		// Promotions
-		promotions := api.Group("/promotions")
-		{
-			promotions.POST("", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.CreatePromotion)
-			promotions.GET("", middleware.RequirePermission(roleRepo, "products.read"), promotionHandler.ListPromotions)
-			promotions.PUT("/:id", middleware.RequirePermission(roleRepo, "products.write"), promotionHandler.UpdatePromotion)
-			promotions.DELETE("/:id", middleware.RequirePermission(roleRepo, "products.delete"), promotionHandler.DeletePromotion)
-		}
-
-		// Categories
-		categories := api.Group("/categories")
-		{
-			categories.POST("", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.CreateCategory)
-			categories.GET("", middleware.RequirePermission(roleRepo, "categories.read"), categoryHandler.ListCategories)
-			categories.GET("/:categoryId", middleware.RequirePermission(roleRepo, "categories.read"), categoryHandler.GetCategory)
-			categories.GET("/name/:name", middleware.RequirePermission(roleRepo, "categories.read"), categoryHandler.GetCategoryByName)
-			categories.PUT("/:categoryId", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.UpdateCategory)
-			categories.DELETE("/:categoryId", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.DeleteCategory)
-			categories.POST("/:categoryId/sub-categories", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.CreateSubCategory)
-			categories.GET("/:categoryId/sub-categories", middleware.RequirePermission(roleRepo, "categories.read"), categoryHandler.ListSubCategories)
-		}
-
-		// Sub-categories
-		subCategories := api.Group("/sub-categories")
-		{
-			subCategories.PUT("/:id", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.UpdateSubCategory)
-			subCategories.DELETE("/:id", middleware.RequirePermission(roleRepo, "categories.write"), categoryHandler.DeleteSubCategory)
-		}
-
-		// Suppliers
-		suppliers := api.Group("/suppliers")
-		{
-			suppliers.POST("", middleware.RequirePermission(roleRepo, "suppliers.write"), supplierHandler.CreateSupplier)
-			suppliers.GET("", middleware.RequirePermission(roleRepo, "suppliers.read"), supplierHandler.ListSuppliers)
-			suppliers.GET("/:id", middleware.RequirePermission(roleRepo, "suppliers.read"), supplierHandler.GetSupplier)
-			suppliers.GET("/name/:name", middleware.RequirePermission(roleRepo, "suppliers.read"), supplierHandler.GetSupplierByName)
-			suppliers.PUT("/:id", middleware.RequirePermission(roleRepo, "suppliers.write"), supplierHandler.UpdateSupplier)
-			suppliers.DELETE("/:id", middleware.RequirePermission(roleRepo, "suppliers.write"), supplierHandler.DeleteSupplier)
-			suppliers.GET("/:id/performance", middleware.RequirePermission(roleRepo, "reports.financial"), supplierHandler.GetSupplierPerformanceReport)
-		}
-
-		// Locations
-		locations := api.Group("/locations")
-		{
-			locations.POST("", middleware.RequirePermission(roleRepo, "locations.write"), handlers.CreateLocation)
-			locations.GET("", middleware.RequirePermission(roleRepo, "locations.read"), handlers.ListLocations)
-			locations.GET("/:id", middleware.RequirePermission(roleRepo, "locations.read"), handlers.GetLocation)
-			locations.PUT("/:id", middleware.RequirePermission(roleRepo, "locations.write"), handlers.UpdateLocation)
-			locations.DELETE("/:id", middleware.RequirePermission(roleRepo, "locations.write"), handlers.DeleteLocation)
-		}
-
-		// Barcode
-		barcode := api.Group("/barcode")
-		{
-			barcode.GET("/lookup", middleware.RequirePermission(roleRepo, "barcode.read"), barcodeHandler.LookupProductByBarcode)
-			barcode.GET("/generate", middleware.RequirePermission(roleRepo, "barcode.read"), barcodeHandler.GenerateBarcode)
-		}
-
-		// Replenishment
-		replenishment := api.Group("/replenishment")
-		{
-			replenishment.POST("/forecast/generate", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.GenerateDemandForecast)
-			replenishment.GET("/forecast/:forecastId", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetDemandForecast)
-			replenishment.GET("/dashboard", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetForecastDashboard)
-			replenishment.POST("/suggestions/generate", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.GenerateReorderSuggestions)
-			replenishment.GET("/suggestions", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListReorderSuggestions)
-			replenishment.POST("/suggestions/:suggestionId/create-po", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePOFromSuggestion)
-			replenishment.POST("/purchase-orders/:poId/approve", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.ApprovePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/send", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.SendPurchaseOrder)
-			replenishment.GET("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetPurchaseOrder)
-			replenishment.PUT("/purchase-orders/:poId", middleware.RequirePermission(roleRepo, "inventory.write"), replenishmentHandler.UpdatePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/receive", middleware.RequirePermission(roleRepo, "inventory.write"), replenishmentHandler.ReceivePurchaseOrder)
-			replenishment.POST("/purchase-orders/:poId/cancel", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CancelPurchaseOrder)
-			replenishment.POST("/purchase-orders", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePurchaseOrder)
-			replenishment.GET("/purchase-orders", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseOrders)
-			replenishment.POST("/returns", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CreatePurchaseReturn)
-			replenishment.GET("/returns", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.ListPurchaseReturns)
-			replenishment.GET("/returns/:id", middleware.RequirePermission(roleRepo, "replenishment.read"), replenishmentHandler.GetPurchaseReturn)
-			replenishment.POST("/returns/:id/approve", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.ApprovePurchaseReturn)
-			replenishment.POST("/returns/:id/complete", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CompletePurchaseReturn)
-			replenishment.POST("/returns/:id/cancel", middleware.RequirePermission(roleRepo, "replenishment.write"), replenishmentHandler.CancelPurchaseReturn)
-		}
-
-		// Sales
-		sales := api.Group("/sales")
-		{
-			// Initialize SalesService here or pass it from SetupRouter arguments?
-			// Ideally SetupRouter should take SalesService as argument or initialize it.
-			// But SetupRouter initializes services itself.
-			// Let's create SalesService in SetupRouter and pass it here.
-			// Wait, I need to update SetupRouter signature or initialize it inside.
-			// See below for SetupRouter update.
-			sales.POST("/checkout", middleware.RequirePermission(roleRepo, "pos.access"), salesHandler.Checkout)
-			sales.GET("/products", middleware.RequirePermission(roleRepo, "pos.access"), salesHandler.ListProducts)
-			sales.GET("/orders", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.ListOrders)
-			sales.GET("/orders/:orderNumber", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.GetOrderByNumber)
-			sales.GET("/history", middleware.RequirePermission(roleRepo, "pos.view"), salesHandler.ListAllOrders)
-		}
-
-		// Returns
-		returns := api.Group("/returns")
-		{
-			returns.POST("/request", middleware.RequirePermission(roleRepo, "returns.request"), returnHandler.RequestReturn)
-			returns.POST("/:id/process", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ProcessReturn)
-			returns.GET("", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.ListReturns)
-			returns.GET("/:id", middleware.RequirePermission(roleRepo, "returns.manage"), returnHandler.GetReturn)
-		}
-
-		// Reports
-		reports := api.Group("/reports")
-		{
-			reports.POST("/sales-trends", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetSalesTrendsReport)
-			reports.POST("/sales-trends/export", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.ExportSalesTrendsReport)
-			reports.GET("/jobs/:jobId", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetReportJobStatus)
-			reports.GET("/download/:jobId", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.DownloadReportFile)
-			reports.POST("/inventory-turnover", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetInventoryTurnoverReport)
-			reports.POST("/profit-margin", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetProfitMarginReport)
-
-			// New Real-Time Reports
-			reports.GET("/stock-aging", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetStockAgingReport)
-			reports.GET("/dead-stock", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetDeadStockReport)
-			reports.GET("/supplier-performance", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetSupplierPerformanceReport)
-			reports.GET("/heatmap", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetHourlySalesHeatmap)
-			reports.GET("/employee-sales", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetSalesByEmployeeReport)
-			reports.GET("/category-drilldown", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCategoryDrillDownReport)
-			reports.GET("/gmroi", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetCOGSAndGMROIReport)
-			reports.GET("/audit/voids", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetVoidDiscountAuditReport)
-			reports.GET("/tax-liability", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetTaxLiabilityReport)
-			reports.GET("/cash-reconciliation", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.GetCashDrawerReconciliationReport)
-
-			// Additional Business Intelligence Reports
-			reports.GET("/customer-insights", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerInsightsReport)
-			reports.GET("/shrinkage", middleware.RequirePermission(roleRepo, "reports.inventory"), reportHandler.GetShrinkageReport)
-			reports.GET("/returns-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetCustomerReturnAnalysisReport)
-			reports.GET("/basket-analysis", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetBasketAnalysisReport)
-			reports.GET("/product-performance", middleware.RequirePermission(roleRepo, "reports.sales"), reportHandler.GetProductPerformanceAnalytics)
-		}
-
-		// Finance — general ledger & accounts receivable
-		finance := api.Group("/finance")
-		{
-			finance.GET("/trial-balance", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetTrialBalance)
-			finance.GET("/income-statement", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetIncomeStatement)
-			finance.GET("/balance-sheet", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetBalanceSheet)
-			finance.GET("/ar-aging", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetARAging)
-			finance.GET("/receivables", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetOutstandingAR)
-			finance.POST("/payments", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.RecordPayment)
-			finance.GET("/ap-aging", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetAPAging)
-			finance.GET("/payables", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetOutstandingAP)
-			finance.POST("/supplier-payments", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.RecordSupplierPayment)
-		}
-
-		// Alerts
-		alerts := api.Group("/alerts")
-		{
-			alerts.GET("", middleware.RequirePermission(roleRepo, "alerts.view"), handlers.ListAlerts)
-			alerts.GET("/:alertId", middleware.RequirePermission(roleRepo, "alerts.view"), handlers.GetAlert)
-			alerts.PATCH("/:alertId/resolve", middleware.RequirePermission(roleRepo, "alerts.manage"), handlers.ResolveAlert)
-			alerts.PUT("/products/:productId/settings", middleware.RequirePermission(roleRepo, "alerts.manage"), handlers.PutProductAlertSettings)
-			alerts.PUT("/users/:userId/notification-settings", middleware.RequirePermission(roleRepo, "settings.manage"), handlers.PutUserNotificationSettings)
-			alerts.POST("/check", func(c *gin.Context) {
-				handlers.CheckAndTriggerAlerts()
-				c.JSON(http.StatusOK, gin.H{"message": "Alert check triggered"})
-			})
-			// Subscriptions - Admin Only
-			subscriptions := alerts.Group("/subscriptions")
-			subscriptions.Use(middleware.AdminOnly())
-			{
-				subscriptions.POST("", handlers.CreateAlertRoleSubscription)
-				subscriptions.GET("", handlers.ListAlertRoleSubscriptions)
-				subscriptions.DELETE("/:id", handlers.DeleteAlertRoleSubscription)
-			}
-		}
-
-		// Bulk Operations
-		bulk := api.Group("/bulk")
-		{
-			bulk.GET("/products/template", middleware.RequirePermission(roleRepo, "bulk.import"), bulkHandler.GetProductImportTemplate)
-			bulk.POST("/products/import", middleware.RequirePermission(roleRepo, "bulk.import"), bulkHandler.UploadProductImport)
-			bulk.GET("/products/import/:jobId/status", middleware.RequirePermission(roleRepo, "bulk.import"), bulkHandler.GetBulkImportStatus)
-			bulk.POST("/products/import/:jobId/confirm", middleware.RequirePermission(roleRepo, "bulk.import"), bulkHandler.ConfirmBulkImport)
-			bulk.GET("/products/export", middleware.RequirePermission(roleRepo, "bulk.export"), bulkHandler.ExportProducts)
-			bulk.GET("/jobs", middleware.RequirePermission(roleRepo, "bulk.import"), bulkHandler.ListBulkJobs)
-			bulk.GET("/files/:bucket/:object", middleware.RequirePermission(roleRepo, "bulk.export"), bulkHandler.DownloadFile)
-		}
-
-		// Inventory (Transfers)
-		inventory := api.Group("/inventory")
-		{
-			inventory.POST("/transfers", middleware.RequirePermission(roleRepo, "products.write"), handlers.CreateStockTransfer)
-		}
-
-		// Users - Protected mainly by users.manage
-		users := api.Group("/users")
-		{
-			users.GET("", middleware.RequirePermission(roleRepo, "users.view"), userHandler.ListUsers)
-			users.POST("/refresh-token", userHandler.RefreshToken)
-			users.POST("/logout", userHandler.LogoutUser)
-			users.GET("/:id", userHandler.GetUser) // Might need self-access check
-			users.PUT("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.UpdateUser)
-			users.DELETE("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.DeleteUser)
-			users.PUT("/:id/approve", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.ApproveUser)
-
-			// Notification routes (Self access usually, but now permission enforced)
-			notifications := users.Group("/:id/notifications")
-			{
-				notifications.GET("", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.ListNotifications)
-				notifications.GET("/unread/count", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.GetUnreadNotificationCount)
-				notifications.PATCH("/:notificationId/read", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkNotificationAsRead)
-				notifications.PATCH("/read-all", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.MarkAllNotificationsAsRead)
-				notifications.PUT("/subscriptions/:type", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.UpdateSubscription)
-				notifications.GET("/subscriptions", middleware.RequirePermission(roleRepo, "notifications.read"), notificationHandler.ListSubscriptions)
-			}
-		}
-
-		// Notifications (System/Broadcast)
-		notifications := api.Group("/notifications")
-		{
-			notifications.POST("/broadcast", middleware.RequirePermission(roleRepo, "notifications.write"), notificationHandler.BroadcastNotification)
-		}
-
-		// CRM
-		crm := api.Group("/crm")
-		{
-			crm.GET("/customers", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.ListCustomers)
-			crm.POST("/customers", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.CreateCustomer)
-			crm.GET("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomer)
-			crm.GET("/customers/username/:username", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByUsername)
-			crm.GET("/customers/email/:email", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByEmail)
-			crm.GET("/customers/phone/:phone", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetCustomerByPhone)
-			crm.PUT("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.UpdateCustomer)
-			crm.DELETE("/customers/:identifier", middleware.RequirePermission(roleRepo, "customers.write"), crmHandler.DeleteCustomer)
-			crm.GET("/loyalty/:userId", middleware.RequirePermission(roleRepo, "loyalty.read"), crmHandler.GetLoyaltyAccount)
-			crm.POST("/loyalty/:userId/points", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.AddLoyaltyPoints)
-			crm.POST("/loyalty/:userId/redeem", middleware.RequirePermission(roleRepo, "loyalty.write"), crmHandler.RedeemLoyaltyPoints)
-			crm.GET("/customers/:identifier/churn-risk", middleware.RequirePermission(roleRepo, "customers.read"), crmHandler.GetChurnRisk)
-		}
-
-		// Time Tracking (Basic access for all staff)
-		timeTracking := api.Group("/time-tracking")
-		{
-			// All logged in users can clock in? Or need permission?
-			// Let's assume basic staff role has access, or implicit if authenticated.
-			// But for strict RBAC, let's use a generic permission or keep basic auth?
-			// The previous code had AuthorizeMiddleware("Admin", "Manager", "Staff").
-			// I'll add "timeclock.use" or just allow all authenticated for now?
-			// No, let's use "pos.access" or create "timeclock.use"?
-			// I didn't seed "timeclock.use".
-			// I'll use "pos.access" for now as it implies staff presence, OR create seeded permission?
-			// Creating new seed is safer.
-			// For now, I'll rely on roleRepo check (if user has role). "Staff" role has it.
-			// If I use "pos.access", manager has it.
-			// I'll stick to NO specific permission for time tracking self-actions, just Auth.
-			// But wait, "GetTeamOverview" needs Manager access.
-			timeTracking.POST("/clock-in/:userId", timeTrackingHandler.ClockIn)
-			timeTracking.POST("/clock-out/:userId", timeTrackingHandler.ClockOut)
-			timeTracking.POST("/break-start/:userId", timeTrackingHandler.StartBreak)
-			timeTracking.POST("/break-end/:userId", timeTrackingHandler.EndBreak)
-			timeTracking.GET("/last-entry/:userId", timeTrackingHandler.GetLastTimeClock)
-			timeTracking.GET("/history/:userId", timeTrackingHandler.GetHistory)
-			timeTracking.GET("/activities", timeTrackingHandler.GetRecentActivities)
-			timeTracking.GET("/weekly-summary/:userId", timeTrackingHandler.GetWeeklySummary)
-			// Manager/Admin only
-			timeTracking.GET("/team-status", middleware.RequirePermission(roleRepo, "users.manage"), timeTrackingHandler.GetTeamStatus)
-			timeTracking.GET("/team-overview", middleware.RequirePermission(roleRepo, "users.manage"), timeTrackingHandler.GetTeamOverview)
-		}
-
-		// Audit Logs
-		api.GET("/audit-logs", middleware.RequirePermission(roleRepo, "reports.financial"), reportHandler.ListAuditLogs)
-
-		// Global Search
-		api.GET("/search", searchHandler.Search) // Open search? Or inventory.read? Let's keep open for authenticated.
-
-		// Settings
-		settings := api.Group("/settings")
-		{
-			settings.GET("", middleware.RequirePermission(roleRepo, "settings.view"), settingsHandler.GetSettings)
-			settings.GET("/configurations", settingsHandler.GetPublicConfigurations) // Authenticated, no specific permission needed
-			settings.PUT("", middleware.RequirePermission(roleRepo, "settings.manage"), settingsHandler.UpdateSetting)
-		}
-
-		// Roles
-		roles := api.Group("/roles")
-		{
-			roles.GET("", middleware.RequirePermission(roleRepo, "roles.view"), roleHandler.ListRoles)
-			roles.POST("", middleware.RequirePermission(roleRepo, "roles.manage"), roleHandler.CreateRole)
-			roles.PUT("/:id", middleware.RequirePermission(roleRepo, "roles.manage"), roleHandler.UpdateRole)
-			roles.DELETE("/:id", middleware.RequirePermission(roleRepo, "roles.manage"), roleHandler.DeleteRole)
-			roles.PUT("/:id/permissions", middleware.RequirePermission(roleRepo, "roles.manage"), roleHandler.UpdateRolePermissions)
-		}
-
-		permissions := api.Group("/permissions")
-		{
-			permissions.GET("", middleware.RequirePermission(roleRepo, "roles.view"), roleHandler.ListPermissions)
-		}
-	}
+	groups.RegisterJobs(api, c, roleRepo)
+	groups.RegisterDashboard(api, c, roleRepo)
+	groups.RegisterProducts(api, c, roleRepo)
+	groups.RegisterUnits(api, c, roleRepo)
+	groups.RegisterPromotions(api, c, roleRepo)
+	groups.RegisterCategories(api, c, roleRepo)
+	groups.RegisterSubCategories(api, c, roleRepo)
+	groups.RegisterSuppliers(api, c, roleRepo)
+	groups.RegisterLocations(api, c, roleRepo)
+	groups.RegisterBarcode(api, c, roleRepo)
+	groups.RegisterReplenishment(api, c, roleRepo)
+	groups.RegisterSales(api, c, roleRepo)
+	groups.RegisterReturns(api, c, roleRepo)
+	groups.RegisterReports(api, c, roleRepo)
+	groups.RegisterFinance(api, c, roleRepo)
+	groups.RegisterAlerts(api, c, roleRepo)
+	groups.RegisterBulk(api, c, roleRepo)
+	groups.RegisterInventory(api, c, roleRepo)
+	groups.RegisterUsers(api, c, roleRepo)
+	groups.RegisterNotifications(api, c, roleRepo)
+	groups.RegisterCRM(api, c, roleRepo)
+	groups.RegisterTimeTracking(api, c, roleRepo)
+	groups.RegisterSearch(api, c)
+	groups.RegisterSettings(api, c, roleRepo)
+	groups.RegisterRoles(api, c, roleRepo)
+	groups.RegisterPermissions(api, c, roleRepo)
 
 	return r
 }
