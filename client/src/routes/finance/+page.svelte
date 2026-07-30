@@ -30,6 +30,7 @@
 		Wallet,
 		Truck
 	} from 'lucide-svelte';
+	import { BarChart, Tooltip } from 'layerchart';
 	import type {
 		AccountsReceivable,
 		ARAgingBucket,
@@ -57,6 +58,12 @@
 		info: 'border-l-info',
 		warning: 'border-l-warning',
 		danger: 'border-l-danger'
+	};
+	const toneColor: Record<Tone, string> = {
+		success: 'hsl(var(--success))',
+		info: 'hsl(var(--info))',
+		warning: 'hsl(var(--warning))',
+		danger: 'hsl(var(--danger))'
 	};
 	const statusBadge: Record<string, string> = {
 		UNPAID: 'badge-danger',
@@ -223,6 +230,63 @@
 	);
 	const netPositive = $derived(!!income && num(income.NetIncome) >= 0);
 
+	type AgingPoint = { label: string; amount: number; count: number; unit: string; color: string };
+	function toAging(
+		rows: { Label: string; Amount: string; Count: number }[],
+		unit: string
+	): AgingPoint[] {
+		return rows.map((b, i) => ({
+			label: b.Label,
+			amount: num(b.Amount),
+			count: b.Count,
+			unit,
+			color: toneColor[bucketTone(b.Label, i)]
+		}));
+	}
+
+	const arAgingData = $derived(toAging(buckets, 'invoice'));
+	const arAgingPeak = $derived(Math.max(...arAgingData.map((d) => d.amount), 1));
+	const arAgingDomain = $derived(arAgingData.map((d) => d.label));
+	const arAgingRange = $derived(arAgingData.map((d) => d.color));
+	const apAgingData = $derived(toAging(apBuckets, 'bill'));
+	const apAgingPeak = $derived(Math.max(...apAgingData.map((d) => d.amount), 1));
+	const apAgingDomain = $derived(apAgingData.map((d) => d.label));
+	const apAgingRange = $derived(apAgingData.map((d) => d.color));
+
+	const sheetChartData = $derived.by(() => {
+		if (!sheet) return [] as { key: string; value: number; color: string }[];
+		return [
+			{ key: 'Assets', value: num(sheet.Assets), color: 'hsl(var(--primary))' },
+			{
+				key: 'Liabilities & Equity',
+				value: num(sheet.TotalLiabilitiesAndEquity),
+				color: 'hsl(var(--info))'
+			}
+		];
+	});
+	const sheetPeak = $derived(Math.max(...sheetChartData.map((d) => d.value), 1));
+	const sheetDomain = $derived(sheetChartData.map((d) => d.key));
+	const sheetRange = $derived(sheetChartData.map((d) => d.color));
+
+	const incomeChartData = $derived.by(() => {
+		if (!income) return [] as { key: string; value: number; color: string }[];
+		const ni = num(income.NetIncome);
+		return [
+			{ key: 'Revenue', value: num(income.Revenue), color: 'hsl(var(--primary))' },
+			{ key: 'COGS', value: num(income.COGS), color: 'hsl(var(--warning))' },
+			{ key: 'Gross Profit', value: num(income.GrossProfit), color: 'hsl(var(--success))' },
+			{ key: 'Expenses', value: num(income.Expenses), color: 'hsl(var(--danger))' },
+			{
+				key: 'Net Income',
+				value: ni,
+				color: ni >= 0 ? 'hsl(var(--success))' : 'hsl(var(--danger))'
+			}
+		];
+	});
+	const incomePeak = $derived(Math.max(...incomeChartData.map((d) => d.value), 1));
+	const incomeDomain = $derived(incomeChartData.map((d) => d.key));
+	const incomeRange = $derived(incomeChartData.map((d) => d.color));
+
 	const periodLabel = $derived(
 		from || to
 			? `${from ? formatDate(from) : 'Beginning'} — ${to ? formatDate(to) : 'Today'}`
@@ -365,9 +429,7 @@
 				amount,
 				method: spMethod,
 				notes: spNotes.trim() || undefined,
-				allocations: spTarget
-					? [{ AccountsPayableID: spTarget.ID, Amount: amount }]
-					: undefined
+				allocations: spTarget ? [{ AccountsPayableID: spTarget.ID, Amount: amount }] : undefined
 			});
 			toast.success('Supplier payment recorded', {
 				description: `${money(amount)} paid via ${methodLabel(spMethod)}`
@@ -386,6 +448,51 @@
 		return err?.response?.data?.error || err?.message || 'Unknown error';
 	}
 </script>
+
+{#snippet agingTip({ context }: { context: any })}
+	<Tooltip.Root
+		{context}
+		x="data"
+		y="pointer"
+		anchor="top"
+		yOffset={-12}
+		variant="none"
+		class="ledger-tip"
+	>
+		{#snippet children({ data })}
+			<p class="ledger-tip-label">
+				<span class="mr-1.5 inline-block h-2 w-2 rounded-full" style="background:{data.color}"
+				></span>
+				{data.label}
+			</p>
+			<p class="ledger-tip-value num-mono">
+				{money(data.amount)}
+				<span>{data.count} {data.unit}{data.count === 1 ? '' : 's'}</span>
+			</p>
+		{/snippet}
+	</Tooltip.Root>
+{/snippet}
+
+{#snippet stmtTip({ context }: { context: any })}
+	<Tooltip.Root
+		{context}
+		x="data"
+		y="pointer"
+		anchor="top"
+		yOffset={-12}
+		variant="none"
+		class="ledger-tip"
+	>
+		{#snippet children({ data })}
+			<p class="ledger-tip-label">
+				<span class="mr-1.5 inline-block h-2 w-2 rounded-full" style="background:{data.color}"
+				></span>
+				{data.key}
+			</p>
+			<p class="ledger-tip-value num-mono">{money(data.value)}</p>
+		{/snippet}
+	</Tooltip.Root>
+{/snippet}
 
 <div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
@@ -437,6 +544,39 @@
 						{/each}
 					</div>
 				{:else if buckets.length > 0}
+					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
+						<div class="border-border flex items-center justify-between border-b p-4">
+							<div>
+								<p class="overline">Aging Overview</p>
+								<p class="text-muted-foreground mt-0.5 text-sm">
+									Outstanding receivables by age bucket
+								</p>
+							</div>
+						</div>
+						<div class="px-4 pt-5 pb-4">
+							<BarChart
+								data={arAgingData}
+								x="label"
+								y="amount"
+								c="label"
+								cDomain={arAgingDomain}
+								cRange={arAgingRange}
+								yDomain={[0, arAgingPeak * 1.12]}
+								padding={{ top: 16, right: 8, bottom: 4, left: 8 }}
+								axis="x"
+								grid={{ y: { stroke: 'hsl(var(--border))', dashArray: '2 4' } }}
+								tooltip={agingTip}
+								props={{
+									xAxis: {
+										tickMarks: false,
+										tickLabelProps: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
+									}
+								}}
+								class="h-52 w-full"
+							/>
+						</div>
+					</div>
+
 					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-animate="fade-up">
 						{#each buckets as b, i (b.Label)}
 							{@const tone = bucketTone(b.Label, i)}
@@ -633,6 +773,39 @@
 						{/each}
 					</div>
 				{:else if apBuckets.length > 0}
+					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
+						<div class="border-border flex items-center justify-between border-b p-4">
+							<div>
+								<p class="overline">Aging Overview</p>
+								<p class="text-muted-foreground mt-0.5 text-sm">
+									Outstanding payables by age bucket
+								</p>
+							</div>
+						</div>
+						<div class="px-4 pt-5 pb-4">
+							<BarChart
+								data={apAgingData}
+								x="label"
+								y="amount"
+								c="label"
+								cDomain={apAgingDomain}
+								cRange={apAgingRange}
+								yDomain={[0, apAgingPeak * 1.12]}
+								padding={{ top: 16, right: 8, bottom: 4, left: 8 }}
+								axis="x"
+								grid={{ y: { stroke: 'hsl(var(--border))', dashArray: '2 4' } }}
+								tooltip={agingTip}
+								props={{
+									xAxis: {
+										tickMarks: false,
+										tickLabelProps: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
+									}
+								}}
+								class="h-52 w-full"
+							/>
+						</div>
+					</div>
+
 					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-animate="fade-up">
 						{#each apBuckets as b, i (b.Label)}
 							{@const tone = bucketTone(b.Label, i)}
@@ -885,6 +1058,28 @@
 											<p class="text-muted-foreground mt-1 text-sm">{periodLabel}</p>
 										</div>
 									</div>
+									<div class="border-border border-b px-5 pt-5 pb-4">
+										<BarChart
+											data={incomeChartData}
+											x="key"
+											y="value"
+											c="key"
+											cDomain={incomeDomain}
+											cRange={incomeRange}
+											yDomain={[0, incomePeak * 1.12]}
+											padding={{ top: 16, right: 8, bottom: 4, left: 8 }}
+											axis="x"
+											grid={{ y: { stroke: 'hsl(var(--border))', dashArray: '2 4' } }}
+											tooltip={stmtTip}
+											props={{
+												xAxis: {
+													tickMarks: false,
+													tickLabelProps: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
+												}
+											}}
+											class="h-56 w-full"
+										/>
+									</div>
 									<div class="mx-auto max-w-2xl px-6 py-6">
 										<dl>
 											<div class="flex items-baseline justify-between py-2">
@@ -975,6 +1170,36 @@
 												Out of balance
 											</span>
 										{/if}
+									</div>
+
+									<div class="border-border border-b px-5 pt-5 pb-4">
+										<div class="mx-auto max-w-md">
+											<BarChart
+												data={sheetChartData}
+												x="key"
+												y="value"
+												c="key"
+												cDomain={sheetDomain}
+												cRange={sheetRange}
+												yDomain={[0, sheetPeak * 1.12]}
+												padding={{ top: 16, right: 8, bottom: 4, left: 8 }}
+												axis="x"
+												grid={{ y: { stroke: 'hsl(var(--border))', dashArray: '2 4' } }}
+												tooltip={stmtTip}
+												props={{
+													xAxis: {
+														tickMarks: false,
+														tickLabelProps: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
+													}
+												}}
+												class="h-48 w-full"
+											/>
+										</div>
+										<p class="text-muted-foreground mt-2 text-center text-xs">
+											{sheet.Balanced
+												? 'Assets equal liabilities plus equity — the ledger balances.'
+												: 'Assets do not equal liabilities plus equity — review postings.'}
+										</p>
 									</div>
 
 									<div class="bg-border grid gap-px md:grid-cols-2">
@@ -1332,8 +1557,7 @@
 		</div>
 
 		<Dialog.Footer>
-			<Button variant="outline" class={btnSecondary} onclick={() => (spOpen = false)}
-				>Cancel</Button
+			<Button variant="outline" class={btnSecondary} onclick={() => (spOpen = false)}>Cancel</Button
 			>
 			<Button
 				onclick={submitSupplierPayment}
@@ -1350,3 +1574,35 @@
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<style>
+	:global(.ledger-tip) {
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--border));
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-md);
+		padding: 0.5rem 0.625rem;
+		min-width: 6.5rem;
+	}
+	:global(.ledger-tip .ledger-tip-label) {
+		display: flex;
+		align-items: center;
+		font-size: 0.6875rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: hsl(var(--muted-foreground));
+	}
+	:global(.ledger-tip .ledger-tip-value) {
+		margin-top: 0.125rem;
+		font-size: 0.9375rem;
+		font-weight: 600;
+		color: hsl(var(--foreground));
+	}
+	:global(.ledger-tip .ledger-tip-value span) {
+		margin-left: 0.25rem;
+		font-size: 0.6875rem;
+		font-weight: 500;
+		color: hsl(var(--muted-foreground));
+	}
+</style>
