@@ -3,4 +3,4 @@
 -- what was sold and how much base stock was deducted.
 
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_id bigint;
-ALTER TABLE order_items ADD COLUMN IF NOT EXISTS base_quantity numeric(14,4) DEFAULT 0;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS base_quantity numeric(14,4);
