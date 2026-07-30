@@ -14,6 +14,10 @@ export interface SystemSettings {
     loyalty_tier_silver: number;
     loyalty_tier_gold: number;
     loyalty_tier_platinum: number;
+    manual_discount_enabled: string;
+    manual_discount_max_percent: string;
+    manual_discount_max_amount: string;
+    manual_discount_require_reason: string;
 }
 
 const defaultSettings: SystemSettings = {
@@ -28,7 +32,11 @@ const defaultSettings: SystemSettings = {
     loyalty_points_redemption_rate: 0.01,
     loyalty_tier_silver: 500,
     loyalty_tier_gold: 2500,
-    loyalty_tier_platinum: 10000
+    loyalty_tier_platinum: 10000,
+    manual_discount_enabled: 'false',
+    manual_discount_max_percent: '10',
+    manual_discount_max_amount: '0',
+    manual_discount_require_reason: 'true'
 };
 
 function createSettingsStore() {
@@ -55,7 +63,11 @@ function createSettingsStore() {
                     loyalty_points_redemption_rate: parseFloat(data.loyalty_points_redemption_rate) || defaultSettings.loyalty_points_redemption_rate,
                     loyalty_tier_silver: parseFloat(data.loyalty_tier_silver) || defaultSettings.loyalty_tier_silver,
                     loyalty_tier_gold: parseFloat(data.loyalty_tier_gold) || defaultSettings.loyalty_tier_gold,
-                    loyalty_tier_platinum: parseFloat(data.loyalty_tier_platinum) || defaultSettings.loyalty_tier_platinum
+                    loyalty_tier_platinum: parseFloat(data.loyalty_tier_platinum) || defaultSettings.loyalty_tier_platinum,
+                    manual_discount_enabled: data.manual_discount_enabled ?? defaultSettings.manual_discount_enabled,
+                    manual_discount_max_percent: data.manual_discount_max_percent ?? defaultSettings.manual_discount_max_percent,
+                    manual_discount_max_amount: data.manual_discount_max_amount ?? defaultSettings.manual_discount_max_amount,
+                    manual_discount_require_reason: data.manual_discount_require_reason ?? defaultSettings.manual_discount_require_reason
                 };
 
                 set(newSettings);

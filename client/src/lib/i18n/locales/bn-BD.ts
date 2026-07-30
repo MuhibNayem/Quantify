@@ -1070,10 +1070,28 @@ export default {
             points: 'পয়েন্ট',
             error_exceed: 'উপলব্ধ ব্যালেন্স অতিক্রম করতে পারে না।'
         },
+        discount: {
+            title: 'ম্যানুয়াল ছাড়',
+            description: 'এই বিক্রয়ে একটি অনুমোদিত মূল্য ছাড় প্রয়োগ করুন।',
+            type_percent: 'শতাংশ',
+            type_fixed: 'নির্দিষ্ট পরিমাণ',
+            value_label: 'ছাড়ের মান',
+            max_percent_hint: 'সর্বোচ্চ {max}%',
+            max_amount_hint: 'সর্বোচ্চ {max}',
+            no_cap_hint: 'কোনো সীমা নেই',
+            reason_label: 'কারণ',
+            reason_placeholder: 'যেমন: ক্ষতিগ্রস্ত প্যাকেজিং, সদিচ্ছা উপহার…',
+            preview: 'ছাড়ের পরিমাণ',
+            clear_btn: 'ছাড় মুছুন',
+            error_exceed_percent: 'শতাংশ ছাড় {max}% এর বেশি হতে পারে না',
+            error_exceed_amount: 'নির্দিষ্ট ছাড় {max} এর বেশি হতে পারে না',
+            error_reason_required: 'ম্যানুয়াল ছাড়ের জন্য একটি কারণ আবশ্যক'
+        },
         summary: {
             title: 'অর্ডার সারাংশ',
             description: 'সেল নিশ্চিত করার আগে মোট এবং পেমেন্ট পর্যালোচনা করুন।',
             subtotal: 'সাবটোটাল',
+            manual_discount: 'ম্যানুয়াল ছাড়',
             tax: 'ট্যাক্স ({rate}%)',
             total: 'মোট',
             payment: 'পেমেন্ট:',

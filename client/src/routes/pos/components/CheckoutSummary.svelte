@@ -7,6 +7,7 @@
 
 	type Props = {
 		subtotal: number;
+		manualDiscount: number;
 		tax: number;
 		total: number;
 		taxRate: number;
@@ -21,6 +22,7 @@
 
 	let {
 		subtotal,
+		manualDiscount,
 		tax,
 		total,
 		taxRate,
@@ -51,6 +53,12 @@
 			<span>{$t('pos.summary.subtotal')}</span>
 			<span class="num-mono">{formatCurrency(subtotal)}</span>
 		</div>
+		{#if manualDiscount > 0}
+			<div class="text-success flex justify-between text-[0.75rem]">
+				<span>{$t('pos.summary.manual_discount')}</span>
+				<span class="num-mono">− {formatCurrency(manualDiscount)}</span>
+			</div>
+		{/if}
 		<div class="text-muted-foreground flex justify-between text-[0.75rem]">
 			<span>{$t('pos.summary.tax', { rate: Number((taxRate * 100).toFixed(2)) })}</span>
 			<span class="num-mono">{formatCurrency(tax)}</span>

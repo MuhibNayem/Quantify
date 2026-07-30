@@ -1070,10 +1070,28 @@ export default {
             points: 'points',
             error_exceed: 'Cannot exceed available balance.'
         },
+        discount: {
+            title: 'Manual Discount',
+            description: 'Apply an approved price cut to this sale.',
+            type_percent: 'Percent',
+            type_fixed: 'Fixed amount',
+            value_label: 'Discount value',
+            max_percent_hint: 'Max {max}%',
+            max_amount_hint: 'Max {max}',
+            no_cap_hint: 'No cap',
+            reason_label: 'Reason',
+            reason_placeholder: 'e.g. Damaged packaging, goodwill gesture…',
+            preview: 'Discount amount',
+            clear_btn: 'Clear discount',
+            error_exceed_percent: 'Percent discount cannot exceed {max}%',
+            error_exceed_amount: 'Fixed discount cannot exceed {max}',
+            error_reason_required: 'A reason is required for manual discounts'
+        },
         summary: {
             title: 'Order Summary',
             description: 'Review totals and payment before confirming the sale.',
             subtotal: 'Subtotal',
+            manual_discount: 'Manual Discount',
             tax: 'Tax ({rate}%)',
             total: 'Total',
             payment: 'Payment:',

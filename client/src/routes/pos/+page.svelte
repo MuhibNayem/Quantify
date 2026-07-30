@@ -9,6 +9,7 @@
 	import { crmApi, promotionsApi, paymentApi, productsApi, unitsApi } from '$lib/api/resources';
 	import type { ProductUnit } from '$lib/types';
 	import { toast } from 'svelte-sonner';
+	import { formatCurrency } from '$lib/utils';
 	import { auth } from '$lib/stores/auth';
 	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
@@ -16,6 +17,7 @@
 	import Cart from './components/Cart.svelte';
 	import CustomerCard from './components/CustomerCard.svelte';
 	import PaymentMethods from './components/PaymentMethods.svelte';
+	import DiscountControl from './components/DiscountControl.svelte';
 	import CheckoutSummary from './components/CheckoutSummary.svelte';
 
 	$effect(() => {
@@ -41,6 +43,9 @@
 	let dueDate = $state('');
 	let barcodeInput = $state('');
 	let barcodeRef = $state<HTMLInputElement | null>(null);
+	let discountType = $state('percent');
+	let discountValue = $state(0);
+	let discountReason = $state('');
 
 	const unitCache: Record<number, ProductUnit[]> = {};
 
@@ -282,6 +287,9 @@
 
 	const clearCart = () => {
 		cart = [];
+		discountType = 'percent';
+		discountValue = 0;
+		discountReason = '';
 	};
 
 	const adjustLastItemQty = (delta: number) => {
@@ -339,16 +347,49 @@
 	const subtotal = $derived(
 		cart.reduce((acc, item) => acc + getLinePrice(item) * item.quantity, 0)
 	);
+
+	const discountAvailable = $derived(
+		$settings.manual_discount_enabled === 'true' && auth.hasPermission('pos.discount')
+	);
+	const discountMaxPercent = $derived(parseFloat($settings.manual_discount_max_percent) || 10);
+	const discountMaxAmount = $derived(parseFloat($settings.manual_discount_max_amount) || 0);
+	const discountRequireReason = $derived($settings.manual_discount_require_reason === 'true');
+
+	const manualDiscountAmount = $derived.by(() => {
+		if (!discountAvailable || !(discountValue > 0)) return 0;
+		if (discountType === 'percent') return (subtotal * discountValue) / 100;
+		if (discountType === 'fixed') return Math.min(discountValue, subtotal);
+		return 0;
+	});
+
+	const discountValueInvalid = $derived(
+		discountAvailable &&
+			discountValue > 0 &&
+			((discountType === 'percent' && discountValue > discountMaxPercent) ||
+				(discountType === 'fixed' && discountMaxAmount > 0 && discountValue > discountMaxAmount))
+	);
+	const discountReasonMissing = $derived(
+		discountAvailable &&
+			discountValue > 0 &&
+			discountRequireReason &&
+			!discountReason.trim()
+	);
+	const discountInvalid = $derived(discountValueInvalid || discountReasonMissing);
+
 	const taxRate = $derived(($settings.tax_rate_percentage || 0) / 100);
-	const tax = $derived(subtotal * taxRate);
-	const total = $derived(subtotal + tax);
+	const taxableSubtotal = $derived(subtotal - manualDiscountAmount);
+	const tax = $derived(taxableSubtotal * taxRate);
+	const total = $derived(taxableSubtotal + tax);
 
 	const potentialPoints = $derived(
 		Math.floor(subtotal * ($settings.loyalty_points_earning_rate || 0))
 	);
 
 	const canCompleteOrder = $derived(
-		cart.length > 0 && !!paymentMethod && (paymentMethod !== 'CREDIT' || !!selectedCustomer)
+		cart.length > 0 &&
+			!!paymentMethod &&
+			(paymentMethod !== 'CREDIT' || !!selectedCustomer) &&
+			!discountInvalid
 	);
 
 	const setPayment = (method: string) => {
@@ -359,6 +400,16 @@
 		if (!canCompleteOrder || isProcessing) return;
 		if (paymentMethod === 'CREDIT' && !selectedCustomer) {
 			toast.error($t('pos.toasts.customer_required_credit'));
+			return;
+		}
+		if (discountInvalid) {
+			toast.error(
+				discountValueInvalid
+					? discountType === 'percent'
+						? $t('pos.discount.error_exceed_percent', { max: discountMaxPercent })
+						: $t('pos.discount.error_exceed_amount', { max: formatCurrency(discountMaxAmount) })
+					: $t('pos.discount.error_reason_required')
+			);
 			return;
 		}
 		isProcessing = true;
@@ -388,13 +439,16 @@
 					quantity: item.quantity,
 					...(item.unitId ? { unitId: item.unitId } : {})
 				})),
-				customerId: selectedCustomer ? selectedCustomer.ID : null,
-				paymentMethod: paymentMethod ? paymentMethod.toLowerCase() : paymentMethod,
-				pointsToRedeem: Math.min(
-					pointsToRedeem,
-					selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
-				)
-			};
+			customerId: selectedCustomer ? selectedCustomer.ID : null,
+			paymentMethod: paymentMethod ? paymentMethod.toLowerCase() : paymentMethod,
+			pointsToRedeem: Math.min(
+				pointsToRedeem,
+				selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
+			),
+			manualDiscountType: manualDiscountAmount > 0 ? discountType : '',
+			manualDiscountValue: manualDiscountAmount > 0 ? discountValue : 0,
+			manualDiscountReason: manualDiscountAmount > 0 ? discountReason.trim() : ''
+		};
 
 			if (paymentMethod === 'CREDIT' && dueDate) {
 				payload.dueDate = new Date(dueDate).toISOString();
@@ -412,6 +466,9 @@
 			customerSearchTerm = '';
 			pointsToRedeem = 0;
 			dueDate = '';
+			discountType = 'percent';
+			discountValue = 0;
+			discountReason = '';
 
 			await fetchProducts();
 		} catch (error: any) {
@@ -599,8 +656,24 @@
 				onSelectPayment={setPayment}
 			/>
 
+			{#if discountAvailable}
+				<DiscountControl
+					{subtotal}
+					maxPercent={discountMaxPercent}
+					maxAmount={discountMaxAmount}
+					requireReason={discountRequireReason}
+					amount={manualDiscountAmount}
+					valueInvalid={discountValueInvalid}
+					reasonMissing={discountReasonMissing}
+					bind:discountType
+					bind:discountValue
+					bind:discountReason
+				/>
+			{/if}
+
 			<CheckoutSummary
 				{subtotal}
+				manualDiscount={manualDiscountAmount}
 				{tax}
 				{total}
 				{taxRate}
