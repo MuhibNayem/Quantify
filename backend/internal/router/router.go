@@ -296,6 +296,9 @@ func SetupRouter(c *app.Container) *gin.Engine {
 			finance.GET("/ar-aging", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetARAging)
 			finance.GET("/receivables", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetOutstandingAR)
 			finance.POST("/payments", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.RecordPayment)
+			finance.GET("/ap-aging", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetAPAging)
+			finance.GET("/payables", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.GetOutstandingAP)
+			finance.POST("/supplier-payments", middleware.RequirePermission(roleRepo, "reports.financial"), financeHandler.RecordSupplierPayment)
 		}
 
 		// Alerts

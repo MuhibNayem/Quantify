@@ -31,7 +31,22 @@ func setupPOTestDB(t *testing.T) *gorm.DB {
 		&domain.PurchaseOrder{},
 		&domain.PurchaseOrderItem{},
 		&domain.ReorderSuggestion{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
+		&domain.AccountsPayable{},
+		&domain.SupplierPayment{},
+		&domain.SupplierPaymentAllocation{},
 	))
+	// Receiving stock posts to the ledger, so these accounts must exist.
+	accounts := []domain.Account{
+		{Code: domain.AccountCodeCash, Name: "Cash", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeAccountsPayable, Name: "AP", Type: domain.AccountLiability},
+	}
+	for i := range accounts {
+		require.NoError(t, db.Create(&accounts[i]).Error)
+	}
 	return db
 }
 

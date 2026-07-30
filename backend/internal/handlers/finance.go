@@ -17,12 +17,14 @@ import (
 type FinanceHandler struct {
 	Ledger *services.LedgerService
 	AR     *services.AccountsReceivableService
+	AP     *services.AccountsPayableService
 }
 
 func NewFinanceHandler(db *gorm.DB) *FinanceHandler {
 	return &FinanceHandler{
 		Ledger: services.NewLedgerService(db),
 		AR:     services.NewAccountsReceivableService(db),
+		AP:     services.NewAccountsPayableService(db),
 	}
 }
 
@@ -161,6 +163,85 @@ func (h *FinanceHandler) RecordPayment(c *gin.Context) {
 	userID := c.GetUint("user_id")
 	payment, err := h.AR.RecordPayment(services.RecordPaymentRequest{
 		CustomerID:  req.CustomerID,
+		Amount:      req.Amount,
+		Method:      req.Method,
+		Notes:       req.Notes,
+		Allocations: req.Allocations,
+	}, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, payment)
+}
+
+// GetAPAging godoc
+// @Summary      Accounts payable aging report
+// @Tags         finance
+// @Produce      json
+// @Success      200 {array} services.APAgingBucket
+// @Security     BearerAuth
+// @Router       /finance/ap-aging [get]
+func (h *FinanceHandler) GetAPAging(c *gin.Context) {
+	buckets, err := h.AP.APAgingReport()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"buckets": buckets})
+}
+
+// GetOutstandingAP godoc
+// @Summary      List outstanding (unpaid) payables to suppliers
+// @Tags         finance
+// @Produce      json
+// @Param        supplierId query int false "filter by supplier"
+// @Success      200 {array} domain.AccountsPayable
+// @Security     BearerAuth
+// @Router       /finance/payables [get]
+func (h *FinanceHandler) GetOutstandingAP(c *gin.Context) {
+	var supplierID *uint
+	if v := c.Query("supplierId"); v != "" {
+		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
+			uid := uint(id)
+			supplierID = &uid
+		}
+	}
+	aps, err := h.AP.ListOutstanding(supplierID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"payables": aps})
+}
+
+// RecordSupplierPaymentRequest is the body for recording a payment to a supplier.
+type RecordSupplierPaymentRequest struct {
+	SupplierID  uint                                      `json:"supplierId" binding:"required"`
+	Amount      float64                                   `json:"amount" binding:"required,gt=0"`
+	Method      string                                    `json:"method" binding:"required"`
+	Notes       string                                    `json:"notes"`
+	Allocations []services.SupplierPaymentAllocationInput `json:"allocations"`
+}
+
+// RecordSupplierPayment godoc
+// @Summary      Record a payment to a supplier against payables
+// @Tags         finance
+// @Accept       json
+// @Produce      json
+// @Param        request body RecordSupplierPaymentRequest true "payment"
+// @Success      201 {object} domain.SupplierPayment
+// @Security     BearerAuth
+// @Router       /finance/supplier-payments [post]
+func (h *FinanceHandler) RecordSupplierPayment(c *gin.Context) {
+	var req RecordSupplierPaymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	userID := c.GetUint("user_id")
+	payment, err := h.AP.RecordPayment(services.RecordSupplierPaymentRequest{
+		SupplierID:  req.SupplierID,
 		Amount:      req.Amount,
 		Method:      req.Method,
 		Notes:       req.Notes,

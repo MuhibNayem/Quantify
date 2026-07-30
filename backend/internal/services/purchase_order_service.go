@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -274,6 +275,7 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 			return appErrors.NewAppError(fmt.Sprintf("Cannot receive goods for Purchase Order in %s status", po.Status), http.StatusConflict, nil)
 		}
 
+		receivedValue := 0.0
 		for _, receivedItem := range receivedItems {
 			var poItem domain.PurchaseOrderItem
 			if err := tx.First(&poItem, receivedItem.PurchaseOrderItemID).Error; err != nil {
@@ -292,6 +294,9 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 			if err := tx.Save(&poItem).Error; err != nil {
 				return appErrors.NewAppError(fmt.Sprintf("Failed to update received quantity for PO item %d", poItem.ID), http.StatusInternalServerError, err)
 			}
+
+			// Accumulate the value of goods received for ledger/AP posting.
+			receivedValue += receivedItem.ReceivedQuantity * poItem.UnitPrice
 
 			batch := domain.Batch{
 				ProductID:   poItem.ProductID,
@@ -319,6 +324,27 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 		var refreshedItems []domain.PurchaseOrderItem
 		if err := tx.Where("purchase_order_id = ?", po.ID).Find(&refreshedItems).Error; err != nil {
 			return appErrors.NewAppError("Failed to reload purchase order items", http.StatusInternalServerError, err)
+		}
+
+		// Post the ledger entry for goods received on credit and record the
+		// amount we now owe the supplier (accounts payable).
+		if receivedValue > 0 {
+			ledger := NewLedgerService(s.db)
+			entry, err := ledger.PostPurchaseReceipt(tx, &po, receivedValue, userID)
+			if err != nil {
+				return appErrors.NewAppError(fmt.Sprintf("Failed to post purchase receipt to ledger: %v", err), http.StatusInternalServerError, err)
+			}
+			ap := domain.AccountsPayable{
+				SupplierID:      po.SupplierID,
+				PurchaseOrderID: po.ID,
+				Amount:          decimal.NewFromFloat(receivedValue).Round(4),
+				PaidAmount:      decimal.Zero,
+				Status:          "UNPAID",
+				JournalEntryID:  entry.ID,
+			}
+			if err := tx.Create(&ap).Error; err != nil {
+				return appErrors.NewAppError(fmt.Sprintf("Failed to create accounts payable: %v", err), http.StatusInternalServerError, err)
+			}
 		}
 
 		allReceived := true

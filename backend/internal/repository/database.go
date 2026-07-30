@@ -133,6 +133,9 @@ func AutoMigrate() {
 		&domain.AccountsReceivable{},
 		&domain.Payment{},
 		&domain.PaymentAllocation{},
+		&domain.AccountsPayable{},
+		&domain.SupplierPayment{},
+		&domain.SupplierPaymentAllocation{},
 	)
 
 	if err != nil {

@@ -121,3 +121,48 @@ type PaymentAllocation struct {
 	AccountsReceivable   AccountsReceivable `json:"AccountsReceivable"`
 	Amount               decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`
 }
+
+// AccountsPayable tracks money we owe a supplier from received purchase orders.
+// Created when stock is received (DR Inventory / CR Accounts Payable), settled
+// via SupplierPayments.
+type AccountsPayable struct {
+	gorm.Model
+	SupplierID      uint            `gorm:"index;not null" json:"SupplierID"`
+	Supplier        Supplier        `json:"Supplier"`
+	PurchaseOrderID uint            `gorm:"index" json:"PurchaseOrderID"`
+	PurchaseOrder   PurchaseOrder   `json:"PurchaseOrder"`
+	Amount          decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`     // total owed for this receipt
+	PaidAmount      decimal.Decimal `gorm:"type:decimal(19,4);default:0" json:"PaidAmount"`
+	Status          string          `gorm:"index;default:'UNPAID'" json:"Status"` // UNPAID, PARTIAL, PAID
+	DueDate         *time.Time      `json:"DueDate"`
+	JournalEntryID  uint            `json:"JournalEntryID"`
+}
+
+// Outstanding returns Amount - PaidAmount.
+func (ap AccountsPayable) Outstanding() decimal.Decimal {
+	return ap.Amount.Sub(ap.PaidAmount)
+}
+
+// SupplierPayment is money paid to a supplier, applied against one or more
+// AccountsPayable entries via Allocations.
+type SupplierPayment struct {
+	gorm.Model
+	SupplierID     uint                      `gorm:"index;not null" json:"SupplierID"`
+	Supplier       Supplier                  `json:"Supplier"`
+	Amount         decimal.Decimal           `gorm:"type:decimal(19,4);not null" json:"Amount"`
+	Method         string                    `json:"Method"` // cash, card, bkash, bank
+	PaidAt         time.Time                 `json:"PaidAt"`
+	PaidBy         uint                      `json:"PaidBy"`
+	Notes          string                    `json:"Notes"`
+	JournalEntryID uint                      `json:"JournalEntryID"`
+	Allocations    []SupplierPaymentAllocation `gorm:"foreignKey:SupplierPaymentID" json:"Allocations"`
+}
+
+// SupplierPaymentAllocation applies part of a SupplierPayment to an AccountsPayable.
+type SupplierPaymentAllocation struct {
+	gorm.Model
+	SupplierPaymentID uint            `gorm:"index;not null" json:"SupplierPaymentID"`
+	AccountsPayableID uint            `gorm:"index;not null" json:"AccountsPayableID"`
+	AccountsPayable   AccountsPayable `json:"AccountsPayable"`
+	Amount            decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`
+}

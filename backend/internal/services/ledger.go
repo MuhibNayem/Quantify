@@ -186,6 +186,74 @@ func (s *LedgerService) PostPayment(tx *gorm.DB, payment *domain.Payment) (*doma
 	return entry, nil
 }
 
+// PostPurchaseReceipt records stock received from a supplier on credit: inventory
+// increases and we now owe the supplier (accounts payable).
+//
+//	DR Inventory          value
+//	CR Accounts Payable   value
+func (s *LedgerService) PostPurchaseReceipt(tx *gorm.DB, po *domain.PurchaseOrder, value float64, postedBy uint) (*domain.JournalEntry, error) {
+	amount := decimal.NewFromFloat(value).Round(4)
+	if !amount.IsPositive() {
+		return nil, fmt.Errorf("purchase receipt value must be positive")
+	}
+	inventoryID, err := s.accountID(tx, domain.AccountCodeInventory)
+	if err != nil {
+		return nil, err
+	}
+	apID, err := s.accountID(tx, domain.AccountCodeAccountsPayable)
+	if err != nil {
+		return nil, err
+	}
+	entry := &domain.JournalEntry{
+		Date:        time.Now(),
+		Reference:   fmt.Sprintf("GRN-%05d", po.ID),
+		Description: fmt.Sprintf("Goods received (PO #%d)", po.ID),
+		SourceType:  "PURCHASE",
+		SourceID:    po.ID,
+		PostedBy:    postedBy,
+		Lines: []domain.JournalLine{
+			{AccountID: inventoryID, Debit: amount, Description: "Inventory"},
+			{AccountID: apID, Credit: amount, Description: "Accounts Payable"},
+		},
+	}
+	if err := s.Post(tx, entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+// PostSupplierPayment records money paid to a supplier against accounts payable.
+//
+//	DR Accounts Payable   amount
+//	CR Cash               amount
+func (s *LedgerService) PostSupplierPayment(tx *gorm.DB, payment *domain.SupplierPayment) (*domain.JournalEntry, error) {
+	amount := payment.Amount.Round(4)
+	apID, err := s.accountID(tx, domain.AccountCodeAccountsPayable)
+	if err != nil {
+		return nil, err
+	}
+	cashID, err := s.accountID(tx, domain.AccountCodeCash)
+	if err != nil {
+		return nil, err
+	}
+	entry := &domain.JournalEntry{
+		Date:        payment.PaidAt,
+		Reference:   fmt.Sprintf("SPMT-%05d", payment.ID),
+		Description: fmt.Sprintf("Payment to supplier %d", payment.SupplierID),
+		SourceType:  "SUPPLIER_PAYMENT",
+		SourceID:    payment.ID,
+		PostedBy:    payment.PaidBy,
+		Lines: []domain.JournalLine{
+			{AccountID: apID, Debit: amount, Description: "Accounts Payable"},
+			{AccountID: cashID, Credit: amount, Description: "Cash"},
+		},
+	}
+	if err := s.Post(tx, entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
 // TrialBalanceRow is one account's summed debits and credits across all posted entries.
 type TrialBalanceRow struct {
 	AccountID   uint            `json:"AccountID"`
