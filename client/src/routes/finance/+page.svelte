@@ -27,11 +27,14 @@
 		HandCoins,
 		Banknote,
 		CreditCard,
-		Wallet
+		Wallet,
+		Truck
 	} from 'lucide-svelte';
 	import type {
 		AccountsReceivable,
 		ARAgingBucket,
+		AccountsPayable,
+		APAgingBucket,
 		TrialBalanceRow,
 		IncomeStatement,
 		BalanceSheet
@@ -74,6 +77,11 @@
 	let receivables = $state<AccountsReceivable[]>([]);
 	let statusFilter = $state('');
 
+	let apLoading = $state(true);
+	let apBuckets = $state<APAgingBucket[]>([]);
+	let payables = $state<AccountsPayable[]>([]);
+	let apStatusFilter = $state('');
+
 	let stmtTab = $state('income');
 	let from = $state('');
 	let to = $state('');
@@ -90,6 +98,14 @@
 	let payMethod = $state('cash');
 	let payNotes = $state('');
 
+	let spOpen = $state(false);
+	let spPaying = $state(false);
+	let spTarget = $state<AccountsPayable | null>(null);
+	let spSupplierId = $state('');
+	let spAmount = $state('');
+	let spMethod = $state('cash');
+	let spNotes = $state('');
+
 	function num(v: string | number | null | undefined): number {
 		const n = typeof v === 'number' ? v : parseFloat(v ?? '0');
 		return Number.isFinite(n) ? n : 0;
@@ -103,12 +119,24 @@
 		return num(ar.Amount) - num(ar.PaidAmount);
 	}
 
+	function outstandingOfAP(ap: AccountsPayable): number {
+		return num(ap.Amount) - num(ap.PaidAmount);
+	}
+
 	function isOverdue(ar: AccountsReceivable): boolean {
 		return !!ar.DueDate && ar.Status !== 'PAID' && new Date(ar.DueDate).getTime() < Date.now();
 	}
 
+	function isOverdueAP(ap: AccountsPayable): boolean {
+		return !!ap.DueDate && ap.Status !== 'PAID' && new Date(ap.DueDate).getTime() < Date.now();
+	}
+
 	function customerName(ar: AccountsReceivable): string {
 		return ar.Customer?.Username || `Customer #${ar.CustomerID}`;
+	}
+
+	function supplierName(ap: AccountsPayable): string {
+		return ap.Supplier?.Name || `Supplier #${ap.SupplierID}`;
 	}
 
 	function methodLabel(v: string): string {
@@ -158,6 +186,23 @@
 		return opts;
 	});
 
+	const filteredPayables = $derived(
+		apStatusFilter ? payables.filter((p) => p.Status === apStatusFilter) : payables
+	);
+
+	const totalAPOutstanding = $derived(
+		payables.reduce((s, p) => s + Math.max(0, outstandingOfAP(p)), 0)
+	);
+
+	const supplierOptions = $derived.by(() => {
+		const opts: { value: string; label: string }[] = [];
+		for (const p of payables) {
+			const value = String(p.SupplierID);
+			if (!opts.some((o) => o.value === value)) opts.push({ value, label: supplierName(p) });
+		}
+		return opts;
+	});
+
 	const tbTotals = $derived.by(() =>
 		(trialRows ?? []).reduce(
 			(acc, r) => {
@@ -200,6 +245,7 @@
 
 	onMount(() => {
 		loadReceivables();
+		loadPayables();
 	});
 
 	async function loadReceivables() {
@@ -213,6 +259,20 @@
 			toast.error('Failed to load receivables', { description: errMessage(e) });
 		} finally {
 			arLoading = false;
+		}
+	}
+
+	async function loadPayables() {
+		apLoading = true;
+		try {
+			const [aging, pay] = await Promise.all([financeApi.apAging(), financeApi.payables()]);
+			apBuckets = aging.buckets || [];
+			payables = pay.payables || [];
+		} catch (e) {
+			console.error(e);
+			toast.error('Failed to load payables', { description: errMessage(e) });
+		} finally {
+			apLoading = false;
 		}
 	}
 
@@ -278,6 +338,49 @@
 		}
 	}
 
+	function openSupplierPayment(ap?: AccountsPayable) {
+		spTarget = ap ?? null;
+		spSupplierId = ap ? String(ap.SupplierID) : (supplierOptions[0]?.value ?? '');
+		spAmount = ap && outstandingOfAP(ap) > 0 ? outstandingOfAP(ap).toFixed(2) : '';
+		spMethod = 'cash';
+		spNotes = '';
+		spOpen = true;
+	}
+
+	async function submitSupplierPayment() {
+		const supplierId = Number(spSupplierId);
+		const amount = parseFloat(spAmount);
+		if (!supplierId) {
+			toast.error('Select a supplier');
+			return;
+		}
+		if (!Number.isFinite(amount) || amount <= 0) {
+			toast.error('Enter a valid payment amount');
+			return;
+		}
+		spPaying = true;
+		try {
+			await financeApi.recordSupplierPayment({
+				supplierId,
+				amount,
+				method: spMethod,
+				notes: spNotes.trim() || undefined,
+				allocations: spTarget
+					? [{ AccountsPayableID: spTarget.ID, Amount: amount }]
+					: undefined
+			});
+			toast.success('Supplier payment recorded', {
+				description: `${money(amount)} paid via ${methodLabel(spMethod)}`
+			});
+			spOpen = false;
+			await loadPayables();
+		} catch (e) {
+			toast.error('Failed to record supplier payment', { description: errMessage(e) });
+		} finally {
+			spPaying = false;
+		}
+	}
+
 	function errMessage(e: unknown): string {
 		const err = e as { response?: { data?: { error?: string } }; message?: string };
 		return err?.response?.data?.error || err?.message || 'Unknown error';
@@ -299,7 +402,7 @@
 				</p>
 				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">Finance</h1>
 				<p class="text-muted-foreground">
-					Financial statements, trial balance & accounts receivable
+					Financial statements, trial balance, receivables & payables
 				</p>
 			</div>
 			<Button
@@ -315,6 +418,7 @@
 			bind:value={activeTab}
 			tabs={[
 				{ value: 'receivables', label: 'Receivables' },
+				{ value: 'payables', label: 'Payables' },
 				{ value: 'statements', label: 'Financial Statements' }
 			]}
 			class="overflow-x-auto"
@@ -499,6 +603,204 @@
 															size="sm"
 															class="{btnSecondary} h-7 gap-1 px-2 text-xs"
 															onclick={() => openPayment(ar)}
+														>
+															<HandCoins class="h-3.5 w-3.5" />
+															Payment
+														</Button>
+													{:else}
+														<span class="text-muted-foreground text-xs">Settled</span>
+													{/if}
+												</div>
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
+						</div>
+					{/if}
+				</div>
+			</div>
+		{:else if activeTab === 'payables'}
+			<div class="space-y-6">
+				{#if apLoading}
+					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+						{#each [0, 80, 160, 240, 320] as delay (delay)}
+							<div class="liquid-panel space-y-3 rounded-lg p-4">
+								<Skeleton class="h-3 w-16" />
+								<Skeleton class="h-7 w-24" style="animation-delay: {delay}ms;" />
+								<Skeleton class="h-3 w-12" />
+							</div>
+						{/each}
+					</div>
+				{:else if apBuckets.length > 0}
+					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" data-animate="fade-up">
+						{#each apBuckets as b, i (b.Label)}
+							{@const tone = bucketTone(b.Label, i)}
+							<div
+								class="liquid-panel group rounded-lg border-l-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md {toneBorder[
+									tone
+								]}"
+							>
+								<p class="overline">{b.Label}</p>
+								<p class="kpi-num mt-2 text-xl md:text-2xl {toneText[tone]}">
+									{money(b.Amount)}
+								</p>
+								<p class="text-muted-foreground num-mono mt-1 text-xs">
+									{b.Count} bill{b.Count === 1 ? '' : 's'}
+								</p>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				<div
+					class="liquid-panel overflow-hidden rounded-lg"
+					data-animate="fade-up"
+					style="animation-delay: 80ms;"
+				>
+					<div
+						class="border-border flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between"
+					>
+						<div>
+							<p class="overline">Accounts Payable</p>
+							<p class="text-foreground mt-0.5 text-sm font-medium">
+								{filteredPayables.length} payable{filteredPayables.length === 1 ? '' : 's'}
+								·
+								<span class="num-mono font-semibold">{money(totalAPOutstanding)}</span> outstanding
+							</p>
+						</div>
+						<div class="flex items-center gap-2">
+							<div class="w-40">
+								<div class="select-wrapper">
+									<select bind:value={apStatusFilter}>
+										<option value="">All Statuses</option>
+										<option value="UNPAID">Unpaid</option>
+										<option value="PARTIAL">Partial</option>
+										<option value="PAID">Paid</option>
+									</select>
+								</div>
+							</div>
+							<Button
+								variant="outline"
+								size="sm"
+								class="{btnSecondary} gap-1"
+								onclick={() => openSupplierPayment()}
+							>
+								<Plus class="h-3 w-3" />
+								Payment
+							</Button>
+						</div>
+					</div>
+
+					{#if apLoading}
+						<div class="divide-border/70 divide-y">
+							{#each [0, 60, 120, 180, 240, 300] as delay (delay)}
+								<div class="flex items-center gap-4 px-4 py-3.5">
+									<Skeleton class="h-4 w-1/5" style="animation-delay: {delay}ms;" />
+									<Skeleton class="h-4 w-1/6" />
+									<Skeleton class="ml-auto h-4 w-16" />
+									<Skeleton class="h-4 w-16" />
+									<Skeleton class="h-4 w-16" />
+									<Skeleton class="h-5 w-16 rounded-md" />
+								</div>
+							{/each}
+						</div>
+					{:else if payables.length === 0}
+						<EmptyState
+							icon={Truck}
+							title="No payables yet"
+							description="Purchase orders on credit will appear here for payment."
+							actionLabel="Record Payment"
+							onAction={() => openSupplierPayment()}
+						/>
+					{:else if filteredPayables.length === 0}
+						<EmptyState
+							icon={Search}
+							title="No matching payables"
+							description="Nothing with this status — try another filter."
+							actionLabel="Clear Filter"
+							onAction={() => (apStatusFilter = '')}
+						/>
+					{:else}
+						<div class="overflow-x-auto">
+							<table class="ledger-table min-w-[56rem]">
+								<thead>
+									<tr>
+										<th>Supplier</th>
+										<th>PO #</th>
+										<th class="text-right">Amount</th>
+										<th class="text-right">Paid</th>
+										<th class="text-right">Outstanding</th>
+										<th>Status</th>
+										<th>Due Date</th>
+										<th class="text-right">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each filteredPayables as ap (ap.ID)}
+										{@const out = outstandingOfAP(ap)}
+										{@const overdue = isOverdueAP(ap)}
+										<tr>
+											<td>
+												<div class="flex flex-col">
+													<span class="text-foreground font-semibold">{supplierName(ap)}</span>
+													{#if ap.PurchaseOrder?.OrderDate}
+														<span class="text-muted-foreground text-xs">
+															Ordered {formatDate(ap.PurchaseOrder.OrderDate)}
+														</span>
+													{/if}
+												</div>
+											</td>
+											<td class="num-mono text-muted-foreground">
+												{ap.PurchaseOrder ? `#${ap.PurchaseOrder.ID}` : `#${ap.PurchaseOrderID}`}
+											</td>
+											<td class="col-num text-foreground">{money(ap.Amount)}</td>
+											<td class="col-num text-muted-foreground">{money(ap.PaidAmount)}</td>
+											<td
+												class="col-num font-semibold {out > 0 ? 'text-foreground' : 'text-success'}"
+											>
+												{money(out)}
+											</td>
+											<td>
+												<span
+													class={cn(
+														statusBadge[ap.Status] ?? 'badge-neutral',
+														'tracking-wide uppercase'
+													)}
+												>
+													{ap.Status}
+												</span>
+											</td>
+											<td class="whitespace-nowrap">
+												{#if ap.DueDate}
+													<div class="flex flex-col">
+														<span
+															class={cn(
+																'text-sm',
+																overdue ? 'text-danger font-semibold' : 'text-muted-foreground'
+															)}
+														>
+															{formatDate(ap.DueDate)}
+														</span>
+														{#if overdue}
+															<span class="text-danger flex items-center gap-1 text-xs">
+																<AlertTriangle class="h-3 w-3" />
+																Overdue
+															</span>
+														{/if}
+													</div>
+												{:else}
+													<span class="text-muted-foreground">—</span>
+												{/if}
+											</td>
+											<td>
+												<div class="flex justify-end">
+													{#if ap.Status !== 'PAID'}
+														<Button
+															variant="outline"
+															size="sm"
+															class="{btnSecondary} h-7 gap-1 px-2 text-xs"
+															onclick={() => openSupplierPayment(ap)}
 														>
 															<HandCoins class="h-3.5 w-3.5" />
 															Payment
@@ -932,6 +1234,113 @@
 				class="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
 			>
 				{#if paying}
+					<Loader2 class="h-4 w-4 animate-spin" />
+				{:else}
+					<HandCoins class="h-4 w-4" />
+				{/if}
+				Record Payment
+			</Button>
+		</Dialog.Footer>
+	</Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={spOpen}>
+	<Dialog.Content class="max-h-[85vh] overflow-y-auto sm:max-w-[480px]">
+		<Dialog.Header>
+			<Dialog.Title>Record Supplier Payment</Dialog.Title>
+			<Dialog.Description>
+				{spTarget
+					? `Paying PO #${spTarget.PurchaseOrder?.ID ?? spTarget.PurchaseOrderID}`
+					: 'Log an outgoing payment to a supplier.'}
+			</Dialog.Description>
+		</Dialog.Header>
+
+		<div class="space-y-4 py-4">
+			{#if spTarget}
+				<div
+					class="border-border bg-muted/50 flex items-center justify-between rounded-md border px-3 py-2.5"
+				>
+					<div>
+						<p class="text-foreground text-sm font-semibold">{supplierName(spTarget)}</p>
+						<p class="text-muted-foreground num-mono text-xs">
+							PO #{spTarget.PurchaseOrder?.ID ?? spTarget.PurchaseOrderID}
+						</p>
+					</div>
+					<div class="text-right">
+						<p class="overline">Outstanding</p>
+						<p class="num-mono text-foreground text-sm font-bold">
+							{money(outstandingOfAP(spTarget))}
+						</p>
+					</div>
+				</div>
+			{/if}
+
+			<div class="space-y-2">
+				<Label>Supplier</Label>
+				<div class="select-wrapper">
+					<select bind:value={spSupplierId} disabled={!!spTarget}>
+						{#each supplierOptions as s (s.value)}
+							<option value={s.value}>{s.label}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<Label>Amount</Label>
+				<Input
+					type="number"
+					min="0"
+					step="0.01"
+					bind:value={spAmount}
+					placeholder="0.00"
+					class="{inputClass} num-mono"
+				/>
+			</div>
+
+			<div class="space-y-2">
+				<Label>Method</Label>
+				<div class="grid grid-cols-4 gap-2">
+					{#each methods as m (m.value)}
+						{@const Icon = m.icon}
+						<button
+							type="button"
+							onclick={() => (spMethod = m.value)}
+							class={cn(
+								'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2.5 text-xs font-semibold transition-all',
+								spMethod === m.value
+									? 'border-primary/40 bg-accent text-accent-foreground shadow-xs'
+									: 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-muted-foreground/40'
+							)}
+						>
+							<Icon class="h-4 w-4" />
+							{m.label}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			<div class="space-y-2">
+				<Label>Notes <span class="text-muted-foreground font-normal">(optional)</span></Label>
+				<textarea
+					bind:value={spNotes}
+					rows="2"
+					placeholder="Reference, cheque no, remarks..."
+					class="liquid-textarea w-full px-3 py-2 text-sm"
+				></textarea>
+			</div>
+		</div>
+
+		<Dialog.Footer>
+			<Button variant="outline" class={btnSecondary} onclick={() => (spOpen = false)}
+				>Cancel</Button
+			>
+			<Button
+				onclick={submitSupplierPayment}
+				disabled={spPaying}
+				class="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+			>
+				{#if spPaying}
 					<Loader2 class="h-4 w-4 animate-spin" />
 				{:else}
 					<HandCoins class="h-4 w-4" />

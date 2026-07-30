@@ -42,6 +42,9 @@ import type {
 	AccountsReceivable,
 	ARAgingBucket,
 	Payment,
+	AccountsPayable,
+	APAgingBucket,
+	SupplierPayment,
 } from '$lib/types';
 import type { AxiosRequestConfig } from 'axios';
 
@@ -427,4 +430,14 @@ export const financeApi = {
 		notes?: string;
 		allocations?: { AccountsReceivableID: number; Amount: number }[];
 	}) => api.post<Payment>('/finance/payments', data).then((r) => r.data),
+	apAging: () => api.get<{ buckets: APAgingBucket[] }>('/finance/ap-aging').then((r) => r.data),
+	payables: (params?: { supplierId?: number }) =>
+		api.get<{ payables: AccountsPayable[] }>('/finance/payables', { params }).then((r) => r.data),
+	recordSupplierPayment: (data: {
+		supplierId: number;
+		amount: number;
+		method: string;
+		notes?: string;
+		allocations?: { AccountsPayableID: number; Amount: number }[];
+	}) => api.post<SupplierPayment>('/finance/supplier-payments', data).then((r) => r.data),
 };

@@ -607,3 +607,28 @@ export interface Payment extends BaseEntity {
 	ReceivedAt: string;
 	Notes: string;
 }
+
+export interface AccountsPayable extends BaseEntity {
+	SupplierID: number;
+	Supplier?: { Name: string };
+	PurchaseOrderID: number;
+	PurchaseOrder?: { ID: number; OrderDate: string };
+	Amount: string;
+	PaidAmount: string;
+	Status: 'UNPAID' | 'PARTIAL' | 'PAID';
+	DueDate?: string;
+}
+
+export interface APAgingBucket {
+	Label: string;
+	Amount: string;
+	Count: number;
+}
+
+export interface SupplierPayment extends BaseEntity {
+	SupplierID: number;
+	Amount: string;
+	Method: string;
+	PaidAt: string;
+	Notes: string;
+}
