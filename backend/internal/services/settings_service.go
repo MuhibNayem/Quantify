@@ -64,6 +64,10 @@ func (s *settingsService) GetPublicSettings() (map[string]string, error) {
 		"loyalty_tier_silver":            true,
 		"loyalty_tier_gold":              true,
 		"loyalty_tier_platinum":          true,
+		"manual_discount_enabled":        true,
+		"manual_discount_max_percent":    true,
+		"manual_discount_max_amount":     true,
+		"manual_discount_require_reason": true,
 	}
 
 	publicSettings := make(map[string]string)
