@@ -36,6 +36,7 @@ const (
 	AccountCodeInventory         = "1200"
 	AccountCodeAccountsPayable   = "2000"
 	AccountCodeSalesRevenue      = "4000"
+	AccountCodeSalesDiscounts    = "4100" // contra-revenue: manual discounts given
 	AccountCodeCOGS              = "5000"
 )
 

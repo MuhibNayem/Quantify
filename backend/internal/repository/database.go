@@ -207,6 +207,7 @@ func seedPermissions() map[string]domain.Permission {
 		{Name: "loyalty.write", Group: "CRM", Description: "Manage loyalty points"},
 		// POS / Sales
 		{Name: "pos.access", Group: "POS", Description: "Access Point of Sale terminal"},
+		{Name: "pos.discount", Group: "POS", Description: "Apply manual discounts at checkout"},
 		{Name: "orders.read", Group: "Orders", Description: "View order history"},
 		{Name: "orders.manage", Group: "Orders", Description: "Manage orders"},
 		// Returns
@@ -286,7 +287,7 @@ func seedRoles(permMap map[string]domain.Permission) {
 				permMap["replenishment.read"], permMap["replenishment.write"],
 				permMap["customers.read"], permMap["customers.write"],
 				permMap["loyalty.read"], permMap["loyalty.write"],
-				permMap["pos.access"],
+				permMap["pos.access"], permMap["pos.discount"],
 				permMap["orders.read"], permMap["orders.manage"],
 				permMap["returns.request"], permMap["returns.manage"],
 				permMap["reports.sales"], permMap["reports.inventory"], permMap["reports.financial"],
@@ -341,6 +342,11 @@ func seedSettings() {
 		{Key: "loyalty_tier_platinum", Value: "10000", Group: "Loyalty", Type: "number", Description: "Points required for Platinum tier"},
 		// Tax Settings
 		{Key: "tax_rate_percentage", Value: "0", Group: "Financial", Type: "number", Description: "Default tax rate percentage"},
+		// Manual Discount Policy (admin opt-in)
+		{Key: "manual_discount_enabled", Value: "false", Group: "Policy", Type: "boolean", Description: "Allow employees to apply manual discounts at checkout"},
+		{Key: "manual_discount_max_percent", Value: "10", Group: "Policy", Type: "number", Description: "Maximum percentage discount an employee may apply"},
+		{Key: "manual_discount_max_amount", Value: "0", Group: "Policy", Type: "number", Description: "Maximum fixed-amount discount (0 = no cap)"},
+		{Key: "manual_discount_require_reason", Value: "true", Group: "Policy", Type: "boolean", Description: "Require a reason note for manual discounts"},
 	}
 
 	for _, s := range settings {

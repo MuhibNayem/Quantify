@@ -69,7 +69,7 @@ func TestLedger_PostsBalancedSale(t *testing.T) {
 	order := &domain.Order{OrderNumber: "ORD-1", TotalAmount: 100.0}
 	order.ID = 1
 
-	entry, err := svc.PostSale(db, order, 60.0, false, 1)
+	entry, err := svc.PostSale(db, order, 60.0, 0, false, 1)
 	if err != nil {
 		t.Fatalf("balanced sale should post: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestLedger_CreditSaleDebitsAR(t *testing.T) {
 	order := &domain.Order{OrderNumber: "ORD-2", TotalAmount: 200.0}
 	order.ID = 2
 
-	_, err := svc.PostSale(db, order, 0, true, 1) // on credit, no cost
+	_, err := svc.PostSale(db, order, 0, 0, true, 1) // on credit, no cost
 	if err != nil {
 		t.Fatalf("credit sale should post: %v", err)
 	}
@@ -118,12 +118,12 @@ func TestLedger_TrialBalanceBalances(t *testing.T) {
 	// Post several entries: a cash sale, a credit sale, a payment.
 	o1 := &domain.Order{OrderNumber: "O1", TotalAmount: 100.0}
 	o1.ID = 1
-	if _, err := svc.PostSale(db, o1, 60.0, false, 1); err != nil {
+	if _, err := svc.PostSale(db, o1, 60.0, 0, false, 1); err != nil {
 		t.Fatal(err)
 	}
 	o2 := &domain.Order{OrderNumber: "O2", TotalAmount: 50.0}
 	o2.ID = 2
-	if _, err := svc.PostSale(db, o2, 0, true, 1); err != nil {
+	if _, err := svc.PostSale(db, o2, 0, 0, true, 1); err != nil {
 		t.Fatal(err)
 	}
 	pmt := &domain.Payment{CustomerID: 1, Amount: decimal.NewFromInt(50), ReceivedAt: time.Now(), ReceivedBy: 1}

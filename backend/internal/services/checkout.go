@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -53,7 +54,14 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 			return err
 		}
 
-		postTaxTotal, taxAmount, err := s.applyTax(subtotal)
+		// Manual discount (admin opt-in) reduces the subtotal before tax.
+		manualDiscountAmount, err := s.computeManualDiscount(subtotal, req)
+		if err != nil {
+			return err
+		}
+		discountedSubtotal := round2(subtotal - manualDiscountAmount)
+
+		postTaxTotal, taxAmount, err := s.applyTax(discountedSubtotal)
 		if err != nil {
 			return err
 		}
@@ -63,8 +71,68 @@ func (s *SalesService) ProcessCheckout(req requests.CheckoutRequest, userID uint
 			return err
 		}
 
-		return s.createOrderAndTransaction(tx, req, userID, subtotal, taxAmount, discountAmount, totalDiscountFromPromotions, pointsRedeemed, cogs, orderItems)
+		return s.createOrderAndTransaction(tx, req, userID, subtotal, discountedSubtotal, taxAmount, discountAmount, totalDiscountFromPromotions, manualDiscountAmount, pointsRedeemed, cogs, orderItems)
 	})
+}
+
+// computeManualDiscount validates an employee's manual discount against the
+// admin-configured policy and returns the currency amount to deduct.
+func (s *SalesService) computeManualDiscount(subtotal float64, req requests.CheckoutRequest) (float64, error) {
+	if req.ManualDiscountType == "" || req.ManualDiscountValue <= 0 {
+		return 0, nil
+	}
+	// Master switch.
+	if !s.settingBool("manual_discount_enabled", false) {
+		return 0, fmt.Errorf("manual discounts are disabled by policy")
+	}
+	// Reason required?
+	if s.settingBool("manual_discount_require_reason", true) && req.ManualDiscountReason == "" {
+		return 0, fmt.Errorf("a reason is required for manual discounts")
+	}
+
+	var amount float64
+	switch req.ManualDiscountType {
+	case "percent":
+		maxPct := s.settingFloat("manual_discount_max_percent", 10)
+		if req.ManualDiscountValue > maxPct {
+			return 0, fmt.Errorf("discount %.2f%% exceeds the maximum allowed %.2f%%", req.ManualDiscountValue, maxPct)
+		}
+		amount = subtotal * (req.ManualDiscountValue / 100.0)
+	case "fixed":
+		maxAmt := s.settingFloat("manual_discount_max_amount", 0)
+		if maxAmt > 0 && req.ManualDiscountValue > maxAmt {
+			return 0, fmt.Errorf("discount %.2f exceeds the maximum allowed %.2f", req.ManualDiscountValue, maxAmt)
+		}
+		amount = req.ManualDiscountValue
+	default:
+		return 0, fmt.Errorf("invalid manual discount type")
+	}
+	if amount > subtotal {
+		amount = subtotal // never discount more than the subtotal
+	}
+	return round2(amount), nil
+}
+
+// settingBool reads a boolean setting, falling back to def on error/parse failure.
+func (s *SalesService) settingBool(key string, def bool) bool {
+	v, err := s.Settings.GetSetting(key)
+	if err != nil {
+		return def
+	}
+	return v == "true" || v == "1"
+}
+
+// settingFloat reads a numeric setting, falling back to def on error/parse failure.
+func (s *SalesService) settingFloat(key string, def float64) float64 {
+	v, err := s.Settings.GetSetting(key)
+	if err != nil {
+		return def
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return def
+	}
+	return f
 }
 
 func (s *SalesService) fetchActivePromotions(tx *gorm.DB) ([]domain.Promotion, error) {
@@ -163,15 +231,17 @@ func (s *SalesService) createOrderAndTransaction(
 	req requests.CheckoutRequest,
 	userID uint,
 	subtotal float64,
+	discountedSubtotal float64,
 	taxAmount float64,
 	discountAmount float64,
 	totalDiscountFromPromotions float64,
+	manualDiscountAmount float64,
 	pointsRedeemed int,
 	cogs float64,
 	orderItems []domain.OrderItem,
 ) error {
 	orderNumber := fmt.Sprintf("ORD-%d-%d", time.Now().Unix(), userID)
-	finalTotal := subtotal + taxAmount - discountAmount
+	finalTotal := discountedSubtotal + taxAmount - discountAmount
 	onCredit := req.PaymentMethod == "credit"
 	// A credit (unpaid) sale stays PENDING until paid; other methods complete now.
 	status := "COMPLETED"
@@ -182,14 +252,19 @@ func (s *SalesService) createOrderAndTransaction(
 		OrderNumber:    orderNumber,
 		UserID:         userID,
 		CustomerID:     req.CustomerID,
-		Subtotal:       subtotal,
+		Subtotal:       discountedSubtotal,
 		TaxAmount:      taxAmount,
 		TotalAmount:    finalTotal,
 		Status:         status,
 		PaymentMethod:  req.PaymentMethod,
 		OrderDate:      time.Now(),
 		PointsRedeemed: pointsRedeemed,
-		DiscountAmount: discountAmount + totalDiscountFromPromotions,
+		DiscountAmount: discountAmount + totalDiscountFromPromotions + manualDiscountAmount,
+		ManualDiscountType:   req.ManualDiscountType,
+		ManualDiscountValue:  req.ManualDiscountValue,
+		ManualDiscountAmount: manualDiscountAmount,
+		ManualDiscountReason: req.ManualDiscountReason,
+		ManualDiscountBy:     userID,
 	}
 
 	if err := tx.Create(&order).Error; err != nil {
@@ -217,9 +292,9 @@ func (s *SalesService) createOrderAndTransaction(
 	}
 
 	// Post the double-entry ledger entry for the sale (DR Cash/AR, CR Revenue,
-	// DR COGS, CR Inventory). This keeps income and cost mathematically balanced.
+	// DR Sales Discounts, DR COGS, CR Inventory). Keeps income and cost balanced.
 	ledger := NewLedgerService(s.DB)
-	entry, err := ledger.PostSale(tx, &order, cogs, onCredit, userID)
+	entry, err := ledger.PostSale(tx, &order, cogs, manualDiscountAmount, onCredit, userID)
 	if err != nil {
 		return fmt.Errorf("failed to post sale to ledger: %w", err)
 	}
@@ -243,9 +318,50 @@ func (s *SalesService) createOrderAndTransaction(
 		}
 	}
 
+	// Audit EVERY manual discount (who applied it, why, and how much).
+	if manualDiscountAmount > 0 {
+		s.emitManualDiscountAudit(tx, orderNumber, userID, req, manualDiscountAmount, subtotal)
+	}
 	s.emitDiscountAuditIfSignificant(tx, orderNumber, userID, subtotal, discountAmount, totalDiscountFromPromotions)
 
 	return nil
+}
+
+// emitManualDiscountAudit records every employee-applied manual discount for
+// accountability and review.
+func (s *SalesService) emitManualDiscountAudit(
+	tx *gorm.DB,
+	orderNumber string,
+	userID uint,
+	req requests.CheckoutRequest,
+	amount float64,
+	subtotal float64,
+) {
+	pct := 0.0
+	if subtotal > 0 {
+		pct = (amount / subtotal) * 100.0
+	}
+	changes, err := json.Marshal(map[string]interface{}{
+		"type":            req.ManualDiscountType,
+		"value":           req.ManualDiscountValue,
+		"amount":          round2(amount),
+		"discount_pct":    round2(pct),
+		"reason":          req.ManualDiscountReason,
+		"applied_by":      userID,
+		"order_subtotal":  round2(subtotal),
+	})
+	if err != nil {
+		changes = []byte(`{}`)
+	}
+	entry := &domain.AuditLog{
+		Action:    "MANUAL_DISCOUNT",
+		Entity:    "Order",
+		EntityID:  orderNumber,
+		UserID:    userID,
+		Changes:   string(changes),
+		Timestamp: time.Now(),
+	}
+	_ = repository.WriteAudit(tx.Statement.Context, tx, entry)
 }
 
 func (s *SalesService) emitDiscountAuditIfSignificant(

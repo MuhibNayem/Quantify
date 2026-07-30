@@ -30,6 +30,20 @@ func NewSalesHandler(db *gorm.DB, settings services.SettingsService, reportingSe
 	}
 }
 
+// userHasPermission reports whether the user's role grants the named permission.
+func (h *SalesHandler) userHasPermission(userID uint, permission string) bool {
+	var user domain.User
+	if err := h.DB.Preload("Role.Permissions").First(&user, userID).Error; err != nil {
+		return false
+	}
+	for _, p := range user.Role.Permissions {
+		if p.Name == permission {
+			return true
+		}
+	}
+	return false
+}
+
 // Checkout godoc
 // @Summary Process a sales checkout
 // @Description Creates a new sale transaction and deducts stock atomically
@@ -61,6 +75,14 @@ func (h *SalesHandler) Checkout(c *gin.Context) {
 		return
 	}
 	userID := authUserID.(uint)
+
+	// Manual discount requires the pos.discount permission (admin opt-in grant).
+	if req.ManualDiscountType != "" && req.ManualDiscountValue > 0 {
+		if !h.userHasPermission(userID, "pos.discount") {
+			c.Error(appErrors.NewAppError("You do not have permission to apply manual discounts", http.StatusForbidden, nil))
+			return
+		}
+	}
 
 	// Delegate to SalesService
 	if err := h.SalesService.ProcessCheckout(req, userID); err != nil {

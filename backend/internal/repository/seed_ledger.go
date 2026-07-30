@@ -16,6 +16,7 @@ var chartOfAccounts = []domain.Account{
 	{Code: domain.AccountCodeAccountsPayable, Name: "Accounts Payable", Type: domain.AccountLiability, Description: "Money owed to suppliers", System: true, IsActive: true},
 	{Code: "3000", Name: "Owner's Equity", Type: domain.AccountEquity, Description: "Owner's stake in the business", System: true, IsActive: true},
 	{Code: domain.AccountCodeSalesRevenue, Name: "Sales Revenue", Type: domain.AccountRevenue, Description: "Revenue from sales", System: true, IsActive: true},
+	{Code: domain.AccountCodeSalesDiscounts, Name: "Sales Discounts", Type: domain.AccountRevenue, Description: "Manual discounts given (contra-revenue)", System: true, IsActive: true},
 	{Code: domain.AccountCodeCOGS, Name: "Cost of Goods Sold", Type: domain.AccountExpense, Description: "Direct cost of sold inventory", System: true, IsActive: true},
 }
 

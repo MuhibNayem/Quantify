@@ -50,7 +50,7 @@ func TestCreditSale_FullCycle(t *testing.T) {
 	// 1. Credit sale (unpaid delivery) of $100, cost $60.
 	order := &domain.Order{OrderNumber: "ORD-C1", TotalAmount: 100.0, CustomerID: ptrUint(1)}
 	order.ID = 1
-	entry, err := ledger.PostSale(db, order, 60.0, true, 1)
+	entry, err := ledger.PostSale(db, order, 60.0, 0, true, 1)
 	if err != nil {
 		t.Fatalf("credit sale should post: %v", err)
 	}

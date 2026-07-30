@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/sqlite"
@@ -83,6 +84,7 @@ func addLedgerToTestDB(t *testing.T, db *gorm.DB) {
 		{Code: domain.AccountCodeAccountsReceivable, Name: "AR", Type: domain.AccountAsset},
 		{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset},
 		{Code: domain.AccountCodeSalesRevenue, Name: "Revenue", Type: domain.AccountRevenue},
+		{Code: domain.AccountCodeSalesDiscounts, Name: "Sales Discounts", Type: domain.AccountRevenue},
 		{Code: domain.AccountCodeCOGS, Name: "COGS", Type: domain.AccountExpense},
 	}
 	for i := range accounts {
@@ -363,4 +365,152 @@ func TestCheckout_PersistsTaxAmount_NoTaxConfigured(t *testing.T) {
 	assert.InDelta(t, 10.0, o.Subtotal, 0.01)
 	assert.InDelta(t, 0.0, o.TaxAmount, 0.01)
 	assert.InDelta(t, 10.0, o.TotalAmount, 0.01)
+}
+
+func manualDiscountSettings(enabled string) mapSettingsService {
+	return mapSettingsService{values: map[string]string{
+		"manual_discount_enabled":        enabled,
+		"manual_discount_max_percent":    "10",
+		"manual_discount_max_amount":     "50",
+		"manual_discount_require_reason": "true",
+		"tax_rate_percentage":            "0",
+	}}
+}
+
+func TestCheckout_ManualPercentDiscount(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD1", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("true"), nil)
+	err := svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:                []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 2}},
+		PaymentMethod:        "cash",
+		ManualDiscountType:   "percent",
+		ManualDiscountValue:  10, // 10% off
+		ManualDiscountReason: "loyal customer",
+	}, 1)
+	require.NoError(t, err)
+
+	// Product price is 10 (seedProductWithLocation default) × 2 = 20 subtotal.
+	// 10% manual discount = 2 → total 18.
+	var order domain.Order
+	require.NoError(t, db.Last(&order).Error)
+	assert.InDelta(t, 18.0, order.TotalAmount, 0.01)
+	assert.InDelta(t, 2.0, order.ManualDiscountAmount, 0.01)
+	assert.Equal(t, "percent", order.ManualDiscountType)
+	assert.Equal(t, "loyal customer", order.ManualDiscountReason)
+
+	// Ledger must balance and include a Sales Discounts debit of 2.
+	assertLedgerBalancedWithDiscount(t, db, 2.0)
+}
+
+func TestCheckout_ManualFixedDiscount(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD2", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("true"), nil)
+	err := svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:                []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 2}},
+		PaymentMethod:        "cash",
+		ManualDiscountType:   "fixed",
+		ManualDiscountValue:  5,
+		ManualDiscountReason: "promo",
+	}, 1)
+	require.NoError(t, err)
+
+	var order domain.Order
+	require.NoError(t, db.Last(&order).Error)
+	assert.InDelta(t, 15.0, order.TotalAmount, 0.01) // 20 - 5
+	assert.InDelta(t, 5.0, order.ManualDiscountAmount, 0.01)
+}
+
+func TestCheckout_ManualDiscountDisabled(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD3", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("false"), nil)
+	err := svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:                []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 1}},
+		PaymentMethod:        "cash",
+		ManualDiscountType:   "percent",
+		ManualDiscountValue:  10,
+		ManualDiscountReason: "x",
+	}, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "disabled")
+}
+
+func TestCheckout_ManualDiscountExceedsMax(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD4", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("true"), nil)
+	err := svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:                []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 1}},
+		PaymentMethod:        "cash",
+		ManualDiscountType:   "percent",
+		ManualDiscountValue:  25, // max is 10
+		ManualDiscountReason: "x",
+	}, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "exceeds")
+}
+
+func TestCheckout_ManualDiscountRequiresReason(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD5", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("true"), nil)
+	err := svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:               []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 1}},
+		PaymentMethod:       "cash",
+		ManualDiscountType:  "percent",
+		ManualDiscountValue: 5,
+		// no reason
+	}, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "reason")
+}
+
+func TestCheckout_ManualDiscountAudited(t *testing.T) {
+	db := setupSalesTestDB(t)
+	prod := seedProductWithLocation(t, db, "SKU-MD6", 1)
+	seedBatch(t, db, prod.ID, 1, 100, time.Now().Add(180*24*time.Hour))
+
+	svc := NewSalesService(db, manualDiscountSettings("true"), nil)
+	require.NoError(t, svc.ProcessCheckout(requests.CheckoutRequest{
+		Items:                []requests.CheckoutItem{{ProductID: prod.ID, Quantity: 2}},
+		PaymentMethod:        "cash",
+		ManualDiscountType:   "fixed",
+		ManualDiscountValue:  5,
+		ManualDiscountReason: "damaged box",
+	}, 1))
+
+	var count int64
+	db.Model(&domain.AuditLog{}).Where("action = ?", "MANUAL_DISCOUNT").Count(&count)
+	assert.Equal(t, int64(1), count, "every manual discount must be audited")
+}
+
+// assertLedgerBalancedWithDiscount verifies Σ debits == Σ credits and that the
+// Sales Discounts account holds the expected debit.
+func assertLedgerBalancedWithDiscount(t *testing.T, db *gorm.DB, expectedDiscount float64) {
+	t.Helper()
+	var lines []domain.JournalLine
+	require.NoError(t, db.Preload("Account").Find(&lines).Error)
+	totalDebit, totalCredit, salesDiscount := decimal.Zero, decimal.Zero, decimal.Zero
+	for _, l := range lines {
+		totalDebit = totalDebit.Add(l.Debit)
+		totalCredit = totalCredit.Add(l.Credit)
+		if l.Account.Code == domain.AccountCodeSalesDiscounts {
+			salesDiscount = salesDiscount.Add(l.Debit)
+		}
+	}
+	assert.True(t, totalDebit.Equal(totalCredit), "ledger unbalanced: %s vs %s", totalDebit, totalCredit)
+	assert.True(t, salesDiscount.Equal(decimal.NewFromFloat(expectedDiscount)),
+		"sales discounts expected %v, got %s", expectedDiscount, salesDiscount)
 }

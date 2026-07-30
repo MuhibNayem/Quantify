@@ -73,16 +73,20 @@ func (s *LedgerService) accountID(tx *gorm.DB, code string) (uint, error) {
 
 // PostSale records a completed sale. For a cash sale, cash is debited; for a
 // credit (unpaid) sale, accounts receivable is debited instead. Revenue is
-// always credited, and COGS is recognized against inventory.
+// always credited, a manual discount (if any) is recorded as a contra-revenue
+// (Sales Discounts), and COGS is recognized against inventory.
 //
-// Cash sale:
+// Sale with a manual discount:
 //
-//	DR Cash / AR        total
-//	CR Sales Revenue    total
-//	DR COGS             cost
-//	CR Inventory        cost
-func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error) {
-	total := decimal.NewFromFloat(order.TotalAmount).Round(4)
+//	DR Cash / AR            netTotal
+//	DR Sales Discounts      manualDiscount   (contra-revenue)
+//	CR Sales Revenue        netTotal + manualDiscount   (gross)
+//	DR COGS                 cost
+//	CR Inventory            cost
+func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64, manualDiscount float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error) {
+	netTotal := decimal.NewFromFloat(order.TotalAmount).Round(4)
+	discount := decimal.NewFromFloat(manualDiscount).Round(4)
+	grossRevenue := netTotal.Add(discount)
 	costDec := decimal.NewFromFloat(cost).Round(4)
 
 	debitAccount := domain.AccountCodeCash
@@ -116,10 +120,26 @@ func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64,
 		SourceType:  "SALE",
 		SourceID:    order.ID,
 		PostedBy:    postedBy,
-		Lines: []domain.JournalLine{
-			{AccountID: cashID, Debit: total, Description: debitAccount},
-			{AccountID: revenueID, Credit: total, Description: "Sales Revenue"},
-		},
+		Lines:       []domain.JournalLine{},
+	}
+	// Cash/AR leg — omitted for a fully-discounted (zero-total) sale.
+	if netTotal.IsPositive() {
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: cashID, Debit: netTotal, Description: debitAccount},
+		)
+	}
+	entry.Lines = append(entry.Lines,
+		domain.JournalLine{AccountID: revenueID, Credit: grossRevenue, Description: "Sales Revenue"},
+	)
+	// Record the manual discount as a contra-revenue (debit to Sales Discounts).
+	if discount.IsPositive() {
+		discountID, err := s.accountID(tx, domain.AccountCodeSalesDiscounts)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: discountID, Debit: discount, Description: "Sales Discounts"},
+		)
 	}
 	// Recognize cost of goods sold only if we have a cost figure.
 	if costDec.IsPositive() {

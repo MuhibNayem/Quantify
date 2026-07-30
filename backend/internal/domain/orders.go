@@ -22,6 +22,12 @@ type Order struct {
 	OrderDate        time.Time `gorm:"index"`
 	PointsRedeemed   int       `gorm:"default:0"`
 	DiscountAmount   float64   `gorm:"default:0"`
+	// Manual discount applied by an employee at checkout (admin opt-in).
+	ManualDiscountType   string  `gorm:"default:''" json:"ManualDiscountType"`     // "percent" | "fixed" | ""
+	ManualDiscountValue  float64 `gorm:"default:0" json:"ManualDiscountValue"`     // the entered value (% or amount)
+	ManualDiscountAmount float64 `gorm:"type:decimal(12,2);default:0" json:"ManualDiscountAmount"` // computed currency amount
+	ManualDiscountReason string  `json:"ManualDiscountReason"`
+	ManualDiscountBy     uint    `json:"ManualDiscountBy"` // employee who applied it
 	OrderItems       []OrderItem
 	Returns          []Return `gorm:"foreignKey:OrderID" json:"Returns"`
 	HasPendingReturn bool     `gorm:"-" json:"HasPendingReturn"`

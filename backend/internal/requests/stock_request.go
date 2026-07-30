@@ -29,4 +29,8 @@ type CheckoutRequest struct {
 	PointsToRedeem     int            `json:"pointsToRedeem"`    // Optional points to redeem
 	RegisterLocationID *uint          `json:"registerLocationId" binding:"omitempty"` // Register-specific location override for stock deduction
 	DueDate            *time.Time     `json:"dueDate"`           // for credit sales: when payment is due
+	// Manual discount (admin opt-in; requires pos.discount permission).
+	ManualDiscountType   string  `json:"manualDiscountType" binding:"omitempty,oneof=percent fixed"` // "" | "percent" | "fixed"
+	ManualDiscountValue  float64 `json:"manualDiscountValue" binding:"omitempty,gte=0"`
+	ManualDiscountReason string  `json:"manualDiscountReason"`
 }
