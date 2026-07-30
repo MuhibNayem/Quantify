@@ -15,9 +15,9 @@ import (
 // trial balance, income statement, balance sheet, AR aging, outstanding AR, and
 // payment receipt.
 type FinanceHandler struct {
-	Ledger *services.LedgerService
-	AR     *services.AccountsReceivableService
-	AP     *services.AccountsPayableService
+	Ledger services.Ledger
+	AR     services.AccountsReceivable
+	AP     services.AccountsPayable
 }
 
 func NewFinanceHandler(db *gorm.DB) *FinanceHandler {
