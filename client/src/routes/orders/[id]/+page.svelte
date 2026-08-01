@@ -11,6 +11,7 @@
 	import { settings } from '$lib/stores/settings';
 	import { addRecent } from '$lib/recent';
 	import ActivityHistory from '$lib/components/activity-history.svelte';
+	import { Calendar, Package } from 'lucide-svelte';
 
 	let orderId = $page.params.id; // actually OrderNumber or ID, usually number in URL, but backend uses string OrderNumber.
 	// Assuming route is /orders/[id], if id is the db ID, we fetch by ID. If orderNumber, by Number.
@@ -185,11 +186,11 @@
 						</div>
 						<div class="text-muted-foreground mt-2 flex items-center gap-4 text-sm">
 							<span class="flex items-center gap-1.5">
-								📅 <span class="num">{formatDate(order.OrderDate)}</span>
+								<Calendar class="h-3.5 w-3.5" /> <span class="num">{formatDate(order.OrderDate)}</span>
 							</span>
 							<span class="bg-border h-1 w-1 rounded-full"></span>
 							<span class="flex items-center gap-1.5">
-								📦 <span class="num">{order.OrderItems?.length || 0}</span> Items
+								<Package class="h-3.5 w-3.5" /> <span class="num">{order.OrderItems?.length || 0}</span> Items
 							</span>
 						</div>
 					</div>
