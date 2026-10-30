@@ -23,9 +23,8 @@
 	let categorySearchTerm = $state('');
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
 
 	const categoryColumns = $derived([
 		{ header: $t('catalog.categories.form.name'), accessorKey: 'Name' },
@@ -88,34 +87,34 @@
 </script>
 
 <div
-	class="grid gap-8 {auth.hasPermission('categories.write')
-		? 'lg:grid-cols-[2fr,1fr]'
+	class="grid gap-6 {auth.hasPermission('categories.write')
+		? 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
 		: 'grid-cols-1'}"
 >
-	<div class="flex flex-col gap-6">
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
-		>
-			<div class="space-y-1">
-				<h2 class="font-display text-foreground text-lg font-semibold">
-					{$t('catalog.categories.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('catalog.categories.subtitle')}</p>
-			</div>
-			<div class="flex flex-wrap items-center gap-2">
-				<Input
-					class="{inputClass} sm:w-48"
-					placeholder={$t('catalog.categories.search_placeholder')}
-					bind:value={categorySearchTerm}
-				/>
-				<Button class={btnPrimary} onclick={handleCategorySearch}
-					>{$t('catalog.common.search')}</Button
-				>
-				<Button
-					variant="ghost"
-					class="text-primary hover:bg-muted hover:text-foreground rounded-md px-4 py-2"
-					onclick={clearCategorySearch}>{$t('catalog.common.clear')}</Button
-				>
+	<div class="flex min-w-0 flex-col gap-4">
+		<div class="panel p-4">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div class="min-w-0 space-y-1">
+					<h2 class="section-title">{$t('catalog.categories.title')}</h2>
+					<p class="text-sm text-muted-foreground">{$t('catalog.categories.subtitle')}</p>
+				</div>
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+					<Input
+						class="{inputClass} sm:w-52"
+						placeholder={$t('catalog.categories.search_placeholder')}
+						bind:value={categorySearchTerm}
+					/>
+					<div class="flex items-center gap-2">
+						<Button class={btnPrimary} onclick={handleCategorySearch}
+							>{$t('catalog.common.search')}</Button
+						>
+						<Button
+							variant="ghost"
+							class="h-10 px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+							onclick={clearCategorySearch}>{$t('catalog.common.clear')}</Button
+						>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -126,14 +125,14 @@
 			onRowClick={(category) => onViewDetails(category, 'categories')}
 		>
 			{#snippet children(category)}
-				<td class="text-foreground font-medium">{category.Name}</td>
+				<td class="font-medium text-foreground">{category.Name}</td>
 				{#if auth.hasPermission('categories.write')}
 					<td class="text-right">
 						<div class="flex items-center justify-end gap-1">
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-primary hover:bg-muted hover:text-foreground"
+								class="h-8 px-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
 								onclick={(event) => {
 									event.stopPropagation();
 									editingCategory = category;
@@ -144,7 +143,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
+								class="h-8 px-2.5 text-danger hover:bg-danger/10 hover:text-danger"
 								onclick={(event) => {
 									event.stopPropagation();
 									deleteCategory(category);

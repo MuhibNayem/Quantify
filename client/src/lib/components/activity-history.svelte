@@ -30,17 +30,17 @@
 	});
 
 	function actionColor(action: string): string {
-		if (action.includes('CREATE')) return 'text-emerald-600';
-		if (action.includes('DELETE')) return 'text-red-600';
-		if (action.includes('UPDATE')) return 'text-blue-600';
-		return 'text-amber-600';
+		if (action.includes('CREATE')) return 'text-success';
+		if (action.includes('DELETE')) return 'text-danger';
+		if (action.includes('UPDATE')) return 'text-info';
+		return 'text-warning';
 	}
 
 	function actionDot(action: string): string {
-		if (action.includes('CREATE')) return 'bg-emerald-500 ring-emerald-100';
-		if (action.includes('DELETE')) return 'bg-red-500 ring-red-100';
-		if (action.includes('UPDATE')) return 'bg-blue-500 ring-blue-100';
-		return 'bg-amber-500 ring-amber-100';
+		if (action.includes('CREATE')) return 'bg-success ring-success/20';
+		if (action.includes('DELETE')) return 'bg-danger ring-danger/20';
+		if (action.includes('UPDATE')) return 'bg-info ring-info/20';
+		return 'bg-warning ring-warning/20';
 	}
 
 	function changeSummary(changes: string): string | null {
@@ -63,16 +63,16 @@
 </script>
 
 <div class="activity-history">
-	<h4 class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+	<h4 class="flex items-center gap-2 text-sm font-semibold text-foreground">
 		<span
-			class="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800/5 text-slate-500 ring-1 ring-slate-900/5"
+			class="flex h-7 w-7 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border"
 		>
 			<History size={14} />
 		</span>
 		Activity
 		{#if !loading && logs.length > 0}
 			<span
-				class="ml-auto rounded-full bg-slate-800/5 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-500 tabular-nums"
+				class="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tracking-wide text-muted-foreground tabular-nums"
 			>
 				{logs.length}
 			</span>
@@ -136,7 +136,7 @@
 		top: 0.4rem;
 		bottom: 0.4rem;
 		width: 1px;
-		background: linear-gradient(to bottom, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.03));
+		background: linear-gradient(to bottom, hsl(var(--border)), hsl(var(--border) / 0.25));
 	}
 
 	.entry {
@@ -145,14 +145,14 @@
 		gap: 0.6rem;
 		align-items: flex-start;
 		padding: 0.35rem 0.4rem 0.35rem 0;
-		border-radius: 0.6rem;
+		border-radius: calc(var(--radius) - 6px);
 		animation: rise 0.35s ease both;
 		animation-delay: calc(var(--i) * 45ms);
 		transition: background-color 0.15s ease;
 	}
 
 	.entry:hover {
-		background: rgba(255, 255, 255, 0.55);
+		background: hsl(var(--muted) / 0.6);
 	}
 
 	.dot {
@@ -188,21 +188,21 @@
 
 	.when {
 		font-size: 0.68rem;
-		color: rgba(51, 65, 85, 0.45);
+		color: hsl(var(--muted-foreground) / 0.85);
 		white-space: nowrap;
 	}
 
 	.meta {
 		margin: 0.1rem 0 0;
 		font-size: 0.72rem;
-		color: rgba(51, 65, 85, 0.6);
+		color: hsl(var(--muted-foreground));
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
 	}
 
 	.changes {
-		color: rgba(51, 65, 85, 0.45);
+		color: hsl(var(--muted-foreground) / 0.8);
 		cursor: help;
 	}
 
@@ -210,10 +210,10 @@
 		margin: 0;
 		padding: 0.6rem 0.75rem;
 		font-size: 0.75rem;
-		color: rgba(51, 65, 85, 0.5);
-		border: 1px dashed rgba(15, 23, 42, 0.12);
-		border-radius: 0.6rem;
-		background: rgba(255, 255, 255, 0.35);
+		color: hsl(var(--muted-foreground));
+		border: 1px dashed hsl(var(--border));
+		border-radius: calc(var(--radius) - 6px);
+		background: hsl(var(--muted) / 0.4);
 	}
 
 	.skeleton-row {
@@ -230,7 +230,7 @@
 		width: 0.55rem;
 		height: 0.55rem;
 		border-radius: 9999px;
-		background: rgba(15, 23, 42, 0.08);
+		background: hsl(var(--muted-foreground) / 0.18);
 	}
 
 	.skeleton-bar {
@@ -238,9 +238,9 @@
 		border-radius: 9999px;
 		background: linear-gradient(
 			90deg,
-			rgba(15, 23, 42, 0.06) 25%,
-			rgba(15, 23, 42, 0.12) 50%,
-			rgba(15, 23, 42, 0.06) 75%
+			hsl(var(--muted-foreground) / 0.1) 25%,
+			hsl(var(--muted-foreground) / 0.2) 50%,
+			hsl(var(--muted-foreground) / 0.1) 75%
 		);
 		background-size: 200% 100%;
 		animation: shimmer 1.2s linear infinite;

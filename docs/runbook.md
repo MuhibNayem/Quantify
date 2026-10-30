@@ -22,7 +22,7 @@ component. The Docker Compose stack also defines healthchecks for Postgres
 
 Default local ports: backend `8080`, Postgres `5432`, Redis `6379–6381`
 (+ cluster bus `16379–16381`), RabbitMQ `5672` / management `15672`, MinIO
-`9000` / console `9001`, Prometheus `9091`, Grafana `3001`.
+`9000` / console `9001`, Prometheus `9092`, Grafana `3001`.
 
 ---
 

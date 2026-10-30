@@ -12,7 +12,11 @@ import (
 )
 
 func main() {
-	dir := flag.String("dir", "migrations", "migrations directory")
+	// Default points to the SQL files embedded inside the Go module
+	// (internal/migrations/sql). The same files are also //go:embed'd into
+	// the backend binary, so the explicit CLI and the auto-boot runner
+	// always operate on the same version of the schema.
+	dir := flag.String("dir", "internal/migrations/sql", "migrations directory")
 	cmd := flag.String("cmd", "up", "up | down | version")
 	dsn := flag.String("dsn", os.Getenv("DATABASE_URL"), "Postgres DSN")
 	flag.Parse()

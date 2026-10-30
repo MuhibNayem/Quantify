@@ -84,7 +84,7 @@ func (r *userRepository) ListUsers(page, limit int, status, search string) ([]do
 
 func (r *userRepository) GetUserByID(id string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Preload("Role").First(&user, id).Error; err != nil {
+	if err := r.db.Preload("Role.Permissions").First(&user, id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

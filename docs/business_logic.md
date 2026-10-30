@@ -48,7 +48,7 @@ any subset of permissions via `PUT /roles/:id/permissions`.
 
 ### 1.3 Permission catalog
 
-Seeded in `migrations/0002_seed.up.sql` (mirrored by
+Seeded in `internal/migrations/sql/0002_seed.up.sql` (mirrored by
 `internal/repository/database.go`). Grouped by domain:
 
 | Group | Permissions |
@@ -248,7 +248,7 @@ first checkout, starting at `Bronze` with 0 points.
 
 ### 5.1 Settings
 
-Seeded in `migrations/0002_seed.up.sql`:
+Seeded in `internal/migrations/sql/0002_seed.up.sql`:
 
 | Key | Default | Meaning |
 | :--- | :--- | :--- |

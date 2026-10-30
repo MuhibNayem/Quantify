@@ -20,8 +20,9 @@
 </script>
 
 <div
+	role="tablist"
 	class={cn(
-		'flex w-fit flex-wrap items-center justify-center gap-1 rounded-lg border border-border bg-muted p-1 shadow-xs',
+		'flex w-fit flex-wrap items-center justify-center gap-1 rounded-lg border border-border bg-muted/60 p-1 shadow-xs',
 		className
 	)}
 >
@@ -30,17 +31,17 @@
 			<Button
 				size="sm"
 				variant="ghost"
+				role="tab"
+				aria-selected={value === tab.value}
 				onclick={() => (value = tab.value)}
 				class={cn(
 					'relative isolate h-9 rounded-md border border-transparent px-4 py-2 text-sm font-medium transition-colors duration-200',
-					value === tab.value
-						? 'text-accent-foreground'
-						: 'text-muted-foreground hover:text-foreground'
+					value === tab.value ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
 				)}
 			>
 				{#if value === tab.value}
 					<div
-						class="glass-toggle-active absolute inset-0 -z-10 rounded-md"
+						class="segmented-pill absolute inset-0 -z-10 rounded-md"
 						in:fade={{ duration: 200 }}
 						out:fade={{ duration: 200 }}
 					></div>
@@ -50,3 +51,12 @@
 		</div>
 	{/each}
 </div>
+
+<style>
+	/* Selected segment: opaque porcelain key sitting on the muted track. */
+	.segmented-pill {
+		background: hsl(var(--card));
+		border: 1px solid hsl(var(--border) / 0.9);
+		box-shadow: var(--surface-inset), var(--shadow-xs);
+	}
+</style>

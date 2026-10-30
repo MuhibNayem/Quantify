@@ -28,7 +28,9 @@ The backend is built with Go and utilizes the following technologies:
 - **Cache & Token Store:** Redis cluster
 - **Message Broker:** RabbitMQ for asynchronous task processing (bulk jobs, reports, alerts)
 - **Object Storage:** MinIO for import/export and report files
-- **Authentication:** JWT (access + refresh) with a Redis token whitelist; per-user CSRF tokens
+- **Authentication:** httpOnly cookie sessions (JWT access + rotating refresh) with a Redis
+  token whitelist and double-submit CSRF; Bearer tokens remain supported for API clients
+- **Rate limiting:** Redis-backed per-IP limits (global + stricter auth endpoints)
 - **Observability:** Prometheus metrics (`/metrics`) and optional OpenTelemetry tracing
 - **API:** A versioned RESTful API (`/api/v1`)
 
@@ -119,20 +121,24 @@ gosec ./...             # gosec static security analysis
 Integration tests under `backend/test/integration/` expect a reachable
 Postgres (see the `postgres` service in the CI workflow).
 
-## CSRF Protection
+## Session & CSRF Protection
 
-All authenticated requests that modify state (`POST`, `PUT`, `PATCH`, `DELETE`)
-require an `X-CSRF-Token` header. The token is returned alongside the
-access/refresh tokens during login and refresh workflows. Clients must store it
-securely and include it on every subsequent unsafe request; tokens are rotated
-on refresh and invalidated on logout and on role/permission changes.
+Login sets two `HttpOnly` cookies — `access_token` (8 h) and `refresh_token`
+(rotating, scoped to `/api/v1/users`) — plus a readable `csrf_token` cookie.
+The SPA never stores or reads JWTs. `POST /users/login` returns only the user,
+permissions, and the non-secret CSRF token. Every state-changing request
+(`POST`, `PUT`, `PATCH`, `DELETE`) must echo the CSRF cookie in an
+`X-CSRF-Token` header; tokens rotate on refresh and are invalidated on logout
+and on role/permission changes. Bearer tokens remain supported for API clients.
 
 ## WebSocket Authentication
 
-After connecting to `/ws`, clients must send
-`{"type":"auth","token":"<JWT>"}` as the first message within 5 seconds. The
-legacy `?token=` query parameter is ignored. See
-[docs/architecture.md](./docs/architecture.md) for the full request lifecycle.
+Browser sessions authenticate from the `access_token` cookie sent during the
+WebSocket handshake, then send `{"type":"auth"}` as the first message within
+5 seconds. API clients may instead include a token in that message
+(`{"type":"auth","token":"<JWT>"}`). The legacy `?token=` query parameter is
+ignored. See [docs/architecture.md](./docs/architecture.md) for the full request
+lifecycle.
 
 ## Environment Variables
 
@@ -175,6 +181,11 @@ order: built-in defaults → optional TOML file → environment variables.
 | `RABBITMQ_URL` | _(empty, **required**)_ | AMQP connection URL. |
 | `CONSUMER_CONCURRENCY` | `1` | Number of bulk-consumer workers. |
 | `AI_SERVICE_URL` | `http://localhost:8001` | Base URL of the Python AI service. |
+| `RATE_LIMIT_REQUESTS` | `300` | Global requests allowed per client IP per window. |
+| `RATE_LIMIT_WINDOW` | `1m` | Global rate-limit window. |
+| `AUTH_RATE_LIMIT_REQUESTS` | `10` | Login/register/refresh requests per IP per window. |
+| `AUTH_RATE_LIMIT_WINDOW` | `1m` | Auth rate-limit window. |
+| `TRUSTED_PROXIES` | _(empty)_ | CSV of proxy CIDRs trusted for `X-Forwarded-For` (set this behind ingress). |
 
 ### Auth & Security (required — must not be defaults)
 

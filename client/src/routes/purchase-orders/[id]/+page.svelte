@@ -65,8 +65,8 @@
 	}
 </script>
 
-<div class="mx-auto w-full max-w-6xl px-6 py-8">
-	<section class="space-y-8">
+<div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<section class="space-y-4">
 		{#if purchaseOrder}
 			<Breadcrumbs
 				items={[
@@ -75,82 +75,101 @@
 				]}
 			/>
 		{/if}
+
 		<!-- HEADER -->
-		<div class="flex items-center justify-between">
+		<header class="page-header">
 			<a
 				href="/intelligence"
-				class="text-primary hover:text-primary/80 flex items-center font-medium transition-colors"
+				class="flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 			>
-				<ArrowLeft class="mr-2 h-5 w-5" />
+				<span
+					class="flex h-8 w-8 items-center justify-center rounded-md border border-border/70 bg-card shadow-xs"
+				>
+					<ArrowLeft class="h-4 w-4" />
+				</span>
 				Back to Intelligence
 			</a>
 			{#if purchaseOrder && !['CANCELLED', 'COMPLETED', 'RECEIVED'].includes(purchaseOrder.Status)}
-				<Button
-					class="bg-danger text-primary-foreground font-semibold shadow-md hover:bg-danger/90"
-					size="sm"
-					onclick={handleCancelPO}
-					disabled={isCancelling}
-				>
+				<Button variant="destructive" size="sm" onclick={handleCancelPO} disabled={isCancelling}>
 					{isCancelling ? 'Cancelling...' : 'Cancel Order'}
 				</Button>
 			{/if}
-		</div>
+		</header>
 
 		{#if purchaseOrder}
-			<div class="grid gap-8 lg:grid-cols-3">
+			<div class="grid gap-4 lg:grid-cols-3">
 				<!-- PO Details -->
-				<div class="space-y-8 lg:col-span-1">
-					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
-						<div class="border-border bg-muted/40 space-y-1 border-b px-6 py-5">
-							<h2 class="font-display text-foreground flex items-center text-lg font-bold">
-								<ShoppingCart class="text-primary mr-2 h-5 w-5" />
-								{poNumber(purchaseOrder.ID)}
-							</h2>
-							<p class="text-muted-foreground text-sm">Details and Status</p>
+				<div class="space-y-4 lg:col-span-1">
+					<section class="panel overflow-hidden" data-animate="fade-up">
+						<div class="panel-header items-start">
+							<div class="flex items-start gap-3">
+								<span
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+								>
+									<ShoppingCart class="h-4 w-4" />
+								</span>
+								<div class="min-w-0 space-y-0.5">
+									<h2 class="num-mono section-title truncate">{poNumber(purchaseOrder.ID)}</h2>
+									<p class="text-sm text-muted-foreground">Details and Status</p>
+								</div>
+							</div>
 						</div>
-						<div class="space-y-4 p-6 text-sm">
+						<div class="panel-body space-y-3.5 text-sm">
 							<div>
-								<p class="overline mb-1">Supplier</p>
+								<p class="mb-1 overline">Supplier</p>
 								<a
 									href="/suppliers/{purchaseOrder.SupplierID}"
-									class="text-foreground hover:text-primary text-lg font-semibold transition-colors hover:underline"
+									class="text-base font-semibold text-foreground transition-colors hover:text-primary hover:underline"
 								>
 									{`Supplier #${purchaseOrder.SupplierID}`}
 								</a>
 							</div>
 							<div>
-								<p class="overline mb-1">Status</p>
+								<p class="mb-1 overline">Status</p>
 								<span class={cn('uppercase', getStatusBadge(purchaseOrder.Status))}>
 									{purchaseOrder.Status}
 								</span>
 							</div>
 							<div>
-								<p class="overline mb-1">Order Date</p>
-								<p class="text-foreground num-mono">
+								<p class="mb-1 overline">Order Date</p>
+								<p class="num-mono text-sm text-foreground">
 									{new Date(purchaseOrder.OrderDate).toLocaleDateString()}
 								</p>
 							</div>
 							<div>
-								<p class="overline mb-1">Expected Delivery</p>
-								<p class="text-foreground num-mono">
+								<p class="mb-1 overline">Expected Delivery</p>
+								<p class="num-mono text-sm text-foreground">
 									{purchaseOrder.ExpectedDeliveryDate
 										? new Date(purchaseOrder.ExpectedDeliveryDate).toLocaleDateString()
 										: 'N/A'}
 								</p>
 							</div>
 						</div>
-					</div>
+					</section>
 
-					<div class="liquid-panel rounded-lg p-4" data-animate="fade-up" style="animation-delay: 100ms;">
-						<ActivityHistory entity="PurchaseOrder" entityId={purchaseOrder.ID} />
-					</div>
+					<section
+						class="panel overflow-hidden"
+						data-animate="fade-up"
+						style="animation-delay: 100ms;"
+					>
+						<div class="panel-header">
+							<h2 class="section-title">History</h2>
+						</div>
+						<div class="panel-body pt-3">
+							<ActivityHistory entity="PurchaseOrder" entityId={purchaseOrder.ID} />
+						</div>
+					</section>
 				</div>
 
 				<!-- PO Items -->
 				<div class="lg:col-span-2">
-					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up" style="animation-delay: 60ms;">
-						<div class="border-border bg-muted/40 border-b px-6 py-5">
-							<h2 class="font-display text-foreground text-lg font-bold">Items</h2>
+					<section
+						class="panel overflow-hidden"
+						data-animate="fade-up"
+						style="animation-delay: 60ms;"
+					>
+						<div class="panel-header">
+							<h2 class="section-title">Items</h2>
 						</div>
 						<div class="overflow-x-auto">
 							<table class="ledger-table">
@@ -169,7 +188,7 @@
 												<td>
 													<a
 														href="/products/{item.ProductID}"
-														class="text-foreground hover:text-primary transition-colors hover:underline"
+														class="font-medium text-foreground transition-colors hover:text-primary hover:underline"
 													>
 														{item.Product?.Name || `Product ID: ${item.ProductID}`}
 													</a>
@@ -181,7 +200,7 @@
 										{/each}
 									{:else}
 										<tr>
-											<td colspan={4} class="text-muted-foreground py-4 text-center">
+											<td colspan={4} class="py-8 text-center text-sm text-muted-foreground">
 												No items in this purchase order.
 											</td>
 										</tr>
@@ -189,17 +208,17 @@
 								</tbody>
 							</table>
 						</div>
-					</div>
+					</section>
 				</div>
 			</div>
 		{:else}
 			<!-- Loading State -->
-			<div class="grid gap-8 lg:grid-cols-3">
+			<div class="grid gap-4 lg:grid-cols-3">
 				<div class="lg:col-span-1">
-					<Skeleton class="bg-muted h-64 w-full rounded-lg" />
+					<Skeleton class="h-64 w-full rounded-lg bg-muted" />
 				</div>
 				<div class="lg:col-span-2">
-					<Skeleton class="bg-muted h-64 w-full rounded-lg" />
+					<Skeleton class="h-64 w-full rounded-lg bg-muted" />
 				</div>
 			</div>
 		{/if}

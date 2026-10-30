@@ -53,9 +53,9 @@
 </script>
 
 <div class="w-full space-y-4">
-	<div class="liquid-panel overflow-hidden rounded-lg" in:fade={{ duration: 250 }}>
+	<div class="panel overflow-hidden" in:fade={{ duration: 250 }}>
 		<div class="custom-scrollbar overflow-x-auto">
-			<table class="ledger-table min-w-[36rem]">
+			<table class="glass-table min-w-[36rem]">
 				<thead>
 					<tr>
 						{#if selectable}
@@ -82,7 +82,7 @@
 								{#each columns as _}
 									<td>
 										<div
-											class="bg-muted h-4 w-full animate-pulse rounded-md"
+											class="h-3.5 w-full animate-pulse rounded-md bg-muted"
 											style="animation-delay: {i * 80}ms"
 										></div>
 									</td>
@@ -93,7 +93,7 @@
 						<tr>
 							<td
 								colspan={columns.length + (selectable ? 1 : 0)}
-								class="text-muted-foreground py-12 text-center text-sm"
+								class="px-4 py-14 text-center text-sm text-muted-foreground"
 							>
 								No records found
 							</td>
@@ -133,7 +133,7 @@
 					<Pagination.Content class="gap-1">
 						<Pagination.Item>
 							<Pagination.PrevButton
-								class="glass-button h-9 w-9 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40"
+								class="h-9 w-9 rounded-lg text-muted-foreground shadow-none hover:bg-muted hover:text-foreground disabled:opacity-40"
 							/>
 						</Pagination.Item>
 						{#each pages as page (page.key)}
@@ -146,9 +146,9 @@
 									<Pagination.Link
 										{page}
 										isActive={currentPage === page.value}
-										class="num h-9 w-9 rounded-md border text-sm font-semibold transition-colors {currentPage ===
+										class="num h-9 w-9 rounded-lg border text-sm font-semibold transition-colors {currentPage ===
 										page.value
-											? 'border-primary/40 bg-accent text-accent-foreground'
+											? 'border-primary/30 bg-accent text-accent-foreground'
 											: 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}"
 									>
 										{page.value}
@@ -158,7 +158,7 @@
 						{/each}
 						<Pagination.Item>
 							<Pagination.NextButton
-								class="glass-button h-9 w-9 rounded-md text-muted-foreground hover:text-foreground disabled:opacity-40"
+								class="h-9 w-9 rounded-lg text-muted-foreground shadow-none hover:bg-muted hover:text-foreground disabled:opacity-40"
 							/>
 						</Pagination.Item>
 					</Pagination.Content>

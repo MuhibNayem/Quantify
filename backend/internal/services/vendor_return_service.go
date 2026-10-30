@@ -182,18 +182,25 @@ func (s *vendorReturnService) CompletePurchaseReturn(ctx context.Context, id uin
 			if err := tx.First(&product, item.ProductID).Error; err != nil {
 				return appErrors.NewAppError("failed to load product for refund", http.StatusInternalServerError, err)
 			}
-			totalRefund += product.PurchasePrice * item.Quantity
+			unitCost := batch.UnitCost
+			if unitCost <= 0 {
+				unitCost = product.PurchasePrice
+			}
+			lineCost := unitCost * item.Quantity
+			totalRefund += lineCost
 
 			adj := domain.StockAdjustment{
-				ProductID:   item.ProductID,
-				LocationID:  product.LocationID,
-				Type:        "STOCK_OUT",
-				Quantity:    item.Quantity,
-				ReasonCode:  "VENDOR_RETURN",
-				Notes:       fmt.Sprintf("Vendor Return ID: %d", ret.ID),
-				AdjustedBy:  derefUint(ret.ApprovedBy),
-				AdjustedAt:  time.Now(),
-				NewQuantity: batch.Quantity,
+				ProductID:        item.ProductID,
+				LocationID:       batch.LocationID,
+				Type:             "STOCK_OUT",
+				Quantity:         item.Quantity,
+				UnitCost:         unitCost,
+				ReasonCode:       "VENDOR_RETURN",
+				Notes:            fmt.Sprintf("Vendor Return ID: %d", ret.ID),
+				AdjustedBy:       derefUint(ret.ApprovedBy),
+				AdjustedAt:       time.Now(),
+				PreviousQuantity: batch.Quantity + item.Quantity,
+				NewQuantity:      batch.Quantity,
 			}
 			if err := tx.Create(&adj).Error; err != nil {
 				return appErrors.NewAppError("failed to create stock adjustment log", http.StatusInternalServerError, err)
@@ -204,6 +211,15 @@ func (s *vendorReturnService) CompletePurchaseReturn(ctx context.Context, id uin
 		ret.Status = vrStatusCompleted
 		ret.CompletedAt = &now
 		ret.RefundAmount = totalRefund
+
+		ledger := NewLedgerService(s.db)
+		entry, err := ledger.PostVendorReturn(tx, &ret, totalRefund, derefUint(ret.ApprovedBy))
+		if err != nil {
+			return appErrors.NewAppError(fmt.Sprintf("failed to post vendor return to ledger: %v", err), http.StatusInternalServerError, err)
+		}
+		if entry != nil {
+			ret.JournalEntryID = &entry.ID
+		}
 		return tx.Save(&ret).Error
 	})
 }

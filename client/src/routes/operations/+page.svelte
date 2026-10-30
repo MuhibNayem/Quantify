@@ -11,13 +11,6 @@
 	import { goto } from '$app/navigation';
 	import { t } from '$lib/i18n';
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
-
 	$effect(() => {
 		if (!auth.hasPermission('inventory.view')) {
 			toast.error($t('operations.toasts.access_denied'), {
@@ -107,7 +100,8 @@
 			toast.success($t('operations.toasts.sku_resolved'));
 		} catch (error) {
 			toast.error($t('operations.toasts.lookup_fail'), {
-				description: (error as any)?.response?.data?.error || $t('operations.toasts.product_not_found')
+				description:
+					(error as any)?.response?.data?.error || $t('operations.toasts.product_not_found')
 			});
 		}
 	};
@@ -137,39 +131,38 @@
 	});
 </script>
 
-<!-- HEADER -->
-<section class="w-full">
-	<div class="mx-auto max-w-7xl px-6 pt-10 pb-6 sm:pt-14">
-		<div
-			class="parallax-hero space-y-2 transition-transform duration-700 ease-out will-change-transform"
-			data-animate="fade-up"
-		>
-			<p class="overline flex items-center gap-2">
-				<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
-					<Activity class="h-4 w-4" />
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div class="parallax-hero transition-transform duration-700 ease-out will-change-transform">
+			<p class="flex items-center gap-2 overline">
+				<span class="inline-flex rounded-md bg-primary/10 p-1.5 text-primary">
+					<Activity class="h-3.5 w-3.5" />
 				</span>
 				{$t('operations.hero.subtitle')}
 			</p>
-			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
-				{$t('operations.hero.title')}
-			</h1>
+			<h1 class="page-title mt-1">{$t('operations.hero.title')}</h1>
 		</div>
-	</div>
-</section>
+	</header>
 
-<!-- MAIN CONTENT -->
-<section class="mx-auto max-w-7xl space-y-8 px-6 py-8">
-	<div class="grid gap-6 lg:grid-cols-2">
+	<!-- MAIN CONTENT -->
+	<div class="mt-6 grid gap-4 lg:grid-cols-2">
 		<!-- Inventory Snapshot -->
-		<div class="liquid-panel rounded-lg">
-			<div class="border-border space-y-1 border-b px-6 py-5">
-				<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
-					<ClipboardCheck class="text-primary h-5 w-5" />
-					{$t('operations.snapshot.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('operations.snapshot.subtitle')}</p>
+		<section class="panel overflow-hidden">
+			<div class="panel-header items-start">
+				<div class="flex items-start gap-3">
+					<span
+						class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+					>
+						<ClipboardCheck class="h-4 w-4" />
+					</span>
+					<div class="space-y-0.5">
+						<h2 class="section-title">{$t('operations.snapshot.title')}</h2>
+						<p class="text-sm text-muted-foreground">{$t('operations.snapshot.subtitle')}</p>
+					</div>
+				</div>
 			</div>
-			<div class="space-y-4 p-6">
+			<div class="panel-body space-y-4">
 				<div class="grid gap-3 sm:grid-cols-2">
 					<ProductSelector
 						bind:value={stockQuery.productId}
@@ -181,21 +174,21 @@
 						type="number"
 						placeholder={$t('operations.snapshot.location_id')}
 						bind:value={stockQuery.locationId}
-						class="{inputClass} num-mono"
+						class="num-mono h-11 w-full rounded-md text-sm"
 						onkeydown={(e) => e.key === 'Enter' && loadStock()}
 					/>
 				</div>
-				<Button class="{btnPrimary} w-full" onclick={loadStock}>
+				<Button class="btn-soothe w-full" onclick={loadStock}>
 					{$t('operations.snapshot.fetch_button')}
 				</Button>
 				{#if stockLoading}
-					<div class="bg-muted h-32 w-full animate-pulse rounded-md"></div>
+					<div class="h-32 w-full animate-pulse rounded-lg bg-muted"></div>
 				{:else if stockSnapshot}
-					<div class="border-border bg-muted/50 rounded-lg border p-4">
+					<div class="rounded-lg bg-muted/40 p-4 ring-1 ring-border/70">
 						<p class="overline">{$t('operations.snapshot.current_qty')}</p>
-						<p class="kpi-num text-primary mt-1 text-3xl">{stockSnapshot.currentQuantity}</p>
+						<p class="kpi-num mt-1 text-3xl text-primary">{stockSnapshot.currentQuantity}</p>
 					</div>
-					<div class="liquid-panel custom-scrollbar mt-4 overflow-x-auto rounded-lg">
+					<div class="custom-scrollbar overflow-x-auto rounded-lg ring-1 ring-border">
 						<table class="ledger-table min-w-[24rem]">
 							<thead>
 								<tr>
@@ -207,7 +200,7 @@
 							<tbody>
 								{#if stockSnapshot.batches.length === 0}
 									<tr>
-										<td colspan={3} class="text-muted-foreground py-4 text-center text-sm"
+										<td colspan={3} class="py-6 text-center text-sm text-muted-foreground"
 											>{$t('operations.snapshot.table.empty')}</td
 										>
 									</tr>
@@ -225,68 +218,82 @@
 					</div>
 				{/if}
 			</div>
-		</div>
+		</section>
 
 		<!-- Manual Adjustment -->
 		{#if auth.hasPermission('products.write')}
-			<div class="liquid-panel rounded-lg">
-				<div class="border-border space-y-1 border-b px-6 py-5">
-					<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
-						<Activity class="text-success h-5 w-5" />
-						{$t('operations.adjustment.title')}
-					</h2>
-					<p class="text-muted-foreground text-sm">{$t('operations.adjustment.subtitle')}</p>
+			<section class="panel overflow-hidden">
+				<div class="panel-header items-start">
+					<div class="flex items-start gap-3">
+						<span
+							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+						>
+							<Activity class="h-4 w-4" />
+						</span>
+						<div class="space-y-0.5">
+							<h2 class="section-title">{$t('operations.adjustment.title')}</h2>
+							<p class="text-sm text-muted-foreground">{$t('operations.adjustment.subtitle')}</p>
+						</div>
+					</div>
 				</div>
-				<div class="space-y-4 p-6">
+				<div class="panel-body space-y-3">
 					<ProductSelector
 						bind:value={adjustmentForm.productId}
 						placeholder={$t('operations.adjustment.select_product')}
 						className="w-full"
 					/>
 					<div class="grid grid-cols-2 gap-3">
-						<div class="select-wrapper">
-							<select bind:value={adjustmentForm.type}>
-								<option value="STOCK_IN">{$t('operations.adjustment.stock_in')}</option>
-								<option value="STOCK_OUT">{$t('operations.adjustment.stock_out')}</option>
-							</select>
-						</div>
+						<select
+							bind:value={adjustmentForm.type}
+							aria-label={$t('operations.adjustment.title')}
+							class="h-11 text-sm"
+						>
+							<option value="STOCK_IN">{$t('operations.adjustment.stock_in')}</option>
+							<option value="STOCK_OUT">{$t('operations.adjustment.stock_out')}</option>
+						</select>
 						<Input
 							type="number"
 							placeholder={$t('operations.adjustment.quantity')}
 							bind:value={adjustmentForm.quantity}
-							class="{inputClass} num-mono"
+							class="num-mono h-11 w-full rounded-md text-sm"
 						/>
 					</div>
 					<Input
 						placeholder={$t('operations.adjustment.reason_code')}
 						bind:value={adjustmentForm.reasonCode}
-						class={inputClass}
+						class="h-11 w-full rounded-md text-sm"
 					/>
 					<Input
 						placeholder={$t('operations.adjustment.notes')}
 						bind:value={adjustmentForm.notes}
-						class={inputClass}
+						class="h-11 w-full rounded-md text-sm"
 					/>
-					<Button class="{btnPrimary} w-full" onclick={submitAdjustment}
+					<Button class="btn-soothe w-full" onclick={submitAdjustment}
 						>{$t('operations.adjustment.submit_button')}</Button
 					>
 				</div>
-			</div>
+			</section>
 		{/if}
 	</div>
 
-	<div class="grid gap-6 lg:grid-cols-2">
+	<div class="mt-4 grid gap-4 lg:grid-cols-2">
 		<!-- Stock Transfer -->
 		{#if auth.hasPermission('products.write')}
-			<div class="liquid-panel rounded-lg">
-				<div class="border-border space-y-1 border-b px-6 py-5">
-					<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
-						<ArrowRightLeft class="text-info h-5 w-5" />
-						{$t('operations.transfer.title')}
-					</h2>
-					<p class="text-muted-foreground text-sm">{$t('operations.transfer.subtitle')}</p>
+			<section class="panel overflow-hidden">
+				<div class="panel-header items-start">
+					<div class="flex items-start gap-3">
+						<span
+							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+						>
+							<ArrowRightLeft class="h-4 w-4" />
+						</span>
+						<div class="space-y-0.5">
+							<h2 class="section-title">{$t('operations.transfer.title')}</h2>
+							<p class="text-sm text-muted-foreground">{$t('operations.transfer.subtitle')}</p>
+						</div>
+					</div>
 				</div>
-				<div class="space-y-4 p-6">
+				<div class="panel-body space-y-3">
 					<ProductSelector
 						bind:value={transferForm.productId}
 						placeholder={$t('operations.transfer.select_product')}
@@ -297,68 +304,74 @@
 							type="number"
 							placeholder={$t('operations.transfer.source')}
 							bind:value={transferForm.sourceLocationId}
-							class="{inputClass} num-mono"
+							class="num-mono h-11 w-full rounded-md text-sm"
 						/>
 						<Input
 							type="number"
 							placeholder={$t('operations.transfer.dest')}
 							bind:value={transferForm.destLocationId}
-							class="{inputClass} num-mono"
+							class="num-mono h-11 w-full rounded-md text-sm"
 						/>
 					</div>
 					<Input
 						type="number"
 						placeholder={$t('operations.transfer.quantity')}
 						bind:value={transferForm.quantity}
-						class="{inputClass} num-mono"
+						class="num-mono h-11 w-full rounded-md text-sm"
 					/>
-					<Button class="{btnPrimary} w-full" onclick={submitTransfer}
+					<Button class="btn-soothe w-full" onclick={submitTransfer}
 						>{$t('operations.transfer.submit_button')}</Button
 					>
 				</div>
-			</div>
+			</section>
 		{/if}
 
 		<!-- Barcode Intelligence -->
-		<div class="liquid-panel rounded-lg">
-			<div class="border-border space-y-1 border-b px-6 py-5">
-				<h2 class="text-foreground flex items-center gap-2 font-display text-lg font-semibold">
-					<ScanLine class="text-warning h-5 w-5" />
-					{$t('operations.barcode.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('operations.barcode.subtitle')}</p>
+		<section class="panel overflow-hidden">
+			<div class="panel-header items-start">
+				<div class="flex items-start gap-3">
+					<span
+						class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+					>
+						<ScanLine class="h-4 w-4" />
+					</span>
+					<div class="space-y-0.5">
+						<h2 class="section-title">{$t('operations.barcode.title')}</h2>
+						<p class="text-sm text-muted-foreground">{$t('operations.barcode.subtitle')}</p>
+					</div>
+				</div>
 			</div>
-			<div class="space-y-4 p-6">
+			<div class="panel-body space-y-3">
 				<Input
 					placeholder={$t('operations.barcode.input_placeholder')}
 					bind:value={barcodeLookup.value}
-					class="{inputClass} num-mono"
+					class="num-mono h-11 w-full rounded-md text-sm"
 					onkeydown={(e) => e.key === 'Enter' && runBarcodeLookup()}
 				/>
-				<div class="flex flex-col gap-3 sm:flex-row">
-					<Button class="{btnSecondary} flex-1" variant="secondary" onclick={runBarcodeLookup}>
+				<div class="flex flex-col gap-2.5 sm:flex-row">
+					<Button variant="secondary" class="flex-1" onclick={runBarcodeLookup}>
 						{$t('operations.barcode.lookup_button')}
 					</Button>
 
-					<Button class="{btnPrimary} flex-1" onclick={generateBarcode}>
+					<Button class="btn-soothe flex-1" onclick={generateBarcode}>
 						{$t('operations.barcode.generate_button')}
 					</Button>
 				</div>
 
 				{#if barcodeLookup.result}
-					<div class="border-border bg-muted/50 rounded-lg border p-3 text-sm">
-						<p class="text-foreground font-semibold">{barcodeLookup.result.Name}</p>
+					<div class="rounded-lg bg-muted/40 p-3 text-sm ring-1 ring-border/70">
+						<p class="font-semibold text-foreground">{barcodeLookup.result.Name}</p>
 						<p class="text-muted-foreground">
 							SKU: <span class="num-mono">{barcodeLookup.result.SKU}</span>
 						</p>
 					</div>
 				{/if}
 				{#if barcodeImage}
-					<div class="border-border bg-card rounded-lg border border-dashed p-3 text-center shadow-sm">
+					<div class="rounded-lg border border-dashed border-border/70 bg-muted/20 p-3 text-center">
 						<img src={barcodeImage} alt={$t('operations.barcode.preview_alt')} class="mx-auto" />
 					</div>
 				{/if}
 			</div>
-		</div>
+		</section>
 	</div>
-</section>
+</div>

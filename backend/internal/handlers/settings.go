@@ -27,7 +27,7 @@ type SettingDescriptor struct {
 
 var settingDescriptors = map[string]SettingDescriptor{
 	"tax_rate_percentage": {
-		Type: "number",
+		Type:     "number",
 		Validate: numericRange(0, 100),
 	},
 	"currency": {
@@ -48,18 +48,29 @@ var settingDescriptors = map[string]SettingDescriptor{
 			return nil
 		},
 	},
-	"currency_symbol":           {Type: "string"},
-	"business_name":             {Type: "string"},
-	"timezone":                  {Type: "string"},
-	"locale":                    {Type: "string"},
-	"loyalty.tier_silver":       {Type: "number", Validate: numericRange(0, 1000000)},
-	"loyalty.tier_gold":         {Type: "number", Validate: numericRange(0, 1000000)},
-	"loyalty.tier_platinum":     {Type: "number", Validate: numericRange(0, 1000000)},
-	"loyalty.earning_rate":      {Type: "number", Validate: numericRange(0, 1)},
-	"loyalty.redemption_rate":   {Type: "number", Validate: numericRange(0, 1)},
+	"currency_symbol":                {Type: "string"},
+	"business_name":                  {Type: "string"},
+	"timezone":                       {Type: "string"},
+	"locale":                         {Type: "string"},
+	"loyalty.tier_silver":            {Type: "number", Validate: numericRange(0, 1000000)},
+	"loyalty.tier_gold":              {Type: "number", Validate: numericRange(0, 1000000)},
+	"loyalty.tier_platinum":          {Type: "number", Validate: numericRange(0, 1000000)},
+	"loyalty.earning_rate":           {Type: "number", Validate: numericRange(0, 1)},
+	"loyalty.redemption_rate":        {Type: "number", Validate: numericRange(0, 1)},
 	"loyalty.points_earning_rate":    {Type: "number", Validate: numericRange(0, 1)},
 	"loyalty.points_redemption_rate": {Type: "number", Validate: numericRange(0, 1)},
-	"return_window_days":        {Type: "number", Validate: numericRange(0, 365)},
+	"return_window_days":             {Type: "number", Validate: numericRange(0, 365)},
+	"manual_discount_enabled":        {Type: "boolean", Validate: booleanValue},
+	"manual_discount_max_percent":    {Type: "number", Validate: numericRange(0, 100)},
+	"manual_discount_max_amount":     {Type: "number", Validate: numericRange(0, 100000000)},
+	"manual_discount_require_reason": {Type: "boolean", Validate: booleanValue},
+}
+
+func booleanValue(v string) error {
+	if v != "true" && v != "false" && v != "1" && v != "0" {
+		return errors.New("must be true or false")
+	}
+	return nil
 }
 
 func numericRange(min, max float64) func(string) error {

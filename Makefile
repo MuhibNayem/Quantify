@@ -1,5 +1,7 @@
 .PHONY: dev dev-down dev-logs migrate seed test test-integration lint build docker-build k8s-deploy tf-plan tf-apply clean
 
+CLOUD ?= aws
+
 dev:
 	docker compose up -d --build
 
@@ -34,13 +36,13 @@ docker-build:
 	docker compose build
 
 k8s-deploy:
-	kubectl apply -f k8s/
+	kubectl apply -f deploy/k8s/
 
 tf-plan:
-	cd terraform && terraform plan
+	cd infrastructure/$(CLOUD) && terraform plan
 
 tf-apply:
-	cd terraform && terraform apply
+	cd infrastructure/$(CLOUD) && terraform apply
 
 clean:
 	rm -rf bin/

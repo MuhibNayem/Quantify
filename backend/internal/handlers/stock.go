@@ -16,6 +16,7 @@ import (
 	"inventory/backend/internal/message_broker"
 	"inventory/backend/internal/repository"
 	"inventory/backend/internal/requests"
+	"inventory/backend/internal/services"
 )
 
 // StockAdjustedEventPayload defines the payload for stock adjustment events.
@@ -63,15 +64,58 @@ func CreateBatch(c *gin.Context) {
 		return
 	}
 
+	userIDVal, _ := c.Get("user_id")
+	userID, _ := userIDVal.(uint)
+
+	if product.LocationID == 0 {
+		var fallback domain.Location
+		if err := repository.DB().First(&fallback).Error; err == nil {
+			product.LocationID = fallback.ID
+		}
+	}
+
 	batch := domain.Batch{
 		ProductID:   uint(productID),
 		BatchNumber: req.BatchNumber,
 		Quantity:    req.Quantity,
+		UnitCost:    product.PurchasePrice,
 		ExpiryDate:  req.ExpiryDate,
 		LocationID:  product.LocationID, // Inherit from product's default location
 	}
 
-	if err := repository.DB().Create(&batch).Error; err != nil {
+	err = repository.DB().Transaction(func(tx *gorm.DB) error {
+		var currentQuantity float64
+		if err := tx.Model(&domain.Batch{}).Where("product_id = ?", productID).
+			Select("COALESCE(SUM(quantity), 0)").Row().Scan(&currentQuantity); err != nil {
+			return err
+		}
+
+		if err := tx.Create(&batch).Error; err != nil {
+			return err
+		}
+
+		adjustment := domain.StockAdjustment{
+			ProductID:        uint(productID),
+			LocationID:       product.LocationID,
+			Type:             "STOCK_IN",
+			Quantity:         req.Quantity,
+			UnitCost:         product.PurchasePrice,
+			ReasonCode:       "BATCH_CREATE",
+			Notes:            fmt.Sprintf("Batch %s", req.BatchNumber),
+			AdjustedBy:       userID,
+			AdjustedAt:       time.Now(),
+			PreviousQuantity: currentQuantity,
+			NewQuantity:      currentQuantity + req.Quantity,
+		}
+		if err := tx.Create(&adjustment).Error; err != nil {
+			return err
+		}
+
+		ledger := services.NewLedgerService(repository.DB())
+		_, err := ledger.PostStockAdjustment(tx, &adjustment, product.PurchasePrice*req.Quantity, userID)
+		return err
+	})
+	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to create batch", http.StatusInternalServerError, err))
 		return
 	}
@@ -186,8 +230,15 @@ func CreateStockAdjustment(c *gin.Context) {
 		c.Error(appErrors.NewAppError("Failed to fetch product", http.StatusInternalServerError, err))
 		return
 	}
+	if product.LocationID == 0 {
+		var fallback domain.Location
+		if err := repository.DB().First(&fallback).Error; err == nil {
+			product.LocationID = fallback.ID
+		}
+	}
 
 	var adjustment domain.StockAdjustment
+	adjustmentCost := 0.0
 
 	// Start a database transaction
 	err = repository.DB().Transaction(func(tx *gorm.DB) error {
@@ -221,11 +272,14 @@ func CreateStockAdjustment(c *gin.Context) {
 				LocationID:  product.LocationID,                              // Inherit from product's default location
 				BatchNumber: "MANUAL-" + time.Now().Format("20060102150405"), // Unique batch number
 				Quantity:    req.Quantity,
+				UnitCost:    product.PurchasePrice,
 				ExpiryDate:  nil, // Manual stock-in might not have expiry
 			}
 			if err := tx.Create(&batch).Error; err != nil {
 				return fmt.Errorf("failed to add stock for adjustment: %w", err)
 			}
+			adjustment.UnitCost = product.PurchasePrice
+			adjustmentCost = product.PurchasePrice * req.Quantity
 			adjustment.NewQuantity = currentQuantity + req.Quantity
 		} else if req.Type == "STOCK_OUT" {
 			// For simplicity, reduce from existing batches (FIFO/FEFO logic would be more complex)
@@ -247,6 +301,16 @@ func CreateStockAdjustment(c *gin.Context) {
 				if quantityToReduce == 0 {
 					break
 				}
+				consumed := b.Quantity
+				if consumed > quantityToReduce {
+					consumed = quantityToReduce
+				}
+				unitCost := b.UnitCost
+				if unitCost <= 0 {
+					unitCost = product.PurchasePrice
+				}
+				adjustmentCost += consumed * unitCost
+
 				if b.Quantity >= quantityToReduce {
 					b.Quantity -= quantityToReduce
 					quantityToReduce = 0
@@ -258,11 +322,19 @@ func CreateStockAdjustment(c *gin.Context) {
 					return fmt.Errorf("failed to update batch quantity: %w", err)
 				}
 			}
+			if req.Quantity > 0 {
+				adjustment.UnitCost = adjustmentCost / req.Quantity
+			}
 			adjustment.NewQuantity = currentQuantity - req.Quantity
 		}
 
 		if err := tx.Create(&adjustment).Error; err != nil {
 			return fmt.Errorf("failed to record stock adjustment: %w", err)
+		}
+
+		ledger := services.NewLedgerService(repository.DB())
+		if _, err := ledger.PostStockAdjustment(tx, &adjustment, adjustmentCost, userID); err != nil {
+			return fmt.Errorf("failed to post stock adjustment to ledger: %w", err)
 		}
 
 		return nil

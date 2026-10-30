@@ -29,7 +29,7 @@
 <div
 	in:fade={{ duration: 300, delay: 150 }}
 	out:fade={{ duration: 150 }}
-	class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+	class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
 >
 	<HeatmapCard grid={heatmapGrid} {loading} />
 
@@ -38,7 +38,7 @@
 	<CustomerInsightsCard {customerInsights} />
 
 	<!-- Category & Insights Grid -->
-	<div class="col-span-full grid gap-6 md:grid-cols-2">
+	<div class="col-span-full grid gap-4 md:grid-cols-2">
 		<CategoryBreakdownCard {categoryPerformance} />
 		<BasketAnalysisCard {basketAnalysis} />
 	</div>

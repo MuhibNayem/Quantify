@@ -15,8 +15,7 @@ func RegisterUsers(rg *gin.RouterGroup, c *app.Container, roleRepo repository.Ro
 	users := rg.Group("/users")
 	{
 		users.GET("", middleware.RequirePermission(roleRepo, "users.view"), userHandler.ListUsers)
-		users.POST("/refresh-token", userHandler.RefreshToken)
-		users.POST("/logout", userHandler.LogoutUser)
+		users.GET("/me", userHandler.GetCurrentUser)
 		users.GET("/:id", userHandler.GetUser)
 		users.PUT("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.UpdateUser)
 		users.DELETE("/:id", middleware.RequirePermission(roleRepo, "users.manage"), userHandler.DeleteUser)

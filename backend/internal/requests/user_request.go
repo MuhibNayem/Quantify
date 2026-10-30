@@ -20,7 +20,9 @@ type UserLoginRequest struct {
 
 // RefreshTokenRequest represents the request body for refreshing an access token.
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refreshToken" binding:"required"`
+	// Optional: browser clients authenticate with the refresh cookie; API
+	// clients may send the token in the body.
+	RefreshToken string `json:"refreshToken"`
 }
 
 // UserUpdateRequest represents the request body for updating user information.

@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/services"
 )
 
@@ -43,6 +44,7 @@ func TestGetCustomer_Uniform404(t *testing.T) {
 	seedUser(t, db, "alice", "a@x.com", "555-1234")
 
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	h := &CRMHandler{db: db}
 	r.GET("/crm/customers/:identifier", h.GetCustomer)
 
@@ -61,6 +63,7 @@ func TestGetCustomer_ValidLookupsStillWork(t *testing.T) {
 	alice := seedUser(t, db, "alice", "a@x.com", "555-1234")
 
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	h := &CRMHandler{db: db}
 	r.GET("/crm/customers/:identifier", h.GetCustomer)
 
@@ -91,6 +94,7 @@ func newChurnRiskRouter(t *testing.T, db *gorm.DB, mock services.CRMService) *gi
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	h := &CRMHandler{db: db, crmService: mock}
 	r.GET("/crm/customers/:identifier/churn-risk", h.GetChurnRisk)
 	return r

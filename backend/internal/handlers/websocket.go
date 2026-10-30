@@ -62,9 +62,6 @@ func parseAuthMessage(data []byte) (string, error) {
 	if msg.Type != authMessageType {
 		return "", fmt.Errorf("expected message type %q, got %q", authMessageType, msg.Type)
 	}
-	if msg.Token == "" {
-		return "", fmt.Errorf("missing token in auth message")
-	}
 	return msg.Token, nil
 }
 
@@ -85,6 +82,18 @@ func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.Notificati
 		logrus.Warn("WebSocket connection supplied a deprecated ?token query parameter; ignoring it. The client must send first-message auth within 5s.")
 	}
 
+	// Prefer the httpOnly access cookie: browsers send it on the WS handshake,
+	// so the SPA never has to handle a JWT. API clients can still authenticate
+	// with a first-message token.
+	var claims *auth.Claims
+	if cookieToken := auth.AccessTokenFromRequest(c); cookieToken != "" {
+		if validated, err := auth.ValidateJWT(cookieToken); err == nil && validated.ID != "" {
+			if stored, err := repository.GetCache("access_token:" + validated.ID); err == nil && stored != "" {
+				claims = validated
+			}
+		}
+	}
+
 	requestUpgrader := upgrader
 	requestUpgrader.CheckOrigin = buildOriginChecker(cfg.WSAllowedOrigins)
 	conn, err := requestUpgrader.Upgrade(c.Writer, c.Request, nil)
@@ -94,8 +103,9 @@ func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.Notificati
 		return
 	}
 
-	// First-message auth. Read with a deadline so a client that never sends
-	// auth cannot hold the connection open indefinitely.
+	// Read the first message with a deadline so a client that never sends
+	// auth cannot hold the connection open indefinitely. Cookie-authenticated
+	// browsers send {"type":"auth"} with no token.
 	if err := conn.SetReadDeadline(time.Now().Add(authMessageTimeout)); err != nil {
 		logrus.Errorf("Failed to set WebSocket auth read deadline: %v", err)
 		conn.Close()
@@ -108,18 +118,32 @@ func ServeWs(hub *ws.Hub, c *gin.Context, notificationRepo repository.Notificati
 		return
 	}
 
-	tokenString, err := parseAuthMessage(msg)
+	msgToken, err := parseAuthMessage(msg)
 	if err != nil {
 		logrus.Errorf("WebSocket first-message auth rejected: %v", err)
 		conn.Close()
 		return
 	}
 
-	claims, err := auth.ValidateJWT(tokenString)
-	if err != nil {
-		logrus.Errorf("Failed to validate WebSocket auth token: %v", err)
-		conn.Close()
-		return
+	if claims == nil {
+		if msgToken == "" {
+			logrus.Errorf("WebSocket auth failed: no session cookie and no token supplied")
+			conn.Close()
+			return
+		}
+		validated, err := auth.ValidateJWT(msgToken)
+		if err != nil || validated.ID == "" {
+			logrus.Errorf("Failed to validate WebSocket auth token: %v", err)
+			conn.Close()
+			return
+		}
+		stored, err := repository.GetCache("access_token:" + validated.ID)
+		if err != nil || stored == "" {
+			logrus.Errorf("WebSocket auth token is not an active session")
+			conn.Close()
+			return
+		}
+		claims = validated
 	}
 
 	// Fetch permissions for the role

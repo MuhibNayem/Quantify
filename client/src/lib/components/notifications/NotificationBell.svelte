@@ -168,9 +168,7 @@
 				</Button>
 			{/snippet}
 		</PopoverTrigger>
-		<PopoverContent
-			class="w-[360px] rounded-lg border-border bg-card p-0 shadow-lg"
-		>
+		<PopoverContent class="w-[360px] rounded-xl p-0">
 			<div class="flex items-center justify-between border-b border-border px-4 py-3">
 				<div>
 					<p class="text-sm font-semibold text-foreground">Notifications</p>

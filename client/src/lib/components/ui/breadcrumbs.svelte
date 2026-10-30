@@ -37,26 +37,42 @@
 		margin: 0;
 		font-size: 0.8rem;
 	}
+
 	.breadcrumbs li {
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
+		min-width: 0;
 	}
+
 	.breadcrumbs a {
-		color: var(--text-secondary, #64748b);
+		color: hsl(var(--muted-foreground));
 		text-decoration: none;
 		display: flex;
 		align-items: center;
-		transition: color 0.15s;
+		border-radius: 0.375rem;
+		transition: color 0.15s ease;
 	}
+
 	.breadcrumbs a:hover {
-		color: var(--text-primary, #0f172a);
+		color: hsl(var(--foreground));
 	}
+
+	.breadcrumbs span {
+		color: hsl(var(--muted-foreground));
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
 	.breadcrumbs [aria-current='page'] span {
-		color: var(--text-primary, #0f172a);
+		color: hsl(var(--foreground));
 		font-weight: 600;
 	}
+
 	:global(.separator) {
-		opacity: 0.4;
+		flex: none;
+		color: hsl(var(--muted-foreground));
+		opacity: 0.5;
 	}
 </style>

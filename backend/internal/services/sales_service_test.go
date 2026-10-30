@@ -78,14 +78,19 @@ func addLedgerToTestDB(t *testing.T, db *gorm.DB) {
 		&domain.AccountsReceivable{},
 		&domain.Payment{},
 		&domain.PaymentAllocation{},
+		&domain.CashDrawerSession{},
+		&domain.CashDrop{},
 	))
 	accounts := []domain.Account{
 		{Code: domain.AccountCodeCash, Name: "Cash", Type: domain.AccountAsset},
 		{Code: domain.AccountCodeAccountsReceivable, Name: "AR", Type: domain.AccountAsset},
 		{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset},
+		{Code: domain.AccountCodeSalesTaxPayable, Name: "Tax Payable", Type: domain.AccountLiability},
 		{Code: domain.AccountCodeSalesRevenue, Name: "Revenue", Type: domain.AccountRevenue},
 		{Code: domain.AccountCodeSalesDiscounts, Name: "Sales Discounts", Type: domain.AccountRevenue},
+		{Code: domain.AccountCodeSalesReturns, Name: "Sales Returns", Type: domain.AccountRevenue},
 		{Code: domain.AccountCodeCOGS, Name: "COGS", Type: domain.AccountExpense},
+		{Code: domain.AccountCodeShrinkageExpense, Name: "Shrinkage", Type: domain.AccountExpense},
 	}
 	for i := range accounts {
 		require.NoError(t, db.Create(&accounts[i]).Error)

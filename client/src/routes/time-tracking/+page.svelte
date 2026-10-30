@@ -10,7 +10,7 @@
 
 	import { t } from '$lib/i18n';
 
-	const tabsClass = 'rounded-lg border-border bg-card shadow-sm';
+	const tabsClass = 'mx-auto mb-6';
 
 	$effect(() => {
 		if (!auth.hasPermission('users.view')) {
@@ -24,42 +24,39 @@
 	let currentRole: 'Staff' | 'Manager' = $state('Staff');
 </script>
 
-<section class="w-full">
-	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-		<div class="space-y-3" data-animate="fade-up">
-			<div class="flex items-center gap-3">
-				<span class="glass-button inline-flex rounded-md p-2">
-					<Clock class="text-primary h-5 w-5" />
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="flex items-center gap-2 overline">
+				<span class="inline-flex rounded-md bg-primary/10 p-1.5 text-primary">
+					<Clock class="h-3.5 w-3.5" />
 				</span>
-				<p class="overline">{$t('time_tracking.hero.label')}</p>
-			</div>
-			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
-				{$t('time_tracking.hero.title')}
-			</h1>
-			<p class="text-muted-foreground max-w-3xl text-base">
-				{$t('time_tracking.hero.subtitle')}
+				{$t('time_tracking.hero.label')}
 			</p>
+			<h1 class="page-title mt-1">{$t('time_tracking.hero.title')}</h1>
+			<p class="page-sub">{$t('time_tracking.hero.subtitle')}</p>
 		</div>
+	</header>
+
+	<div class="mt-6">
+		<GlassTabs
+			bind:value={currentRole}
+			tabs={[
+				{ value: 'Staff', label: $t('time_tracking.role_toggle.staff') },
+				{ value: 'Manager', label: $t('time_tracking.role_toggle.manager') }
+			]}
+			class={tabsClass}
+		/>
+
+		{#if currentRole === 'Staff'}
+			<div in:fade={{ duration: 250, delay: 100 }} out:fade={{ duration: 120 }}>
+				<StaffDashboard />
+			</div>
+		{:else}
+			<div in:fade={{ duration: 250, delay: 100 }} out:fade={{ duration: 120 }}>
+				<ManagerDashboard />
+			</div>
+		{/if}
 	</div>
-</section>
-
-<div class="mx-auto mt-8 max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-	<GlassTabs
-		bind:value={currentRole}
-		tabs={[
-			{ value: 'Staff', label: $t('time_tracking.role_toggle.staff') },
-			{ value: 'Manager', label: $t('time_tracking.role_toggle.manager') }
-		]}
-		class="{tabsClass} mx-auto mb-8"
-	/>
-
-	{#if currentRole === 'Staff'}
-		<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }}>
-			<StaffDashboard />
-		</div>
-	{:else}
-		<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }}>
-			<ManagerDashboard />
-		</div>
-	{/if}
 </div>

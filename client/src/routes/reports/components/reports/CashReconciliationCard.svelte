@@ -12,37 +12,53 @@
 	let { cashReconciliation }: Props = $props();
 </script>
 
-<div class="liquid-panel rounded-lg p-6">
-	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
-		<DollarSign class="text-primary h-5 w-5" />
-		{$t('reports.cash_reconciliation.title')}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
-			</Tooltip.Trigger>
-			<Tooltip.Content>
-				<p class="max-w-xs">{$t('reports.cash_reconciliation.description')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
-	</h3>
-	<div class="space-y-2">
+<div class="panel p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-primary/10 text-primary"
+		>
+			<DollarSign class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.cash_reconciliation.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle
+							class="h-4 w-4 text-muted-foreground transition-colors hover:text-primary"
+						/>
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">
+							{$t('reports.cash_reconciliation.description')}
+						</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+		</div>
+	</div>
+
+	<div class="mt-4 space-y-1">
+		{#if cashReconciliation.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
 		{#each cashReconciliation as item}
 			<div
-				class="border-border bg-card hover:bg-muted flex items-center justify-between rounded-md border p-4 transition-colors"
+				class="flex items-center justify-between gap-3 rounded-[calc(var(--radius)_-_6px)] px-2.5 py-2 transition-colors hover:bg-muted/50"
 			>
-				<span class="text-foreground pl-2 text-sm font-semibold">{item.CashierName}</span>
-				<div class="text-right">
-					<div class="overline mb-0.5">
-						{$t('reports.cash_reconciliation.discrepancy')}
-					</div>
-					<div
-						class="border-border bg-muted/50 rounded-md border px-3 py-1 font-semibold num-mono {item.Discrepancy <
+				<span class="min-w-0 truncate text-sm font-medium text-foreground">{item.CashierName}</span>
+				<div class="shrink-0 text-right">
+					<p class="mb-1 overline">{$t('reports.cash_reconciliation.discrepancy')}</p>
+					<span
+						class="num-mono inline-flex items-center rounded-[calc(var(--radius)_-_8px)] border border-border/70 bg-muted/50 px-2.5 py-1 text-xs font-semibold {item.Discrepancy <
 						0
 							? 'text-danger'
 							: 'text-success'}"
 					>
 						{formatCurrency(item.Discrepancy)}
-					</div>
+					</span>
 				</div>
 			</div>
 		{/each}

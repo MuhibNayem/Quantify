@@ -115,7 +115,7 @@ Inserts two users (idempotent, `ON CONFLICT DO NOTHING`):
 | AI Service | http://localhost:8001 | — |
 | Swagger UI | http://localhost:8080/swagger | — |
 | Grafana | http://localhost:3001 | admin / password |
-| Prometheus | http://localhost:9091 | — |
+| Prometheus | http://localhost:9092 | — |
 | Alertmanager | http://localhost:9093 | — |
 | Loki | http://localhost:3100 | — |
 | pgAdmin | http://localhost:5050 | admin@quantify.local / password |

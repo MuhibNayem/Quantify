@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/repository"
 )
 
 func setupVendorReturnTestDB(t *testing.T) *gorm.DB {
@@ -26,7 +27,11 @@ func setupVendorReturnTestDB(t *testing.T) *gorm.DB {
 		&domain.PurchaseOrder{},
 		&domain.PurchaseReturn{},
 		&domain.PurchaseReturnItem{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
 	))
+	require.NoError(t, repository.SeedChartOfAccounts(db))
 	return db
 }
 

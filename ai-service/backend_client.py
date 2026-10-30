@@ -11,13 +11,13 @@ class BackendClient:
         self.base_url = base_url or os.getenv("BACKEND_URL", "http://localhost:8080")
         self.username = os.getenv("AI_USER_USERNAME", "ai-agent")
         self.email = os.getenv("AI_USER_EMAIL", "ai-agent@quantify.com")
-        self.password = os.getenv("AI_AGENT_PASSWORD")
+        # AI_AGENT_PASSWORD is the canonical name (also read by the backend
+        # seeder). AI_USER_PASSWORD is accepted for older deployments.
+        self.password = os.getenv("AI_AGENT_PASSWORD") or os.getenv("AI_USER_PASSWORD")
         if not self.password:
             raise RuntimeError(
-                "AI_AGENT_PASSWORD env var must be set. "
-                "The AI agent user is seeded with a random password at backend startup; "
-                "the operator must read the password from backend logs and set this env var "
-                "so the AI service can authenticate."
+                "AI_AGENT_PASSWORD env var must be set and must match the value the "
+                "backend used to seed the ai-agent user."
             )
         self.token = None
         self.csrf_token = None

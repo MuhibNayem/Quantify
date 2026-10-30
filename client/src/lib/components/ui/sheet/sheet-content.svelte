@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	import { tv, type VariantProps } from 'tailwind-variants';
 	export const sheetVariants = tv({
-		base: 'fixed z-50 flex flex-col gap-4 transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 p-6 data-[state=open]:animate-in data-[state=closed]:animate-out bg-card border-border shadow-lg',
+		base: 'glass-chrome fixed z-50 flex flex-col gap-4 transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500 p-6 data-[state=open]:animate-in data-[state=closed]:animate-out',
 		variants: {
 			side: {
 				top: 'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
@@ -51,7 +51,7 @@
 	>
 		{@render children?.()}
 		<SheetPrimitive.Close
-			class="ring-offset-background focus-visible:ring-ring rounded-xs focus-visible:outline-hidden absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none"
+			class="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-hidden disabled:pointer-events-none"
 		>
 			<XIcon class="size-4" />
 			<span class="sr-only">Close</span>

@@ -12,41 +12,61 @@
 	let { supplierPerf }: Props = $props();
 </script>
 
-<div class="liquid-panel rounded-lg p-6">
-	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
-		<DollarSign class="text-primary h-5 w-5" />
-		{$t('reports.supplier.title')}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
-			</Tooltip.Trigger>
-			<Tooltip.Content>
-				<p class="max-w-xs">{$t('reports.supplier.description')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
-	</h3>
-	<div class="space-y-2">
+<div class="panel p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-primary/10 text-primary"
+		>
+			<DollarSign class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.supplier.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle
+							class="h-4 w-4 text-muted-foreground transition-colors hover:text-primary"
+						/>
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">{$t('reports.supplier.description')}</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+		</div>
+	</div>
+
+	<div class="mt-4 space-y-1">
+		{#if supplierPerf.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
 		{#each supplierPerf as sup}
 			<div
-				class="border-border bg-card hover:bg-muted flex items-center justify-between rounded-md border p-4 transition-colors"
+				class="flex items-center justify-between gap-3 rounded-[calc(var(--radius)_-_6px)] px-2.5 py-2 transition-colors hover:bg-muted/50"
 			>
-				<span class="text-foreground text-sm font-semibold">{sup.supplierName}</span>
-				<div class="flex items-center gap-3">
-					<div class="bg-muted/50 min-w-[64px] rounded-md p-2 text-right">
-						<div class="overline">
+				<span class="min-w-0 truncate text-sm font-medium text-foreground">{sup.supplierName}</span>
+				<div class="flex shrink-0 items-center gap-2">
+					<div
+						class="min-w-[64px] rounded-[calc(var(--radius)_-_8px)] border border-border/70 bg-muted/50 px-2 py-1.5 text-right"
+					>
+						<p class="text-[10px] overline">
 							{$t('reports.supplier.time')}
-						</div>
-						<div class="text-foreground font-semibold num-mono">
+						</p>
+						<p class="num-mono mt-0.5 text-xs font-semibold text-foreground">
 							{sup.averageLeadTimeDays}{$t('reports.supplier.days_suffix')}
-						</div>
+						</p>
 					</div>
-					<div class="bg-success/10 min-w-[64px] rounded-md p-2 text-right">
-						<div class="text-success overline">
+					<div
+						class="min-w-[64px] rounded-[calc(var(--radius)_-_8px)] border border-success/20 bg-success/10 px-2 py-1.5 text-right"
+					>
+						<p class="text-[10px] text-success overline">
 							{$t('reports.supplier.rate')}
-						</div>
-						<div class="text-success font-semibold num-mono">
+						</p>
+						<p class="num-mono mt-0.5 text-xs font-semibold text-success">
 							{formatPercent(sup.onTimeDeliveryRate)}
-						</div>
+						</p>
 					</div>
 				</div>
 			</div>

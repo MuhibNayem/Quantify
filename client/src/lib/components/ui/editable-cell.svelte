@@ -69,7 +69,7 @@
 
 {#if editing}
 	<div
-		class="inline-flex items-center gap-0.5 rounded-md border border-primary bg-card py-0.5 pr-0.5 pl-1.5 shadow-sm"
+		class="inline-flex items-center gap-0.5 rounded-md border border-primary bg-card py-0.5 pr-0.5 pl-1.5 shadow-sm ring-2 ring-ring/15"
 		role="group"
 	>
 		{#if prefix}
@@ -91,6 +91,7 @@
 			<span class="text-xs font-semibold text-muted-foreground">{suffix}</span>
 		{/if}
 		<button
+			type="button"
 			onclick={(e) => {
 				stop(e);
 				commit();
@@ -102,6 +103,7 @@
 			<Check class="h-3.5 w-3.5 text-success" />
 		</button>
 		<button
+			type="button"
 			onclick={(e) => {
 				stop(e);
 				cancel();
@@ -115,12 +117,14 @@
 	</div>
 {:else}
 	<button
-		class="group/cell inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 font-[inherit] transition-colors duration-200 hover:border-border hover:bg-muted hover:shadow-sm"
+		type="button"
+		class="group/cell inline-flex items-center gap-1.5 rounded-md border border-transparent px-1.5 py-1 font-[inherit] transition-colors duration-200 hover:border-border hover:bg-muted"
 		onclick={(e) => {
 			e.stopPropagation();
 			startEdit();
 		}}
 		title="Click to edit"
+		aria-label={`Edit value, currently ${display ?? value}`}
 	>
 		<span class="text-sm font-semibold text-foreground">
 			{#if prefix}
@@ -132,7 +136,7 @@
 			{/if}
 		</span>
 		<Pencil
-			class="h-3 w-3 text-primary opacity-0 transition-opacity duration-200 group-hover/cell:opacity-60"
+			class="h-3 w-3 text-primary opacity-0 transition-opacity duration-200 group-hover/cell:opacity-70 group-focus-visible/cell:opacity-70"
 		/>
 	</button>
 {/if}

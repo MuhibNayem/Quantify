@@ -31,13 +31,17 @@ func (t AccountType) NormalBalance() string {
 
 // Well-known system account codes used by the automated posting engine.
 const (
-	AccountCodeCash              = "1000"
-	AccountCodeAccountsReceivable = "1100"
-	AccountCodeInventory         = "1200"
-	AccountCodeAccountsPayable   = "2000"
-	AccountCodeSalesRevenue      = "4000"
-	AccountCodeSalesDiscounts    = "4100" // contra-revenue: manual discounts given
-	AccountCodeCOGS              = "5000"
+	AccountCodeCash                    = "1000"
+	AccountCodeAccountsReceivable      = "1100"
+	AccountCodeInventory               = "1200"
+	AccountCodeAccountsPayable         = "2000"
+	AccountCodeSalesTaxPayable         = "2100" // liability: tax collected at checkout
+	AccountCodeSalesRevenue            = "4000"
+	AccountCodeSalesDiscounts          = "4100" // contra-revenue: manual/loyalty discounts
+	AccountCodeSalesReturns            = "4200" // contra-revenue: customer refunds
+	AccountCodeInventoryAdjustmentGain = "4900" // other income: stock gains
+	AccountCodeCOGS                    = "5000"
+	AccountCodeShrinkageExpense        = "5100" // expense: damage/loss write-offs
 )
 
 // Account is a single ledger account in the chart of accounts.
@@ -57,10 +61,10 @@ type Account struct {
 type JournalEntry struct {
 	gorm.Model
 	Date        time.Time     `gorm:"index;not null" json:"Date"`
-	Reference   string        `gorm:"index" json:"Reference"`   // "SO-00001", "PMT-00001"
+	Reference   string        `gorm:"index" json:"Reference"` // "SO-00001", "PMT-00001"
 	Description string        `json:"Description"`
-	SourceType  string        `gorm:"index" json:"SourceType"`  // SALE, PAYMENT, PURCHASE, ADJUSTMENT
-	SourceID    uint          `json:"SourceID"`                 // link to Order/Payment/etc.
+	SourceType  string        `gorm:"index" json:"SourceType"` // SALE, PAYMENT, PURCHASE, ADJUSTMENT
+	SourceID    uint          `json:"SourceID"`                // link to Order/Payment/etc.
 	PostedBy    uint          `json:"PostedBy"`
 	Lines       []JournalLine `gorm:"foreignKey:JournalEntryID" json:"Lines"`
 }
@@ -85,7 +89,7 @@ type AccountsReceivable struct {
 	Customer       User            `json:"Customer"`
 	OrderID        uint            `gorm:"index" json:"OrderID"`
 	Order          Order           `json:"Order"`
-	Amount         decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`     // original amount owed
+	Amount         decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"` // original amount owed
 	PaidAmount     decimal.Decimal `gorm:"type:decimal(19,4);default:0" json:"PaidAmount"`
 	Status         string          `gorm:"index;default:'UNPAID'" json:"Status"` // UNPAID, PARTIAL, PAID
 	DueDate        *time.Time      `json:"DueDate"`
@@ -116,10 +120,10 @@ type Payment struct {
 // A single payment can settle multiple AR entries (and vice versa).
 type PaymentAllocation struct {
 	gorm.Model
-	PaymentID            uint            `gorm:"index;not null" json:"PaymentID"`
-	AccountsReceivableID uint            `gorm:"index;not null" json:"AccountsReceivableID"`
+	PaymentID            uint               `gorm:"index;not null" json:"PaymentID"`
+	AccountsReceivableID uint               `gorm:"index;not null" json:"AccountsReceivableID"`
 	AccountsReceivable   AccountsReceivable `json:"AccountsReceivable"`
-	Amount               decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`
+	Amount               decimal.Decimal    `gorm:"type:decimal(19,4);not null" json:"Amount"`
 }
 
 // AccountsPayable tracks money we owe a supplier from received purchase orders.
@@ -131,7 +135,7 @@ type AccountsPayable struct {
 	Supplier        Supplier        `json:"Supplier"`
 	PurchaseOrderID uint            `gorm:"index" json:"PurchaseOrderID"`
 	PurchaseOrder   PurchaseOrder   `json:"PurchaseOrder"`
-	Amount          decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"`     // total owed for this receipt
+	Amount          decimal.Decimal `gorm:"type:decimal(19,4);not null" json:"Amount"` // total owed for this receipt
 	PaidAmount      decimal.Decimal `gorm:"type:decimal(19,4);default:0" json:"PaidAmount"`
 	Status          string          `gorm:"index;default:'UNPAID'" json:"Status"` // UNPAID, PARTIAL, PAID
 	DueDate         *time.Time      `json:"DueDate"`
@@ -147,14 +151,14 @@ func (ap AccountsPayable) Outstanding() decimal.Decimal {
 // AccountsPayable entries via Allocations.
 type SupplierPayment struct {
 	gorm.Model
-	SupplierID     uint                      `gorm:"index;not null" json:"SupplierID"`
-	Supplier       Supplier                  `json:"Supplier"`
-	Amount         decimal.Decimal           `gorm:"type:decimal(19,4);not null" json:"Amount"`
-	Method         string                    `json:"Method"` // cash, card, bkash, bank
-	PaidAt         time.Time                 `json:"PaidAt"`
-	PaidBy         uint                      `json:"PaidBy"`
-	Notes          string                    `json:"Notes"`
-	JournalEntryID uint                      `json:"JournalEntryID"`
+	SupplierID     uint                        `gorm:"index;not null" json:"SupplierID"`
+	Supplier       Supplier                    `json:"Supplier"`
+	Amount         decimal.Decimal             `gorm:"type:decimal(19,4);not null" json:"Amount"`
+	Method         string                      `json:"Method"` // cash, card, bkash, bank
+	PaidAt         time.Time                   `json:"PaidAt"`
+	PaidBy         uint                        `json:"PaidBy"`
+	Notes          string                      `json:"Notes"`
+	JournalEntryID uint                        `json:"JournalEntryID"`
 	Allocations    []SupplierPaymentAllocation `gorm:"foreignKey:SupplierPaymentID" json:"Allocations"`
 }
 

@@ -37,6 +37,11 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 	}
 
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var product domain.Product
+		// A missing/soft-deleted product should not block moving existing
+		// batches; cost falls back to zero and batch data remains intact.
+		_ = tx.Unscoped().First(&product, req.ProductID).Error
+
 		var srcBatches []domain.Batch
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("product_id = ? AND location_id = ? AND quantity > 0", req.ProductID, req.SourceLocationID).
@@ -46,6 +51,7 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 		}
 
 		remaining := req.Quantity
+		transferCost := 0.0
 		for i := range srcBatches {
 			if remaining <= 0 {
 				break
@@ -54,6 +60,12 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 			if take > remaining {
 				take = remaining
 			}
+			unitCost := srcBatches[i].UnitCost
+			if unitCost <= 0 {
+				unitCost = product.PurchasePrice
+			}
+			transferCost += take * unitCost
+
 			srcBatches[i].Quantity -= take
 			if err := tx.Save(&srcBatches[i]).Error; err != nil {
 				return err
@@ -63,6 +75,7 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 		if remaining > 0 {
 			return errors.New("insufficient stock at source")
 		}
+		transferUnitCost := transferCost / req.Quantity
 
 		var dstBatch domain.Batch
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -77,12 +90,23 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 				ProductID:  req.ProductID,
 				LocationID: req.DestLocationID,
 				Quantity:   req.Quantity,
+				UnitCost:   transferUnitCost,
 			}
 			if err := tx.Create(&dstBatch).Error; err != nil {
 				return err
 			}
 		} else {
-			dstBatch.Quantity += req.Quantity
+			// Weighted-average the destination batch's cost so mixed receipts
+			// retain a defensible valuation.
+			existingUnitCost := dstBatch.UnitCost
+			if existingUnitCost <= 0 {
+				existingUnitCost = product.PurchasePrice
+			}
+			newQty := dstBatch.Quantity + req.Quantity
+			if newQty > 0 {
+				dstBatch.UnitCost = (dstBatch.Quantity*existingUnitCost + transferCost) / newQty
+			}
+			dstBatch.Quantity = newQty
 			if err := tx.Save(&dstBatch).Error; err != nil {
 				return err
 			}
@@ -107,6 +131,7 @@ func (s *StockTransferService) Transfer(ctx context.Context, req StockTransferRe
 			Type:       "STOCK_OUT",
 			ReasonCode: "TRANSFER",
 			Quantity:   req.Quantity,
+			UnitCost:   transferUnitCost,
 			AdjustedBy: req.UserID,
 			AdjustedAt: now,
 		}

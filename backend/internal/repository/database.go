@@ -22,6 +22,18 @@ func DB() *gorm.DB { return db }
 // SetDB replaces the package-level DB handle (for tests).
 func SetDB(database *gorm.DB) { db = database }
 
+// InitDBFromDSN opens a GORM connection from a pre-built DSN string. Used
+// by the `-migrate` mode of cmd/server (one-shot migration runner) and
+// by tests. Fatal-exits on connection failure (same contract as InitDB).
+func InitDBFromDSN(dsn string) {
+	opened, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		logrus.Fatalf("Failed to connect to database: %v", err)
+	}
+	db = opened
+	logrus.Info("Database connection established")
+}
+
 func InitDB(cfg *config.Config) {
 
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
@@ -49,15 +61,31 @@ func InitDB(cfg *config.Config) {
 
 	logrus.Info("Database connection established")
 
-	if cfg.AppEnv == "dev" {
-		AutoMigrate()
-	} else {
-		logrus.Info("AutoMigrate skipped (APP_ENV != dev); run cmd/migrator to apply migrations")
-	}
+	// AutoMigrate is now run AFTER the embedded SQL migrations
+	// (see internal/bootstrap/app.go). The SQL migrations are the
+	// source of truth for schema and seed data. AutoMigrate is a
+	// safety net for any tables the GORM models describe but the
+	// SQL migrations don't yet cover.
 	ensureBarcodeUniqueIndex()
 
 	ensureDefaultAlertSubscriptions()
 
+}
+
+// RunAutoMigrate applies GORM's AutoMigrate for all domain models.
+// Called by the bootstrap after the embedded SQL migrations have
+// already created the tables, so this is purely a no-op for the
+// tables SQL has covered and only adds any GORM-only models.
+func RunAutoMigrate() {
+	if db == nil {
+		logrus.Warn("RunAutoMigrate called before database was initialized")
+		return
+	}
+	if err := db.Error; err != nil {
+		logrus.Warnf("RunAutoMigrate skipped: %v", err)
+		return
+	}
+	AutoMigrate()
 }
 
 func AutoMigrate() {
@@ -165,7 +193,8 @@ func fixRolePermissionsSchema() {
 }
 
 func seedData() {
-	// Seeding moved to migrations/0002_seed.up.sql
+	// Seeding moved to internal/migrations/sql/0002_seed.up.sql
+	// (auto-applied on backend boot by internal/migrations/runner.go).
 	// permMap := seedPermissions()
 	// seedRoles(permMap)
 	// seedSettings()

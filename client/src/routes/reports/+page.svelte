@@ -227,27 +227,25 @@
 </script>
 
 <Tooltip.Provider>
-	<div class="relative min-h-screen overflow-hidden bg-background p-6 lg:p-10">
-		<div class="mx-auto max-w-7xl space-y-8 pb-12">
+	<div class="min-h-screen bg-background p-6 lg:p-8">
+		<div class="mx-auto max-w-7xl space-y-6 pb-12">
 			<!-- Header -->
-			<div class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-				<div class="space-y-1">
-					<h1 class="font-display text-foreground text-4xl font-bold tracking-tight">
-						{$t('reports.title')}
-					</h1>
-					<p class="text-muted-foreground text-lg">
-						{$t('reports.subtitle')}
-					</p>
+			<header class="page-header">
+				<div class="min-w-0">
+					<h1 class="page-title">{$t('reports.title')}</h1>
+					<p class="page-sub">{$t('reports.subtitle')}</p>
 				</div>
 
-				<DateRangePicker
-					bind:start={dateRange.start}
-					bind:end={dateRange.end}
-					onRefresh={() => loadReports(true)}
-				/>
-			</div>
+				<div class="shrink-0">
+					<DateRangePicker
+						bind:start={dateRange.start}
+						bind:end={dateRange.end}
+						onRefresh={() => loadReports(true)}
+					/>
+				</div>
+			</header>
 
-			<div class="space-y-8">
+			<div class="space-y-5">
 				<GlassTabs
 					bind:value={currentTab}
 					tabs={[

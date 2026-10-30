@@ -1,118 +1,134 @@
 // client/src/lib/api.ts
 import axios from 'axios';
-import { get } from 'svelte/store';
 import { browser } from '$app/environment';
 import { auth } from './stores/auth';
 import { enqueue, syncQueue, updateCount, type QueuedMutation } from './offline-queue';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8080/api/v1';
-const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || 'http://127.0.0.1:8080/api/v1/users';
+// Default to the same hostname the SPA was loaded from so the session cookies
+// are same-site (SameSite=Lax) during local development.
+const defaultHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+export const API_BASE_URL =
+	import.meta.env.VITE_API_BASE_URL || `http://${defaultHost}:8080/api/v1`;
+const AUTH_SERVICE_URL = import.meta.env.VITE_AUTH_SERVICE_URL || `${API_BASE_URL}/users`;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+	baseURL: API_BASE_URL,
+	// Session cookies are httpOnly; the browser sends them automatically.
+	withCredentials: true
 });
 
-// Request interceptor for attaching access token and CSRF token
+function readCookie(name: string): string {
+	if (!browser) return '';
+	const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+	return match ? decodeURIComponent(match[1]) : '';
+}
+
+// Memory fallback for cross-subdomain deployments where the CSRF cookie is
+// scoped to the API host. Auth responses carry the token explicitly.
+let csrfTokenMemory = '';
+
+export function setCsrfToken(token?: string) {
+	csrfTokenMemory = token || '';
+}
+
+const unsafeMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+// Attach the double-submit CSRF header. The token itself is a non-secret
+// cookie readable by the SPA; the access/refresh tokens are httpOnly.
 api.interceptors.request.use(
-  async (config) => {
-    const { accessToken, csrfToken } = get(auth);
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    if (csrfToken && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(config.method?.toUpperCase() ?? '')) {
-      config.headers['X-CSRF-Token'] = csrfToken;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
+	(config) => {
+		if (unsafeMethods.includes(config.method?.toUpperCase() ?? '')) {
+			const csrf = csrfTokenMemory || readCookie('csrf_token');
+			if (csrf) config.headers['X-CSRF-Token'] = csrf;
+		}
+		return config;
+	},
+	(error) => Promise.reject(error)
 );
 
 // Offline mutation queue: persist write operations while offline and replay them on reconnect
 api.interceptors.request.use(
-  async (config) => {
-    const method = config.method?.toLowerCase() ?? '';
-    const isMutation = ['post', 'put', 'patch', 'delete'].includes(method);
-    if (browser && !navigator.onLine && isMutation) {
-      await enqueue({
-        method: config.method!.toUpperCase() as QueuedMutation['method'],
-        url: config.url!,
-        data: typeof config.data === 'string' ? JSON.parse(config.data) : config.data,
-        headers: config.headers as unknown as Record<string, string>
-      });
-      // Abort the actual request; the response interceptor resolves a synthetic "queued" response
-      const controller = new AbortController();
-      config.signal = controller.signal;
-      controller.abort('queued-offline');
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
+	async (config) => {
+		const method = config.method?.toLowerCase() ?? '';
+		const isMutation = ['post', 'put', 'patch', 'delete'].includes(method);
+		if (browser && !navigator.onLine && isMutation) {
+			await enqueue({
+				method: config.method!.toUpperCase() as QueuedMutation['method'],
+				url: config.url!,
+				data: typeof config.data === 'string' ? JSON.parse(config.data) : config.data,
+				headers: config.headers as unknown as Record<string, string>
+			});
+			const controller = new AbortController();
+			config.signal = controller.signal;
+			controller.abort('queued-offline');
+		}
+		return config;
+	},
+	(error) => Promise.reject(error)
 );
 
-// Response interceptor for handling token refresh and unauthorized errors
+const isAuthEndpoint = (url?: string) =>
+	Boolean(
+		url &&
+			(url.includes('/users/login') ||
+				url.includes('/users/refresh-token') ||
+				url.includes('/users/logout'))
+	);
+
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    // Requests aborted because they were queued offline: resolve a synthetic marker, not an error
-    if (axios.isCancel(error) || error?.message === 'queued-offline') {
-      return Promise.resolve({
-        data: { queued: true, offline: true },
-        status: 202,
-        statusText: 'Queued Offline',
-        headers: {},
-        config: error.config
-      });
-    }
+	(response) => {
+		if (response.data && typeof response.data.csrfToken === 'string') {
+			setCsrfToken(response.data.csrfToken);
+		}
+		return response;
+	},
+	async (error) => {
+		if (axios.isCancel(error) || error?.message === 'queued-offline') {
+			return Promise.resolve({
+				data: { queued: true, offline: true },
+				status: 202,
+				statusText: 'Queued Offline',
+				headers: {},
+				config: error.config
+			});
+		}
 
-    const originalRequest = error.config;
-    // If error is 401 Unauthorized and not a refresh token request
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true; // Mark request as retried
+		const originalRequest = error.config;
+		if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+			if (isAuthEndpoint(originalRequest.url)) {
+				return Promise.reject(error);
+			}
 
-      const { refreshToken } = get(auth);
-      if (refreshToken) {
-        try {
-          const refreshResponse = await axios.post(`${AUTH_SERVICE_URL}/refresh-token`, { refreshToken });
-          const { accessToken: newAccessToken, refreshToken: newRefreshToken, csrfToken: newCsrfToken } = refreshResponse.data;
+			originalRequest._retry = true;
+			try {
+				// Refresh rotates both cookies and the CSRF token. JWTs never
+				// enter JavaScript; the CSRF token is non-secret.
+				const refresh = await axios.post(
+					`${AUTH_SERVICE_URL}/refresh-token`,
+					{},
+					{ withCredentials: true }
+				);
+				setCsrfToken(refresh.data?.csrfToken);
+				return api(originalRequest);
+			} catch (refreshError) {
+				console.error('Session refresh failed:', refreshError);
+				await auth.logout();
+			}
+		}
 
-          // Update auth store with new tokens
-          const { user: currentUser, permissions: currentPermissions } = get(auth);
-          if (currentUser) {
-            auth.login(newAccessToken, newRefreshToken, newCsrfToken, currentUser, currentPermissions);
-          }
-
-          // Retry the original request with the new access token
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
-          auth.logout(); // Clear auth data and redirect to login
-          // Optionally redirect to login page here if not handled by a router guard
-        }
-      }
-    } else if (error.response?.status === 401) {
-      auth.logout(); // No refresh token or refresh failed, clear auth data and redirect to login
-    }
-
-    return Promise.reject(error);
-  }
+		return Promise.reject(error);
+	}
 );
 
 // Replay queued mutations automatically when connectivity returns
 if (browser) {
-  window.addEventListener('online', async () => {
-    await updateCount();
-    const result = await syncQueue(api);
-    if (result.synced > 0) {
-      window.dispatchEvent(new CustomEvent('offline-sync', { detail: result }));
-    }
-  });
+	window.addEventListener('online', async () => {
+		await updateCount();
+		const result = await syncQueue(api);
+		if (result.synced > 0) {
+			window.dispatchEvent(new CustomEvent('offline-sync', { detail: result }));
+		}
+	});
 }
 
 export default api;

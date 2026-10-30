@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/services"
 )
 
@@ -55,6 +56,7 @@ func putSettingJSON(t *testing.T, h *SettingsHandler, body string) *httptest.Res
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	r.Use(func(c *gin.Context) {
 		c.Set("user_id", uint(1))
 		c.Next()

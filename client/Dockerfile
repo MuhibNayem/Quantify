@@ -4,9 +4,9 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install
 
 COPY . .
@@ -18,7 +18,7 @@ FROM node:22-alpine
 WORKDIR /app
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules

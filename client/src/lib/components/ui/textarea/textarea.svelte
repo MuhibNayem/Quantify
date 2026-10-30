@@ -14,8 +14,8 @@
 	bind:this={ref}
 	data-slot="textarea"
 	class={cn(
-		'liquid-textarea field-sizing-content flex min-h-[120px] w-full px-4 py-3 text-base text-foreground outline-none transition-all placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-		'aria-invalid:ring-destructive/20 aria-invalid:border-destructive',
+		'glass-textarea flex field-sizing-content min-h-[120px] w-full rounded-lg px-4 py-3 text-base text-foreground transition-all outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+		'aria-invalid:border-destructive aria-invalid:ring-destructive/20',
 		className
 	)}
 	bind:value

@@ -20,12 +20,7 @@
 	let conditions: Record<number, string> = {};
 	let isSubmitting = false;
 
-	const dialogClass =
-		'rounded-lg border-border bg-card bg-none shadow-lg backdrop-blur-none backdrop-saturate-100 from-card to-card';
-	const inputClass =
-		'liquid-input h-8 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const inputClass = 'h-9 w-full rounded-md text-sm';
 
 	const reasonOptions = [
 		{ value: 'DAMAGED', label: 'Damaged / Defective' },
@@ -79,18 +74,20 @@
 </script>
 
 <Dialog.Root bind:open>
-	<Dialog.Content class="{dialogClass} sm:max-w-[600px]">
+	<Dialog.Content class="sm:max-w-[600px]">
 		<Dialog.Header>
-			<Dialog.Title>Request Return for Order <span class="num-mono">#{order.OrderNumber}</span></Dialog.Title>
+			<Dialog.Title
+				>Request Return for Order <span class="num-mono">#{order.OrderNumber}</span></Dialog.Title
+			>
 			<Dialog.Description>
 				Select the items you wish to return and specify the reason.
 			</Dialog.Description>
 		</Dialog.Header>
 
-		<div class="custom-scrollbar grid max-h-[60vh] gap-4 overflow-y-auto py-4 pr-2">
+		<div class="custom-scrollbar grid max-h-[60vh] gap-3 overflow-y-auto py-4 pr-2">
 			{#each order.Items as item}
 				<div
-					class="border-border hover:bg-muted/60 flex flex-col gap-3 rounded-md border p-4 transition-colors"
+					class="rounded-lg border border-border/70 bg-muted/25 p-4 transition-colors hover:bg-muted/45"
 				>
 					<div class="flex items-start gap-3">
 						<Checkbox
@@ -98,16 +95,19 @@
 							onCheckedChange={() => toggleItem(item.ID)}
 						/>
 						<div class="flex-1">
-							<p class="text-foreground font-medium">{item.Product?.Name || 'Unknown Product'}</p>
-							<p class="text-muted-foreground text-sm">Qty: <span class="num-mono">{item.Quantity}</span> • <span class="num-mono">${item.UnitPrice}</span></p>
+							<p class="font-medium text-foreground">{item.Product?.Name || 'Unknown Product'}</p>
+							<p class="text-sm text-muted-foreground">
+								Qty: <span class="num-mono">{item.Quantity}</span> •
+								<span class="num-mono">${item.UnitPrice}</span>
+							</p>
 						</div>
 					</div>
 
 					{#if selectedItems[item.ID]}
-						<div class="border-border ml-8 grid gap-3 border-l-2 pl-2">
+						<div class="mt-3 ml-8 grid gap-3 border-l border-border/80 pl-4">
 							<div class="grid grid-cols-2 gap-3">
 								<div class="space-y-1">
-									<Label class="text-muted-foreground text-xs">Quantity</Label>
+									<Label class="text-xs text-muted-foreground">Quantity</Label>
 									<Input
 										type="number"
 										min="1"
@@ -117,7 +117,7 @@
 									/>
 								</div>
 								<div class="space-y-1">
-									<Label class="text-muted-foreground text-xs">Condition</Label>
+									<Label class="text-xs text-muted-foreground">Condition</Label>
 									<Select
 										options={conditionOptions}
 										bind:value={conditions[item.ID]}
@@ -126,7 +126,7 @@
 								</div>
 							</div>
 							<div class="space-y-1">
-								<Label class="text-muted-foreground text-xs">Reason</Label>
+								<Label class="text-xs text-muted-foreground">Reason</Label>
 								<Select options={reasonOptions} bind:value={reasons[item.ID]} style="h-8 text-sm" />
 							</div>
 						</div>
@@ -137,7 +137,7 @@
 
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (open = false)}>Cancel</Button>
-			<Button onclick={submitReturn} disabled={isSubmitting} class={btnPrimary}>
+			<Button onclick={submitReturn} disabled={isSubmitting} class="btn-soothe">
 				{isSubmitting ? 'Submitting...' : 'Submit Request'}
 			</Button>
 		</Dialog.Footer>

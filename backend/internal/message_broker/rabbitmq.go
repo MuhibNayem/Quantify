@@ -224,6 +224,11 @@ func (m *RabbitMQManager) waitReady(ctx context.Context) error {
 // Subscribe subscribes to a RabbitMQ queue.
 // Subscribe subscribes to a RabbitMQ queue and handles reconnections.
 func Subscribe(ctx context.Context, exchange, queueName, routingKey string, handler func(context.Context, <-chan amqp091.Delivery)) context.CancelFunc {
+	if _, ok := DefaultTopology().Queues[queueName]; !ok {
+		logrus.Errorf("Subscribe rejected unknown queue %q", queueName)
+		return nil
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		for {

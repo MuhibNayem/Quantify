@@ -38,14 +38,13 @@ const initialState: NotificationStoreState = {
 	unreadCount: 0,
 	loading: false,
 	connected: false,
-	error: null,
+	error: null
 };
 
 function createNotificationStore() {
 	const { subscribe, set, update } = writable<NotificationStoreState>(initialState);
 
 	let currentUserId: number | null = null;
-	let token: string | null = null;
 	let socket: WebSocket | null = null;
 	let reconnectHandle: ReturnType<typeof setTimeout> | null = null;
 	let initializing = false;
@@ -78,17 +77,18 @@ function createNotificationStore() {
 		try {
 			const [items, count] = await Promise.all([
 				notificationsApi.list(currentUserId, { limit: MAX_NOTIFICATIONS }),
-				notificationsApi.unreadCount(currentUserId),
+				notificationsApi.unreadCount(currentUserId)
 			]);
 			update((state) => ({
 				...state,
 				items,
 				unreadCount: count,
 				loading: false,
-				error: null,
+				error: null
 			}));
 		} catch (error: any) {
-			const message = error?.response?.data?.error || error?.message || 'Unable to load notifications';
+			const message =
+				error?.response?.data?.error || error?.message || 'Unable to load notifications';
 			update((state) => ({ ...state, loading: false, error: message }));
 		} finally {
 			initializing = false;
@@ -96,16 +96,18 @@ function createNotificationStore() {
 	};
 
 	const connectSocket = () => {
-		if (!browser || !currentUserId || !token) return;
+		if (!browser || !currentUserId) return;
 
 		cleanupSocket();
 
 		let authTimeout: ReturnType<typeof setTimeout> | null = null;
 
+		// The access cookie authenticates the WebSocket handshake. The first
+		// message carries no token — it only tells the server to finish auth.
 		socket = new WebSocket(WS_BASE_URL);
 
 		socket.onopen = () => {
-			socket?.send(JSON.stringify({ type: 'auth', token }));
+			socket?.send(JSON.stringify({ type: 'auth' }));
 			authTimeout = setTimeout(() => {
 				socket?.close();
 			}, 5000);
@@ -114,7 +116,7 @@ function createNotificationStore() {
 		socket.onclose = () => {
 			if (authTimeout) clearTimeout(authTimeout);
 			update((state) => ({ ...state, connected: false }));
-			if (browser && currentUserId && token) {
+			if (browser && currentUserId) {
 				reconnectHandle = setTimeout(connectSocket, 5000);
 			}
 		};
@@ -144,17 +146,20 @@ function createNotificationStore() {
 					return;
 				}
 
-				if (browser && (payload?.event === 'RETURN_UPDATED' || payload?.event === 'RETURN_REQUESTED')) {
+				if (
+					browser &&
+					(payload?.event === 'RETURN_UPDATED' || payload?.event === 'RETURN_REQUESTED')
+				) {
 					window.dispatchEvent(new CustomEvent('return-updated', { detail: payload }));
 					return;
 				}
 
 				const notification = payload as Notification;
 				update((state) => {
-					const nextItems = [notification, ...state.items.filter((item) => item.ID !== notification.ID)].slice(
-						0,
-						MAX_NOTIFICATIONS
-					);
+					const nextItems = [
+						notification,
+						...state.items.filter((item) => item.ID !== notification.ID)
+					].slice(0, MAX_NOTIFICATIONS);
 					const unreadCount = notification.IsRead ? state.unreadCount : state.unreadCount + 1;
 					return { ...state, items: nextItems, unreadCount };
 				});
@@ -168,23 +173,18 @@ function createNotificationStore() {
 		if (!browser) return;
 		const authState = get(auth);
 		const nextUserId = authState.user?.ID ?? null;
-		const nextToken = authState.accessToken ?? null;
 		const hasPermission = authState.permissions?.includes('notifications.read');
 
-		if (!nextUserId || !nextToken || !hasPermission) {
+		if (!nextUserId || !hasPermission) {
 			currentUserId = null;
-			token = null;
 			resetState();
 			return;
 		}
 
 		const userChanged = nextUserId !== currentUserId;
-		const tokenChanged = nextToken !== token;
-
 		currentUserId = nextUserId;
-		token = nextToken;
 
-		if (userChanged || tokenChanged) {
+		if (userChanged) {
 			fetchNotifications();
 			connectSocket();
 		}
@@ -221,7 +221,7 @@ function createNotificationStore() {
 			items: state.items.map((item) =>
 				item.IsRead ? item : { ...item, IsRead: true, ReadAt: new Date().toISOString() }
 			),
-			unreadCount: 0,
+			unreadCount: 0
 		}));
 	};
 
@@ -234,7 +234,7 @@ function createNotificationStore() {
 		update,
 		markNotificationRead,
 		markAllAsRead,
-		refresh,
+		refresh
 	};
 }
 

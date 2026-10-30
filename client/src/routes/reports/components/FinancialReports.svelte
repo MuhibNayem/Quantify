@@ -21,10 +21,10 @@
 	let { gmroiStats, voidAudit, taxLiability, cashReconciliation }: Props = $props();
 </script>
 
-<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }} class="space-y-6">
+<div in:fade={{ duration: 300, delay: 150 }} out:fade={{ duration: 150 }} class="space-y-4">
 	<GmroiCards {gmroiStats} />
 
-	<div class="grid gap-6 md:grid-cols-2">
+	<div class="grid gap-4 md:grid-cols-2">
 		<VoidAnalysisCard {voidAudit} />
 
 		<TaxLiabilityCard {taxLiability} />

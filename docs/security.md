@@ -47,20 +47,26 @@ in place.
 - **Transport**: assume TLS termination in front of the backend; HSTS is set
   unconditionally. CORS is restricted to `CORS_ALLOWED_ORIGINS` with
   credentials enabled.
-- **Access tokens**: short-lived JWTs. Validity requires both a valid signature
-  and presence in the Redis whitelist. Logout removes the token from Redis.
+- **Access tokens**: short-lived JWTs stored in an `HttpOnly`, `SameSite=Lax`
+  cookie (Secure outside development). Bearer headers remain supported for API
+  clients. Validity requires both a valid signature and presence in the Redis
+  whitelist. Logout removes the token from Redis.
 - **Refresh tokens**: separate secret (`REFRESH_TOKEN_SECRET`), configurable
-  TTL, rotated on the refresh endpoint.
-- **CSRF tokens**: issued alongside access/refresh tokens at login and refresh;
-  required on unsafe methods; rotated on refresh; invalidated on logout and on
-  role/permission changes.
+  TTL, rotated on the refresh endpoint, stored in an `HttpOnly` cookie scoped
+  to `/api/v1/users`. The SPA never sees a token.
+- **CSRF tokens**: a non-HttpOnly `csrf_token` cookie is issued at login and
+  refresh and must be echoed in `X-CSRF-Token` on unsafe methods (double-submit);
+  rotated on refresh; invalidated on logout and on role/permission changes.
+- **Rate limiting**: Redis-backed per client IP, with a stricter budget for
+  login/register/refresh. The limiter fails open if Redis is unavailable.
 - **Authorization**: permission-based RBAC with an explicit Admin bypass. See
   [business_logic.md §1](./business_logic.md) and
   [access_control.md](./access_control.md).
-- **WebSocket auth**: after upgrade, the client must send
-  `{"type":"auth","token":"<JWT>"}` as the first message within 5 seconds. The
-  legacy `?token=` query parameter is ignored (a warning is logged so operators
-  can spot un-updated clients).
+- **WebSocket auth**: browsers authenticate from the `access_token` cookie sent
+  on the handshake, then send `{"type":"auth"}` as the first message within
+  5 seconds. API clients may include a token in that message. The legacy
+  `?token=` query parameter is ignored (a warning is logged so operators can
+  spot un-updated clients).
 
 ---
 

@@ -181,204 +181,232 @@
 	$: sortedGroups = Object.keys(groupedPermissions).sort();
 </script>
 
-<div class="border-border bg-card relative h-[calc(100vh-140px)] w-full overflow-hidden rounded-lg border shadow-md">
-	<div class="relative z-10 flex h-full flex-col gap-6 p-4 lg:flex-row">
+<div class="panel overflow-hidden">
+	<div class="flex h-[calc(100dvh-13rem)] min-h-[34rem] flex-col lg:flex-row">
 		<!-- Left Column: Role List -->
-		<div
-			class="border-border bg-card flex w-full shrink-0 flex-col overflow-hidden rounded-md border shadow-xs lg:w-80"
+		<aside
+			class="flex w-full shrink-0 flex-col border-b border-border/70 lg:w-[19rem] lg:border-r lg:border-b-0"
 		>
-			<div class="border-border bg-muted/40 flex items-center justify-between border-b p-5">
-				<h3 class="font-display text-foreground text-lg font-bold">
-					{$t('roles.title')}
-				</h3>
+			<div class="flex items-center justify-between gap-2 px-4 py-3.5">
+				<div class="min-w-0">
+					<h3 class="section-title truncate">{$t('roles.title')}</h3>
+					<p class="text-xs text-muted-foreground">
+						<span class="num-mono">{roles.length}</span> role{roles.length === 1 ? '' : 's'}
+					</p>
+				</div>
 				<Button
 					variant="ghost"
 					size="icon"
-					class="bg-accent text-primary hover:bg-accent/70 h-8 w-8 rounded-md"
+					class="h-8 w-8 shrink-0 rounded-md bg-accent text-accent-foreground transition-colors hover:bg-accent/70"
 					onclick={handleNewRole}
+					aria-label={$t('roles.create_new')}
+					title={$t('roles.create_new')}
 				>
 					<Plus class="h-4 w-4" />
 				</Button>
 			</div>
 
 			<div
-				class="scrollbar-hide flex gap-2 overflow-x-auto p-3 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden"
+				class="custom-scrollbar flex gap-2 overflow-x-auto px-3 pb-3 lg:flex-1 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto"
 			>
+				{#if isLoading && roles.length === 0}
+					{#each Array(4) as _, i}
+						<div
+							class="h-14 animate-pulse rounded-md bg-muted"
+							style={`animation-delay:${i * 80}ms`}
+						></div>
+					{/each}
+				{/if}
 				{#each roles as role (role.ID)}
 					<button
+						type="button"
+						aria-current={selectedRole?.ID === role.ID ? 'true' : undefined}
 						class={cn(
-							'group relative flex min-w-[160px] flex-col gap-1 rounded-md p-3 text-left transition-colors duration-200 lg:w-full lg:min-w-0',
+							'group relative flex min-w-[11rem] flex-col gap-0.5 rounded-md px-3 py-2.5 text-left transition-colors duration-150 lg:w-full lg:min-w-0',
 							selectedRole?.ID === role.ID
-								? 'border-primary/40 bg-accent border shadow-xs'
-								: 'border-border hover:bg-muted border'
+								? 'bg-accent text-accent-foreground shadow-xs ring-1 ring-primary/20'
+								: 'text-foreground hover:bg-muted'
 						)}
 						onclick={() => selectRole(role)}
 					>
-						<div class="flex w-full items-center justify-between">
-							<span
-								class={cn(
-									'font-semibold transition-colors',
-									selectedRole?.ID === role.ID
-										? 'text-accent-foreground'
-										: 'text-foreground group-hover:text-foreground'
-								)}
-							>
-								{role.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${role.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) : role.Name}
+						<div class="flex w-full items-center justify-between gap-2">
+							<span class="truncate text-sm font-semibold">
+								{role.ID === 0
+									? $t('roles.create_new')
+									: $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`) !==
+										  `roles.names.${role.Name.toLowerCase().replace(' ', '_')}`
+										? $t(`roles.names.${role.Name.toLowerCase().replace(' ', '_')}`)
+										: role.Name}
 							</span>
 							{#if role.IsSystem}
-								<ShieldCheck class="text-warning h-4 w-4" />
+								<ShieldCheck class="h-3.5 w-3.5 shrink-0 text-warning" />
 							{/if}
 						</div>
-						<p class="text-muted-foreground line-clamp-1 text-xs">
+						<p class="truncate text-xs text-muted-foreground">
 							{role.Description || 'No description'}
 						</p>
 					</button>
 				{/each}
 			</div>
-		</div>
+		</aside>
 
 		<!-- Right Column: Editor -->
-		<div class="border-border bg-card flex flex-1 flex-col overflow-hidden rounded-md border shadow-xs">
+		<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
 			{#if selectedRole}
-				<div in:fade={{ duration: 300 }} class="flex h-full flex-col">
+				<div in:fade={{ duration: 250 }} class="flex h-full min-h-0 flex-col">
 					<!-- Header -->
-					<div class="border-border bg-muted/40 flex flex-col gap-6 border-b px-6 py-6 md:px-8">
-						<!-- Title Section -->
-						<div class="flex items-center gap-5">
-							<div
-								class={cn(
-									'flex h-16 w-16 shrink-0 items-center justify-center rounded-md border shadow-xs',
-									selectedRole.IsSystem
-										? 'border-warning/30 bg-warning/10 text-warning'
-										: 'bg-accent text-primary border-primary/20'
-								)}
-							>
-								{#if selectedRole.IsSystem}
-									<ShieldCheck class="h-8 w-8" />
-								{:else if selectedRole.ID === 0}
-									<Plus class="h-8 w-8" />
-								{:else}
-									<Shield class="h-8 w-8" />
-								{/if}
-							</div>
-							<div class="space-y-1 overflow-hidden">
-								<h2 class="font-display text-foreground truncate text-2xl font-bold tracking-tight md:text-3xl">
-									{selectedRole.ID === 0 ? $t('roles.create_new') : $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) !== `roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}` ? $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) : selectedRole.Name}
-								</h2>
-								<div class="text-muted-foreground flex flex-wrap items-center gap-3 text-sm font-medium">
+					<div class="border-b border-border/70 px-5 py-4 sm:px-6">
+						<div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+							<div class="flex min-w-0 items-center gap-3.5">
+								<div
+									class={cn(
+										'flex h-11 w-11 shrink-0 items-center justify-center rounded-md ring-1',
+										selectedRole.IsSystem
+											? 'bg-warning/10 text-warning ring-warning/20'
+											: 'bg-accent text-accent-foreground ring-accent-foreground/10'
+									)}
+								>
 									{#if selectedRole.IsSystem}
-										<span class="badge-warning">
-											<AlertCircle class="h-3.5 w-3.5" /> {$t('roles.system_managed')}
-										</span>
+										<ShieldCheck class="h-5 w-5" />
+									{:else if selectedRole.ID === 0}
+										<Plus class="h-5 w-5" />
 									{:else}
-										<span class="badge-success">
-											<Check class="h-3.5 w-3.5" /> {$t('roles.custom_role')}
-										</span>
+										<Shield class="h-5 w-5" />
 									{/if}
-									<span class="bg-border hidden h-1 w-1 rounded-full sm:block"></span>
-									<span class="text-muted-foreground whitespace-nowrap"
-										><span class="num-mono">{selectedPermissionIds.length}</span>
-										{$t('roles.active_permissions')}</span
+								</div>
+								<div class="min-w-0 space-y-1">
+									<h2
+										class="truncate font-display text-xl font-semibold tracking-tight text-foreground"
 									>
+										{selectedRole.ID === 0
+											? $t('roles.create_new')
+											: $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`) !==
+												  `roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`
+												? $t(`roles.names.${selectedRole.Name.toLowerCase().replace(' ', '_')}`)
+												: selectedRole.Name}
+									</h2>
+									<div
+										class="flex flex-wrap items-center gap-2 text-xs font-medium text-muted-foreground"
+									>
+										{#if selectedRole.IsSystem}
+											<span class="badge-warning">
+												<AlertCircle class="h-3 w-3" />
+												{$t('roles.system_managed')}
+											</span>
+										{:else}
+											<span class="badge-success">
+												<Check class="h-3 w-3" />
+												{$t('roles.custom_role')}
+											</span>
+										{/if}
+										<span class="h-1 w-1 rounded-full bg-border"></span>
+										<span class="whitespace-nowrap">
+											<span class="num-mono">{selectedPermissionIds.length}</span>
+											{$t('roles.active_permissions')}
+										</span>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						<!-- Action Buttons (Separate Row) -->
-						<div class="border-border flex w-full items-center justify-end gap-3 border-t pt-4">
-							<Button
-								variant="ghost"
-								onclick={handleReset}
-								disabled={isSaving}
-								class="text-muted-foreground hover:bg-muted hover:text-foreground rounded-md font-medium"
-							>
-								{$t('roles.reset')}
-							</Button>
-							{#if !selectedRole.IsSystem && selectedRole.ID !== 0}
+							<!-- Actions -->
+							<div class="flex shrink-0 flex-wrap items-center gap-2">
 								<Button
-									variant="ghost"
-									class="text-danger hover:bg-danger/10 hover:text-danger rounded-md font-medium"
-									onclick={handleDelete}
+									variant="outline"
+									size="sm"
+									onclick={handleReset}
+									disabled={isSaving}
+									class="font-medium"
 								>
-									<Trash2 class="mr-2 h-4 w-4" /> {$t('roles.delete')}
+									{$t('roles.reset')}
 								</Button>
-							{/if}
-							<Button
-								class="bg-primary text-primary-foreground rounded-md px-6 font-semibold shadow-md transition-all hover:bg-primary/90 disabled:opacity-70"
-								onclick={handleSave}
-								disabled={isSaving}
-							>
-								{#if isSaving}
-									<div
-										class="border-primary-foreground/40 mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"
-									></div>
-								{:else}
-									<Save class="mr-2 h-4 w-4" />
+								{#if !selectedRole.IsSystem && selectedRole.ID !== 0}
+									<Button
+										variant="ghost"
+										size="sm"
+										class="font-medium text-danger hover:bg-danger/10 hover:text-danger"
+										onclick={handleDelete}
+									>
+										<Trash2 class="mr-1.5 h-3.5 w-3.5" />
+										{$t('roles.delete')}
+									</Button>
 								{/if}
-								{isSaving ? $t('roles.saving') : $t('roles.save_changes')}
-							</Button>
+								<Button size="sm" class="btn-soothe px-4" onclick={handleSave} disabled={isSaving}>
+									{#if isSaving}
+										<div
+											class="mr-1.5 h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground"
+										></div>
+									{:else}
+										<Save class="mr-1.5 h-3.5 w-3.5" />
+									{/if}
+									{isSaving ? $t('roles.saving') : $t('roles.save_changes')}
+								</Button>
+							</div>
 						</div>
 					</div>
 
 					<!-- Scrollable Content -->
-					<div class="custom-scrollbar flex-1 overflow-y-auto p-4 md:p-8">
+					<div class="custom-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
 						<!-- Inputs -->
-						<div class="mb-10 grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
-							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 100 }}>
-								<Label class="text-foreground text-base font-semibold">{$t('roles.role_name')}</Label>
-								<div class="group relative">
+						<div class="grid gap-4 sm:grid-cols-2">
+							<div class="space-y-1.5">
+								<Label class="ml-1" for="role-name">{$t('roles.role_name')}</Label>
+								<div class="relative">
 									<Input
+										id="role-name"
 										bind:value={editName}
 										placeholder="e.g. Sales Associate"
 										disabled={selectedRole.IsSystem}
-										class="liquid-input text-foreground h-12 w-full rounded-md px-3 text-base placeholder:text-muted-foreground"
+										class="h-11 w-full rounded-md pr-9 text-sm"
 									/>
 									{#if selectedRole.IsSystem}
 										<ShieldCheck
-											class="text-warning/60 absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2"
+											class="absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
 										/>
 									{/if}
 								</div>
 							</div>
-							<div class="space-y-3" in:fly={{ y: 20, duration: 400, delay: 200 }}>
-								<Label class="text-foreground text-base font-semibold">{$t('roles.description')}</Label>
+							<div class="space-y-1.5">
+								<Label class="ml-1" for="role-description">{$t('roles.description')}</Label>
 								<Input
+									id="role-description"
 									bind:value={editDescription}
 									placeholder="Describe the responsibilities..."
-									class="liquid-input text-foreground h-12 w-full rounded-md px-3 text-base placeholder:text-muted-foreground"
+									class="h-11 w-full rounded-md text-sm"
 								/>
 							</div>
 						</div>
 
-						<!-- Permissions Grid -->
-						<div class="space-y-6">
-							<div
-								class="border-border flex items-center gap-3 border-b pb-4"
-								in:fly={{ y: 20, duration: 400, delay: 300 }}
-							>
-								<div class="bg-accent flex h-10 w-10 items-center justify-center rounded-md">
-									<Sparkles class="text-primary h-5 w-5" />
-								</div>
-								<div>
-									<h3 class="font-display text-foreground text-lg font-bold">{$t('roles.capabilities')}</h3>
-									<p class="text-muted-foreground text-sm">{$t('roles.capabilities_desc')}</p>
+						<!-- Permissions -->
+						<div class="mt-6 space-y-4">
+							<div class="flex items-start gap-3">
+								<span
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+								>
+									<Sparkles class="h-4 w-4" />
+								</span>
+								<div class="space-y-0.5">
+									<h3 class="section-title">{$t('roles.capabilities')}</h3>
+									<p class="text-sm text-muted-foreground">{$t('roles.capabilities_desc')}</p>
 								</div>
 							</div>
 
-							<div class="grid grid-cols-1 gap-6 md:grid-cols-2 2xl:grid-cols-3">
+							<div class="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
 								{#each sortedGroups as group, i}
 									<div
-										in:fly={{ y: 30, duration: 500, delay: 400 + i * 50 }}
-										class="border-border bg-card relative overflow-hidden rounded-md border p-5 shadow-xs transition-shadow duration-200 hover:shadow-md md:p-6"
+										in:fly={{ y: 12, duration: 350, delay: 60 + i * 40 }}
+										class="rounded-lg border border-border/70 bg-muted/20 p-4"
 									>
-										<div class="relative z-10 mb-5 flex flex-wrap items-center justify-between gap-y-2">
-											<h4 class="text-foreground flex items-center gap-2 text-lg font-bold">
-												{$t(`permissions.groups.${group.toLowerCase()}`) !== `permissions.groups.${group.toLowerCase()}` ? $t(`permissions.groups.${group.toLowerCase()}`) : group}
+										<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+											<h4 class="section-title">
+												{$t(`permissions.groups.${group.toLowerCase()}`) !==
+												`permissions.groups.${group.toLowerCase()}`
+													? $t(`permissions.groups.${group.toLowerCase()}`)
+													: group}
 											</h4>
 											<div class="flex items-center gap-2">
 												<Label
 													for="group-{group}"
-													class="text-muted-foreground hover:text-primary cursor-pointer text-xs font-semibold uppercase tracking-wider transition-colors"
+													class="cursor-pointer text-[0.6875rem] font-semibold tracking-[0.08em] text-muted-foreground uppercase transition-colors hover:text-primary"
 												>
 													{$t('roles.select_all')}
 												</Label>
@@ -386,27 +414,27 @@
 													id="group-{group}"
 													checked={groupSelectionStates[group]}
 													onCheckedChange={(v) => toggleGroup(group, !!v)}
-													class="border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground h-5 w-5 rounded-md"
+													class="h-4 w-4"
 												/>
 											</div>
 										</div>
 
-										<div class="grid grid-cols-1 gap-2.5">
+										<div class="grid gap-1.5">
 											{#each groupedPermissions[group] as perm}
 												<label
 													class={cn(
-														'relative flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors duration-150',
+														'relative flex cursor-pointer items-start gap-2.5 rounded-md px-2.5 py-2 transition-colors duration-150',
 														selectedPermissionIds.includes(perm.ID)
-															? 'border-primary/30 bg-accent'
-															: 'border-border hover:bg-muted'
+															? 'bg-accent text-accent-foreground ring-1 ring-primary/20'
+															: 'text-foreground hover:bg-muted'
 													)}
 												>
 													<Checkbox
 														checked={selectedPermissionIds.includes(perm.ID)}
 														onCheckedChange={() => togglePermission(perm.ID)}
-														class="border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground mt-0.5 h-4.5 w-4.5 rounded"
+														class="mt-0.5 h-4 w-4 rounded"
 													/>
-													<div class="space-y-0.5">
+													<div class="min-w-0 space-y-0.5">
 														<span
 															class={cn(
 																'block text-sm font-semibold transition-colors',
@@ -415,10 +443,18 @@
 																	: 'text-foreground'
 															)}
 														>
-															{$t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) !== `permissions.names.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) : perm.Name}
+															{$t(`permissions.names.${perm.Name.replaceAll('.', '_')}`) !==
+															`permissions.names.${perm.Name.replaceAll('.', '_')}`
+																? $t(`permissions.names.${perm.Name.replaceAll('.', '_')}`)
+																: perm.Name}
 														</span>
-														<span class="text-muted-foreground line-clamp-2 block text-xs leading-relaxed">
-															{$t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) !== `permissions.descriptions.${perm.Name.replaceAll('.', '_')}` ? $t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) : perm.Description}
+														<span
+															class="line-clamp-2 block text-xs leading-relaxed text-muted-foreground"
+														>
+															{$t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`) !==
+															`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`
+																? $t(`permissions.descriptions.${perm.Name.replaceAll('.', '_')}`)
+																: perm.Description}
 														</span>
 													</div>
 												</label>
@@ -431,37 +467,27 @@
 					</div>
 				</div>
 			{:else}
-				<div class="flex h-full flex-col items-center justify-center p-8 text-center" in:fade>
-					<div class="group relative mb-8 cursor-default">
-						<div
-							class="bg-card border-border relative flex h-32 w-32 items-center justify-center rounded-lg border shadow-md transition-transform duration-300 group-hover:scale-105"
-						>
-							<Shield class="text-muted-foreground/50 h-16 w-16 transition-colors duration-300 group-hover:text-primary" />
-						</div>
+				<div
+					class="flex h-full flex-col items-center justify-center px-6 py-16 text-center"
+					in:fade
+				>
+					<div
+						class="mb-5 flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border"
+					>
+						<Shield class="h-7 w-7" />
 					</div>
-					<h3 class="font-display text-foreground text-2xl font-bold">{$t('roles.security_access_control')}</h3>
-					<p class="text-muted-foreground mt-3 max-w-md text-lg">
+					<h3 class="font-display text-lg font-semibold tracking-tight text-foreground">
+						{$t('roles.security_access_control')}
+					</h3>
+					<p class="mt-2 max-w-md text-sm text-muted-foreground">
 						{$t('roles.security_desc')}
 					</p>
-					<Button
-						class="bg-primary text-primary-foreground mt-10 h-12 rounded-md px-8 font-semibold shadow-md transition-all hover:-translate-y-0.5 hover:bg-primary/90"
-						onclick={handleNewRole}
-					>
-						<Plus class="mr-2 h-5 w-5" /> {$t('roles.create_first')}
+					<Button class="btn-soothe mt-6 px-5" onclick={handleNewRole}>
+						<Plus class="mr-1.5 h-4 w-4" />
+						{$t('roles.create_first')}
 					</Button>
 				</div>
 			{/if}
 		</div>
 	</div>
 </div>
-
-<style>
-	/* Hide scrollbar for cleaner look */
-	.scrollbar-hide::-webkit-scrollbar {
-		display: none;
-	}
-	.scrollbar-hide {
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-	}
-</style>

@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"gorm.io/gorm"
@@ -89,7 +90,7 @@ func (s *SalesService) allocateStock(
 	quantity float64,
 	customerID *uint,
 	userID uint,
-) (float64, error) {
+) (float64, float64, error) {
 	availableStock := 0.0
 	for _, b := range batches {
 		availableStock += b.Quantity
@@ -100,14 +101,22 @@ func (s *SalesService) allocateStock(
 		if locationID != 0 {
 			locLabel = fmt.Sprintf("location %d", locationID)
 		}
-		return 0, fmt.Errorf("insufficient stock for product '%s' at %s (Available: %v, Requested: %v)", product.Name, locLabel, availableStock, quantity)
+		return 0, 0, fmt.Errorf("insufficient stock for product '%s' at %s (Available: %v, Requested: %v)", product.Name, locLabel, availableStock, quantity)
 	}
 
 	qtyToReduce := quantity
+	cost := 0.0
 	for _, batch := range batches {
 		if qtyToReduce <= 0 {
 			break
 		}
+		consumed := math.Min(batch.Quantity, qtyToReduce)
+		unitCost := batch.UnitCost
+		if unitCost <= 0 {
+			unitCost = product.PurchasePrice
+		}
+		cost += consumed * unitCost
+
 		if batch.Quantity >= qtyToReduce {
 			batch.Quantity = units.RoundQty(batch.Quantity - qtyToReduce)
 			qtyToReduce = 0
@@ -116,15 +125,20 @@ func (s *SalesService) allocateStock(
 			batch.Quantity = 0
 		}
 		if err := tx.Save(batch).Error; err != nil {
-			return 0, fmt.Errorf("failed to update batch %s", batch.BatchNumber)
+			return 0, 0, fmt.Errorf("failed to update batch %s", batch.BatchNumber)
 		}
 	}
 
+	unitCost := 0.0
+	if quantity > 0 {
+		unitCost = cost / quantity
+	}
 	adjustment := domain.StockAdjustment{
 		ProductID:        product.ID,
 		LocationID:       locationID,
 		Type:             "STOCK_OUT",
 		Quantity:         quantity,
+		UnitCost:         unitCost,
 		ReasonCode:       "SALE",
 		Notes:            fmt.Sprintf("Sale to customer ID: %d", customerID),
 		AdjustedBy:       userID,
@@ -133,8 +147,8 @@ func (s *SalesService) allocateStock(
 		NewQuantity:      units.RoundQty(availableStock - quantity),
 	}
 	if err := tx.Create(&adjustment).Error; err != nil {
-		return 0, fmt.Errorf("failed to create stock adjustment: %w", err)
+		return 0, 0, fmt.Errorf("failed to create stock adjustment: %w", err)
 	}
 
-	return availableStock, nil
+	return availableStock, cost, nil
 }

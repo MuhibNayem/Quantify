@@ -59,6 +59,11 @@ type Config struct {
 	AppEnv                    string        `koanf:"APP_ENV"`
 	OTLPEndpoint              string        `koanf:"OTLP_ENDPOINT"`
 	ServiceName               string        `koanf:"SERVICE_NAME"`
+	RateLimitRequests         int           `koanf:"RATE_LIMIT_REQUESTS"`
+	RateLimitWindow           time.Duration `koanf:"RATE_LIMIT_WINDOW"`
+	AuthRateLimitRequests     int           `koanf:"AUTH_RATE_LIMIT_REQUESTS"`
+	AuthRateLimitWindow       time.Duration `koanf:"AUTH_RATE_LIMIT_WINDOW"`
+	TrustedProxies            []string      `koanf:"TRUSTED_PROXIES"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -89,6 +94,7 @@ func LoadConfig(path string) (*Config, error) {
 	cfg.WSAllowedOrigins = trimSlice(cfg.WSAllowedOrigins)
 	cfg.CORSAllowedOrigins = trimSlice(cfg.CORSAllowedOrigins)
 	cfg.RedisClusterAddrs = trimSlice(cfg.RedisClusterAddrs)
+	cfg.TrustedProxies = trimSlice(cfg.TrustedProxies)
 
 	if err := validateCriticalConfig(&cfg); err != nil {
 		return nil, fmt.Errorf("config validation failed: %w", err)
@@ -104,8 +110,8 @@ func defaults() map[string]any {
 		"DB_NAME":                      "inventory_db",
 		"DB_PORT":                      "5432",
 		"SERVER_PORT":                  "8080",
-		"WS_ALLOWED_ORIGINS":           "http://localhost:5173",
-		"CORS_ALLOWED_ORIGINS":         "http://localhost:5173",
+		"WS_ALLOWED_ORIGINS":           "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000",
+		"CORS_ALLOWED_ORIGINS":         "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:3000",
 		"SMTP_HOST":                    "",
 		"SMTP_PORT":                    587,
 		"SMTP_USER":                    "",
@@ -143,6 +149,11 @@ func defaults() map[string]any {
 		"APP_ENV":                      "dev",
 		"OTLP_ENDPOINT":                "",
 		"SERVICE_NAME":                 "quantify-backend",
+		"RATE_LIMIT_REQUESTS":          300,
+		"RATE_LIMIT_WINDOW":            "1m",
+		"AUTH_RATE_LIMIT_REQUESTS":     10,
+		"AUTH_RATE_LIMIT_WINDOW":       "1m",
+		"TRUSTED_PROXIES":              "",
 	}
 }
 

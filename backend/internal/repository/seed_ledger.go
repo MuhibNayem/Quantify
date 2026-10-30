@@ -14,10 +14,14 @@ var chartOfAccounts = []domain.Account{
 	{Code: domain.AccountCodeAccountsReceivable, Name: "Accounts Receivable", Type: domain.AccountAsset, Description: "Money owed by customers (credit sales)", System: true, IsActive: true},
 	{Code: domain.AccountCodeInventory, Name: "Inventory", Type: domain.AccountAsset, Description: "Value of stock on hand", System: true, IsActive: true},
 	{Code: domain.AccountCodeAccountsPayable, Name: "Accounts Payable", Type: domain.AccountLiability, Description: "Money owed to suppliers", System: true, IsActive: true},
+	{Code: domain.AccountCodeSalesTaxPayable, Name: "Sales Tax Payable", Type: domain.AccountLiability, Description: "Tax collected at checkout and owed to the tax authority", System: true, IsActive: true},
 	{Code: "3000", Name: "Owner's Equity", Type: domain.AccountEquity, Description: "Owner's stake in the business", System: true, IsActive: true},
 	{Code: domain.AccountCodeSalesRevenue, Name: "Sales Revenue", Type: domain.AccountRevenue, Description: "Revenue from sales", System: true, IsActive: true},
-	{Code: domain.AccountCodeSalesDiscounts, Name: "Sales Discounts", Type: domain.AccountRevenue, Description: "Manual discounts given (contra-revenue)", System: true, IsActive: true},
+	{Code: domain.AccountCodeSalesDiscounts, Name: "Sales Discounts", Type: domain.AccountRevenue, Description: "Manual and loyalty discounts given (contra-revenue)", System: true, IsActive: true},
+	{Code: domain.AccountCodeSalesReturns, Name: "Sales Returns", Type: domain.AccountRevenue, Description: "Customer refunds (contra-revenue)", System: true, IsActive: true},
+	{Code: domain.AccountCodeInventoryAdjustmentGain, Name: "Inventory Adjustment Gain", Type: domain.AccountRevenue, Description: "Gains from positive stock adjustments", System: true, IsActive: true},
 	{Code: domain.AccountCodeCOGS, Name: "Cost of Goods Sold", Type: domain.AccountExpense, Description: "Direct cost of sold inventory", System: true, IsActive: true},
+	{Code: domain.AccountCodeShrinkageExpense, Name: "Inventory Shrinkage", Type: domain.AccountExpense, Description: "Damage, loss, and write-off expense", System: true, IsActive: true},
 }
 
 // SeedChartOfAccounts idempotently inserts the default chart of accounts.

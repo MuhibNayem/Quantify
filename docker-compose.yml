@@ -11,6 +11,7 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-replication.sh:/docker-entrypoint-initdb.d/init-replication.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-inventory_db}"]
       interval: 10s
@@ -38,15 +39,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    entrypoint: >
-      bash -c "
-      until pg_basebackup --pgdata=/var/lib/postgresql/data -R --slot=replication_slot --host=db --port=5432 --username=${POSTGRES_USER:-user} --dbname=${POSTGRES_DB:-inventory_db}; do
-        echo 'Waiting for primary to connect...'
-        sleep 1s
-      done
-      chmod 0700 /var/lib/postgresql/data
-      postgres
-      "
+    entrypoint: |
+      bash -c '
+      set -e
+      export PGPASSWORD="${POSTGRES_PASSWORD:-password}"
+      if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
+        echo "Replica uninitialized - taking base backup from primary..."
+        rm -rf /var/lib/postgresql/data/* 2>/dev/null || true
+        until pg_basebackup -d "host=db port=5432 user=${POSTGRES_USER:-user} dbname=${POSTGRES_DB:-inventory_db}" -D /var/lib/postgresql/data -R --slot=replication_slot; do
+          echo "Waiting for primary to become ready..."
+          sleep 2s
+        done
+        chown -R postgres:postgres /var/lib/postgresql/data
+        chmod 0700 /var/lib/postgresql/data
+      else
+        echo "Replica already initialized - starting postgres."
+      fi
+      exec gosu postgres postgres
+      '
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-inventory_db}"]
       interval: 10s
@@ -248,6 +258,25 @@ services:
     networks:
       - backend
 
+  migrator:
+    # Explicit init step: runs the embedded SQL migrations against the
+    # database before the backend starts. The backend ALSO auto-runs them
+    # on boot (see internal/migrations/runner.go), so this is a belt-and-
+    # braces guarantee for fresh environments. If the migrations have
+    # already been applied, `cmd/migrator -cmd up` is a no-op (exits 0)
+    # and this service simply completes successfully.
+    build:
+      context: ./backend
+    command: ["/app/inventory-backend", "-migrate"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    restart: "no"
+    networks:
+      - backend
+
   backend:
     build:
       context: ./backend
@@ -257,6 +286,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
       redis-init:
         condition: service_completed_successfully
       rabbitmq:
@@ -268,7 +299,7 @@ services:
     environment:
       - AI_SERVICE_URL=http://ai-service:8000
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/ready"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -335,7 +366,7 @@ services:
     image: prom/prometheus:v2.53.0
     restart: unless-stopped
     ports:
-      - "${PROMETHEUS_PORT:-9091}:9090"
+      - "${PROMETHEUS_PORT:-9092}:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
@@ -459,7 +490,7 @@ services:
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@quantify.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@quantify.dev}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-password}
     volumes:
       - pgadmin_data:/var/lib/pgadmin

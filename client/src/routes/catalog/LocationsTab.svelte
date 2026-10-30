@@ -59,17 +59,15 @@
 </script>
 
 <div
-	class="grid gap-8 {auth.hasPermission('locations.write')
-		? 'lg:grid-cols-[2fr,1fr]'
+	class="grid gap-6 {auth.hasPermission('locations.write')
+		? 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
 		: 'grid-cols-1'}"
 >
-	<div class="flex flex-col gap-6">
-		<div class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between">
-			<div class="space-y-1">
-				<h2 class="font-display text-foreground text-lg font-semibold">
-					{$t('catalog.locations.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('catalog.locations.subtitle')}</p>
+	<div class="flex min-w-0 flex-col gap-4">
+		<div class="panel p-4">
+			<div class="min-w-0 space-y-1">
+				<h2 class="section-title">{$t('catalog.locations.title')}</h2>
+				<p class="text-sm text-muted-foreground">{$t('catalog.locations.subtitle')}</p>
 			</div>
 		</div>
 
@@ -80,7 +78,7 @@
 			onRowClick={(location) => onViewDetails(location, 'locations')}
 		>
 			{#snippet children(location)}
-				<td class="text-foreground font-medium">{location.Name}</td>
+				<td class="font-medium text-foreground">{location.Name}</td>
 				<td class="text-muted-foreground">{location.Address ?? '—'}</td>
 				{#if auth.hasPermission('locations.write')}
 					<td class="text-right">
@@ -88,7 +86,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-primary hover:bg-muted hover:text-foreground"
+								class="h-8 px-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
 								onclick={(event) => {
 									event.stopPropagation();
 									editingLocation = location;
@@ -99,7 +97,7 @@
 							<Button
 								size="sm"
 								variant="ghost"
-								class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
+								class="h-8 px-2.5 text-danger hover:bg-danger/10 hover:text-danger"
 								onclick={(event) => {
 									event.stopPropagation();
 									deleteLocation(location);

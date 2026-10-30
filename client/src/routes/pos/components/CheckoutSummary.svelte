@@ -36,41 +36,39 @@
 	}: Props = $props();
 </script>
 
-<div
-	class="liquid-panel overflow-hidden rounded-lg"
-	data-animate="fade-up"
-	style="animation-delay:240ms"
->
-	<div class="border-border bg-muted/50 border-b px-4 py-3">
-		<h3 class="font-display text-foreground text-sm font-semibold">{$t('pos.summary.title')}</h3>
-		<p class="text-muted-foreground text-[0.7rem]">
-			{$t('pos.summary.description')}
-		</p>
+<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:240ms">
+	<div class="panel-header">
+		<div>
+			<h3 class="section-title">{$t('pos.summary.title')}</h3>
+			<p class="mt-0.5 text-xs text-muted-foreground">
+				{$t('pos.summary.description')}
+			</p>
+		</div>
 	</div>
 
-	<div class="space-y-2 p-4 text-[0.8rem]">
-		<div class="text-foreground flex justify-between">
+	<div class="space-y-2 p-4 text-[0.8125rem]">
+		<div class="flex justify-between text-foreground">
 			<span>{$t('pos.summary.subtotal')}</span>
 			<span class="num-mono">{formatCurrency(subtotal)}</span>
 		</div>
 		{#if manualDiscount > 0}
-			<div class="text-success flex justify-between text-[0.75rem]">
+			<div class="flex justify-between text-xs text-success">
 				<span>{$t('pos.summary.manual_discount')}</span>
 				<span class="num-mono">− {formatCurrency(manualDiscount)}</span>
 			</div>
 		{/if}
-		<div class="text-muted-foreground flex justify-between text-[0.75rem]">
+		<div class="flex justify-between text-xs text-muted-foreground">
 			<span>{$t('pos.summary.tax', { rate: Number((taxRate * 100).toFixed(2)) })}</span>
 			<span class="num-mono">{formatCurrency(tax)}</span>
 		</div>
-		<div class="border-border flex items-center justify-between border-t pt-2">
-			<span class="text-foreground text-[0.85rem] font-medium">{$t('pos.summary.total')}</span>
-			<span class="kpi-num text-foreground text-2xl">
+		<div class="flex items-center justify-between border-t border-border/80 pt-3">
+			<span class="text-sm font-medium text-foreground">{$t('pos.summary.total')}</span>
+			<span class="kpi-num text-2xl text-foreground">
 				{formatCurrency(total)}
 			</span>
 		</div>
 
-		<div class="text-muted-foreground flex items-center justify-between pt-1 text-[0.7rem]">
+		<div class="flex items-center justify-between pt-1 text-[0.7rem] text-muted-foreground">
 			<div>
 				<span class="font-medium">{$t('pos.summary.payment')}</span>
 				<span class="ml-1">
@@ -84,14 +82,12 @@
 		</div>
 
 		{#if selectedCustomer && potentialPoints > 0}
-			<div
-				class="border-border flex items-center justify-between border-t pt-2 text-[0.7rem]"
-			>
-				<div class="text-success flex items-center gap-1">
+			<div class="flex items-center justify-between border-t border-border/80 pt-2 text-[0.7rem]">
+				<div class="flex items-center gap-1 text-success">
 					<Zap class="h-3 w-3" />
 					<span class="font-medium">{$t('pos.summary.loyalty_earnings')}</span>
 				</div>
-				<span class="num-mono text-success font-bold">+{potentialPoints} pt</span>
+				<span class="num-mono font-semibold text-success">+{potentialPoints} pt</span>
 			</div>
 		{/if}
 	</div>
@@ -99,7 +95,7 @@
 	<div class="px-4 pb-4">
 		<Button
 			size="lg"
-			class="bg-primary text-primary-foreground hover:bg-primary/90 h-11 w-full rounded-md bg-none text-sm font-semibold tracking-wide shadow-sm hover:bg-none disabled:cursor-not-allowed disabled:opacity-60"
+			class="btn-soothe h-11 w-full text-sm font-semibold tracking-wide"
 			onclick={onCompleteOrder}
 			disabled={!canCompleteOrder || isProcessing}
 		>
@@ -113,7 +109,10 @@
 			{:else}
 				{$t('pos.summary.complete_btn')}
 			{/if}
-			<Kbd class="border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground ml-2">F8</Kbd>
+			<Kbd
+				class="ml-2 border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+				>F8</Kbd
+			>
 		</Button>
 	</div>
 </div>

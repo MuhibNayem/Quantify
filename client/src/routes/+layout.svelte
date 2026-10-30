@@ -41,9 +41,17 @@
 		if (e.key === 'Escape') paletteOpen = false;
 	}
 
+	let sessionVerified = false;
+
 	$effect(() => {
 		if (authState.user) {
 			settings.load();
+			// Validate the httpOnly cookie session once per page load and
+			// refresh identity/permissions if the server disagrees.
+			if (!sessionVerified) {
+				sessionVerified = true;
+				auth.verify();
+			}
 			if (onboardingRef?.shouldShow()) {
 				onboardingOpen = true;
 			}
@@ -63,14 +71,14 @@
 	<a href="#main-content" class="skip-link">Skip to main content</a>
 
 	<!-- Fixed Height Layout -->
-	<div class="relative z-0 flex h-screen overflow-hidden bg-background text-foreground">
+	<div class="app-canvas relative z-0 flex h-screen overflow-hidden text-foreground">
 		<!-- Sidebar (fixed height, non-scrolling page) -->
 		<Sidebar bind:open={sidebarOpen} user={authState.user ?? data?.user} />
 
 		<!-- Mobile overlay -->
 		{#if sidebarOpen}
 			<div
-				class="fixed inset-0 z-30 bg-foreground/40 lg:hidden"
+				class="fixed inset-0 z-30 bg-foreground/20 backdrop-blur-sm lg:hidden"
 				onclick={() => (sidebarOpen = false)}
 			></div>
 		{/if}
@@ -79,10 +87,10 @@
 		<div class="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
 			<Topbar user={authState.user ?? data?.user} />
 
-		<main
-			id="main-content"
-			class="flex-1 overflow-y-auto scroll-smooth px-3 pb-12 pt-4 sm:px-6 sm:pt-6 lg:px-8 xl:px-12"
-		>
+			<main
+				id="main-content"
+				class="custom-scrollbar flex-1 overflow-y-auto scroll-smooth px-3 pt-4 pb-16 sm:px-6 sm:pt-6 lg:px-8 xl:px-12"
+			>
 				{@render children?.()}
 			</main>
 		</div>
@@ -121,7 +129,7 @@
 
 	main {
 		scrollbar-width: thin;
-		scrollbar-color: hsl(var(--border)) transparent;
+		scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
 	}
 
 	main::-webkit-scrollbar {
@@ -129,11 +137,11 @@
 	}
 
 	main::-webkit-scrollbar-thumb {
-		background: hsl(var(--border));
+		background: hsl(var(--muted-foreground) / 0.22);
 		border-radius: 3px;
 	}
 	main::-webkit-scrollbar-thumb:hover {
-		background: hsl(var(--muted-foreground) / 0.5);
+		background: hsl(var(--muted-foreground) / 0.4);
 	}
 
 	/* Responsive adjustments */

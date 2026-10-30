@@ -20,7 +20,7 @@
 	data-inset={inset}
 	data-variant={variant}
 	class={cn(
-		"data-highlighted:bg-blue-500/10 data-highlighted:text-blue-900 data-[variant=destructive]:data-highlighted:bg-rose-500/10 data-[variant=destructive]:data-highlighted:text-rose-900 relative flex cursor-default select-none items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-700 outline-none transition-colors data-[disabled]:pointer-events-none data-[variant=destructive]:text-rose-600 data-[disabled]:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		"relative flex cursor-default items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors outline-none select-none data-highlighted:bg-primary/10 data-highlighted:text-primary data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[variant=destructive]:text-danger data-[variant=destructive]:data-highlighted:bg-danger/10 data-[variant=destructive]:data-highlighted:text-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
 		className
 	)}
 	{...restProps}

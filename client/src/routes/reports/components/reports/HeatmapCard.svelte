@@ -16,58 +16,59 @@
 	const hours = [0, 4, 8, 12, 16, 20, 23];
 </script>
 
-<div class="liquid-panel group relative col-span-2 overflow-hidden rounded-lg p-6 lg:col-span-2">
-	<div class="mb-6 flex items-center justify-between">
-		<div class="flex items-center gap-3">
-			<div
-				class="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-primary/10 text-primary"
-			>
-				<Clock class="h-5 w-5" />
-			</div>
-			<div>
-				<h3 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-					{$t('reports.heatmap.title')}
-					<Tooltip.Root>
-						<Tooltip.Trigger>
-							<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
-						</Tooltip.Trigger>
-						<Tooltip.Content>
-							<p class="text-foreground max-w-xs font-normal">
-								{$t('reports.heatmap.description')}
-							</p>
-						</Tooltip.Content>
-					</Tooltip.Root>
-				</h3>
-				<p class="text-muted-foreground text-sm">
-					{$t('reports.heatmap.subtitle')}
-				</p>
-			</div>
+<div class="panel col-span-2 p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-primary/10 text-primary"
+		>
+			<Clock class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.heatmap.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle
+							class="h-4 w-4 text-muted-foreground transition-colors hover:text-primary"
+						/>
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">
+							{$t('reports.heatmap.description')}
+						</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+			<p class="mt-0.5 text-xs text-muted-foreground">
+				{$t('reports.heatmap.subtitle')}
+			</p>
 		</div>
 	</div>
 
 	{#if loading}
-		<Skeleton class="bg-muted h-[300px] w-full rounded-md" />
+		<Skeleton class="mt-4 h-[268px] w-full rounded-md bg-muted" />
 	{:else}
-		<div class="relative">
+		<div class="mt-4">
 			<!-- X-Axis Labels -->
-			<div class="mb-3 flex justify-between pl-10">
+			<div class="mb-2 flex justify-between pl-10">
 				{#each hours as h}
 					<div
-						class="text-muted-foreground border-border w-full border-l pl-2 text-left text-[10px] font-semibold num-mono"
+						class="num-mono w-full border-l border-border pl-1.5 text-left text-[10px] font-medium text-muted-foreground"
 					>
 						{h}:00
 					</div>
 				{/each}
 			</div>
 
-			<div class="space-y-1.5">
+			<div class="space-y-1">
 				{#each days as day, i}
 					<div class="flex items-center gap-3">
-						<span class="text-muted-foreground w-8 text-right text-[11px] font-semibold tracking-wide"
+						<span
+							class="w-8 text-right text-[10px] font-semibold tracking-[0.08em] text-muted-foreground"
 							>{day.toUpperCase()}</span
 						>
 						<div
-							class="grid-cols-24 border-border bg-muted/40 grid flex-1 gap-[2px] rounded-md border p-1"
+							class="grid flex-1 grid-cols-24 gap-[2px] rounded-[calc(var(--radius)_-_6px)] border border-border bg-muted/40 p-1"
 						>
 							{#each grid.filter((c) => c.day === i) as cell}
 								<div
@@ -78,7 +79,7 @@
 										class="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 hidden -translate-x-1/2 group-hover/cell:block"
 									>
 										<div
-											class="bg-foreground text-background rounded-md px-3 py-1.5 text-[10px] font-semibold whitespace-nowrap shadow-md num-mono"
+											class="glass-float num-mono px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap text-foreground"
 										>
 											{formatCurrency(cell.sales)}
 										</div>

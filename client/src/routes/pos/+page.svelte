@@ -19,6 +19,7 @@
 	import PaymentMethods from './components/PaymentMethods.svelte';
 	import DiscountControl from './components/DiscountControl.svelte';
 	import CheckoutSummary from './components/CheckoutSummary.svelte';
+	import CashDrawerBar from './components/CashDrawerBar.svelte';
 
 	$effect(() => {
 		if (!auth.hasPermission('pos.view')) {
@@ -49,10 +50,8 @@
 
 	const unitCache: Record<number, ProductUnit[]> = {};
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'h-10 rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
+	const inputClass = 'glass-input h-10 w-full rounded-lg px-3 text-sm font-normal';
+	const btnPrimary = 'btn-soothe h-10 px-5 text-sm font-semibold';
 
 	async function findProductByCode(code: string) {
 		const product = products.find((p) => p.BarcodeUPC === code || p.SKU === code);
@@ -369,10 +368,7 @@
 				(discountType === 'fixed' && discountMaxAmount > 0 && discountValue > discountMaxAmount))
 	);
 	const discountReasonMissing = $derived(
-		discountAvailable &&
-			discountValue > 0 &&
-			discountRequireReason &&
-			!discountReason.trim()
+		discountAvailable && discountValue > 0 && discountRequireReason && !discountReason.trim()
 	);
 	const discountInvalid = $derived(discountValueInvalid || discountReasonMissing);
 
@@ -439,16 +435,16 @@
 					quantity: item.quantity,
 					...(item.unitId ? { unitId: item.unitId } : {})
 				})),
-			customerId: selectedCustomer ? selectedCustomer.ID : null,
-			paymentMethod: paymentMethod ? paymentMethod.toLowerCase() : paymentMethod,
-			pointsToRedeem: Math.min(
-				pointsToRedeem,
-				selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
-			),
-			manualDiscountType: manualDiscountAmount > 0 ? discountType : '',
-			manualDiscountValue: manualDiscountAmount > 0 ? discountValue : 0,
-			manualDiscountReason: manualDiscountAmount > 0 ? discountReason.trim() : ''
-		};
+				customerId: selectedCustomer ? selectedCustomer.ID : null,
+				paymentMethod: paymentMethod ? paymentMethod.toLowerCase() : paymentMethod,
+				pointsToRedeem: Math.min(
+					pointsToRedeem,
+					selectedCustomer ? selectedCustomer.loyalty?.Points || 0 : 0
+				),
+				manualDiscountType: manualDiscountAmount > 0 ? discountType : '',
+				manualDiscountValue: manualDiscountAmount > 0 ? discountValue : 0,
+				manualDiscountReason: manualDiscountAmount > 0 ? discountReason.trim() : ''
+			};
 
 			if (paymentMethod === 'CREDIT' && dueDate) {
 				payload.dueDate = new Date(dueDate).toISOString();
@@ -518,24 +514,19 @@
 
 <svelte:window onkeydown={handlePosKeydown} />
 
-<div class="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 	<!-- ── Terminal header ── -->
-	<header
-		class="flex flex-wrap items-center justify-between gap-4"
-		data-animate="fade-up"
-	>
+	<header class="page-header" data-animate="fade-up">
 		<div class="flex items-center gap-3">
 			<span
-				class="bg-primary text-primary-foreground inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg shadow-sm"
+				class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"
 			>
 				<CreditCard class="h-5 w-5" />
 			</span>
-			<div>
+			<div class="min-w-0">
 				<p class="overline">{$t('pos.hero.label')} · {$t('pos.hero.sub_label')}</p>
-				<h1 class="font-display text-foreground text-2xl font-bold tracking-tight">
-					{$t('pos.hero.title')}
-				</h1>
-				<p class="text-muted-foreground mt-0.5 text-xs">{$t('pos.hero.subtitle')}</p>
+				<h1 class="page-title mt-0.5">{$t('pos.hero.title')}</h1>
+				<p class="page-sub">{$t('pos.hero.subtitle')}</p>
 			</div>
 		</div>
 
@@ -543,39 +534,42 @@
 			<Button
 				variant="outline"
 				onclick={() => fetchProducts(searchTerm.trim())}
-				class="glass-button h-10 rounded-md border-border bg-card px-4 text-sm font-medium text-foreground shadow-none backdrop-blur-none"
+				class="h-10 px-4 text-sm font-medium"
 			>
 				<Search class="mr-2 h-4 w-4" />
 				{$t('pos.hero.refresh_catalog_btn')}
 			</Button>
-			<Button
-				variant="secondary"
-				onclick={clearCart}
-				class="bg-primary text-primary-foreground hover:bg-primary/90 h-10 rounded-md bg-none px-4 text-sm font-medium shadow-none hover:bg-none"
-			>
+			<Button onclick={clearCart} class={btnPrimary}>
 				<Zap class="mr-2 h-4 w-4" />
 				{$t('pos.hero.new_sale_btn')}
-				<Kbd class="border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground ml-2">F9</Kbd>
+				<Kbd
+					class="ml-2 border-primary-foreground/30 bg-primary-foreground/15 text-primary-foreground"
+					>F9</Kbd
+				>
 			</Button>
 		</div>
 	</header>
 
+	<div class="mt-4" data-animate="fade-up" style="animation-delay:40ms">
+		<CashDrawerBar />
+	</div>
+
 	<!-- ── Barcode capture bar ── -->
 	<div
-		class="liquid-panel border-primary/40 mt-5 flex items-center gap-3 px-4 py-3 shadow-md"
+		class="panel mt-5 flex items-center gap-3 px-4 py-3 focus-within:border-primary/40"
 		data-animate="fade-up"
 		style="animation-delay:60ms"
 	>
-		<ScanBarcode class="text-primary h-5 w-5 shrink-0" />
+		<ScanBarcode class="h-5 w-5 shrink-0 text-primary" />
 		<input
 			bind:this={barcodeRef}
 			bind:value={barcodeInput}
 			onkeydown={handleBarcodeKeydown}
 			placeholder={$t('pos.barcode.placeholder')}
 			aria-label={$t('pos.barcode.aria_label')}
-			class="text-foreground placeholder:text-muted-foreground flex-1 bg-transparent text-sm outline-none"
+			class="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
 		/>
-		<Kbd class="text-muted-foreground border-border bg-muted hidden sm:inline-block">F2</Kbd>
+		<Kbd class="hidden border-border bg-muted text-muted-foreground sm:inline-block">F2</Kbd>
 		<span class="badge-success hidden sm:inline-flex">
 			<span class="live-dot" aria-hidden="true"></span>
 			{$t('pos.barcode.scanner_ready')}
@@ -583,26 +577,24 @@
 	</div>
 
 	<!-- ── Catalog search ── -->
-	<div class="liquid-panel mt-4 p-4" data-animate="fade-up" style="animation-delay:100ms">
+	<div class="panel mt-4 p-4" data-animate="fade-up" style="animation-delay:100ms">
 		<div class="flex flex-row items-center justify-between gap-3">
 			<div>
-				<h2 class="font-display text-foreground text-base font-semibold tracking-tight">
-					{$t('pos.header.title')}
-				</h2>
-				<p class="text-muted-foreground text-[0.75rem]">{$t('pos.header.description')}</p>
+				<h2 class="section-title">{$t('pos.header.title')}</h2>
+				<p class="mt-0.5 text-xs text-muted-foreground">{$t('pos.header.description')}</p>
 			</div>
-			<div class="text-muted-foreground hidden items-center gap-2 text-[0.7rem] sm:flex">
+			<div class="hidden items-center gap-2 text-[0.7rem] text-muted-foreground sm:flex">
 				<span class="badge-neutral">{$t('pos.header.super_shop_mode')}</span>
 			</div>
 		</div>
 
 		<div class="mt-3 flex flex-col items-stretch gap-3 sm:flex-row">
 			<div class="relative flex-1">
-				<Search class="text-muted-foreground absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2" />
+				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 				<Input
 					bind:value={searchTerm}
 					placeholder={$t('pos.header.search_placeholder')}
-					class="{inputClass} pl-8"
+					class="{inputClass} pl-9"
 					onkeydown={(e) => e.key === 'Enter' && handleSearch()}
 				/>
 			</div>
@@ -615,7 +607,7 @@
 	</div>
 
 	<!-- ── Register grid ── -->
-	<div class="mt-5 grid w-full grid-cols-1 gap-4 lg:grid-cols-2">
+	<div class="mt-5 grid w-full grid-cols-1 gap-5 lg:grid-cols-2">
 		<!-- LEFT STACK: Products + Cart -->
 		<div class="space-y-5" data-animate="fade-up" style="animation-delay:120ms">
 			<ProductGrid

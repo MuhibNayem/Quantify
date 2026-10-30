@@ -17,12 +17,7 @@
 	let rejectReason = '';
 	let isRejectModalOpen = false;
 
-	const dialogClass =
-		'rounded-lg border-border bg-card bg-none shadow-lg backdrop-blur-none backdrop-saturate-100 from-card to-card';
-	const textareaClass =
-		'liquid-textarea rounded-md bg-card bg-none px-3 py-2 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0';
-	const btnApprove =
-		'rounded-md bg-success bg-none text-white shadow-none hover:bg-success/90 hover:bg-none';
+	const textareaClass = 'rounded-md text-sm';
 
 	onMount(() => {
 		loadReturns();
@@ -66,32 +61,33 @@
 	}
 </script>
 
-<div class="grid gap-4">
+<div class="grid gap-3">
 	{#each returns as ret}
 		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-6 transition-all hover:border-primary/35 hover:shadow-md md:flex-row md:items-center md:justify-between"
+			class="panel flex flex-col gap-4 p-5 transition-colors duration-200 hover:border-primary/30 md:flex-row md:items-center md:justify-between"
 		>
-			<div>
-				<div class="flex items-center gap-3">
-					<h3 class="num-mono text-foreground text-lg font-bold">{returnNumber(ret.ID)}</h3>
+			<div class="min-w-0 space-y-1">
+				<div class="flex flex-wrap items-center gap-3">
+					<h3 class="num-mono text-base font-bold text-foreground">{returnNumber(ret.ID)}</h3>
 					<span class="badge-warning">{ret.Status}</span>
 				</div>
-				<p class="text-muted-foreground text-sm">
-					Requested by User <span class="num-mono">#{ret.UserID}</span> for Order <span class="num-mono">#{ret.OrderID}</span>
+				<p class="text-sm text-muted-foreground">
+					Requested by User <span class="num-mono">#{ret.UserID}</span> for Order
+					<span class="num-mono">#{ret.OrderID}</span>
 				</p>
-				<p class="text-muted-foreground text-xs">
+				<p class="text-xs text-muted-foreground">
 					<TimeAgo date={ret.CreatedAt} />
 				</p>
 			</div>
 
-			<div class="flex items-center gap-2">
+			<div class="flex flex-wrap items-center gap-2">
 				<Button variant="outline" size="sm" onclick={() => openDetails(ret)}>
 					<Eye size={16} class="mr-2" /> Details
 				</Button>
 				<Button
 					variant="default"
 					size="sm"
-					class={btnApprove}
+					class="btn-soothe"
 					disabled={processingId === ret.ID}
 					onclick={() => handleProcess(ret.ID, 'approve')}
 				>
@@ -108,7 +104,7 @@
 			</div>
 		</div>
 	{:else}
-		<div class="border-border bg-muted/40 rounded-lg border border-dashed">
+		<div class="rounded-lg border border-dashed border-border/70 bg-muted/30">
 			<EmptyState
 				icon={CheckCircle2}
 				title="All caught up!"
@@ -120,7 +116,7 @@
 
 <!-- Details Modal -->
 <Dialog.Root bind:open={isDetailsOpen}>
-	<Dialog.Content class="{dialogClass} sm:max-w-[600px]">
+	<Dialog.Content class="sm:max-w-[600px]">
 		<Dialog.Header>
 			<Dialog.Title
 				>Return Details {selectedReturn ? returnNumber(selectedReturn.ID) : ''}</Dialog.Title
@@ -129,18 +125,26 @@
 
 		{#if selectedReturn}
 			<div class="space-y-4">
-				<div class="bg-muted rounded-md p-4">
+				<div class="rounded-lg bg-muted/50 p-4">
 					<p class="overline">Refund Amount</p>
-					<p class="num-mono text-foreground mt-1 text-2xl font-bold">${selectedReturn.RefundAmount.toFixed(2)}</p>
+					<p class="num-mono mt-1 text-2xl font-bold text-foreground">
+						${selectedReturn.RefundAmount.toFixed(2)}
+					</p>
 				</div>
 
 				<div class="space-y-2">
-					<h4 class="text-foreground font-medium">Items</h4>
+					<h4 class="section-title">Items</h4>
 					{#each selectedReturn.Items as item}
-						<div class="border-border flex items-start justify-between rounded-md border p-3">
-							<div>
-								<p class="text-foreground font-medium">Item <span class="num-mono">#{item.OrderItemID}</span></p>
-								<p class="text-muted-foreground text-sm">Qty: <span class="num-mono">{item.Quantity}</span> • Reason: {item.Reason}</p>
+						<div
+							class="flex items-start justify-between gap-3 rounded-md border border-border/70 p-3"
+						>
+							<div class="min-w-0">
+								<p class="font-medium text-foreground">
+									Item <span class="num-mono">#{item.OrderItemID}</span>
+								</p>
+								<p class="text-sm text-muted-foreground">
+									Qty: <span class="num-mono">{item.Quantity}</span> • Reason: {item.Reason}
+								</p>
 							</div>
 							<span class="badge-neutral">{item.Condition}</span>
 						</div>
@@ -151,7 +155,7 @@
 			<Dialog.Footer>
 				<Button
 					variant="default"
-					class={btnApprove}
+					class="btn-soothe"
 					onclick={() => handleProcess(selectedReturn.ID, 'approve')}
 				>
 					Approve Return
@@ -163,13 +167,17 @@
 
 <!-- Reject Modal -->
 <Dialog.Root bind:open={isRejectModalOpen}>
-	<Dialog.Content class={dialogClass}>
+	<Dialog.Content>
 		<Dialog.Header>
 			<Dialog.Title>Reject Return</Dialog.Title>
 			<Dialog.Description>Please provide a reason for rejection.</Dialog.Description>
 		</Dialog.Header>
 
-		<Textarea bind:value={rejectReason} placeholder="Reason for rejection..." class={textareaClass} />
+		<Textarea
+			bind:value={rejectReason}
+			placeholder="Reason for rejection..."
+			class={textareaClass}
+		/>
 
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (isRejectModalOpen = false)}>Cancel</Button>

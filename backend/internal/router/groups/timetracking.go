@@ -11,17 +11,20 @@ import (
 func RegisterTimeTracking(rg *gin.RouterGroup, c *app.Container, roleRepo repository.RoleRepository) {
 	timeTrackingHandler := c.TimeTrackingHandler
 
+	selfOrManager := middleware.SelfOrPermission(roleRepo, "users.manage")
+	managerOnly := middleware.RequirePermission(roleRepo, "users.manage")
+
 	timeTracking := rg.Group("/time-tracking")
 	{
-		timeTracking.POST("/clock-in/:userId", timeTrackingHandler.ClockIn)
-		timeTracking.POST("/clock-out/:userId", timeTrackingHandler.ClockOut)
-		timeTracking.POST("/break-start/:userId", timeTrackingHandler.StartBreak)
-		timeTracking.POST("/break-end/:userId", timeTrackingHandler.EndBreak)
-		timeTracking.GET("/last-entry/:userId", timeTrackingHandler.GetLastTimeClock)
-		timeTracking.GET("/history/:userId", timeTrackingHandler.GetHistory)
-		timeTracking.GET("/activities", timeTrackingHandler.GetRecentActivities)
-		timeTracking.GET("/weekly-summary/:userId", timeTrackingHandler.GetWeeklySummary)
-		timeTracking.GET("/team-status", middleware.RequirePermission(roleRepo, "users.manage"), timeTrackingHandler.GetTeamStatus)
-		timeTracking.GET("/team-overview", middleware.RequirePermission(roleRepo, "users.manage"), timeTrackingHandler.GetTeamOverview)
+		timeTracking.POST("/clock-in/:userId", selfOrManager, timeTrackingHandler.ClockIn)
+		timeTracking.POST("/clock-out/:userId", selfOrManager, timeTrackingHandler.ClockOut)
+		timeTracking.POST("/break-start/:userId", selfOrManager, timeTrackingHandler.StartBreak)
+		timeTracking.POST("/break-end/:userId", selfOrManager, timeTrackingHandler.EndBreak)
+		timeTracking.GET("/last-entry/:userId", selfOrManager, timeTrackingHandler.GetLastTimeClock)
+		timeTracking.GET("/history/:userId", selfOrManager, timeTrackingHandler.GetHistory)
+		timeTracking.GET("/activities", managerOnly, timeTrackingHandler.GetRecentActivities)
+		timeTracking.GET("/weekly-summary/:userId", selfOrManager, timeTrackingHandler.GetWeeklySummary)
+		timeTracking.GET("/team-status", managerOnly, timeTrackingHandler.GetTeamStatus)
+		timeTracking.GET("/team-overview", managerOnly, timeTrackingHandler.GetTeamOverview)
 	}
 }

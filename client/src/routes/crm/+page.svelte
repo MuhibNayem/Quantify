@@ -30,9 +30,6 @@
 	import { settings } from '$lib/stores/settings';
 	import { goto } from '$app/navigation';
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
-
 	let customers = $state<UserSummary[]>([]);
 	let filteredCustomers = $state<UserSummary[]>([]);
 	let selectedCustomer = $state<UserSummary | null>(null);
@@ -228,64 +225,46 @@
 	});
 </script>
 
-<!-- ===== HEADER ===== -->
-<section class="w-full">
-	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-		<div
-			class="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-end"
-			data-animate="fade-up"
-		>
-			<div>
-				<div class="mb-3 inline-flex items-center gap-3">
-					<span class="glass-button inline-flex rounded-md p-2">
-						<Users class="text-primary h-5 w-5" />
-					</span>
-					<p class="overline">Customer Loyalty</p>
-				</div>
-
-				<h1 class="font-display text-foreground mb-2 text-3xl font-bold tracking-tight sm:text-4xl">
-					Customer Management
-				</h1>
-				<p class="text-muted-foreground max-w-2xl text-sm sm:text-base">
-					Manage customer relationships and loyalty programs
-				</p>
-			</div>
-
-			<!-- Action buttons -->
-			<div class="flex flex-col gap-3 sm:flex-row">
-				<Button variant="outline" onclick={fetchCustomers} class="glass-button gap-2 rounded-md">
-					<Zap class="h-4 w-4" /> Refresh
-				</Button>
-				<Button onclick={() => openModal()} class="bg-primary text-primary-foreground gap-2 rounded-md hover:bg-primary/90">
-					<UserPlus class="h-4 w-4" /> Add Customer
-				</Button>
-			</div>
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- ===== PAGE HEADER ===== -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="flex items-center gap-2 overline">
+				<span class="inline-flex rounded-md bg-primary/10 p-1.5 text-primary">
+					<Users class="h-3.5 w-3.5" />
+				</span>
+				Customer Loyalty
+			</p>
+			<h1 class="page-title mt-1">Customer Management</h1>
+			<p class="page-sub">Manage customer relationships and loyalty programs</p>
 		</div>
-	</div>
-</section>
 
-<!-- ===== SEARCH AND FILTERS ===== -->
-<div class="mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div class="liquid-panel rounded-lg p-5" data-animate="fade-up" style="animation-delay: 80ms;">
-		<div class="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-			<div class="w-full flex-1 lg:w-auto">
-				<div class="relative">
-					<Search class="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-					<Input
-						bind:value={searchTerm}
-						oninput={handleSearch}
-						placeholder="Search customers by name or email..."
-						class="{inputClass} pl-10"
-					/>
-				</div>
+		<!-- Action buttons -->
+		<div class="flex flex-col gap-2 sm:flex-row">
+			<Button variant="outline" onclick={fetchCustomers}>
+				<Zap class="h-4 w-4" /> Refresh
+			</Button>
+			<Button onclick={() => openModal()} class="btn-soothe">
+				<UserPlus class="h-4 w-4" /> Add Customer
+			</Button>
+		</div>
+	</header>
+
+	<!-- ===== SEARCH AND FILTERS ===== -->
+	<section class="panel mt-6 p-4" data-animate="fade-up" style="animation-delay: 80ms;">
+		<div class="flex flex-col items-start justify-between gap-3 lg:flex-row lg:items-center">
+			<div class="relative w-full flex-1">
+				<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+				<Input
+					bind:value={searchTerm}
+					oninput={handleSearch}
+					placeholder="Search customers by name or email..."
+					class="h-11 w-full rounded-md pl-9 text-sm"
+				/>
 			</div>
 
-			<div class="flex items-center gap-3">
-				<Button
-					variant="outline"
-					onclick={() => (showFilters = !showFilters)}
-					class="glass-button gap-2 rounded-md"
-				>
+			<div class="flex items-center gap-2">
+				<Button variant="outline" onclick={() => (showFilters = !showFilters)}>
 					<Filter class="h-4 w-4" /> Filters
 					{#if selectedTier !== 'all'}
 						<Badge class="badge-info ml-1">1</Badge>
@@ -295,17 +274,21 @@
 		</div>
 
 		{#if showFilters}
-			<div class="border-border mt-4 border-t pt-4">
-				<div class="flex items-center gap-3">
-					<span class="text-muted-foreground text-sm font-medium">Tier:</span>
-					<div class="flex gap-2">
+			<div class="mt-3 border-t border-border/70 pt-3">
+				<div class="flex flex-wrap items-center gap-3">
+					<span class="text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase"
+						>Tier</span
+					>
+					<div
+						class="inline-flex items-center gap-1 rounded-md border border-border/70 bg-muted/50 p-1"
+					>
 						{#each ['all', 'Bronze', 'Silver', 'Gold'] as tier}
 							<Button
-								variant={selectedTier === tier ? 'default' : 'ghost'}
+								variant="ghost"
 								size="sm"
-								class={selectedTier === tier
-									? 'glass-toggle-active rounded-md'
-									: 'text-muted-foreground hover:bg-muted hover:text-foreground rounded-md'}
+								class="rounded-md px-3 text-sm font-medium {selectedTier === tier
+									? 'bg-card text-foreground shadow-xs ring-1 ring-border'
+									: 'text-muted-foreground hover:text-foreground'}"
 								onclick={() => {
 									selectedTier = tier;
 									handleSearch();
@@ -318,15 +301,13 @@
 				</div>
 			</div>
 		{/if}
-	</div>
-</div>
+	</section>
 
-<!-- ===== MAIN CONTENT ===== -->
-<div class="mx-auto mb-12 mt-6 max-w-7xl px-4 sm:px-6 lg:px-8">
-	<div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+	<!-- ===== MAIN CONTENT ===== -->
+	<div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<!-- Customer Table -->
 		<div class="lg:col-span-2" data-animate="fade-up" style="animation-delay: 140ms;">
-			<div class="liquid-panel overflow-hidden rounded-lg">
+			<section class="panel overflow-hidden">
 				<div class="overflow-x-auto">
 					<table class="ledger-table">
 						<thead>
@@ -343,55 +324,59 @@
 								{#each Array(pagination.itemsPerPage) as _}
 									<tr>
 										<td colspan="5">
-											<Skeleton class="bg-muted h-5 w-full" />
+											<Skeleton class="h-5 w-full bg-muted" />
 										</td>
 									</tr>
 								{/each}
 							{:else if customers.length === 0}
 								<tr>
-									<td colspan="5" class="py-12 text-center">
-										<Users class="text-muted-foreground/40 mx-auto mb-3 h-10 w-10" />
-										<p class="text-foreground text-sm font-medium">No customers found</p>
-										<p class="text-muted-foreground text-xs">Try adjusting your search</p>
+									<td colspan="5" class="py-14 text-center">
+										<div class="flex flex-col items-center gap-2">
+											<span
+												class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border"
+											>
+												<Users class="h-5 w-5" />
+											</span>
+											<p class="text-sm font-medium text-foreground">No customers found</p>
+											<p class="text-xs text-muted-foreground">Try adjusting your search</p>
+										</div>
 									</td>
 								</tr>
 							{:else}
 								{#each customers as customer (customer.ID)}
+									{@const TierIcon = getTierIcon(customer.loyalty?.Tier || 'Bronze')}
 									<tr
-										class="cursor-pointer transition-colors {selectedCustomer?.ID ===
-										customer.ID
-											? 'border-l-2 border-primary bg-muted/60'
+										class="cursor-pointer transition-colors {selectedCustomer?.ID === customer.ID
+											? 'bg-muted/60 shadow-[inset_2px_0_0_0_hsl(var(--primary))]'
 											: ''}"
 										onclick={() => (selectedCustomer = customer)}
 									>
 										<td>
-											<div class="text-foreground font-medium">
+											<div class="font-medium text-foreground">
 												{(customer.FirstName + ' ' + (customer.LastName || '')).trim()}
 											</div>
-											<div class="text-muted-foreground text-xs">{customer.Email}</div>
+											<div class="text-xs text-muted-foreground">{customer.Email}</div>
 										</td>
-										<td class="text-muted-foreground num-mono text-sm">
+										<td class="num-mono text-sm text-muted-foreground">
 											{customer.PhoneNumber}
 										</td>
 										<td>
 											<span class={getTierColor(customer.loyalty?.Tier || 'Bronze')}>
-												<svelte:component
-													this={getTierIcon(customer.loyalty?.Tier || 'Bronze')}
-													class="h-3 w-3"
-												/>
+												<TierIcon class="h-3 w-3" />
 												{customer.loyalty?.Tier || 'Bronze'}
 											</span>
 										</td>
-										<td class="col-num text-foreground font-semibold">
+										<td class="col-num font-semibold text-foreground">
 											{customer.loyalty?.Points || 0}
 										</td>
 										<td>
-											<div class="flex justify-end gap-2" onclick={(e) => e.stopPropagation()}>
+											<div class="flex justify-end gap-1" onclick={(e) => e.stopPropagation()}>
 												<Button
 													size="sm"
-													variant="outline"
+													variant="ghost"
+													class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+													aria-label="Edit customer"
 													onclick={() => openModal(customer)}
-													class="glass-button h-8 w-8 rounded-md p-0"
 												>
 													<Edit class="h-4 w-4" />
 												</Button>
@@ -399,7 +384,8 @@
 													size="sm"
 													variant="ghost"
 													onclick={() => deleteCustomer(customer)}
-													class="text-danger hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md p-0"
+													class="h-8 w-8 p-0 text-danger hover:bg-danger/10 hover:text-danger"
+													aria-label="Delete customer"
 												>
 													<Trash2 class="h-4 w-4" />
 												</Button>
@@ -411,32 +397,34 @@
 						</tbody>
 					</table>
 				</div>
-			</div>
+			</section>
 
 			{#if pagination.totalPages > 1}
-				<div class="mt-4 flex items-center justify-between">
-					<p class="text-muted-foreground text-sm">
+				<div class="mt-3 flex items-center justify-between">
+					<p class="text-sm text-muted-foreground">
 						Showing {customers.length} of {pagination.totalItems} customers
 					</p>
 					<div class="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={pagination.currentPage <= 1}
 							onclick={() => handlePageChange(pagination.currentPage - 1)}
+							aria-label="Previous page"
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-foreground text-sm font-medium">
+						<span class="num-mono text-sm font-medium text-foreground">
 							Page {pagination.currentPage} of {pagination.totalPages}
 						</span>
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={pagination.currentPage >= pagination.totalPages}
 							onclick={() => handlePageChange(pagination.currentPage + 1)}
+							aria-label="Next page"
 						>
 							<ChevronRight class="h-4 w-4" />
 						</Button>
@@ -448,19 +436,21 @@
 		<!-- Customer Details Sidebar -->
 		<div class="lg:col-span-1" data-animate="fade-up" style="animation-delay: 200ms;">
 			{#if selectedCustomer}
-				<div class="sticky top-6 space-y-6">
+				{@const SelectedTierIcon = getTierIcon(selectedCustomer.loyalty?.Tier || 'Bronze')}
+				<div class="sticky top-6 space-y-4">
 					<!-- Customer Profile Card -->
-					<div class="liquid-panel rounded-lg p-6">
-						<div class="mb-4 flex items-center justify-between">
-							<h2 class="font-display text-foreground text-xl font-bold">
+					<section class="panel p-5">
+						<div class="mb-3 flex items-start justify-between gap-3">
+							<h2 class="min-w-0 truncate font-display text-lg font-semibold text-foreground">
 								{(selectedCustomer.FirstName + ' ' + (selectedCustomer.LastName || '')).trim()}
 							</h2>
-							<div class="flex gap-2">
+							<div class="flex shrink-0 gap-1">
 								<Button
 									size="sm"
-									variant="outline"
+									variant="ghost"
 									onclick={() => openModal(selectedCustomer)}
-									class="glass-button h-8 w-8 rounded-md p-0"
+									class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+									aria-label="Edit customer"
 								>
 									<Edit2 class="h-4 w-4" />
 								</Button>
@@ -468,66 +458,67 @@
 									size="sm"
 									variant="ghost"
 									onclick={() => selectedCustomer && deleteCustomer(selectedCustomer)}
-									class="text-danger hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md p-0"
+									class="h-8 w-8 p-0 text-danger hover:bg-danger/10 hover:text-danger"
+									aria-label="Delete customer"
 								>
 									<Trash2 class="h-4 w-4" />
 								</Button>
 							</div>
 						</div>
 
-						<div class="space-y-3">
-							<div class="flex items-center gap-3">
-								<Mail class="text-muted-foreground h-4 w-4" />
-								<span class="text-foreground text-sm">{selectedCustomer.Email}</span>
+						<div class="space-y-2.5">
+							<div class="flex items-center gap-2.5">
+								<Mail class="h-4 w-4 shrink-0 text-muted-foreground" />
+								<span class="truncate text-sm text-foreground">{selectedCustomer.Email}</span>
 							</div>
-							<div class="flex items-center gap-3">
-								<Phone class="text-muted-foreground h-4 w-4" />
-								<span class="text-foreground text-sm">{selectedCustomer.PhoneNumber}</span>
+							<div class="flex items-center gap-2.5">
+								<Phone class="h-4 w-4 shrink-0 text-muted-foreground" />
+								<span class="num-mono truncate text-sm text-foreground"
+									>{selectedCustomer.PhoneNumber}</span
+								>
 							</div>
 						</div>
-					</div>
+					</section>
 
 					<!-- Loyalty Card -->
 					{#if auth.hasPermission('loyalty.read')}
-						<div class="liquid-panel rounded-lg p-6">
-							<h3 class="text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
-								<Star class="text-primary" />
+						<section class="panel p-5">
+							<h3 class="section-title mb-4 flex items-center gap-2">
+								<Star class="h-4 w-4 text-primary" />
 								Loyalty Program
 							</h3>
 
-							<div class="mb-6 text-center">
-								<p class="kpi-num text-primary text-4xl">
+							<div class="mb-5 text-center">
+								<p class="kpi-num text-4xl text-primary">
 									{selectedCustomer.loyalty?.Points || 0}
 								</p>
-								<p class="text-muted-foreground text-sm">Available Points</p>
+								<p class="mt-1 text-xs font-medium text-muted-foreground">Available Points</p>
 								<span
 									class={`mt-2 inline-flex ${getTierColor(selectedCustomer.loyalty?.Tier || 'Bronze')}`}
 								>
-									<svelte:component
-										this={getTierIcon(selectedCustomer.loyalty?.Tier || 'Bronze')}
-										class="h-3 w-3"
-									/>
+									<SelectedTierIcon class="h-3 w-3" />
 									{selectedCustomer.loyalty?.Tier || 'Bronze'} Member
 								</span>
-								<div class="text-muted-foreground mt-3 text-[0.65rem]">
+								<p class="mt-3 text-[0.65rem] text-muted-foreground">
 									Earning Rate: {$settings.loyalty_points_earning_rate} pt / {$settings.currency_symbol}1
 									spent
-								</div>
+								</p>
 							</div>
 
 							<div class="space-y-3">
 								<div>
-									<label class="text-foreground text-sm font-medium">Add Points</label>
+									<label class="text-xs font-medium text-foreground">Add Points</label>
 									<div class="mt-1 flex gap-2">
 										<Input
 											type="number"
 											placeholder="Amount"
 											bind:value={pointsToAdd}
-											class="{inputClass} num-mono"
+											class="num-mono h-10 w-full rounded-md text-sm"
 										/>
 										<Button
 											onclick={addPoints}
-											class="bg-primary text-primary-foreground rounded-md px-3 hover:bg-primary/90"
+											class="btn-soothe h-10 w-10 shrink-0 p-0"
+											aria-label="Add points"
 										>
 											<Gift class="h-4 w-4" />
 										</Button>
@@ -535,52 +526,57 @@
 								</div>
 
 								<div>
-									<label class="text-foreground text-sm font-medium">Redeem Points</label>
+									<label class="text-xs font-medium text-foreground">Redeem Points</label>
 									<div class="mt-1 flex gap-2">
 										<Input
 											type="number"
 											placeholder="Amount"
 											bind:value={pointsToRedeem}
-											class="{inputClass} num-mono"
+											class="num-mono h-10 w-full rounded-md text-sm"
 										/>
-										<Button
-											onclick={redeemPoints}
-											class="bg-primary text-primary-foreground rounded-md px-3 hover:bg-primary/90"
-										>
+										<Button onclick={redeemPoints} class="btn-soothe h-10 shrink-0 px-3 text-sm">
 											Redeem
 										</Button>
 									</div>
 								</div>
 							</div>
-						</div>
+						</section>
 					{/if}
 
 					<!-- Quick Stats -->
-					<div class="liquid-panel rounded-lg p-6">
-						<h3 class="text-foreground mb-4 text-lg font-semibold">Quick Stats</h3>
-						<div class="space-y-3">
-							<div class="flex justify-between">
-								<span class="text-muted-foreground text-sm">Joined Date</span>
-								<span class="text-foreground num-mono text-sm font-medium"
+					<section class="panel p-5">
+						<h3 class="section-title mb-3">Quick Stats</h3>
+						<div class="space-y-2.5">
+							<div class="flex justify-between gap-3">
+								<span class="text-xs text-muted-foreground">Joined Date</span>
+								<span class="num-mono text-xs font-medium text-foreground"
 									>{new Date(selectedCustomer.CreatedAt || '').toLocaleDateString()}</span
 								>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-muted-foreground text-sm">Last Activity</span>
-								<span class="text-foreground num-mono text-sm font-medium"
+							<div class="flex justify-between gap-3">
+								<span class="text-xs text-muted-foreground">Last Activity</span>
+								<span class="num-mono text-xs font-medium text-foreground"
 									>{new Date(selectedCustomer.UpdatedAt || '').toLocaleDateString()}</span
 								>
 							</div>
 						</div>
-					</div>
+					</section>
 				</div>
 			{:else}
 				<div class="sticky top-6">
-					<div class="liquid-panel rounded-lg p-12 text-center">
-						<Users class="text-muted-foreground/40 mx-auto mb-4 h-16 w-16" />
-						<p class="text-foreground text-lg font-medium">Select a Customer</p>
-						<p class="text-muted-foreground text-sm">Choose a customer from list to view details</p>
-					</div>
+					<section
+						class="rounded-lg border border-dashed border-border/70 bg-muted/20 p-10 text-center"
+					>
+						<div
+							class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-muted text-muted-foreground/60"
+						>
+							<Users class="h-6 w-6" />
+						</div>
+						<p class="text-sm font-semibold text-foreground">Select a Customer</p>
+						<p class="mt-1 text-xs text-muted-foreground">
+							Choose a customer from list to view details
+						</p>
+					</section>
 				</div>
 			{/if}
 		</div>
@@ -588,15 +584,13 @@
 </div>
 
 <Dialog.Root bind:open={isModalOpen}>
-	<Dialog.Content
-		class="bg-card border-border overflow-hidden rounded-lg border p-0 shadow-lg sm:max-w-[425px]"
-	>
+	<Dialog.Content class="overflow-hidden p-0 sm:max-w-[425px]">
 		<!-- Header -->
-		<div class="border-border bg-muted/50 px-6 py-6 sm:px-8">
-			<Dialog.Title class="font-display text-foreground text-2xl font-bold tracking-tight">
+		<div class="border-b border-border/70 bg-muted/40 px-6 py-5">
+			<Dialog.Title class="font-display text-xl font-semibold tracking-tight text-foreground">
 				{editingCustomer ? 'Edit Customer' : 'New Customer'}
 			</Dialog.Title>
-			<Dialog.Description class="text-muted-foreground mt-1.5">
+			<Dialog.Description class="mt-1 text-sm text-muted-foreground">
 				{editingCustomer
 					? "Update the customer's profile information."
 					: 'Add a new member to your customer base.'}
@@ -604,53 +598,53 @@
 		</div>
 
 		<!-- Body -->
-		<div class="space-y-6 px-6 py-8 sm:px-8">
+		<div class="space-y-4 px-6 py-5">
 			{#key isModalOpen}
 				<!-- Name Field -->
-				<div class="group space-y-2">
-					<label for="name" class="overline ml-1"> Full Name </label>
+				<div class="space-y-1.5">
+					<label for="name" class="text-xs font-medium text-foreground">Full Name</label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Users class="text-muted-foreground h-4 w-4" />
+							<Users class="h-4 w-4 text-muted-foreground" />
 						</div>
 						<Input
 							id="name"
 							bind:value={customerForm.name}
 							placeholder="Jane Doe"
-							class="{inputClass} pl-10"
+							class="h-11 w-full rounded-md pl-9 text-sm"
 						/>
 					</div>
 				</div>
 
 				<!-- Email Field -->
-				<div class="group space-y-2">
-					<label for="email" class="overline ml-1"> Email Address </label>
+				<div class="space-y-1.5">
+					<label for="email" class="text-xs font-medium text-foreground">Email Address</label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Mail class="text-muted-foreground h-4 w-4" />
+							<Mail class="h-4 w-4 text-muted-foreground" />
 						</div>
 						<Input
 							id="email"
 							type="email"
 							bind:value={customerForm.email}
 							placeholder="jane@example.com"
-							class="{inputClass} pl-10"
+							class="h-11 w-full rounded-md pl-9 text-sm"
 						/>
 					</div>
 				</div>
 
 				<!-- Phone Field -->
-				<div class="group space-y-2">
-					<label for="phone" class="overline ml-1"> Phone Number </label>
+				<div class="space-y-1.5">
+					<label for="phone" class="text-xs font-medium text-foreground">Phone Number</label>
 					<div class="relative">
 						<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-							<Phone class="text-muted-foreground h-4 w-4" />
+							<Phone class="h-4 w-4 text-muted-foreground" />
 						</div>
 						<Input
 							id="phone"
 							bind:value={customerForm.phone}
 							placeholder="+1 (555) 000-0000"
-							class="{inputClass} pl-10"
+							class="h-11 w-full rounded-md pl-9 text-sm"
 						/>
 					</div>
 				</div>
@@ -658,18 +652,17 @@
 		</div>
 
 		<!-- Footer -->
-		<div class="bg-muted/50 flex items-center justify-end gap-3 px-6 py-4 sm:px-8">
+		<div
+			class="flex items-center justify-end gap-2 border-t border-border/70 bg-muted/40 px-6 py-4"
+		>
 			<Button
 				variant="ghost"
 				onclick={() => (isModalOpen = false)}
-				class="text-muted-foreground hover:bg-muted hover:text-foreground rounded-md"
+				class="text-muted-foreground hover:text-foreground"
 			>
 				Cancel
 			</Button>
-			<Button
-				onclick={saveCustomer}
-				class="bg-primary text-primary-foreground rounded-md px-8 font-semibold hover:bg-primary/90"
-			>
+			<Button onclick={saveCustomer} class="btn-soothe px-6">
 				{editingCustomer ? 'Update Profile' : 'Create Profile'}
 			</Button>
 		</div>

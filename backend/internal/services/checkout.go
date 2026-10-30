@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
@@ -22,6 +24,16 @@ type SalesService struct {
 	DB               *gorm.DB
 	Settings         SettingsService
 	ReportingService *ReportingService
+}
+
+// currencyCode returns the configured ISO currency, defaulting to USD.
+func (s *SalesService) currencyCode() string {
+	if v, err := s.Settings.GetSetting("currency_code"); err == nil {
+		if code := strings.ToUpper(strings.TrimSpace(v)); len(code) == 3 {
+			return code
+		}
+	}
+	return "USD"
 }
 
 func NewSalesService(db *gorm.DB, settings SettingsService, reportingService *ReportingService) *SalesService {
@@ -200,7 +212,8 @@ func (s *SalesService) processItems(
 			batches = batchesByProduct[item.ProductID]
 		}
 
-		if _, err := s.allocateStock(tx, product, batches, deductionLocationID, baseQty, req.CustomerID, userID); err != nil {
+		_, lineCost, err := s.allocateStock(tx, product, batches, deductionLocationID, baseQty, req.CustomerID, userID)
+		if err != nil {
 			return 0, 0, 0, nil, err
 		}
 
@@ -210,14 +223,21 @@ func (s *SalesService) processItems(
 		totalDiscountFromPromotions += discount
 		totalAmount += unitPrice * item.Quantity
 
-		// Cost of goods sold: base quantity deducted × purchase price per base unit.
-		totalCOGS += baseQty * product.PurchasePrice
+		// COGS comes from the batches actually consumed (their landed cost),
+		// not the product's current purchase price.
+		totalCOGS += lineCost
+		unitCost := 0.0
+		if baseQty > 0 {
+			unitCost = lineCost / baseQty
+		}
 
 		orderItems = append(orderItems, domain.OrderItem{
 			ProductID:    item.ProductID,
 			Quantity:     item.Quantity, // selling units (e.g. 14 inches)
 			UnitID:       unitID,
 			BaseQuantity: baseQty, // base units deducted (e.g. 1.1667 ft)
+			LocationID:   deductionLocationID,
+			UnitCost:     unitCost,
 			UnitPrice:    unitPrice,
 			TotalPrice:   units.RoundQty(unitPrice * item.Quantity),
 		})
@@ -249,17 +269,17 @@ func (s *SalesService) createOrderAndTransaction(
 		status = "PENDING"
 	}
 	order := domain.Order{
-		OrderNumber:    orderNumber,
-		UserID:         userID,
-		CustomerID:     req.CustomerID,
-		Subtotal:       discountedSubtotal,
-		TaxAmount:      taxAmount,
-		TotalAmount:    finalTotal,
-		Status:         status,
-		PaymentMethod:  req.PaymentMethod,
-		OrderDate:      time.Now(),
-		PointsRedeemed: pointsRedeemed,
-		DiscountAmount: discountAmount + totalDiscountFromPromotions + manualDiscountAmount,
+		OrderNumber:          orderNumber,
+		UserID:               userID,
+		CustomerID:           req.CustomerID,
+		Subtotal:             discountedSubtotal,
+		TaxAmount:            taxAmount,
+		TotalAmount:          finalTotal,
+		Status:               status,
+		PaymentMethod:        req.PaymentMethod,
+		OrderDate:            time.Now(),
+		PointsRedeemed:       pointsRedeemed,
+		DiscountAmount:       discountAmount + totalDiscountFromPromotions + manualDiscountAmount,
 		ManualDiscountType:   req.ManualDiscountType,
 		ManualDiscountValue:  req.ManualDiscountValue,
 		ManualDiscountAmount: manualDiscountAmount,
@@ -281,7 +301,7 @@ func (s *SalesService) createOrderAndTransaction(
 	saletransaction := domain.Transaction{
 		OrderID:              orderNumber,
 		Amount:               int64(finalTotal * 100),
-		Currency:             "USD",
+		Currency:             s.currencyCode(),
 		PaymentMethod:        req.PaymentMethod,
 		Status:               status,
 		GatewayTransactionID: fmt.Sprintf("GW-%d", time.Now().UnixNano()),
@@ -291,10 +311,25 @@ func (s *SalesService) createOrderAndTransaction(
 		return fmt.Errorf("failed to record transaction: %w", err)
 	}
 
+	// Cash sales feed the cashier's open drawer so closing reconciles against
+	// actual cash movements. Card/credit sales do not touch the drawer.
+	if req.PaymentMethod == "cash" && !onCredit {
+		var drawer domain.CashDrawerSession
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("user_id = ? AND status = ?", userID, "OPEN").
+			Order("start_time DESC").First(&drawer).Error; err == nil {
+			drawer.TotalSales += finalTotal
+			drawer.SystemCash = drawer.StartingCash + drawer.TotalSales - drawer.TotalRefunds - drawer.TotalDrops
+			if err := tx.Save(&drawer).Error; err != nil {
+				return fmt.Errorf("failed to update cash drawer: %w", err)
+			}
+		}
+	}
+
 	// Post the double-entry ledger entry for the sale (DR Cash/AR, CR Revenue,
 	// DR Sales Discounts, DR COGS, CR Inventory). Keeps income and cost balanced.
 	ledger := NewLedgerService(s.DB)
-	entry, err := ledger.PostSale(tx, &order, cogs, manualDiscountAmount, onCredit, userID)
+	entry, err := ledger.PostSale(tx, &order, cogs, manualDiscountAmount, discountAmount, onCredit, userID)
 	if err != nil {
 		return fmt.Errorf("failed to post sale to ledger: %w", err)
 	}
@@ -342,13 +377,13 @@ func (s *SalesService) emitManualDiscountAudit(
 		pct = (amount / subtotal) * 100.0
 	}
 	changes, err := json.Marshal(map[string]interface{}{
-		"type":            req.ManualDiscountType,
-		"value":           req.ManualDiscountValue,
-		"amount":          round2(amount),
-		"discount_pct":    round2(pct),
-		"reason":          req.ManualDiscountReason,
-		"applied_by":      userID,
-		"order_subtotal":  round2(subtotal),
+		"type":           req.ManualDiscountType,
+		"value":          req.ManualDiscountValue,
+		"amount":         round2(amount),
+		"discount_pct":   round2(pct),
+		"reason":         req.ManualDiscountReason,
+		"applied_by":     userID,
+		"order_subtotal": round2(subtotal),
 	})
 	if err != nil {
 		changes = []byte(`{}`)

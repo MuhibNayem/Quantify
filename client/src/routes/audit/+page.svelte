@@ -23,9 +23,8 @@
 	import type { AuditLog } from '$lib/types';
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm font-normal text-foreground placeholder:text-muted-foreground';
+	const btnSecondary = 'shadow-none';
 
 	let logs = $state<AuditLog[]>([]);
 	let loading = $state(true);
@@ -214,32 +213,28 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden bg-background p-6 lg:p-10">
-	<div class="mx-auto max-w-7xl space-y-8">
-		<div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-			<div class="space-y-1">
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
-					Audit Trail
-				</h1>
-				<p class="text-muted-foreground">Track every action and change across the system</p>
+<div class="min-h-screen bg-background p-6 lg:p-8">
+	<div class="mx-auto max-w-7xl space-y-6">
+		<header class="page-header">
+			<div class="min-w-0">
+				<h1 class="page-title">Audit Trail</h1>
+				<p class="page-sub">Track every action and change across the system</p>
 			</div>
 			<Button
 				variant="outline"
-				class="{btnSecondary} gap-2"
+				class="{btnSecondary} h-10 gap-2 px-4 text-sm"
 				onclick={exportCsv}
 				disabled={loading || logs.length === 0}
 			>
 				<Download class="h-4 w-4" />
 				Export CSV
 			</Button>
-		</div>
+		</header>
 
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 lg:flex-row lg:items-center"
-		>
+		<div class="panel flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
 			<div class="w-full lg:w-52">
 				<div class="select-wrapper">
-					<select bind:value={actionFilter}>
+					<select bind:value={actionFilter} class="h-10">
 						{#each actionOptions as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
@@ -248,7 +243,7 @@
 			</div>
 			<div class="w-full lg:w-48">
 				<div class="select-wrapper">
-					<select bind:value={entityFilter}>
+					<select bind:value={entityFilter} class="h-10">
 						{#each entityOptions as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
@@ -256,7 +251,12 @@
 				</div>
 			</div>
 			<div class="w-full lg:w-40">
-				<Input type="date" bind:value={start} placeholder="Start date" class="{inputClass} num-mono" />
+				<Input
+					type="date"
+					bind:value={start}
+					placeholder="Start date"
+					class="{inputClass} num-mono"
+				/>
 			</div>
 			<div class="w-full lg:w-40">
 				<Input type="date" bind:value={end} placeholder="End date" class="{inputClass} num-mono" />
@@ -270,20 +270,24 @@
 				/>
 			</div>
 			<div class="flex items-center gap-2">
-				<Button variant="outline" size="sm" onclick={applyFilters} class="{btnSecondary} gap-1">
-					<Search class="h-3 w-3" />
+				<Button
+					variant="outline"
+					class="{btnSecondary} h-10 gap-2 px-4 text-sm"
+					onclick={applyFilters}
+				>
+					<Search class="h-3.5 w-3.5" />
 					Filter
 				</Button>
-				<Button variant="ghost" size="sm" onclick={resetFilters} class="rounded-md">Reset</Button>
+				<Button variant="ghost" class="h-10 px-3 text-sm" onclick={resetFilters}>Reset</Button>
 			</div>
 		</div>
 
 		{#if loading}
-			<div class="flex h-64 items-center justify-center">
-				<Loader2 class="text-primary h-8 w-8 animate-spin" />
+			<div class="panel flex h-64 items-center justify-center">
+				<Loader2 class="h-6 w-6 animate-spin text-primary" />
 			</div>
 		{:else if logs.length === 0}
-			<div class="liquid-panel rounded-lg">
+			<div class="panel">
 				<EmptyState
 					icon={ShieldCheck}
 					title="No audit logs found"
@@ -293,8 +297,8 @@
 				/>
 			</div>
 		{:else}
-			<div in:fly={{ y: 20, duration: 300 }} class="liquid-panel overflow-hidden rounded-lg">
-				<table class="ledger-table">
+			<div in:fly={{ y: 20, duration: 300 }} class="panel overflow-x-auto">
+				<table class="ledger-table min-w-[64rem]">
 					<thead>
 						<tr>
 							<th class="w-8"></th>
@@ -313,33 +317,33 @@
 								<td>
 									<ChevronDown
 										class={cn(
-											'text-muted-foreground h-4 w-4 transition-transform',
+											'h-4 w-4 text-muted-foreground transition-transform',
 											expandedId === log.ID && 'rotate-180'
 										)}
 									/>
 								</td>
-								<td class="text-muted-foreground whitespace-nowrap num-mono">
+								<td class="num-mono whitespace-nowrap text-muted-foreground">
 									<TimeAgo date={log.Timestamp} />
 								</td>
 								<td>
 									<div class="flex flex-col">
-										<span class="text-foreground font-semibold">
+										<span class="font-semibold text-foreground">
 											{log.User?.Username || `User #${log.UserID}`}
 										</span>
 										{#if log.User?.Email}
-											<span class="text-muted-foreground text-xs">{log.User.Email}</span>
+											<span class="text-xs text-muted-foreground">{log.User.Email}</span>
 										{/if}
 									</div>
 								</td>
 								<td>
-									<span class={cn(getActionColor(log.Action), 'uppercase tracking-wide')}>
+									<span class={cn(getActionColor(log.Action), 'tracking-wide uppercase')}>
 										{log.Action}
 									</span>
 								</td>
 								<td>
 									<div class="flex flex-col">
-										<span class="text-foreground font-medium">{log.Entity}</span>
-										<span class="text-muted-foreground text-xs num-mono">#{log.EntityID}</span>
+										<span class="font-medium text-foreground">{log.Entity}</span>
+										<span class="num-mono text-xs text-muted-foreground">#{log.EntityID}</span>
 									</div>
 								</td>
 								<td class="text-muted-foreground">
@@ -348,10 +352,10 @@
 											{changes.length} field{changes.length === 1 ? '' : 's'} changed
 										</span>
 									{:else}
-										<span class="text-muted-foreground text-xs">—</span>
+										<span class="text-xs text-muted-foreground">—</span>
 									{/if}
 								</td>
-								<td class="text-muted-foreground text-xs num-mono">
+								<td class="num-mono text-xs text-muted-foreground">
 									{log.IPAddress || '—'}
 								</td>
 							</tr>
@@ -362,28 +366,24 @@
 										<div in:fly={{ y: -8, duration: 200 }} class="space-y-4 px-6 py-4">
 											{#if changes.length > 0}
 												<div class="space-y-2">
-													<p class="overline">
-														Changes
-													</p>
+													<p class="overline">Changes</p>
 													<div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 														{#each changes as change}
-															<div
-																class="border-border bg-card rounded-md border px-3 py-2"
-															>
-																<p class="text-muted-foreground text-xs font-semibold num-mono">
+															<div class="rounded-md border border-border bg-card px-3 py-2">
+																<p class="num-mono text-xs font-semibold text-muted-foreground">
 																	{change.key}
 																</p>
 																<div class="mt-1 flex flex-wrap items-center gap-2 text-sm">
 																	{#if change.from !== undefined}
 																		<span
-																			class="bg-danger/10 text-danger rounded px-1.5 py-0.5 text-xs line-through num-mono"
+																			class="num-mono rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger line-through"
 																		>
 																			{formatValue(change.from)}
 																		</span>
-																		<ArrowRight class="text-muted-foreground h-3 w-3" />
+																		<ArrowRight class="h-3 w-3 text-muted-foreground" />
 																	{/if}
 																	<span
-																		class="bg-success/10 text-success rounded px-1.5 py-0.5 text-xs num-mono"
+																		class="num-mono rounded bg-success/10 px-1.5 py-0.5 text-xs text-success"
 																	>
 																		{formatValue(change.to)}
 																	</span>
@@ -393,17 +393,17 @@
 													</div>
 												</div>
 											{:else}
-												<p class="text-muted-foreground text-sm">No structured changes recorded.</p>
+												<p class="text-sm text-muted-foreground">No structured changes recorded.</p>
 											{/if}
 
-											<div class="text-muted-foreground grid gap-3 text-xs sm:grid-cols-2">
+											<div class="grid gap-3 text-xs text-muted-foreground sm:grid-cols-2">
 												<div>
-													<span class="text-foreground font-semibold">Full timestamp:</span>
+													<span class="font-semibold text-foreground">Full timestamp:</span>
 													{formatDate(log.Timestamp)}
 												</div>
 												{#if log.UserAgent}
 													<div class="truncate">
-														<span class="text-foreground font-semibold">User agent:</span>
+														<span class="font-semibold text-foreground">User agent:</span>
 														{log.UserAgent}
 													</div>
 												{/if}
@@ -418,29 +418,31 @@
 			</div>
 
 			{#if totalPages > 1}
-				<div class="flex items-center justify-between">
-					<p class="text-muted-foreground text-sm">
+				<div class="flex flex-wrap items-center justify-between gap-3">
+					<p class="num-mono text-xs text-muted-foreground">
 						Showing {logs.length} of {total} events
 					</p>
 					<div class="flex items-center gap-2">
 						<Button
 							variant="outline"
-							size="sm"
+							size="icon"
 							disabled={page <= 1}
 							onclick={() => goToPage(page - 1)}
-							class={btnSecondary}
+							class="{btnSecondary} size-9"
+							aria-label="Previous page"
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-foreground text-sm font-medium num-mono">
+						<span class="num-mono text-xs font-medium text-foreground">
 							Page {page} of {totalPages}
 						</span>
 						<Button
 							variant="outline"
-							size="sm"
+							size="icon"
 							disabled={page >= totalPages}
 							onclick={() => goToPage(page + 1)}
-							class={btnSecondary}
+							class="{btnSecondary} size-9"
+							aria-label="Next page"
 						>
 							<ChevronRight class="h-4 w-4" />
 						</Button>

@@ -26,9 +26,6 @@
 	import { fade, fly } from 'svelte/transition';
 	import type { PurchaseOrder, Supplier } from '$lib/types';
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
-
 	let purchaseOrders = $state<PurchaseOrder[]>([]);
 	let suppliers = $state<Supplier[]>([]);
 	let loading = $state(true);
@@ -202,60 +199,54 @@
 	}
 </script>
 
-<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
-	<div class="mx-auto max-w-7xl space-y-8">
-		<div
-			class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-			data-animate="fade-up"
-		>
-			<div class="space-y-1">
-				<p class="overline">Procurement · Replenishment</p>
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
-					Purchase Orders
-				</h1>
-				<p class="text-muted-foreground">Manage replenishment purchase orders</p>
-			</div>
-			<Button
-				class="bg-primary text-primary-foreground gap-2 rounded-md shadow-md hover:bg-primary/90"
-				onclick={() => goto('/intelligence')}
-			>
-				<Plus class="h-4 w-4" />
-				Create PO
-			</Button>
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="overline">Procurement · Replenishment</p>
+			<h1 class="page-title mt-1">Purchase Orders</h1>
+			<p class="page-sub">Manage replenishment purchase orders</p>
 		</div>
+		<Button class="btn-soothe" onclick={() => goto('/intelligence')}>
+			<Plus class="h-4 w-4" />
+			Create PO
+		</Button>
+	</header>
 
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 md:flex-row md:items-center"
-			data-animate="fade-up"
-			style="animation-delay: 80ms;"
-		>
-			<div class="relative max-w-xs flex-1">
-				<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-				<Input
-					bind:value={searchQuery}
-					placeholder="Search POs..."
-					class="{inputClass} pl-9"
-					onkeydown={(e) => e.key === 'Enter' && applyFilters()}
-				/>
-			</div>
-			<div class="w-48">
-				<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
-			</div>
-			<div class="w-48">
-				<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
-			</div>
-			<Button variant="outline" size="sm" onclick={applyFilters} class="glass-button gap-1 rounded-md">
-				<Search class="h-3 w-3" />
-				Filter
-			</Button>
+	<!-- Filters -->
+	<section
+		class="panel mt-6 flex flex-col gap-3 p-4 md:flex-row md:items-center"
+		data-animate="fade-up"
+		style="animation-delay: 80ms;"
+	>
+		<div class="relative w-full max-w-xs flex-1">
+			<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+			<Input
+				bind:value={searchQuery}
+				placeholder="Search POs..."
+				class="h-11 w-full rounded-md pl-9 text-sm"
+				onkeydown={(e) => e.key === 'Enter' && applyFilters()}
+			/>
 		</div>
+		<div class="w-full md:w-48">
+			<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
+		</div>
+		<div class="w-full md:w-48">
+			<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
+		</div>
+		<Button variant="outline" size="sm" onclick={applyFilters} class="h-9 shrink-0 gap-1.5">
+			<Search class="h-3.5 w-3.5" />
+			Filter
+		</Button>
+	</section>
 
+	<div class="mt-4">
 		{#if loading}
-			<div class="flex h-64 items-center justify-center">
-				<Loader2 class="text-primary h-8 w-8 animate-spin" />
+			<div class="panel flex h-64 items-center justify-center">
+				<Loader2 class="h-7 w-7 animate-spin text-primary" />
 			</div>
 		{:else if purchaseOrders.length === 0}
-			<div class="liquid-panel rounded-lg">
+			<div class="rounded-lg border border-dashed border-border/70 bg-muted/25">
 				<EmptyState
 					icon={ShoppingCart}
 					title="No purchase orders found"
@@ -265,7 +256,7 @@
 				/>
 			</div>
 		{:else}
-			<div in:fly={{ y: 20, duration: 300 }} class="liquid-panel overflow-hidden rounded-lg">
+			<section in:fly={{ y: 16, duration: 300 }} class="panel overflow-hidden">
 				<div class="overflow-x-auto">
 					<table class="ledger-table">
 						<thead>
@@ -281,7 +272,7 @@
 						<tbody>
 							{#each purchaseOrders as po (po.ID)}
 								<tr>
-									<td class="num-mono text-foreground font-semibold">
+									<td class="num-mono font-semibold text-foreground">
 										{poNumber(po.ID)}
 									</td>
 									<td class="text-foreground">
@@ -292,22 +283,23 @@
 											{po.Status.replace('_', ' ')}
 										</span>
 									</td>
-									<td class="col-num text-foreground font-semibold">
+									<td class="col-num font-semibold text-foreground">
 										{formatCurrency(getPoTotal(po))}
 									</td>
-									<td class="text-muted-foreground">
+									<td class="text-sm text-muted-foreground">
 										<TimeAgo date={po.OrderDate} />
 									</td>
 									<td>
-										<div class="flex items-center justify-end gap-1">
+										<div class="flex items-center justify-end gap-0.5">
 											{#if actionLoading === po.ID}
-												<Loader2 class="text-primary h-4 w-4 animate-spin" />
+												<Loader2 class="h-4 w-4 animate-spin text-primary" />
 											{:else}
 												<Button
 													variant="ghost"
 													size="sm"
-													class="text-muted-foreground hover:text-primary h-7 w-7 rounded-md p-0"
+													class="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
 													title="View"
+													aria-label="View purchase order"
 													onclick={() => goto(`/purchase-orders/${po.ID}`)}
 												>
 													<Eye class="h-3.5 w-3.5" />
@@ -316,8 +308,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-success h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-success"
 														title="Approve"
+														aria-label="Approve purchase order"
 														onclick={() => handleApprove(po)}
 													>
 														<CheckCircle2 class="h-3.5 w-3.5" />
@@ -327,8 +320,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-info h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-info"
 														title="Send"
+														aria-label="Send purchase order"
 														onclick={() => handleSend(po)}
 													>
 														<Send class="h-3.5 w-3.5" />
@@ -338,8 +332,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-warning h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-warning"
 														title="Receive"
+														aria-label="Receive purchase order"
 														onclick={() => handleReceive(po)}
 													>
 														<PackageCheck class="h-3.5 w-3.5" />
@@ -349,8 +344,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-danger h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-danger"
 														title="Cancel"
+														aria-label="Cancel purchase order"
 														onclick={() => handleCancel(po)}
 													>
 														<XCircle class="h-3.5 w-3.5" />
@@ -364,32 +360,34 @@
 						</tbody>
 					</table>
 				</div>
-			</div>
+			</section>
 
 			{#if totalPages > 1}
-				<div class="flex items-center justify-between">
-					<p class="text-muted-foreground text-sm">
+				<div class="mt-3 flex items-center justify-between">
+					<p class="text-sm text-muted-foreground">
 						Showing {purchaseOrders.length} of {total} orders
 					</p>
 					<div class="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={page <= 1}
 							onclick={() => goToPage(page - 1)}
+							aria-label="Previous page"
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-foreground num-mono text-sm font-medium">
+						<span class="num-mono text-sm font-medium text-foreground">
 							Page {page} of {totalPages}
 						</span>
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={page >= totalPages}
 							onclick={() => goToPage(page + 1)}
+							aria-label="Next page"
 						>
 							<ChevronRight class="h-4 w-4" />
 						</Button>

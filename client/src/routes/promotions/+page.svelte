@@ -38,7 +38,8 @@
 	import { promotionSchema } from '$lib/schemas/promotion';
 
 	const inputClass =
-		'liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
+		'glass-input h-11 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const selectClass = 'glass-input h-11 w-full rounded-md px-3 text-sm text-foreground';
 
 	let promotions = $state<Promotion[]>([]);
 	let loading = $state(false);
@@ -262,67 +263,60 @@
 	}
 </script>
 
-<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
+<div class="relative min-h-screen p-6 lg:p-10">
 	<div class="mx-auto max-w-7xl space-y-8">
 		<!-- Header -->
-		<div
-			class="flex flex-col gap-6 md:flex-row md:items-center md:justify-between"
-			data-animate="fade-up"
-		>
-			<div class="space-y-1">
+		<div class="page-header" data-animate="fade-up">
+			<div class="min-w-0 space-y-2">
 				<p class="overline">Pricing · Campaigns</p>
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
-					Promotions & Discounts
-				</h1>
-				<p class="text-muted-foreground">
-					Manage dynamic pricing rules, sales events, and granular discounts.
-				</p>
+				<h1 class="page-title">Promotions & Discounts</h1>
+				<p class="page-sub">Manage dynamic pricing rules, sales events, and granular discounts.</p>
 			</div>
 
-			<Button
-				onclick={openCreateDialog}
-				class="bg-primary text-primary-foreground rounded-md px-6 font-semibold shadow-md hover:bg-primary/90"
-			>
-				<Plus class="mr-2 h-4 w-4" /> New Promotion
-			</Button>
+			<div class="flex flex-wrap items-center gap-2">
+				<Button onclick={openCreateDialog} class="btn-soothe h-10 px-5 text-sm font-semibold">
+					<Plus class="h-4 w-4" /> New Promotion
+				</Button>
+			</div>
 		</div>
 
 		{#if loading}
-			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+			<div class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
 				{#each Array(6) as _}
-					<div class="bg-muted h-48 animate-pulse rounded-lg"></div>
+					<div class="h-48 animate-pulse rounded-xl bg-muted/70"></div>
 				{/each}
 			</div>
 		{:else}
 			<div
-				class="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+				class="grid gap-5 md:grid-cols-2 xl:grid-cols-3"
 				in:fly={{ y: 20, duration: 400, delay: 0 }}
 			>
 				{#each promotions as promo (promo.ID)}
 					{@const target = getTargetLabel(promo)}
-					<div class="liquid-hoverable group relative flex flex-col overflow-hidden rounded-lg">
+					<div class="glass-hoverable group relative flex flex-col overflow-hidden">
 						<!-- Active Indicator -->
-						<div class="absolute top-0 right-0 p-4">
-							<div
-								class={cn(
-									'h-2.5 w-2.5 rounded-full',
-									promo.IsActive ? 'bg-success animate-pulse' : 'bg-border'
-								)}
-							></div>
+						<div class="absolute top-4 right-4 flex items-center gap-2 p-1">
+							{#if promo.IsActive}
+								<span class="live-dot" aria-hidden="true"></span>
+							{:else}
+								<span class="h-2 w-2 rounded-full bg-border" aria-hidden="true"></span>
+							{/if}
 						</div>
 
 						<!-- Card Header -->
-						<div class="border-border border-b p-5">
-							<div class="flex items-start justify-between pr-6">
-								<div>
-									<h3 class="text-foreground line-clamp-1 text-lg font-bold">{promo.Name}</h3>
-									<p class="text-muted-foreground mt-1 line-clamp-2 min-h-[1.5em] text-xs font-medium">
-										{promo.Description || 'No description provided'}
-									</p>
-								</div>
+						<div class="border-b border-border/80 p-5">
+							<div class="min-w-0 pr-6">
+								<h3 class="line-clamp-1 text-base font-semibold text-foreground">
+									{promo.Name}
+								</h3>
+								<p
+									class="mt-1 line-clamp-2 min-h-[1.5em] text-xs font-medium text-muted-foreground"
+								>
+									{promo.Description || 'No description provided'}
+								</p>
 							</div>
 
-							<div class="mt-4 flex flex-wrap gap-2">
+							<div class="mt-4 flex flex-wrap items-center gap-2">
 								<span class="badge-info">
 									<Layers class="h-3 w-3" />
 									{target.type}
@@ -333,9 +327,9 @@
 
 						<!-- Card Content -->
 						<div class="flex-1 space-y-4 p-5">
-							<div class="bg-muted flex items-center justify-between rounded-md p-3">
-								<span class="text-muted-foreground text-sm font-medium">Discount</span>
-								<span class="num-mono text-primary text-lg font-bold">
+							<div class="flex items-center justify-between rounded-lg bg-muted/70 px-3 py-2.5">
+								<span class="overline">Discount</span>
+								<span class="num-mono text-lg font-semibold text-primary">
 									{#if promo.DiscountType === 'PERCENTAGE'}
 										{promo.DiscountValue}% OFF
 									{:else}
@@ -345,18 +339,18 @@
 							</div>
 
 							<div class="space-y-2 text-sm">
-								<div class="flex items-center justify-between">
-									<span class="text-muted-foreground flex items-center">
+								<div class="flex items-center justify-between gap-3">
+									<span class="flex items-center text-xs font-medium text-muted-foreground">
 										<CalendarRange class="mr-2 h-3.5 w-3.5" /> Period
 									</span>
-									<span class="num-mono text-foreground text-xs font-medium">
+									<span class="num-mono text-xs font-medium text-foreground">
 										{formatDateTime(promo.StartDate).split(',')[0]} - {formatDateTime(
 											promo.EndDate
 										).split(',')[0]}
 									</span>
 								</div>
-								<div class="flex items-center justify-between">
-									<span class="text-muted-foreground flex items-center">
+								<div class="flex items-center justify-between gap-3">
+									<span class="flex items-center text-xs font-medium text-muted-foreground">
 										<AlertCircle class="mr-2 h-3.5 w-3.5" /> Priority
 									</span>
 									<span class="badge-neutral num-mono">{promo.Priority}</span>
@@ -366,21 +360,18 @@
 
 						<!-- Card Footer -->
 						<div
-							class="border-border bg-muted/40 mt-auto flex items-center justify-between border-t p-4"
+							class="mt-auto flex items-center justify-between border-t border-border/80 bg-muted/40 px-4 py-2.5"
 						>
 							<span
-								class={cn(
-									'overline',
-									promo.IsActive ? 'text-success' : 'text-muted-foreground'
-								)}
+								class={cn('overline', promo.IsActive ? 'text-success' : 'text-muted-foreground')}
 							>
 								{promo.IsActive ? 'Active Now' : 'Inactive'}
 							</span>
-							<div class="flex gap-1">
+							<div class="flex items-center gap-1">
 								<Button
 									variant="ghost"
 									size="icon"
-									class="text-muted-foreground hover:bg-muted hover:text-primary h-8 w-8 rounded-md"
+									class="h-8 w-8 rounded-md text-muted-foreground hover:bg-muted hover:text-primary"
 									onclick={() => openEditDialog(promo)}
 								>
 									<Pencil class="h-4 w-4" />
@@ -388,7 +379,7 @@
 								<Button
 									variant="ghost"
 									size="icon"
-									class="text-muted-foreground hover:bg-danger/10 hover:text-danger h-8 w-8 rounded-md"
+									class="h-8 w-8 rounded-md text-muted-foreground hover:bg-danger/10 hover:text-danger"
 									onclick={() => handleDelete(promo.ID)}
 								>
 									<Trash2 class="h-4 w-4" />
@@ -397,16 +388,20 @@
 						</div>
 					</div>
 				{:else}
-					<div class="col-span-full py-20 text-center">
-						<div class="bg-muted text-muted-foreground mx-auto flex h-20 w-20 items-center justify-center rounded-lg">
-							<Tag class="h-10 w-10" />
+					<div
+						class="panel col-span-full flex flex-col items-center justify-center gap-2 px-6 py-16 text-center"
+					>
+						<div
+							class="bg-muted text-muted-foreground mb-1 flex h-16 w-16 items-center justify-center rounded-2xl"
+						>
+							<Tag class="h-8 w-8" strokeWidth={1.5} />
 						</div>
-						<h3 class="text-foreground mt-4 text-lg font-bold">No Promotions Found</h3>
-						<p class="text-muted-foreground">Create your first promotion to boost sales.</p>
+						<h3 class="text-foreground text-lg font-semibold">No Promotions Found</h3>
+						<p class="text-muted-foreground text-sm">Create your first promotion to boost sales.</p>
 						<Button
 							onclick={openCreateDialog}
-							variant="outline"
-							class="glass-button text-foreground mt-4 rounded-md"
+							variant="secondary"
+							class="btn-soft mt-3 h-10 px-4 text-sm"
 						>
 							Create Promotion
 						</Button>
@@ -419,15 +414,15 @@
 	<!-- Create/Edit Dialog -->
 	<Dialog bind:open={isDialogOpen}>
 		<DialogContent
-			class="bg-card border-border gap-0 overflow-visible rounded-lg border p-0 shadow-lg sm:max-w-[650px]"
+			class="gap-0 overflow-visible rounded-xl border border-border bg-card p-0 shadow-lg sm:max-w-[650px]"
 		>
 			<!-- Header -->
-			<div class="border-border bg-muted/50 rounded-t-lg border-b px-8 pt-8 pb-6">
+			<div class="rounded-t-xl border-b border-border bg-muted/40 px-8 pt-8 pb-6">
 				<DialogHeader>
-					<DialogTitle class="font-display text-foreground text-2xl font-bold">
+					<DialogTitle class="font-display text-2xl font-semibold text-foreground">
 						{editingId ? 'Edit Promotion' : 'Create Promotion'}</DialogTitle
 					>
-					<DialogDescription class="text-muted-foreground font-medium">
+					<DialogDescription class="text-muted-foreground">
 						Configure discount rules and targeting. Higher priority rules override overlapping ones.
 					</DialogDescription>
 				</DialogHeader>
@@ -439,12 +434,12 @@
 				id="promotion-form"
 				class="custom-scrollbar grid max-h-[70vh] gap-6 overflow-y-auto px-8 py-6"
 			>
-				<div class="grid grid-cols-2 gap-6">
+				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-2">
 						<Label class="overline">Name</Label>
 						<Input bind:value={$form.name} placeholder="e.g. Summer Sale" class={inputClass} />
 						{#if $errors.name}
-							<p class="text-danger text-xs font-semibold">{$errors.name}</p>
+							<p class="text-xs font-semibold text-danger">{$errors.name}</p>
 						{/if}
 					</div>
 					<div class="space-y-2">
@@ -460,51 +455,49 @@
 
 				<div class="space-y-2">
 					<Label class="overline">Description</Label>
-					<Input
-						bind:value={$form.description}
-						placeholder="Internal note..."
-						class={inputClass}
-					/>
+					<Input bind:value={$form.description} placeholder="Internal note..." class={inputClass} />
 				</div>
 
-				<div class="border-border bg-muted/40 grid grid-cols-2 gap-6 rounded-md border p-5">
+				<div class="grid grid-cols-2 gap-4 rounded-xl bg-muted/50 p-5">
 					<div class="space-y-2">
-						<Label class="text-foreground flex items-center gap-1 font-semibold">
+						<Label class="flex items-center gap-1 font-semibold text-foreground">
 							Discount Type
-							<HelpTip text="PERCENTAGE applies a % off the price; FIXED_AMOUNT subtracts a flat currency value." />
+							<HelpTip
+								text="PERCENTAGE applies a % off the price; FIXED_AMOUNT subtracts a flat currency value."
+							/>
 						</Label>
 						<Select
 							value={$form.discountType}
 							options={discountTypeOptions}
 							on:change={onDiscountTypeChange}
 							placeholder="Select Type"
-							style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
+							class={selectClass}
 						/>
 					</div>
 					<div class="space-y-2">
-						<Label class="text-foreground font-semibold">Value</Label>
+						<Label class="font-semibold text-foreground">Value</Label>
 						<div class="relative">
 							<Input
 								type="number"
 								bind:value={$form.discountValue}
 								min="0"
 								step="0.01"
-								class="liquid-input num-mono text-primary h-11 w-full rounded-md bg-card pl-10 text-lg font-bold focus:border-primary focus:ring-0"
+								class="{inputClass} num-mono pl-10 text-base font-semibold text-primary"
 							/>
 							<div
-								class="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2"
+								class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground"
 							>
 								{#if $form.discountType === 'PERCENTAGE'}
-									<Percent class="h-5 w-5" />
+									<Percent class="h-4 w-4" />
 								{:else}
-									<DollarSign class="h-5 w-5" />
+									<DollarSign class="h-4 w-4" />
 								{/if}
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<div class="grid grid-cols-2 gap-6">
+				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-2">
 						<Label class="overline">Start Date</Label>
 						<Input
@@ -513,29 +506,25 @@
 							class="{inputClass} num-mono"
 						/>
 						{#if $errors.startDate}
-							<p class="text-danger text-xs font-semibold">{$errors.startDate}</p>
+							<p class="text-xs font-semibold text-danger">{$errors.startDate}</p>
 						{/if}
 					</div>
 					<div class="space-y-2">
 						<Label class="overline">End Date</Label>
-						<Input
-							type="datetime-local"
-							bind:value={$form.endDate}
-							class="{inputClass} num-mono"
-						/>
+						<Input type="datetime-local" bind:value={$form.endDate} class="{inputClass} num-mono" />
 						{#if $errors.endDate}
-							<p class="text-danger text-xs font-semibold">{$errors.endDate}</p>
+							<p class="text-xs font-semibold text-danger">{$errors.endDate}</p>
 						{/if}
 					</div>
 				</div>
 
-				<div class="border-border bg-card space-y-4 rounded-md border p-6 shadow-xs">
-					<div class="mb-2 flex items-center gap-2">
-						<Layers class="text-primary h-5 w-5" />
-						<Label class="text-foreground text-base font-bold">Targeting Rules</Label>
+				<div class="surface-1 space-y-4 p-5">
+					<div class="flex items-center gap-2">
+						<Layers class="h-4 w-4 text-primary" />
+						<Label class="text-sm font-semibold text-foreground">Targeting Rules</Label>
 					</div>
 
-					<div class="bg-muted flex rounded-md p-1.5">
+					<div class="flex rounded-lg bg-muted p-1">
 						{#each [{ val: 'CATEGORY', label: 'Category' }, { val: 'SUBCATEGORY', label: 'Sub-Category' }, { val: 'PRODUCT', label: 'Product' }] as option}
 							<label class="relative flex-1 cursor-pointer">
 								<input
@@ -546,7 +535,7 @@
 									bind:group={$form.targetType}
 								/>
 								<div
-									class="text-muted-foreground peer-checked:bg-card peer-checked:text-primary peer-checked:shadow-sm flex items-center justify-center rounded-md py-2.5 text-sm font-semibold transition-all duration-200"
+									class="flex items-center justify-center rounded-md py-2 text-sm font-semibold text-muted-foreground transition-all duration-200 peer-checked:bg-card peer-checked:text-primary peer-checked:shadow-sm"
 								>
 									{option.label}
 								</div>
@@ -554,7 +543,7 @@
 						{/each}
 					</div>
 
-					<div class="min-h-[80px] space-y-4 pt-2">
+					<div class="min-h-[80px] space-y-4 pt-1">
 						{#if $form.targetType === 'CATEGORY' || $form.targetType === 'SUBCATEGORY'}
 							<div in:fly={{ y: 5, duration: 200 }} class="space-y-2">
 								<Label class="overline">Select Category</Label>
@@ -563,7 +552,7 @@
 									options={categoryOptions}
 									on:change={onCategoryChange}
 									placeholder="Choose a category..."
-									style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
+									class={selectClass}
 								/>
 							</div>
 						{/if}
@@ -577,7 +566,7 @@
 									on:change={onSubCategoryChange}
 									disabled={!$form.categoryId || subCategories.length === 0}
 									placeholder="Choose a sub-category..."
-									style="liquid-input h-11 w-full rounded-md bg-card px-3 text-sm text-foreground"
+									class={selectClass}
 								/>
 							</div>
 						{/if}
@@ -586,9 +575,7 @@
 							<div in:fly={{ y: 5, duration: 200 }} class="space-y-2">
 								<Label class="overline">Find Product</Label>
 								<div class="group relative">
-									<Search
-										class="text-muted-foreground absolute top-3.5 left-3 h-4 w-4"
-									/>
+									<Search class="absolute top-3.5 left-3 h-4 w-4 text-muted-foreground" />
 									<Input
 										class="{inputClass} pl-10"
 										placeholder="Search by name or SKU..."
@@ -598,21 +585,19 @@
 								</div>
 
 								{#if products.length > 0}
-									<div class="text-muted-foreground mt-2 px-1 text-xs font-medium">
+									<div class="mt-2 px-1 text-xs font-medium text-muted-foreground">
 										Found {products.length} matches
 									</div>
-									<div
-										class="custom-scrollbar border-border bg-card mt-2 max-h-[160px] overflow-y-auto rounded-md border p-1 shadow-md"
-									>
+									<div class="custom-scrollbar surface-2 mt-2 max-h-[160px] overflow-y-auto p-1">
 										{#each products as textProd}
 											<button
-												class="group flex w-full items-center justify-between rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted {$form.productId ===
+												class="group flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted {$form.productId ===
 												textProd.ID
-													? 'bg-accent ring-primary/30 ring-1'
+													? 'bg-accent text-accent-foreground'
 													: ''}"
 												onclick={() => ($form.productId = textProd.ID)}
 											>
-												<span class="text-foreground font-medium">{textProd.Name}</span>
+												<span class="truncate font-medium text-foreground">{textProd.Name}</span>
 												<span class="badge-neutral num-mono">{textProd.SKU}</span>
 											</button>
 										{/each}
@@ -620,14 +605,14 @@
 								{/if}
 								{#if $form.productId}
 									<div
-										class="text-success mt-3 flex items-center justify-between rounded-md border border-success/25 bg-success/10 p-3"
+										class="mt-3 flex items-center justify-between gap-3 rounded-lg border border-success/25 bg-success/10 px-3 py-2.5 text-success"
 									>
 										<div class="flex items-center gap-2 text-sm font-medium">
-											<CheckCircle2 class="text-success h-4 w-4" />
+											<CheckCircle2 class="h-4 w-4 text-success" />
 											Product Selected
 										</div>
 										<span
-											class="num-mono border-success/30 bg-card rounded-md border px-2 py-0.5 text-xs"
+											class="num-mono rounded-md border border-success/30 bg-card px-2 py-0.5 text-xs"
 											>ID: {$form.productId}</span
 										>
 									</div>
@@ -639,7 +624,7 @@
 
 				<div
 					class={cn(
-						'flex items-center space-x-4 rounded-md border p-4 transition-colors duration-200',
+						'flex items-center gap-3 rounded-xl border p-4 transition-colors duration-200',
 						$form.isActive ? 'border-success/30 bg-success/10' : 'border-border bg-muted/50'
 					)}
 				>
@@ -648,7 +633,7 @@
 						<Label
 							for="active-mode"
 							class={cn(
-								'cursor-pointer text-sm font-bold transition-colors',
+								'cursor-pointer text-sm font-semibold transition-colors',
 								$form.isActive ? 'text-success' : 'text-muted-foreground'
 							)}
 						>
@@ -669,18 +654,19 @@
 			</form>
 
 			<!-- Footer -->
-			<div class="border-border bg-muted/50 rounded-b-lg border-t p-6">
-				<DialogFooter class="gap-3 sm:gap-0">
+			<div
+				class="flex flex-wrap items-center justify-end gap-3 rounded-b-xl border-t border-border bg-muted/40 px-8 py-5"
+			>
+				<DialogFooter class="gap-3">
 					<Button
-						variant="outline"
+						variant="secondary"
 						onclick={() => (isDialogOpen = false)}
-						class="glass-button text-foreground rounded-md font-medium"
-						>Cancel</Button
+						class="btn-soft h-10 px-4 text-sm font-medium">Cancel</Button
 					>
 					<Button
 						type="submit"
 						form="promotion-form"
-						class="bg-primary text-primary-foreground rounded-md px-8 font-semibold shadow-md hover:bg-primary/90"
+						class="btn-soothe h-10 px-6 text-sm font-semibold"
 					>
 						{editingId ? 'Save Changes' : 'Create Promotion'}
 					</Button>

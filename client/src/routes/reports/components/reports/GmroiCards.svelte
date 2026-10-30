@@ -16,93 +16,98 @@
 	let { gmroiStats }: Props = $props();
 </script>
 
-<div class="flex flex-wrap gap-4">
-	{#if gmroiStats}
-		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
-			<div class="overline mb-2 flex items-center gap-2">
-				{$t('reports.financials.revenue')}
+{#if gmroiStats}
+	<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+		<div class="panel p-5">
+			<div class="flex items-start justify-between gap-2">
+				<p class="overline">{$t('reports.financials.revenue')}</p>
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
+							class="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-primary"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="text-foreground max-w-xs font-normal">
+						<p class="max-w-xs font-normal text-foreground">
 							{$t('reports.financials.revenue_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="kpi-num text-foreground text-xl md:text-2xl">
+			<p class="kpi-num mt-2 text-2xl text-foreground">
 				{formatCurrency(gmroiStats.totalRevenue)}
-			</div>
+			</p>
 		</div>
-		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
-			<div class="overline mb-2 flex items-center gap-2">
-				{$t('reports.financials.cogs')}
+
+		<div class="panel p-5">
+			<div class="flex items-start justify-between gap-2">
+				<p class="overline">{$t('reports.financials.cogs')}</p>
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
+							class="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-primary"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="text-foreground max-w-xs font-normal">
+						<p class="max-w-xs font-normal text-foreground">
 							{$t('reports.financials.cogs_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="kpi-num text-foreground text-xl md:text-2xl">
+			<p class="kpi-num mt-2 text-2xl text-foreground">
 				{formatCurrency(gmroiStats.totalCost)}
-			</div>
+			</p>
 		</div>
-		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
-			<div class="overline mb-2 flex items-center gap-2">
-				{$t('reports.financials.margin')}
+
+		<div class="panel p-5">
+			<div class="flex items-start justify-between gap-2">
+				<p class="overline">{$t('reports.financials.margin')}</p>
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
+							class="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-primary"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="text-foreground max-w-xs font-normal">
+						<p class="max-w-xs font-normal text-foreground">
 							{$t('reports.financials.margin_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="kpi-num text-success text-xl md:text-2xl">
+			<p class="kpi-num mt-2 text-2xl text-success">
 				{formatPercent(gmroiStats.marginPercent)}
-			</div>
+			</p>
 		</div>
-		<div class="liquid-panel min-w-[200px] flex-1 rounded-lg p-6">
-			<div class="overline mb-2 flex items-center gap-2">
-				<span class="border-muted-foreground border-b border-dotted"
-					>{$t('reports.financials.gmroi')}</span
-				>
+
+		<div class="panel p-5">
+			<div class="flex items-start justify-between gap-2">
+				<p class="overline">
+					<span class="border-b border-dotted border-muted-foreground/60 pb-0.5"
+						>{$t('reports.financials.gmroi')}</span
+					>
+				</p>
 				<Tooltip.Root>
 					<Tooltip.Trigger>
 						<HelpCircle
-							class="text-muted-foreground hover:text-primary h-3.5 w-3.5 transition-colors"
+							class="h-3.5 w-3.5 text-muted-foreground transition-colors hover:text-primary"
 						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="text-foreground max-w-xs font-normal">
+						<p class="max-w-xs font-normal text-foreground">
 							{$t('reports.financials.gmroi_desc')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</div>
-			<div class="kpi-num text-primary text-xl md:text-2xl">
+			<p class="kpi-num mt-2 text-2xl text-primary">
 				{gmroiStats.gmroiIndex.toFixed(2)}
-			</div>
+			</p>
 		</div>
-	{:else}
-		<div class="text-muted-foreground col-span-full py-8 text-center">
-			{$t('common.no_data_available')}
-		</div>
-	{/if}
-</div>
+	</div>
+{:else}
+	<div class="panel p-8 text-center">
+		<p class="text-sm text-muted-foreground">{$t('common.no_data_available')}</p>
+	</div>
+{/if}

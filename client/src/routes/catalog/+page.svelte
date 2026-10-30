@@ -21,11 +21,9 @@
 	let isModalOpen = $state(false);
 	let modalConfig = $state<DetailConfig | null>(null);
 
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none px-5 py-2.5 text-sm font-medium text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
-	const tabsClass = 'rounded-lg border border-border bg-card shadow-sm backdrop-blur-none';
+	const btnPrimary = 'btn-soothe h-10 px-5 text-sm font-semibold';
+	const btnSecondary = 'btn-soft h-10 px-5 text-sm font-medium';
+	const tabsClass = 'mb-8 overflow-x-auto rounded-xl';
 
 	$effect(() => {
 		if (!auth.hasPermission('products.read')) {
@@ -58,29 +56,25 @@
 <!-- ===== HEADER ===== -->
 <section class="w-full">
 	<div class="mx-auto max-w-7xl px-4 pt-10 pb-6 sm:px-6 sm:pt-14 lg:px-8">
-		<div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-			<div class="space-y-2" data-animate="fade-up">
-				<p class="overline flex items-center gap-2">
-					<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
+		<div class="page-header" data-animate="fade-up">
+			<div class="min-w-0 space-y-2">
+				<p class="flex items-center gap-2 overline">
+					<span class="inline-flex rounded-md bg-primary/10 p-1.5 text-primary">
 						<Zap class="h-4 w-4" />
 					</span>
 					{$t('catalog.hero.subtitle')}
 				</p>
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
-					{$t('catalog.hero.title')}
-				</h1>
-				<p class="text-muted-foreground max-w-2xl text-sm sm:text-base">
-					{$t('catalog.hero.description')}
-				</p>
+				<h1 class="page-title">{$t('catalog.hero.title')}</h1>
+				<p class="page-sub">{$t('catalog.hero.description')}</p>
 			</div>
 
-			<div class="flex flex-col gap-3 sm:flex-row">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
 				<Button onclick={() => refreshToken++} class={btnPrimary}>
-					<RefreshCcw class="mr-2 h-4 w-4" />
+					<RefreshCcw class="h-4 w-4" />
 					{$t('catalog.hero.sync_data')}
 				</Button>
-				<Button href="/bulk" variant="outline" class={btnSecondary}>
-					<PlusCircle class="mr-2 h-4 w-4" />
+				<Button href="/bulk" variant="secondary" class={btnSecondary}>
+					<PlusCircle class="h-4 w-4" />
 					{$t('catalog.hero.bulk_import')}
 				</Button>
 			</div>
@@ -99,10 +93,10 @@
 			{ value: 'suppliers', label: $t('catalog.tabs.suppliers') },
 			{ value: 'locations', label: $t('catalog.tabs.locations') }
 		]}
-		class="{tabsClass} mb-8 overflow-x-auto"
+		class={tabsClass}
 	/>
 
-	<section class="space-y-10">
+	<section class="space-y-8">
 		{#key activeTab}
 			{#if activeTab === 'products'}
 				<ProductsTab

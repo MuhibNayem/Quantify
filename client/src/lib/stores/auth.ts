@@ -2,126 +2,134 @@ import { writable } from 'svelte/store';
 import api from '$lib/api';
 
 interface User {
-  ID: number;
-  Username: string;
-  Role: { Name: string; Permissions?: { Name: string }[] } | string;
-  IsActive: boolean;
-  Permissions?: string[];
-  LegacyRole?: string;
+	ID: number;
+	Username: string;
+	FirstName?: string;
+	LastName?: string;
+	Email?: string;
+	PhoneNumber?: string;
+	Address?: string;
+	Role: { Name: string; Permissions?: { Name: string }[] } | string;
+	IsActive: boolean;
+	Permissions?: string[];
+	LegacyRole?: string;
 }
 
 interface AuthState {
-  accessToken: string | null;
-  refreshToken: string | null;
-  csrfToken: string | null;
-  user: User | null;
-  isAuthenticated: boolean;
-  permissions: string[];
+	user: User | null;
+	isAuthenticated: boolean;
+	permissions: string[];
 }
 
 const createAuthStore = () => {
-  const { subscribe, set, update } = writable<AuthState>(getInitialAuthState());
+	const { subscribe, set } = writable<AuthState>(getInitialAuthState());
 
-  function extractPermissions(user: User, explicitPermissions?: string[]): string[] {
-    // If explicit permissions are provided and not empty, use them
-    if (explicitPermissions && explicitPermissions.length > 0) {
-      return explicitPermissions;
-    }
+	function extractPermissions(user: User, explicitPermissions?: string[]): string[] {
+		if (explicitPermissions && explicitPermissions.length > 0) {
+			return explicitPermissions;
+		}
+		if (user && typeof user.Role === 'object' && Array.isArray(user.Role.Permissions)) {
+			return user.Role.Permissions.map((p) => p.Name);
+		}
+		return [];
+	}
 
-    // Otherwise try to extract from User object
-    if (user && typeof user.Role === 'object' && Array.isArray(user.Role.Permissions)) {
-      return user.Role.Permissions.map(p => p.Name);
-    }
+	function getInitialAuthState(): AuthState {
+		if (typeof window === 'undefined') {
+			return { user: null, isAuthenticated: false, permissions: [] };
+		}
 
-    return [];
-  }
+		// Only non-sensitive identity is persisted. Access/refresh tokens live
+		// in httpOnly cookies managed by the backend and are never readable by JS.
+		const userStr = localStorage.getItem('user');
+		const permissionsStr = localStorage.getItem('permissions');
 
-  function getInitialAuthState(): AuthState {
-    if (typeof window === 'undefined') {
-      return { accessToken: null, refreshToken: null, csrfToken: null, user: null, isAuthenticated: false, permissions: [] };
-    }
+		if (userStr) {
+			try {
+				const parsedUser: User = JSON.parse(userStr);
+				let parsedPermissions: string[] = permissionsStr ? JSON.parse(permissionsStr) : [];
+				if (parsedPermissions.length === 0) {
+					parsedPermissions = extractPermissions(parsedUser);
+				}
+				return { user: parsedUser, isAuthenticated: true, permissions: parsedPermissions };
+			} catch (e) {
+				console.error('Failed to parse user from storage', e);
+				clearAuthData();
+			}
+		}
 
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const csrfToken = localStorage.getItem('csrfToken');
-    const userStr = localStorage.getItem('user');
-    const permissionsStr = localStorage.getItem('permissions');
+		return { user: null, isAuthenticated: false, permissions: [] };
+	}
 
-    if (accessToken && refreshToken && csrfToken && userStr) {
-      try {
-        const parsedUser: User = JSON.parse(userStr);
-        let parsedPermissions: string[] = permissionsStr ? JSON.parse(permissionsStr) : [];
+	function setAuthData(user: User, permissions: string[] = []) {
+		const finalPermissions = extractPermissions(user, permissions);
 
-        // Fallback: extract from user if permissions are empty
-        if (parsedPermissions.length === 0) {
-          parsedPermissions = extractPermissions(parsedUser);
-        }
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('user', JSON.stringify(user));
+			localStorage.setItem('permissions', JSON.stringify(finalPermissions));
+			// Remove legacy token keys from older sessions.
+			localStorage.removeItem('accessToken');
+			localStorage.removeItem('refreshToken');
+			localStorage.removeItem('csrfToken');
+		}
 
-        return { accessToken, refreshToken, csrfToken, user: parsedUser, isAuthenticated: true, permissions: parsedPermissions };
-      } catch (e) {
-        console.error("Failed to parse user from storage", e);
-        clearAuthData();
-        return { accessToken: null, refreshToken: null, csrfToken: null, user: null, isAuthenticated: false, permissions: [] };
-      }
-    }
+		set({ user, isAuthenticated: true, permissions: finalPermissions });
+	}
 
-    return { accessToken: null, refreshToken: null, csrfToken: null, user: null, isAuthenticated: false, permissions: [] };
-  }
+	function clearAuthData() {
+		if (typeof window !== 'undefined') {
+			localStorage.removeItem('user');
+			localStorage.removeItem('permissions');
+			localStorage.removeItem('accessToken');
+			localStorage.removeItem('refreshToken');
+			localStorage.removeItem('csrfToken');
+		}
+		set({ user: null, isAuthenticated: false, permissions: [] });
+	}
 
-  function setAuthData(accessToken: string, refreshToken: string, csrfToken: string, user: User, permissions: string[] = []) {
-    // Consolidate permission extraction logic
-    const finalPermissions = extractPermissions(user, permissions);
+	function hasPermission(permission: string): boolean {
+		let currentPermissions: string[] = [];
+		subscribe((state) => {
+			currentPermissions = state.permissions;
+		})();
+		return currentPermissions.includes(permission);
+	}
 
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
-      localStorage.setItem('csrfToken', csrfToken);
-      localStorage.setItem('user', JSON.stringify(user));
-      localStorage.setItem('permissions', JSON.stringify(finalPermissions));
-    }
+	return {
+		subscribe,
+		login: (user: User, permissions: string[] = []) => setAuthData(user, permissions),
+		/** Validate the cookie session and refresh identity/permissions after a reload. */
+		verify: async (): Promise<boolean> => {
+			let currentUser: User | null = null;
+			subscribe((state) => {
+				currentUser = state.user;
+			})();
+			if (!currentUser) return false;
 
-    set({ accessToken, refreshToken, csrfToken, user, isAuthenticated: true, permissions: finalPermissions });
-  }
-
-  function clearAuthData() {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('csrfToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('permissions');
-    }
-
-    set({ accessToken: null, refreshToken: null, csrfToken: null, user: null, isAuthenticated: false, permissions: [] });
-  }
-
-  function hasPermission(permission: string): boolean {
-    let currentPermissions: string[] = [];
-    subscribe(state => {
-      currentPermissions = state.permissions;
-    })();
-    return currentPermissions.includes(permission);
-  }
-
-  return {
-    subscribe,
-    login: (accessToken: string, refreshToken: string, csrfToken: string, user: User, permissions: string[]) => setAuthData(accessToken, refreshToken, csrfToken, user, permissions),
-    logout: async () => {
-      try {
-        await api.post('/users/logout');
-      } catch (error) {
-        console.error('Logout API call failed:', error);
-      } finally {
-        clearAuthData();
-      }
-    },
-    hasPermission,
-    refreshTokens: async (currentRefreshToken: string): Promise<{ accessToken: string, refreshToken: string, csrfToken: string } | null> => {
-      // This will be implemented later when we create the API client
-      console.log("Refreshing tokens with:", currentRefreshToken);
-      return null;
-    }
-  };
+			try {
+				const { data } = await api.get('/users/me');
+				setAuthData(data.user, data.permissions || []);
+				return true;
+			} catch (error: any) {
+				if (error?.response?.status === 401) {
+					clearAuthData();
+					return false;
+				}
+				// Offline/network errors must not destroy a valid local session.
+				return true;
+			}
+		},
+		logout: async () => {
+			try {
+				await api.post('/users/logout');
+			} catch (error) {
+				console.error('Logout API call failed:', error);
+			} finally {
+				clearAuthData();
+			}
+		},
+		hasPermission
+	};
 };
 
 export const auth = createAuthStore();

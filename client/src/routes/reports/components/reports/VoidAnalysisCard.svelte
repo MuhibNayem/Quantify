@@ -12,41 +12,54 @@
 	let { voidAudit }: Props = $props();
 </script>
 
-<div class="liquid-panel rounded-lg p-6">
-	<h3 class="font-display text-foreground mb-1 flex items-center gap-2 text-lg font-semibold">
-		<AlertTriangle class="text-danger h-5 w-5" />
-		{$t('reports.void_analysis.title')}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				<HelpCircle class="text-muted-foreground hover:text-danger h-4 w-4 transition-colors" />
-			</Tooltip.Trigger>
-			<Tooltip.Content>
-				<p class="max-w-xs">{$t('reports.void_analysis.description')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
-	</h3>
-	<p class="text-muted-foreground mb-4 text-sm">
-		{$t('reports.void_analysis.subtitle')}
-	</p>
+<div class="panel p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-danger/10 text-danger"
+		>
+			<AlertTriangle class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.void_analysis.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle class="h-4 w-4 text-muted-foreground transition-colors hover:text-danger" />
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">
+							{$t('reports.void_analysis.description')}
+						</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+			<p class="mt-0.5 text-xs text-muted-foreground">
+				{$t('reports.void_analysis.subtitle')}
+			</p>
+		</div>
+	</div>
 
-	<div class="space-y-3">
+	<div class="mt-4 space-y-2">
+		{#if voidAudit.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
 		{#each voidAudit as item}
-			<div
-				class="border-border bg-card rounded-md border p-5"
-			>
-				<div class="mb-3 flex items-start justify-between">
-					<div>
-						<div class="text-foreground font-semibold">{item.Reason}</div>
-						<div class="text-muted-foreground text-xs num-mono">
+			<div class="rounded-[calc(var(--radius)_-_6px)] border border-border/70 bg-muted/30 p-3.5">
+				<div class="flex items-start justify-between gap-3">
+					<div class="min-w-0">
+						<p class="truncate text-sm font-medium text-foreground">{item.Reason}</p>
+						<p class="num-mono mt-0.5 text-[11px] text-muted-foreground">
 							{new Date(item.Timestamp).toLocaleString()}
-						</div>
+						</p>
 					</div>
 					<span
 						class="{item.RiskScore === 'High'
 							? 'badge-danger'
 							: item.RiskScore === 'Medium'
 								? 'badge-warning'
-								: 'badge-neutral'} uppercase tracking-wider"
+								: 'badge-neutral'} shrink-0 tracking-wide uppercase"
 					>
 						{item.RiskScore === 'High'
 							? $t('reports.void_analysis.risk.high')
@@ -55,20 +68,20 @@
 								: $t('reports.void_analysis.risk.low')}
 					</span>
 				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div class="bg-muted/50 rounded-md p-2.5">
-						<div class="overline">
-							{$t('reports.void_analysis.voids')}
-						</div>
-						<div class="text-foreground text-lg font-semibold num-mono">{item.VoidCount}</div>
+				<div class="mt-3 grid grid-cols-2 gap-2">
+					<div
+						class="rounded-[calc(var(--radius)_-_8px)] border border-border/70 bg-card px-2.5 py-2"
+					>
+						<p class="overline">{$t('reports.void_analysis.voids')}</p>
+						<p class="num-mono mt-0.5 text-sm font-semibold text-foreground">{item.VoidCount}</p>
 					</div>
-					<div class="bg-danger/10 rounded-md p-2.5">
-						<div class="text-danger overline">
-							{$t('reports.void_analysis.risk_score')}
-						</div>
-						<div class="text-danger text-lg font-semibold num-mono">
+					<div
+						class="rounded-[calc(var(--radius)_-_8px)] border border-danger/20 bg-danger/10 px-2.5 py-2"
+					>
+						<p class="text-danger overline">{$t('reports.void_analysis.risk_score')}</p>
+						<p class="num-mono mt-0.5 text-sm font-semibold text-danger">
 							{formatCurrency(item.TotalVoidValue)}
-						</div>
+						</p>
 					</div>
 				</div>
 			</div>

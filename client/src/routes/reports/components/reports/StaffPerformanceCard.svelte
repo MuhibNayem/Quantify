@@ -11,54 +11,60 @@
 	let { employeeSales }: Props = $props();
 </script>
 
-<div class="liquid-panel col-span-2 flex flex-col rounded-lg p-6 lg:col-span-1">
-	<div class="mb-6 flex shrink-0 items-center gap-3">
-		<div
-			class="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-primary/10 text-primary"
+<div class="panel col-span-2 flex flex-col p-5 lg:col-span-1">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-primary/10 text-primary"
 		>
-			<Users class="h-5 w-5" />
-		</div>
-		<div>
-			<h3 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
+			<Users class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
 				{$t('reports.staff.title')}
 				<Tooltip.Root>
 					<Tooltip.Trigger>
-						<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
+						<HelpCircle
+							class="h-4 w-4 text-muted-foreground transition-colors hover:text-primary"
+						/>
 					</Tooltip.Trigger>
 					<Tooltip.Content>
-						<p class="text-foreground max-w-xs font-normal">
+						<p class="max-w-xs font-normal text-foreground">
 							{$t('reports.staff.description')}
 						</p>
 					</Tooltip.Content>
 				</Tooltip.Root>
 			</h3>
-			<p class="text-muted-foreground text-sm">{$t('reports.staff.subtitle')}</p>
+			<p class="mt-0.5 text-xs text-muted-foreground">{$t('reports.staff.subtitle')}</p>
 		</div>
 	</div>
 
-	<div class="custom-scrollbar relative z-10 flex-1 space-y-2 overflow-y-auto p-1 pr-2">
-		{#each employeeSales.slice(0, 50) as emp, i}
+	<div class="custom-scrollbar mt-4 max-h-[420px] flex-1 space-y-1 overflow-y-auto pr-1">
+		{#if employeeSales.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
+		{#each employeeSales.slice(0, 50) as emp}
 			<div
-				class="group border-border bg-card hover:bg-muted flex w-full cursor-default items-center justify-between gap-3 overflow-x-auto rounded-md border p-3 transition-colors"
+				class="flex w-full items-center justify-between gap-3 rounded-[calc(var(--radius)_-_6px)] px-2.5 py-2 transition-colors hover:bg-muted/50"
 			>
-				<div class="flex shrink-0 items-center gap-3">
+				<div class="flex min-w-0 items-center gap-2.5">
 					<div
-						class="bg-muted text-muted-foreground border-border flex h-9 w-9 items-center justify-center rounded-full border font-semibold"
+						class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-semibold text-muted-foreground"
 					>
 						{emp.name.charAt(0)}
 					</div>
-					<div>
-						<p class="text-foreground text-sm font-semibold whitespace-nowrap">
+					<div class="min-w-0">
+						<p class="truncate text-sm font-medium text-foreground">
 							{emp.name}
 						</p>
-						<p class="text-muted-foreground text-[11px] whitespace-nowrap num-mono">
+						<p class="num-mono text-[11px] text-muted-foreground">
 							{emp.count}
 							{$t('reports.staff.transactions')}
 						</p>
 					</div>
 				</div>
-				<span
-					class="bg-muted text-foreground shrink-0 rounded-md px-3 py-1 text-sm font-semibold whitespace-nowrap num-mono"
+				<span class="num-mono shrink-0 text-sm font-semibold whitespace-nowrap text-foreground"
 					>{formatCurrency(emp.sales)}</span
 				>
 			</div>

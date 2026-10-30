@@ -116,5 +116,5 @@ func TestReady_NilDependenciesDoNotPanic(t *testing.T) {
 
 	assert.Equal(t, 503, w.Code)
 	failed := failedDeps(t, w)
-	assert.ElementsMatch(t, []string{"db", "redis", "amqp", "minio"}, failed)
+	assert.ElementsMatch(t, []string{"db", "redis", "amqp", "minio", "rbac"}, failed)
 }

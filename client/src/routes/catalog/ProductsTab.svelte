@@ -49,11 +49,9 @@
 	const someSelected = $derived(selectedIds.size > 0);
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
+	const btnSecondary = 'btn-soft h-10 px-4 text-sm font-medium';
 
 	function toggleSelect(id: number) {
 		const next = new Set(selectedIds);
@@ -142,8 +140,16 @@
 	const productColumns = $derived([
 		{ header: $t('catalog.products.columns.sku'), accessorKey: 'SKU' },
 		{ header: $t('catalog.products.columns.name'), accessorKey: 'Name' },
-		{ header: $t('catalog.products.columns.selling_price'), accessorKey: 'SellingPrice', class: 'text-right' },
-		{ header: $t('catalog.products.columns.purchase_price'), accessorKey: 'PurchasePrice', class: 'text-right' },
+		{
+			header: $t('catalog.products.columns.selling_price'),
+			accessorKey: 'SellingPrice',
+			class: 'text-right'
+		},
+		{
+			header: $t('catalog.products.columns.purchase_price'),
+			accessorKey: 'PurchasePrice',
+			class: 'text-right'
+		},
 		{ header: $t('catalog.products.columns.status'), accessorKey: 'Status' },
 		...(auth.hasPermission('products.write') || auth.hasPermission('products.delete')
 			? [{ header: $t('catalog.common.actions'), accessorKey: 'id', class: 'text-right' }]
@@ -276,58 +282,66 @@
 </script>
 
 <div
-	class="grid gap-8 {auth.hasPermission('products.write')
-		? 'lg:grid-cols-[2fr,1fr]'
+	class="grid gap-6 {auth.hasPermission('products.write')
+		? 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
 		: 'grid-cols-1'}"
 >
-	<div class="flex flex-col gap-6">
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
-		>
-			<div class="space-y-1">
-				<h2 class="font-display text-foreground text-lg font-semibold">
-					{$t('catalog.products.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('catalog.products.subtitle')}</p>
-			</div>
-			<div class="flex flex-col gap-3 sm:flex-row">
-				<div class="relative flex-1">
-					<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-					<Input
-						placeholder={$t('catalog.products.search_placeholder')}
-						bind:value={search.term}
-						onkeydown={(e) => e.key === 'Enter' && handleSearch()}
-						class="{inputClass} pl-9"
-					/>
+	<div class="flex min-w-0 flex-col gap-4">
+		<div class="panel p-4">
+			<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+				<div class="min-w-0 space-y-1">
+					<h2 class="section-title">{$t('catalog.products.title')}</h2>
+					<p class="text-sm text-muted-foreground">{$t('catalog.products.subtitle')}</p>
 				</div>
-				<div class="flex gap-2">
-					<Button variant="secondary" onclick={handleSearch} class={btnSecondary}>
-						{$t('catalog.common.search')}
-					</Button>
-					{#if auth.hasPermission('products.write')}
-						<Button onclick={() => (editingProduct = null)} class={btnPrimary}>
-							<PlusCircle class="mr-2 h-4 w-4" />
-							{$t('catalog.products.add_button')}
+				<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+					<div class="relative min-w-0 flex-1 sm:min-w-[15rem]">
+						<Search
+							class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+						/>
+						<Input
+							placeholder={$t('catalog.products.search_placeholder')}
+							bind:value={search.term}
+							onkeydown={(e) => e.key === 'Enter' && handleSearch()}
+							class="{inputClass} pl-9"
+						/>
+					</div>
+					<div class="flex items-center gap-2">
+						<Button variant="secondary" onclick={handleSearch} class={btnSecondary}>
+							{$t('catalog.common.search')}
 						</Button>
-					{/if}
+						{#if auth.hasPermission('products.write')}
+							<Button onclick={() => (editingProduct = null)} class={btnPrimary}>
+								<PlusCircle class="h-4 w-4" />
+								{$t('catalog.products.add_button')}
+							</Button>
+						{/if}
+					</div>
 				</div>
 			</div>
 		</div>
 
 		{#if selectedCount > 0}
-			<div
-				class="flex items-center gap-3 rounded-lg border border-primary/25 bg-accent px-4 py-3 shadow-sm"
-			>
-				<span class="text-accent-foreground text-sm font-semibold">{selectedCount} selected</span>
-				<div class="ml-auto flex items-center gap-2">
+			<div class="panel flex flex-wrap items-center gap-3 border-primary/25 bg-accent px-4 py-3">
+				<span class="text-sm font-semibold text-accent-foreground">{selectedCount} selected</span>
+				<div class="ml-auto flex flex-wrap items-center gap-2">
 					{#if auth.hasPermission('products.write')}
-						<Button size="sm" variant="outline" onclick={() => (bulkEditOpen = true)} class="{btnSecondary} h-9">
-							<Pencil class="mr-1.5 h-3.5 w-3.5" />
+						<Button
+							size="sm"
+							variant="secondary"
+							onclick={() => (bulkEditOpen = true)}
+							class="{btnSecondary} h-9 px-3"
+						>
+							<Pencil class="h-3.5 w-3.5" />
 							Edit
 						</Button>
 					{/if}
-					<Button size="sm" variant="outline" onclick={bulkExport} class="{btnSecondary} h-9">
-						<Download class="mr-1.5 h-3.5 w-3.5" />
+					<Button
+						size="sm"
+						variant="secondary"
+						onclick={bulkExport}
+						class="{btnSecondary} h-9 px-3"
+					>
+						<Download class="h-3.5 w-3.5" />
 						Export
 					</Button>
 					{#if auth.hasPermission('products.delete')}
@@ -335,9 +349,9 @@
 							size="sm"
 							variant="destructive"
 							onclick={() => (bulkDeleteOpen = true)}
-							class="rounded-md"
+							class="h-9 rounded-lg px-3"
 						>
-							<Trash2 class="mr-1.5 h-3.5 w-3.5" />
+							<Trash2 class="h-3.5 w-3.5" />
 							Delete
 						</Button>
 					{/if}
@@ -345,7 +359,7 @@
 						size="sm"
 						variant="ghost"
 						onclick={() => (selectedIds = new Set())}
-						class="text-muted-foreground hover:bg-muted hover:text-foreground"
+						class="h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground"
 						>Clear</Button
 					>
 				</div>
@@ -353,7 +367,7 @@
 		{/if}
 
 		{#if !loading && products.length === 0}
-			<div class="liquid-panel rounded-lg">
+			<div class="panel">
 				<EmptyState
 					icon={Package}
 					title="Add your first product"
@@ -375,8 +389,8 @@
 				{loading}
 				onRowClick={(product) => onViewDetails(product, 'products')}
 				selectable
-				allSelected={allSelected}
-				someSelected={someSelected}
+				{allSelected}
+				{someSelected}
 				onSelectAll={toggleSelectAll}
 			>
 				{#snippet children(product)}
@@ -387,8 +401,8 @@
 							onCheckedChange={() => toggleSelect(product.ID)}
 						/>
 					</td>
-					<td class="num-mono text-muted-foreground text-xs">{product.SKU}</td>
-					<td class="text-foreground font-medium">{product.Name}</td>
+					<td class="num-mono text-xs text-muted-foreground">{product.SKU}</td>
+					<td class="font-medium text-foreground">{product.Name}</td>
 					<td class="col-num" onclick={(e) => e.stopPropagation()}>
 						{#if canEditPrices}
 							<EditableCell
@@ -399,8 +413,8 @@
 								onSave={(v) => savePrice(product, 'SellingPrice', Number(v))}
 							/>
 						{:else}
-							<span class="text-foreground text-sm font-semibold">
-								<span class="text-muted-foreground mr-0.5 text-xs font-medium">
+							<span class="text-sm font-semibold text-foreground">
+								<span class="mr-0.5 text-xs font-medium text-muted-foreground">
 									{$settings.currency_symbol}
 								</span>
 								{formatMoney(product.SellingPrice)}
@@ -417,8 +431,8 @@
 								onSave={(v) => savePrice(product, 'PurchasePrice', Number(v))}
 							/>
 						{:else}
-							<span class="text-foreground text-sm font-semibold">
-								<span class="text-muted-foreground mr-0.5 text-xs font-medium">
+							<span class="text-sm font-semibold text-foreground">
+								<span class="mr-0.5 text-xs font-medium text-muted-foreground">
 									{$settings.currency_symbol}
 								</span>
 								{formatMoney(product.PurchasePrice)}
@@ -441,7 +455,7 @@
 									<Button
 										size="sm"
 										variant="ghost"
-										class="h-8 text-primary hover:bg-muted hover:text-foreground"
+										class="h-8 px-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
 										onclick={(event) => {
 											event.stopPropagation();
 											editProduct(product);
@@ -454,7 +468,7 @@
 									<Button
 										size="sm"
 										variant="ghost"
-										class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
+										class="h-8 px-2.5 text-danger hover:bg-danger/10 hover:text-danger"
 										onclick={(event) => {
 											event.stopPropagation();
 											deleteProduct(product);
@@ -494,19 +508,22 @@
 />
 
 {#if bulkEditOpen}
-	<div class="fixed inset-0 z-50 flex items-center justify-center">
+	<div class="fixed inset-0 z-50 flex items-center justify-center p-4">
 		<button
-			class="bg-black/40 absolute inset-0"
+			class="absolute inset-0 bg-black/40"
 			onclick={() => (bulkEditOpen = false)}
 			aria-label="Close"
 		></button>
-		<div
-			class="bg-card border-border relative z-10 w-full max-w-sm space-y-4 rounded-lg border p-6 shadow-lg"
-		>
-			<h3 class="text-foreground text-lg font-semibold">Bulk edit ({selectedCount} selected)</h3>
-			<div class="space-y-3">
-				<div class="space-y-1">
-					<label class="text-muted-foreground text-sm font-medium" for="bulk-category">Category</label>
+		<div class="surface-3 relative z-10 w-full max-w-sm space-y-5 rounded-xl p-6">
+			<div class="space-y-1">
+				<h3 class="section-title">Bulk edit</h3>
+				<p class="text-sm text-muted-foreground">{selectedCount} selected product(s)</p>
+			</div>
+			<div class="space-y-4">
+				<div class="space-y-1.5">
+					<label class="text-xs font-semibold text-muted-foreground" for="bulk-category"
+						>Category</label
+					>
 					<div class="select-wrapper">
 						<select id="bulk-category" bind:value={bulkEditCategory}>
 							<option value="">No change</option>
@@ -516,8 +533,9 @@
 						</select>
 					</div>
 				</div>
-				<div class="space-y-1">
-					<label class="text-muted-foreground text-sm font-medium" for="bulk-status">Status</label>
+				<div class="space-y-1.5">
+					<label class="text-xs font-semibold text-muted-foreground" for="bulk-status">Status</label
+					>
 					<div class="select-wrapper">
 						<select id="bulk-status" bind:value={bulkEditStatus}>
 							<option value="">No change</option>
@@ -527,11 +545,8 @@
 					</div>
 				</div>
 			</div>
-			<div class="flex justify-end gap-2">
-				<Button
-					variant="outline"
-					onclick={() => (bulkEditOpen = false)}
-					class="rounded-md border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted"
+			<div class="flex justify-end gap-2 pt-1">
+				<Button variant="secondary" onclick={() => (bulkEditOpen = false)} class={btnSecondary}
 					>Cancel</Button
 				>
 				<Button onclick={bulkEditApply} class={btnPrimary}>Apply</Button>

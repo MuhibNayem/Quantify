@@ -11,7 +11,8 @@ import (
 
 type Ledger interface {
 	Post(tx *gorm.DB, entry *domain.JournalEntry) error
-	PostSale(tx *gorm.DB, order *domain.Order, cost float64, manualDiscount float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error)
+	PostSale(tx *gorm.DB, order *domain.Order, cost float64, manualDiscount float64, loyaltyDiscount float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error)
+	PostReturn(tx *gorm.DB, ret *domain.Return, order *domain.Order, netRefund, taxRefund, restockCost float64, postedBy uint) (*domain.JournalEntry, error)
 	PostPayment(tx *gorm.DB, payment *domain.Payment) (*domain.JournalEntry, error)
 	PostPurchaseReceipt(tx *gorm.DB, po *domain.PurchaseOrder, value float64, postedBy uint) (*domain.JournalEntry, error)
 	PostSupplierPayment(tx *gorm.DB, payment *domain.SupplierPayment) (*domain.JournalEntry, error)

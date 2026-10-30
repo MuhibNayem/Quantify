@@ -37,10 +37,11 @@ func TestParseAuthMessage_RejectsWrongType(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestParseAuthMessage_RejectsMissingToken(t *testing.T) {
+func TestParseAuthMessage_AllowsCookieAuthWithoutToken(t *testing.T) {
 	data := []byte(`{"type":"auth"}`)
-	_, err := parseAuthMessage(data)
-	assert.Error(t, err)
+	token, err := parseAuthMessage(data)
+	require.NoError(t, err)
+	assert.Empty(t, token, "cookie-authenticated browsers send no token")
 }
 
 func TestParseAuthMessage_RejectsInvalidJSON(t *testing.T) {

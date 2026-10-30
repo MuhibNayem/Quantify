@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { t } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { Input } from '$lib/components/ui/input';
@@ -9,22 +9,36 @@
 	import { replenishmentApi, reportsApi } from '$lib/api/resources';
 	import type { ReorderSuggestion } from '$lib/types';
 	import { BarChart3 } from 'lucide-svelte';
-	import { Download, TrendingUp, RotateCcw, Percent, ShoppingCart, RefreshCw, FileSpreadsheet, FileText, Loader2, Package, ClipboardList, AlertTriangle, ArrowRight } from 'lucide-svelte';
+	import {
+		Download,
+		TrendingUp,
+		RotateCcw,
+		Percent,
+		ShoppingCart,
+		RefreshCw,
+		FileSpreadsheet,
+		FileText,
+		Loader2,
+		Package,
+		ClipboardList,
+		AlertTriangle,
+		ArrowRight
+	} from 'lucide-svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
-    import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
-    import ChurnRiskWidget from '$lib/components/dashboard/ChurnRiskWidget.svelte';
+	import DemandForecastWidget from '$lib/components/dashboard/DemandForecastWidget.svelte';
+	import ChurnRiskWidget from '$lib/components/dashboard/ChurnRiskWidget.svelte';
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm font-normal text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
+	const btnSecondary = 'shadow-none';
 
 	$effect(() => {
 		if (!auth.hasPermission('reports.view')) {
-			toast.error($t('intelligence.toasts.access_denied'), { description: $t('intelligence.toasts.access_denied_desc') });
+			toast.error($t('intelligence.toasts.access_denied'), {
+				description: $t('intelligence.toasts.access_denied_desc')
+			});
 			goto('/');
 		}
 	});
@@ -43,26 +57,24 @@
 		}
 	};
 
-
-    
-    // Define report types
-    interface SalesReport {
-        salesTrends: any[];
-        totalSales: number;
-        averageDailySales: number;
-        period: string;
-    }
-    interface TurnoverReport {
-        averageInventoryValue: number;
-        inventoryTurnoverRate: number;
-        period: string;
-    }
-    interface MarginReport {
-        grossProfitMargin: number;
-        grossProfit: number;
-        totalRevenue: number;
-        period: string;
-    }
+	// Define report types
+	interface SalesReport {
+		salesTrends: any[];
+		totalSales: number;
+		averageDailySales: number;
+		period: string;
+	}
+	interface TurnoverReport {
+		averageInventoryValue: number;
+		inventoryTurnoverRate: number;
+		period: string;
+	}
+	interface MarginReport {
+		grossProfitMargin: number;
+		grossProfit: number;
+		totalRevenue: number;
+		period: string;
+	}
 
 	let suggestions = $state<ReorderSuggestion[]>([]);
 	let suggestionsLoading = $state(false);
@@ -73,12 +85,12 @@
 	});
 	const reportKeys = ['sales', 'turnover', 'margin'] as const;
 	type ReportKey = (typeof reportKeys)[number];
-	
-    const reportResults = $state<{
-        sales: SalesReport | null;
-        turnover: TurnoverReport | null;
-        margin: MarginReport | null;
-    }>({
+
+	const reportResults = $state<{
+		sales: SalesReport | null;
+		turnover: TurnoverReport | null;
+		margin: MarginReport | null;
+	}>({
 		sales: null,
 		turnover: null,
 		margin: null
@@ -96,11 +108,15 @@
 			const job = await reportsApi.exportReport({ format: exportFormat });
 			exportJobId = job.jobId || job.id || job.ID;
 			exportStatus = 'processing';
-			toast.success('Export started', { description: `Generating ${exportFormat.toUpperCase()} report...` });
+			toast.success('Export started', {
+				description: `Generating ${exportFormat.toUpperCase()} report...`
+			});
 			pollExportStatus();
 		} catch (error: any) {
 			exportStatus = 'failed';
-			toast.error('Export failed', { description: error.response?.data?.error || 'Could not start export job' });
+			toast.error('Export failed', {
+				description: error.response?.data?.error || 'Could not start export job'
+			});
 		}
 	};
 
@@ -168,7 +184,8 @@
 		try {
 			suggestions = await replenishmentApi.listSuggestions();
 		} catch (error: any) {
-			const errorMessage = error.response?.data?.error || $t('intelligence.toasts.load_suggestions_fail');
+			const errorMessage =
+				error.response?.data?.error || $t('intelligence.toasts.load_suggestions_fail');
 			toast.error($t('intelligence.toasts.load_suggestions_fail'), { description: errorMessage });
 		} finally {
 			suggestionsLoading = false;
@@ -178,8 +195,6 @@
 		loadSuggestions();
 		loadReplenishmentDashboard();
 	});
-
-
 
 	const createPO = async (suggestionId: number) => {
 		try {
@@ -201,11 +216,11 @@
 		};
 		try {
 			if (type === 'sales') {
-				reportResults.sales = await reportsApi.salesTrends(payload) as SalesReport;
+				reportResults.sales = (await reportsApi.salesTrends(payload)) as SalesReport;
 			} else if (type === 'turnover') {
-				reportResults.turnover = await reportsApi.inventoryTurnover(payload) as TurnoverReport;
+				reportResults.turnover = (await reportsApi.inventoryTurnover(payload)) as TurnoverReport;
 			} else {
-				reportResults.margin = await reportsApi.profitMargin(payload) as MarginReport;
+				reportResults.margin = (await reportsApi.profitMargin(payload)) as MarginReport;
 			}
 			toast.success($t('intelligence.toasts.report_ready'));
 		} catch (error: any) {
@@ -231,202 +246,216 @@
 
 <!-- HERO -->
 <section class="w-full">
-	<div class="mx-auto max-w-7xl px-6 pt-10 pb-6 sm:pt-14">
-		<div
-			class="parallax-hero space-y-2 transition-transform duration-700 ease-out will-change-transform"
+	<div class="mx-auto max-w-7xl px-6 pt-8 pb-4 sm:pt-10">
+		<header
+			class="parallax-hero page-header transition-transform duration-700 ease-out will-change-transform"
 			data-animate="fade-up"
 		>
-			<p class="overline flex items-center gap-2">
-				<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
-					<BarChart3 class="h-4 w-4" />
-				</span>
-				{$t('intelligence.hero.subtitle')}
-			</p>
-			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
-				{$t('intelligence.hero.title')}
-			</h1>
-		</div>
+			<div class="min-w-0">
+				<p class="flex items-center gap-2 overline">
+					<span class="inline-flex rounded-md bg-primary/10 p-1 text-primary">
+						<BarChart3 class="h-3.5 w-3.5" />
+					</span>
+					{$t('intelligence.hero.subtitle')}
+				</p>
+				<h1 class="page-title mt-2">{$t('intelligence.hero.title')}</h1>
+			</div>
+		</header>
 	</div>
 </section>
 
 <!-- MAIN -->
-<section class="mx-auto max-w-7xl space-y-10 px-6 py-10">
+<section class="mx-auto max-w-7xl space-y-6 px-6 py-8">
 	<!-- Replenishment Dashboard -->
-	<div class="liquid-panel rounded-lg">
-		<div class="border-border space-y-1 border-b px-6 py-5">
-			<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-				<Package class="text-primary h-5 w-5" />
-				Replenishment Overview
-			</h2>
-			<p class="text-muted-foreground text-sm">Quick stats for your replenishment pipeline</p>
+	<div class="panel">
+		<div class="panel-header">
+			<div class="min-w-0">
+				<h2 class="section-title flex items-center gap-2">
+					<Package class="h-4 w-4 text-primary" />
+					Replenishment Overview
+				</h2>
+				<p class="mt-0.5 text-xs text-muted-foreground">
+					Quick stats for your replenishment pipeline
+				</p>
+			</div>
 		</div>
-		<div class="p-6">
+		<div class="panel-body space-y-4">
 			{#if replenishmentLoading}
 				<div class="grid gap-4 sm:grid-cols-3">
 					{#each Array(3) as _}
-						<Skeleton class="bg-muted h-24 w-full rounded-md" />
+						<Skeleton class="h-24 w-full rounded-md bg-muted" />
 					{/each}
 				</div>
 			{:else if replenishmentDashboard}
 				<div class="grid gap-4 sm:grid-cols-3">
-					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
-						<ClipboardList class="text-primary mx-auto mb-2 h-6 w-6" />
-						<p class="kpi-num text-foreground text-3xl">
-							{replenishmentDashboard.pendingSuggestions ?? replenishmentDashboard.PendingSuggestions ?? 0}
+					<div class="surface-1 p-5 text-center">
+						<ClipboardList class="mx-auto mb-2 h-5 w-5 text-primary" />
+						<p class="kpi-num text-3xl text-foreground">
+							{replenishmentDashboard.pendingSuggestions ??
+								replenishmentDashboard.PendingSuggestions ??
+								0}
 						</p>
-						<p class="text-muted-foreground text-sm">Pending Suggestions</p>
+						<p class="mt-1 text-xs text-muted-foreground">Pending Suggestions</p>
 					</div>
-					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
-						<ShoppingCart class="text-info mx-auto mb-2 h-6 w-6" />
-						<p class="kpi-num text-foreground text-3xl">
+					<div class="surface-1 p-5 text-center">
+						<ShoppingCart class="mx-auto mb-2 h-5 w-5 text-info" />
+						<p class="kpi-num text-3xl text-foreground">
 							{replenishmentDashboard.openPOs ?? replenishmentDashboard.OpenPOs ?? 0}
 						</p>
-						<p class="text-muted-foreground text-sm">Open Purchase Orders</p>
+						<p class="mt-1 text-xs text-muted-foreground">Open Purchase Orders</p>
 					</div>
-					<div class="border-border bg-card rounded-md border p-5 text-center shadow-xs">
-						<AlertTriangle class="text-warning mx-auto mb-2 h-6 w-6" />
-						<p class="kpi-num text-foreground text-3xl">
+					<div class="surface-1 p-5 text-center">
+						<AlertTriangle class="mx-auto mb-2 h-5 w-5 text-warning" />
+						<p class="kpi-num text-3xl text-foreground">
 							{replenishmentDashboard.lowStockItems ?? replenishmentDashboard.LowStockItems ?? 0}
 						</p>
-						<p class="text-muted-foreground text-sm">Low Stock Items</p>
+						<p class="mt-1 text-xs text-muted-foreground">Low Stock Items</p>
 					</div>
 				</div>
-				<div class="mt-4 flex flex-wrap gap-3">
+				<div class="flex flex-wrap gap-2">
 					<a href="/intelligence" class="no-underline">
-						<Button variant="outline" size="sm" class="{btnSecondary} gap-1">
+						<Button variant="outline" class="{btnSecondary} h-9 gap-1.5 px-3 text-xs font-semibold">
 							View Suggestions <ArrowRight class="h-3.5 w-3.5" />
 						</Button>
 					</a>
 					<a href="/purchase-orders" class="no-underline">
-						<Button variant="outline" size="sm" class="{btnSecondary} gap-1">
+						<Button variant="outline" class="{btnSecondary} h-9 gap-1.5 px-3 text-xs font-semibold">
 							View Purchase Orders <ArrowRight class="h-3.5 w-3.5" />
 						</Button>
 					</a>
 				</div>
 			{:else}
-				<p class="text-muted-foreground py-4 text-center text-sm">Unable to load replenishment data.</p>
+				<p class="py-4 text-center text-sm text-muted-foreground">
+					Unable to load replenishment data.
+				</p>
 			{/if}
 		</div>
 	</div>
 
 	<!-- Forecast + Churn Risk -->
-	<div class="grid gap-8 lg:grid-cols-2">
+	<div class="grid gap-4 lg:grid-cols-2">
 		<!-- Demand forecast -->
-        <div class="h-full">
-            <DemandForecastWidget />
-        </div>
-        <!-- Churn Risk -->
-        <div class="h-full">
-            <ChurnRiskWidget />
-        </div>
+		<div class="h-full">
+			<DemandForecastWidget />
+		</div>
+		<!-- Churn Risk -->
+		<div class="h-full">
+			<ChurnRiskWidget />
+		</div>
 	</div>
 
-    <!-- Report range -->
-    <div class="mx-auto max-w-4xl">
-		<div class="liquid-panel rounded-lg">
-			<div class="border-border space-y-1 border-b px-6 py-5">
-				<h2 class="font-display text-foreground text-lg font-semibold">{$t('intelligence.report_range.title')}</h2>
-				<p class="text-muted-foreground text-sm">{$t('intelligence.report_range.subtitle')}</p>
-			</div>
-			<div class="space-y-4 p-6">
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-					<Input
-						type="date"
-						bind:value={reportRange.startDate}
-						class="{inputClass} num-mono"
-					/>
-					<Input
-						type="date"
-						bind:value={reportRange.endDate}
-						class="{inputClass} num-mono"
-					/>
-				</div>
-
-				<!-- Responsive 3-button group -->
-				<div class="flex flex-col gap-3 sm:flex-row">
-					<Button
-						class="{btnSecondary} flex-1"
-						variant="secondary"
-						onclick={() => runReport('sales')}
-					>
-						{$t('intelligence.report_range.sales_trends')}
-					</Button>
-					<Button
-						class="{btnSecondary} flex-1"
-						variant="secondary"
-						onclick={() => runReport('turnover')}
-					>
-						{$t('intelligence.report_range.turnover')}
-					</Button>
-					<Button
-						class="{btnSecondary} flex-1"
-						variant="secondary"
-						onclick={() => runReport('margin')}
-					>
-						{$t('intelligence.report_range.margin')}
-					</Button>
-				</div>
-
-				<div class="border-border flex items-center gap-3 border-t pt-4">
-					<div class="border-border bg-muted flex items-center gap-1 rounded-md border p-1">
-						<button
-							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'csv' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
-							onclick={() => (exportFormat = 'csv')}
-						>
-							<FileText class="h-3.5 w-3.5" /> CSV
-						</button>
-						<button
-							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'pdf' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
-							onclick={() => (exportFormat = 'pdf')}
-						>
-							<FileText class="h-3.5 w-3.5" /> PDF
-						</button>
-						<button
-							class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat === 'excel' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:bg-card'}"
-							onclick={() => (exportFormat = 'excel')}
-						>
-							<FileSpreadsheet class="h-3.5 w-3.5" /> Excel
-						</button>
-					</div>
-					<Button
-						class={btnPrimary}
-						onclick={startExport}
-						disabled={exportStatus === 'pending' || exportStatus === 'processing'}
-					>
-						{#if exportStatus === 'pending' || exportStatus === 'processing'}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-							Exporting...
-						{:else}
-							<Download class="mr-2 h-4 w-4" />
-							Export
-						{/if}
-					</Button>
-					{#if exportStatus === 'complete'}
-						<span class="text-success text-xs font-medium">Ready</span>
-					{:else if exportStatus === 'failed'}
-						<span class="text-danger text-xs font-medium">Failed</span>
-					{/if}
-				</div>
+	<!-- Report range -->
+	<div class="panel">
+		<div class="panel-header">
+			<div class="min-w-0">
+				<h2 class="section-title">{$t('intelligence.report_range.title')}</h2>
+				<p class="mt-0.5 text-xs text-muted-foreground">
+					{$t('intelligence.report_range.subtitle')}
+				</p>
 			</div>
 		</div>
-    </div>
+		<div class="panel-body space-y-4">
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				<Input type="date" bind:value={reportRange.startDate} class="{inputClass} num-mono" />
+				<Input type="date" bind:value={reportRange.endDate} class="{inputClass} num-mono" />
+			</div>
+
+			<!-- Responsive 3-button group -->
+			<div class="flex flex-col gap-3 sm:flex-row">
+				<Button
+					class="{btnSecondary} h-10 flex-1 text-sm"
+					variant="outline"
+					onclick={() => runReport('sales')}
+				>
+					{$t('intelligence.report_range.sales_trends')}
+				</Button>
+				<Button
+					class="{btnSecondary} h-10 flex-1 text-sm"
+					variant="outline"
+					onclick={() => runReport('turnover')}
+				>
+					{$t('intelligence.report_range.turnover')}
+				</Button>
+				<Button
+					class="{btnSecondary} h-10 flex-1 text-sm"
+					variant="outline"
+					onclick={() => runReport('margin')}
+				>
+					{$t('intelligence.report_range.margin')}
+				</Button>
+			</div>
+
+			<div class="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+				<div
+					class="inline-flex items-center gap-1 rounded-[calc(var(--radius)_-_4px)] border border-border bg-muted/60 p-1"
+				>
+					<button
+						class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat ===
+						'csv'
+							? 'bg-card text-foreground shadow-xs'
+							: 'text-muted-foreground hover:text-foreground'}"
+						onclick={() => (exportFormat = 'csv')}
+					>
+						<FileText class="h-3.5 w-3.5" /> CSV
+					</button>
+					<button
+						class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat ===
+						'pdf'
+							? 'bg-card text-foreground shadow-xs'
+							: 'text-muted-foreground hover:text-foreground'}"
+						onclick={() => (exportFormat = 'pdf')}
+					>
+						<FileText class="h-3.5 w-3.5" /> PDF
+					</button>
+					<button
+						class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors {exportFormat ===
+						'excel'
+							? 'bg-card text-foreground shadow-xs'
+							: 'text-muted-foreground hover:text-foreground'}"
+						onclick={() => (exportFormat = 'excel')}
+					>
+						<FileSpreadsheet class="h-3.5 w-3.5" /> Excel
+					</button>
+				</div>
+				<Button
+					class="{btnPrimary} gap-2"
+					onclick={startExport}
+					disabled={exportStatus === 'pending' || exportStatus === 'processing'}
+				>
+					{#if exportStatus === 'pending' || exportStatus === 'processing'}
+						<Loader2 class="h-4 w-4 animate-spin" />
+						Exporting...
+					{:else}
+						<Download class="h-4 w-4" />
+						Export
+					{/if}
+				</Button>
+				{#if exportStatus === 'complete'}
+					<span class="badge-success">Ready</span>
+				{:else if exportStatus === 'failed'}
+					<span class="badge-danger">Failed</span>
+				{/if}
+			</div>
+		</div>
+	</div>
 
 	<!-- Reorder suggestions -->
-	<div class="liquid-panel overflow-hidden rounded-lg">
+	<div class="panel overflow-hidden">
 		<div
-			class="border-border flex flex-col gap-4 border-b px-6 py-5 sm:flex-row sm:items-center sm:justify-between"
+			class="panel-header flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
 		>
-			<div>
-				<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-					<ShoppingCart class="text-primary h-5 w-5" />
+			<div class="min-w-0">
+				<h2 class="section-title flex items-center gap-2">
+					<ShoppingCart class="h-4 w-4 text-primary" />
 					{$t('intelligence.reorder_suggestions.title')}
 				</h2>
-				<p class="text-muted-foreground text-sm">{$t('intelligence.reorder_suggestions.subtitle')}</p>
+				<p class="mt-0.5 text-xs text-muted-foreground">
+					{$t('intelligence.reorder_suggestions.subtitle')}
+				</p>
 			</div>
 			<Button
 				variant="outline"
-				size="sm"
-				class="{btnSecondary} gap-2"
+				class="{btnSecondary} h-9 gap-2 px-3 text-xs font-semibold"
 				onclick={async () => {
 					suggestionsLoading = true;
 					try {
@@ -451,10 +480,12 @@
 					<tr>
 						<th>{$t('intelligence.reorder_suggestions.table.product')}</th>
 						<th>{$t('intelligence.reorder_suggestions.table.supplier')}</th>
-						<th>
+						<th class="text-right">
 							<span class="inline-flex items-center gap-1">
 								{$t('intelligence.reorder_suggestions.table.suggested_qty')}
-								<HelpTip text="Recommended reorder quantity based on recent sales velocity and lead time." />
+								<HelpTip
+									text="Recommended reorder quantity based on recent sales velocity and lead time."
+								/>
 							</span>
 						</th>
 						<th>{$t('intelligence.reorder_suggestions.table.status')}</th>
@@ -465,25 +496,25 @@
 					{#if suggestionsLoading}
 						{#each Array(4) as _, i}
 							<tr>
-								<td colspan={5} class="p-3"
-									><Skeleton class="bg-muted h-6 w-full" /></td
-								>
+								<td colspan={5} class="p-3"><Skeleton class="h-6 w-full bg-muted" /></td>
 							</tr>
 						{/each}
 					{:else if suggestions.length === 0}
 						<tr>
-							<td colspan={5} class="text-muted-foreground py-6 text-center text-sm"
+							<td colspan={5} class="py-6 text-center text-sm text-muted-foreground"
 								>{$t('intelligence.reorder_suggestions.table.empty')}</td
 							>
 						</tr>
 					{:else}
 						{#each suggestions as suggestion}
 							<tr>
-								<td class="text-foreground"
+								<td class="text-sm font-medium text-foreground"
 									>{suggestion.Product?.Name ?? `Product ${suggestion.ProductID}`}</td
 								>
-								<td class="text-foreground">{suggestion.Supplier?.Name ?? String(suggestion.SupplierID)}</td>
-								<td class="num-mono">{suggestion.SuggestedOrderQuantity}</td>
+								<td class="text-sm text-muted-foreground"
+									>{suggestion.Supplier?.Name ?? String(suggestion.SupplierID)}</td
+								>
+								<td class="col-num">{suggestion.SuggestedOrderQuantity}</td>
 								<td>
 									<span class="badge-warning capitalize">
 										{suggestion.Status}
@@ -492,9 +523,8 @@
 								<td class="text-right">
 									<!-- Responsive action: single button stays compact -->
 									<Button
-										size="sm"
-										variant="ghost"
-										class="text-primary hover:bg-muted rounded-md px-3 py-1.5"
+										variant="outline"
+										class="{btnSecondary} h-8 gap-1.5 px-2.5 text-xs font-semibold"
 										onclick={() => createPO(suggestion.ID)}
 									>
 										{$t('intelligence.reorder_suggestions.table.create_po')}
@@ -510,29 +540,37 @@
 
 	<!-- Reports payloads -->
 
-	<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
+	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3" data-animate="fade-up">
 		<!-- SALES REPORT -->
 		{#if auth.hasPermission('reports.sales')}
-			<div class="liquid-panel rounded-lg">
-				<div class="border-border flex items-center justify-between border-b px-6 py-5">
-					<div>
-						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-							<TrendingUp class="text-primary h-5 w-5" />
+			<div class="panel">
+				<div class="panel-header">
+					<div class="min-w-0">
+						<h2 class="section-title flex items-center gap-2">
+							<TrendingUp class="h-4 w-4 text-primary" />
 							{$t('intelligence.reports.sales.title')}
 						</h2>
-						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.sales.subtitle')}</p>
+						<p class="mt-0.5 text-xs text-muted-foreground">
+							{$t('intelligence.reports.sales.subtitle')}
+						</p>
 					</div>
 					<button
-						class="hover:bg-muted rounded-md p-2"
+						class="-mr-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						onclick={() => exportJSON(reportResults.sales, 'sales-report')}
+						aria-label="Export sales report"
 					>
-						<Download class="text-primary h-4 w-4" />
+						<Download class="h-4 w-4" />
 					</button>
 				</div>
-				<div class="space-y-4 p-6">
+				<div class="panel-body space-y-3">
 					<!-- Simple Line Chart (SVG sparkline) -->
 					<div class="relative h-24 w-full">
-						<svg viewBox="0 0 100 40" preserveAspectRatio="none" class="text-primary absolute inset-0">
+						<svg
+							viewBox="0 0 100 40"
+							preserveAspectRatio="none"
+							class="absolute inset-0 h-full w-full"
+							style="color: hsl(var(--primary))"
+						>
 							<polyline
 								points={generateSparkline(reportResults.sales?.salesTrends)}
 								fill="none"
@@ -542,110 +580,135 @@
 							/>
 						</svg>
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.sales.total_sales')}</p>
-						<p class="text-foreground font-semibold num-mono">{fmt(reportResults.sales?.totalSales)}</p>
+						<p class="num-mono font-semibold text-foreground">
+							{fmt(reportResults.sales?.totalSales)}
+						</p>
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.sales.avg_daily_sales')}</p>
-						<p class="text-foreground font-semibold num-mono">{fmt(reportResults.sales?.averageDailySales)}</p>
+						<p class="num-mono font-semibold text-foreground">
+							{fmt(reportResults.sales?.averageDailySales)}
+						</p>
 					</div>
-					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.sales?.period ?? '—' })}</p>
+					<p class="text-xs text-muted-foreground">
+						{$t('intelligence.reports.period', { period: reportResults.sales?.period ?? '—' })}
+					</p>
 				</div>
 			</div>
 		{/if}
 
 		<!-- TURNOVER REPORT -->
 		{#if auth.hasPermission('reports.inventory')}
-			<div class="liquid-panel rounded-lg">
-				<div class="border-border flex items-center justify-between border-b px-6 py-5">
-					<div>
-						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-							<RotateCcw class="text-primary h-5 w-5" />
+			<div class="panel">
+				<div class="panel-header">
+					<div class="min-w-0">
+						<h2 class="section-title flex items-center gap-2">
+							<RotateCcw class="h-4 w-4 text-primary" />
 							{$t('intelligence.reports.turnover.title')}
 						</h2>
-						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.turnover.subtitle')}</p>
+						<p class="mt-0.5 text-xs text-muted-foreground">
+							{$t('intelligence.reports.turnover.subtitle')}
+						</p>
 					</div>
 					<button
-						class="hover:bg-muted rounded-md p-2"
+						class="-mr-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						onclick={() => exportJSON(reportResults.turnover, 'turnover-report')}
+						aria-label="Export turnover report"
 					>
-						<Download class="text-primary h-4 w-4" />
+						<Download class="h-4 w-4" />
 					</button>
 				</div>
-				<div class="space-y-4 p-6">
+				<div class="panel-body space-y-3">
 					<!-- Bar Chart -->
 					<div class="flex h-24 w-full items-end gap-1">
 						{#each [40, 25, 30, 15, 35, 22, 28] as height, i}
 							<div
-								class="flex-1 rounded-t-md transition-all duration-500 ease-in-out hover:scale-105 {i === 6
-									? 'bg-primary'
-									: 'bg-primary/30'}"
-								style={`height: ${height}%;`}
+								class="flex-1 rounded-t-[3px] transition-all duration-500 ease-in-out hover:scale-105"
+								style={`height: ${height}%; background-color: hsl(var(--primary) / ${i === 6 ? 1 : 0.3});`}
 							></div>
 						{/each}
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.turnover.avg_inventory_value')}</p>
-						<p class="text-foreground font-semibold num-mono">
+						<p class="num-mono font-semibold text-foreground">
 							${fmt(reportResults.turnover?.averageInventoryValue)}
 						</p>
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.turnover.turnover_rate')}</p>
-						<p class="text-foreground font-semibold num-mono">
+						<p class="num-mono font-semibold text-foreground">
 							{fmt(reportResults.turnover?.inventoryTurnoverRate)}
 						</p>
 					</div>
-					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.turnover?.period ?? '—' })}</p>
+					<p class="text-xs text-muted-foreground">
+						{$t('intelligence.reports.period', { period: reportResults.turnover?.period ?? '—' })}
+					</p>
 				</div>
 			</div>
 		{/if}
 
 		<!-- MARGIN REPORT -->
 		{#if auth.hasPermission('reports.financial')}
-			<div class="liquid-panel rounded-lg">
-				<div class="border-border flex items-center justify-between border-b px-6 py-5">
-					<div>
-						<h2 class="font-display text-foreground flex items-center gap-2 text-lg font-semibold">
-							<Percent class="text-primary h-5 w-5" />
+			<div class="panel">
+				<div class="panel-header">
+					<div class="min-w-0">
+						<h2 class="section-title flex items-center gap-2">
+							<Percent class="h-4 w-4 text-primary" />
 							{$t('intelligence.reports.margin.title')}
 						</h2>
-						<p class="text-muted-foreground text-sm">{$t('intelligence.reports.margin.subtitle')}</p>
+						<p class="mt-0.5 text-xs text-muted-foreground">
+							{$t('intelligence.reports.margin.subtitle')}
+						</p>
 					</div>
 					<button
-						class="hover:bg-muted rounded-md p-2"
+						class="-mr-1 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						onclick={() => exportJSON(reportResults.margin, 'margin-report')}
+						aria-label="Export margin report"
 					>
-						<Download class="text-primary h-4 w-4" />
+						<Download class="h-4 w-4" />
 					</button>
 				</div>
-				<div class="space-y-4 p-6">
+				<div class="panel-body space-y-3">
 					<!-- Semi-donut Chart -->
 					<div class="relative flex h-24 items-center justify-center">
-						<svg viewBox="0 0 36 18" class="text-primary h-12 w-24 rotate-180">
+						<svg viewBox="0 0 36 18" class="h-12 w-24 rotate-180">
 							<path
 								d="M2 18 A16 16 0 0 1 34 18"
 								fill="none"
-								stroke="currentColor"
+								stroke="hsl(var(--muted))"
+								stroke-width="4"
+								stroke-linecap="round"
+							/>
+							<path
+								d="M2 18 A16 16 0 0 1 34 18"
+								fill="none"
+								stroke="hsl(var(--primary))"
 								stroke-width="4"
 								stroke-linecap="round"
 								stroke-dasharray="{(reportResults.margin?.grossProfitMargin ?? 0) * 0.5},100"
 							/>
 						</svg>
-						<span class="text-primary absolute text-lg font-semibold num-mono">
+						<span class="num-mono absolute text-lg font-semibold text-primary">
 							{fmt(reportResults.margin?.grossProfitMargin)}%
 						</span>
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.margin.gross_profit')}</p>
-						<p class="text-foreground font-semibold num-mono">${fmt(reportResults.margin?.grossProfit)}</p>
+						<p class="num-mono font-semibold text-foreground">
+							${fmt(reportResults.margin?.grossProfit)}
+						</p>
 					</div>
-					<div class="text-muted-foreground flex justify-between text-sm">
+					<div class="flex justify-between text-sm text-muted-foreground">
 						<p>{$t('intelligence.reports.margin.total_revenue')}</p>
-						<p class="text-foreground font-semibold num-mono">${fmt(reportResults.margin?.totalRevenue)}</p>
+						<p class="num-mono font-semibold text-foreground">
+							${fmt(reportResults.margin?.totalRevenue)}
+						</p>
 					</div>
-					<p class="text-muted-foreground text-xs">{$t('intelligence.reports.period', { period: reportResults.margin?.period ?? '—' })}</p>
+					<p class="text-xs text-muted-foreground">
+						{$t('intelligence.reports.period', { period: reportResults.margin?.period ?? '—' })}
+					</p>
 				</div>
 			</div>
 		{/if}

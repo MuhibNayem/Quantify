@@ -43,15 +43,9 @@
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
 
-	const inputClass =
-		'liquid-input h-12 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
-	const selectClass =
-		'liquid-input h-12 w-full rounded-md bg-card px-3 text-sm text-foreground';
-	const saveBtn =
-		'bg-primary text-primary-foreground h-12 rounded-md font-medium hover:bg-primary/90';
-	const iconBtn =
-		'bg-primary text-primary-foreground h-12 w-12 rounded-md hover:bg-primary/90';
-	const tabsClass = 'rounded-lg border-border bg-card shadow-sm';
+	const inputClass = 'h-11 w-full rounded-md text-sm';
+	const selectClass = 'h-11 w-full';
+	const tabsClass = 'mx-auto flex-nowrap';
 
 	$effect(() => {
 		if (!auth.hasPermission('settings.view')) {
@@ -264,84 +258,90 @@
 	});
 </script>
 
-<div class="bg-background relative min-h-screen overflow-hidden p-8 lg:p-12">
-	<div class="relative z-10 mx-auto max-w-7xl space-y-8">
-		<!-- Header -->
-		<div class="flex flex-col gap-2" data-animate="fade-up">
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
 			<p class="overline">System · Preferences</p>
-			<h1 class="font-display text-foreground text-4xl font-bold tracking-tight">
-				{$t('common.configuration')}
-			</h1>
-			<p class="text-muted-foreground font-medium">
-				{$t('common.manage_preferences')}
-			</p>
+			<h1 class="page-title mt-1">{$t('common.configuration')}</h1>
+			<p class="page-sub">{$t('common.manage_preferences')}</p>
+		</div>
+	</header>
+
+	<Tabs.Root
+		value={activeTab}
+		class="mt-6 w-full space-y-6"
+		onValueChange={(val) => (activeTab = val)}
+	>
+		<!-- Ledger Tabs -->
+		<div class="-mx-1 overflow-x-auto px-1 pb-1">
+			<GlassTabs
+				bind:value={activeTab}
+				tabs={tabs.map((tab) => ({ value: tab.id, label: $t(tab.label) }))}
+				class={tabsClass}
+			/>
 		</div>
 
-		<Tabs.Root
-			value={activeTab}
-			class="w-full space-y-8"
-			onValueChange={(val) => (activeTab = val)}
-		>
-			<!-- Ledger Tabs -->
-			<div class="overflow-x-auto pb-4">
-				<GlassTabs
-					bind:value={activeTab}
-					tabs={tabs.map((tab) => ({ value: tab.id, label: $t(tab.label) }))}
-					class="{tabsClass} mx-auto flex-nowrap"
-				/>
-			</div>
-
-			<!-- General Settings -->
-			<Tabs.Content value="general" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<!-- Business Profile Card -->
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-8 flex items-start gap-5">
-							<div class="bg-accent text-primary rounded-md p-4">
-								<Building2 size={32} />
-							</div>
-							<div>
-								<h3 class="font-display text-foreground text-xl font-bold">
-									{$t('settings.general.business_profile')}
-								</h3>
-								<p class="text-muted-foreground">
+		<!-- General Settings -->
+		<Tabs.Content value="general" class="space-y-4 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-4">
+				<!-- Business Profile Card -->
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3.5">
+							<span
+								class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Building2 size={18} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.general.business_profile')}</h2>
+								<p class="text-sm text-muted-foreground">
 									{$t('settings.general.business_profile_desc')}
 								</p>
 							</div>
 						</div>
+					</div>
 
-						<div class="max-w-xl space-y-6">
-							<div class="space-y-3">
-								<Label class="text-foreground ml-1">{$t('settings.general.business_name')}</Label>
-								<div class="flex gap-3">
-									<Input
-										class={inputClass}
-										bind:value={settings['business_name']}
-										placeholder="e.g. Acme Corp"
-									/>
-									<Button
-										class="{saveBtn} px-6"
-										onclick={() => saveSetting('business_name', settings['business_name'])}
-									>
-										<Save size={20} class="mr-2" />
-										{$t('common.save')}
-									</Button>
-								</div>
+					<div class="panel-body">
+						<div class="max-w-xl space-y-2">
+							<Label class="ml-1" for="business-name">{$t('settings.general.business_name')}</Label>
+							<div class="flex gap-3">
+								<Input
+									id="business-name"
+									class={inputClass}
+									bind:value={settings['business_name']}
+									placeholder="e.g. Acme Corp"
+								/>
+								<Button
+									class="btn-soothe h-11 shrink-0 px-5"
+									onclick={() => saveSetting('business_name', settings['business_name'])}
+								>
+									<Save size={16} />
+									{$t('common.save')}
+								</Button>
 							</div>
 						</div>
 					</div>
+				</section>
 
-					<!-- Localization -->
-					<div class="grid gap-6 md:grid-cols-2">
-						<div class="liquid-panel rounded-lg p-8">
-							<div class="mb-6 flex items-center gap-4">
-								<div class="bg-accent text-primary rounded-md p-3">
-									<Globe size={24} />
+				<!-- Localization -->
+				<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+					<section class="panel overflow-hidden">
+						<div class="panel-header items-start">
+							<div class="flex items-start gap-3">
+								<span
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border"
+								>
+									<Globe size={16} />
+								</span>
+								<div class="space-y-0.5">
+									<h2 class="section-title">{$t('settings.general.currency')}</h2>
+									<p class="text-xs text-muted-foreground">Symbol updates with the code.</p>
 								</div>
-								<h3 class="font-display text-foreground text-lg font-bold">
-									{$t('settings.general.currency')}
-								</h3>
 							</div>
+						</div>
+						<div class="panel-body">
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
@@ -352,7 +352,9 @@
 									/>
 								</div>
 								<Button
-									class={iconBtn}
+									size="icon"
+									class="btn-soothe h-11 w-11 shrink-0"
+									aria-label={$t('common.save')}
 									onclick={() => {
 										const selected = currencyOptions.find(
 											(c) => c.value === settings['currency_code']
@@ -364,20 +366,27 @@
 										}
 									}}
 								>
-									<Save size={20} />
+									<Save size={16} />
 								</Button>
 							</div>
 						</div>
+					</section>
 
-						<div class="liquid-panel rounded-lg p-8">
-							<div class="mb-6 flex items-center gap-4">
-								<div class="bg-accent text-primary rounded-md p-3">
-									<Clock size={24} />
+					<section class="panel overflow-hidden">
+						<div class="panel-header items-start">
+							<div class="flex items-start gap-3">
+								<span
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border"
+								>
+									<Clock size={16} />
+								</span>
+								<div class="space-y-0.5">
+									<h2 class="section-title">{$t('settings.general.timezone')}</h2>
+									<p class="text-xs text-muted-foreground">Used for all timestamps.</p>
 								</div>
-								<h3 class="font-display text-foreground text-lg font-bold">
-									{$t('settings.general.timezone')}
-								</h3>
 							</div>
+						</div>
+						<div class="panel-body">
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
@@ -388,23 +397,32 @@
 									/>
 								</div>
 								<Button
-									class={iconBtn}
+									size="icon"
+									class="btn-soothe h-11 w-11 shrink-0"
+									aria-label={$t('common.save')}
 									onclick={() => saveSetting('timezone', settings['timezone'])}
 								>
-									<Save size={20} />
+									<Save size={16} />
 								</Button>
 							</div>
 						</div>
+					</section>
 
-						<div class="liquid-panel rounded-lg p-8">
-							<div class="mb-6 flex items-center gap-4">
-								<div class="bg-accent text-primary rounded-md p-3">
-									<Globe size={24} />
+					<section class="panel overflow-hidden">
+						<div class="panel-header items-start">
+							<div class="flex items-start gap-3">
+								<span
+									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground ring-1 ring-border"
+								>
+									<Globe size={16} />
+								</span>
+								<div class="space-y-0.5">
+									<h2 class="section-title">{$t('settings.general.locale')}</h2>
+									<p class="text-xs text-muted-foreground">Interface language.</p>
 								</div>
-								<h3 class="font-display text-foreground text-lg font-bold">
-									{$t('settings.general.locale')}
-								</h3>
 							</div>
+						</div>
+						<div class="panel-body">
 							<div class="flex items-end gap-3">
 								<div class="flex-1">
 									<Select
@@ -415,46 +433,52 @@
 									/>
 								</div>
 								<Button
-									class={iconBtn}
+									size="icon"
+									class="btn-soothe h-11 w-11 shrink-0"
+									aria-label={$t('common.save')}
 									onclick={() => saveSetting('locale', settings['locale'])}
 								>
-									<Save size={20} />
+									<Save size={16} />
 								</Button>
 							</div>
 						</div>
-					</div>
+					</section>
 				</div>
-			</Tabs.Content>
+			</div>
+		</Tabs.Content>
 
-			<!-- Business Rules -->
-			<Tabs.Content value="business" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<!-- Loyalty Program -->
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-8 flex items-start gap-5">
-							<div class="bg-accent text-primary rounded-md p-4">
-								<Sparkles size={32} />
-							</div>
-							<div>
-								<h3 class="font-display text-foreground text-xl font-bold">
-									{$t('settings.business.loyalty_program')}
-								</h3>
-								<p class="text-muted-foreground">
+		<!-- Business Rules -->
+		<Tabs.Content value="business" class="space-y-4 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-4">
+				<!-- Loyalty Program -->
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3.5">
+							<span
+								class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Sparkles size={18} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.business.loyalty_program')}</h2>
+								<p class="text-sm text-muted-foreground">
 									{$t('settings.business.loyalty_program_desc')}
 								</p>
 							</div>
 						</div>
+					</div>
 
-						<div class="grid gap-8 md:grid-cols-2">
+					<div class="panel-body">
+						<div class="grid gap-6 md:grid-cols-2">
 							<!-- Earning & Redemption -->
-							<div class="space-y-6">
-								<h4 class="overline">
-									{$t('settings.business.points_configuration')}
-								</h4>
-								<div class="space-y-3">
-									<Label class="text-foreground ml-1 flex items-center gap-1 font-medium">
+							<div class="space-y-5">
+								<h3 class="overline">{$t('settings.business.points_configuration')}</h3>
+								<div class="space-y-2">
+									<Label class="ml-1 flex items-center gap-1.5">
 										{$t('settings.business.earning_rate')}
-										<HelpTip text="Loyalty points earned per unit of currency spent. For example, 1 means a customer earns 1 point for every $1 spent." />
+										<HelpTip
+											text="Loyalty points earned per unit of currency spent. For example, 1 means a customer earns 1 point for every $1 spent."
+										/>
 									</Label>
 									<div class="flex gap-3">
 										<Input
@@ -464,25 +488,25 @@
 											bind:value={settings['loyalty_points_earning_rate']}
 										/>
 										<Button
-											class={iconBtn}
+											size="icon"
+											class="btn-soothe h-11 w-11 shrink-0"
+											aria-label={$t('common.save')}
 											onclick={() =>
 												saveSetting(
 													'loyalty_points_earning_rate',
 													settings['loyalty_points_earning_rate']
 												)}
 										>
-											<Save size={20} />
+											<Save size={16} />
 										</Button>
 									</div>
-									<p class="text-muted-foreground text-xs">
+									<p class="text-xs text-muted-foreground">
 										{$t('settings.business.earning_rate_hint')}
 									</p>
 								</div>
 
-								<div class="space-y-3">
-									<Label class="text-foreground ml-1 font-medium"
-										>{$t('settings.business.redemption_value')}</Label
-									>
+								<div class="space-y-2">
+									<Label class="ml-1">{$t('settings.business.redemption_value')}</Label>
 									<div class="flex gap-3">
 										<Input
 											type="number"
@@ -491,32 +515,30 @@
 											bind:value={settings['loyalty_points_redemption_rate']}
 										/>
 										<Button
-											class={iconBtn}
+											size="icon"
+											class="btn-soothe h-11 w-11 shrink-0"
+											aria-label={$t('common.save')}
 											onclick={() =>
 												saveSetting(
 													'loyalty_points_redemption_rate',
 													settings['loyalty_points_redemption_rate']
 												)}
 										>
-											<Save size={20} />
+											<Save size={16} />
 										</Button>
 									</div>
-									<p class="text-muted-foreground text-xs">
+									<p class="text-xs text-muted-foreground">
 										{$t('settings.business.redemption_value_hint')}
 									</p>
 								</div>
 							</div>
 
 							<!-- Tiers -->
-							<div class="space-y-6">
-								<h4 class="overline">
-									{$t('settings.business.tier_thresholds')}
-								</h4>
-								<div class="space-y-4">
-									<div class="space-y-2">
-										<Label class="text-foreground ml-1 font-medium"
-											>{$t('settings.business.silver_tier')}</Label
-										>
+							<div class="space-y-4 md:border-l md:border-border/70 md:pl-6">
+								<h3 class="overline">{$t('settings.business.tier_thresholds')}</h3>
+								<div class="space-y-3">
+									<div class="space-y-1.5">
+										<Label class="ml-1">{$t('settings.business.silver_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -524,18 +546,18 @@
 												bind:value={settings['loyalty_tier_silver']}
 											/>
 											<Button
-												class={iconBtn}
+												size="icon"
+												class="btn-soothe h-11 w-11 shrink-0"
+												aria-label={$t('common.save')}
 												onclick={() =>
 													saveSetting('loyalty_tier_silver', settings['loyalty_tier_silver'])}
 											>
-												<Save size={20} />
+												<Save size={16} />
 											</Button>
 										</div>
 									</div>
-									<div class="space-y-2">
-										<Label class="text-foreground ml-1 font-medium"
-											>{$t('settings.business.gold_tier')}</Label
-										>
+									<div class="space-y-1.5">
+										<Label class="ml-1">{$t('settings.business.gold_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -543,18 +565,18 @@
 												bind:value={settings['loyalty_tier_gold']}
 											/>
 											<Button
-												class={iconBtn}
+												size="icon"
+												class="btn-soothe h-11 w-11 shrink-0"
+												aria-label={$t('common.save')}
 												onclick={() =>
 													saveSetting('loyalty_tier_gold', settings['loyalty_tier_gold'])}
 											>
-												<Save size={20} />
+												<Save size={16} />
 											</Button>
 										</div>
 									</div>
-									<div class="space-y-2">
-										<Label class="text-foreground ml-1 font-medium"
-											>{$t('settings.business.platinum_tier')}</Label
-										>
+									<div class="space-y-1.5">
+										<Label class="ml-1">{$t('settings.business.platinum_tier')}</Label>
 										<div class="flex gap-3">
 											<Input
 												type="number"
@@ -562,11 +584,13 @@
 												bind:value={settings['loyalty_tier_platinum']}
 											/>
 											<Button
-												class={iconBtn}
+												size="icon"
+												class="btn-soothe h-11 w-11 shrink-0"
+												aria-label={$t('common.save')}
 												onclick={() =>
 													saveSetting('loyalty_tier_platinum', settings['loyalty_tier_platinum'])}
 											>
-												<Save size={20} />
+												<Save size={16} />
 											</Button>
 										</div>
 									</div>
@@ -574,126 +598,151 @@
 							</div>
 						</div>
 					</div>
+				</section>
 
-					<!-- Tax Settings -->
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-8 flex items-start gap-5">
-							<div class="bg-accent text-primary rounded-md p-4">
-								<Percent size={32} />
-							</div>
-							<div>
-								<h3 class="font-display text-foreground text-xl font-bold">
-									{$t('settings.business.financial_settings')}
-								</h3>
-								<p class="text-muted-foreground">{$t('settings.business.financial_settings_desc')}</p>
-							</div>
-						</div>
-
-						<div class="max-w-xl space-y-6">
-							<div class="space-y-3">
-								<Label class="text-foreground ml-1 flex items-center gap-1 font-medium">
-									{$t('settings.business.default_tax_rate')}
-									<HelpTip text="Default tax percentage applied to sales at checkout. Enter 5 for 5%." />
-								</Label>
-								<div class="flex gap-3">
-									<Input
-										type="number"
-										step="0.01"
-										class="{inputClass} num-mono"
-										bind:value={settings['tax_rate_percentage']}
-									/>
-									<Button
-										class="{saveBtn} px-6"
-										onclick={() =>
-											saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
-									>
-										<Save size={20} class="mr-2" />
-										{$t('common.save')}
-									</Button>
-								</div>
-								<p class="text-muted-foreground text-xs">
-									{$t('settings.business.default_tax_rate_hint')}
+				<!-- Tax Settings -->
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3.5">
+							<span
+								class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Percent size={18} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.business.financial_settings')}</h2>
+								<p class="text-sm text-muted-foreground">
+									{$t('settings.business.financial_settings_desc')}
 								</p>
 							</div>
 						</div>
 					</div>
-				</div>
-			</Tabs.Content>
 
-			<!-- Security / RBAC -->
-			<Tabs.Content value="security" class="pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="overflow-hidden rounded-lg">
-					<RoleManager />
-				</div>
-			</Tabs.Content>
-
-			<!-- Policies -->
-			<Tabs.Content value="policies" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-6 flex items-center gap-4">
-							<div class="bg-accent text-primary rounded-md p-3">
-								<Lock size={24} />
+					<div class="panel-body">
+						<div class="max-w-xl space-y-2">
+							<Label class="ml-1 flex items-center gap-1.5">
+								{$t('settings.business.default_tax_rate')}
+								<HelpTip
+									text="Default tax percentage applied to sales at checkout. Enter 5 for 5%."
+								/>
+							</Label>
+							<div class="flex gap-3">
+								<Input
+									type="number"
+									step="0.01"
+									class="{inputClass} num-mono"
+									bind:value={settings['tax_rate_percentage']}
+								/>
+								<Button
+									class="btn-soothe h-11 shrink-0 px-5"
+									onclick={() =>
+										saveSetting('tax_rate_percentage', settings['tax_rate_percentage'])}
+								>
+									<Save size={16} />
+									{$t('common.save')}
+								</Button>
 							</div>
-							<h3 class="font-display text-foreground text-lg font-bold">
-								{$t('settings.policies.privacy_policy')}
-							</h3>
+							<p class="text-xs text-muted-foreground">
+								{$t('settings.business.default_tax_rate_hint')}
+							</p>
 						</div>
+					</div>
+				</section>
+			</div>
+		</Tabs.Content>
+
+		<!-- Security / RBAC -->
+		<Tabs.Content value="security" class="pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }}>
+				<RoleManager />
+			</div>
+		</Tabs.Content>
+
+		<!-- Policies -->
+		<Tabs.Content value="policies" class="space-y-4 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-4">
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3">
+							<span
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Lock size={16} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.policies.privacy_policy')}</h2>
+								<p class="text-sm text-muted-foreground">Published on the customer storefront.</p>
+							</div>
+						</div>
+					</div>
+					<div class="panel-body space-y-4">
 						<Textarea
-							class="liquid-textarea text-foreground min-h-[200px] rounded-md p-6 leading-relaxed placeholder:text-muted-foreground"
+							class="min-h-[200px] rounded-md text-sm leading-relaxed"
 							placeholder={$t('settings.policies.privacy_policy_placeholder')}
 							bind:value={settings['privacy_policy']}
 						/>
-						<div class="mt-4 flex justify-end">
+						<div class="flex justify-end">
 							<Button
-								class="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
+								class="btn-soothe h-10 px-4"
 								onclick={() => saveSetting('privacy_policy', settings['privacy_policy'])}
 							>
-								<Save size={18} class="mr-2" />
+								<Save size={16} />
 								{$t('settings.policies.save_policy')}
 							</Button>
 						</div>
 					</div>
+				</section>
 
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-6 flex items-center gap-4">
-							<div class="bg-accent text-primary rounded-md p-3">
-								<LayoutTemplate size={24} />
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3">
+							<span
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<LayoutTemplate size={16} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.policies.terms_of_service')}</h2>
+								<p class="text-sm text-muted-foreground">Shown at checkout and on invoices.</p>
 							</div>
-							<h3 class="font-display text-foreground text-lg font-bold">
-								{$t('settings.policies.terms_of_service')}
-							</h3>
 						</div>
+					</div>
+					<div class="panel-body space-y-4">
 						<Textarea
-							class="liquid-textarea text-foreground min-h-[200px] rounded-md p-6 leading-relaxed placeholder:text-muted-foreground"
+							class="min-h-[200px] rounded-md text-sm leading-relaxed"
 							placeholder={$t('settings.policies.terms_of_service_placeholder')}
 							bind:value={settings['terms_of_service']}
 						/>
-						<div class="mt-4 flex justify-end">
+						<div class="flex justify-end">
 							<Button
-								class="bg-primary text-primary-foreground rounded-md font-medium hover:bg-primary/90"
+								class="btn-soothe h-10 px-4"
 								onclick={() => saveSetting('terms_of_service', settings['terms_of_service'])}
 							>
-								<Save size={18} class="mr-2" />
+								<Save size={16} />
 								{$t('settings.policies.save_terms')}
 							</Button>
 						</div>
 					</div>
+				</section>
 
-					<!-- Return Policy Settings -->
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-6 flex items-center gap-4">
-							<div class="bg-accent text-primary rounded-md p-3">
-								<Clock size={24} />
-							</div>
-							<h3 class="font-display text-foreground text-lg font-bold">
-								{$t('settings.policies.return_policy')}
-							</h3>
-						</div>
-						<div class="max-w-xl space-y-3">
-							<Label class="text-foreground ml-1 font-medium"
-								>{$t('settings.policies.return_window')}</Label
+				<!-- Return Policy Settings -->
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3">
+							<span
+								class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
 							>
+								<Clock size={16} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.policies.return_policy')}</h2>
+								<p class="text-sm text-muted-foreground">Applies to all new return requests.</p>
+							</div>
+						</div>
+					</div>
+					<div class="panel-body">
+						<div class="max-w-xl space-y-2">
+							<Label class="ml-1">{$t('settings.policies.return_window')}</Label>
 							<div class="flex gap-3">
 								<Input
 									type="number"
@@ -702,109 +751,106 @@
 									placeholder="e.g. 30"
 								/>
 								<Button
-									class="{saveBtn} px-6"
+									class="btn-soothe h-11 shrink-0 px-5"
 									onclick={() => saveSetting('return_window_days', settings['return_window_days'])}
 								>
-									<Save size={20} class="mr-2" />
+									<Save size={16} />
 									{$t('common.save')}
 								</Button>
 							</div>
-							<p class="text-muted-foreground text-xs">
+							<p class="text-xs text-muted-foreground">
 								{$t('settings.policies.return_window_hint')}
 							</p>
 						</div>
 					</div>
-				</div>
-			</Tabs.Content>
+				</section>
+			</div>
+		</Tabs.Content>
 
-			<!-- System & AI -->
-			<Tabs.Content value="system" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-8 flex items-start gap-5">
-							<div class="bg-accent text-primary rounded-md p-4">
-								<Zap size={32} />
-							</div>
-							<div>
-								<h3 class="font-display text-foreground text-xl font-bold">
-									{$t('settings.system.ai_system')}
-								</h3>
-								<p class="text-muted-foreground">
-									{$t('settings.system.ai_system_desc')}
-								</p>
-							</div>
-						</div>
-
-						<div class="max-w-xl space-y-6">
-							<div class="space-y-3">
-								<Label class="text-foreground ml-1 font-medium"
-									>{$t('settings.system.wake_up_time')}</Label
-								>
-								<div class="flex gap-3">
-									<Input
-										type="time"
-										class="{inputClass} num-mono"
-										bind:value={settings['ai_wake_up_time']}
-									/>
-									<Button
-										class="{saveBtn} px-6"
-										onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
-									>
-										<Save size={20} class="mr-2" />
-										{$t('common.save')}
-									</Button>
-								</div>
-								<p class="text-muted-foreground text-xs">
-									{$t('settings.system.wake_up_time_hint')}
-								</p>
+		<!-- System & AI -->
+		<Tabs.Content value="system" class="space-y-4 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-4">
+				<section class="panel overflow-hidden">
+					<div class="panel-header items-start">
+						<div class="flex items-start gap-3.5">
+							<span
+								class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Zap size={18} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">{$t('settings.system.ai_system')}</h2>
+								<p class="text-sm text-muted-foreground">{$t('settings.system.ai_system_desc')}</p>
 							</div>
 						</div>
 					</div>
-				</div>
-			</Tabs.Content>
 
-			<!-- Notifications -->
-			<Tabs.Content value="notifications" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<div class="liquid-panel rounded-lg p-8">
-						<div class="mb-8 flex items-start justify-between gap-5">
-							<div class="flex items-start gap-5">
-								<div class="bg-accent text-primary rounded-md p-4">
-									<Bell size={32} />
-								</div>
-								<div>
-									<h3 class="font-display text-foreground text-xl font-bold">
-										Notification Subscriptions
-									</h3>
-									<p class="text-muted-foreground">
-										Choose which alert types you want to receive notifications for.
-									</p>
-								</div>
-							</div>
-							{#if auth.hasPermission('notifications.broadcast')}
+					<div class="panel-body">
+						<div class="max-w-xl space-y-2">
+							<Label class="ml-1">{$t('settings.system.wake_up_time')}</Label>
+							<div class="flex gap-3">
+								<Input
+									type="time"
+									class="{inputClass} num-mono"
+									bind:value={settings['ai_wake_up_time']}
+								/>
 								<Button
-									class="bg-primary text-primary-foreground rounded-md px-5 font-medium hover:bg-primary/90"
-									onclick={() => (broadcastOpen = true)}
+									class="btn-soothe h-11 shrink-0 px-5"
+									onclick={() => saveSetting('ai_wake_up_time', settings['ai_wake_up_time'])}
 								>
-									<Megaphone size={18} class="mr-2" />
-									Broadcast
+									<Save size={16} />
+									{$t('common.save')}
 								</Button>
-							{/if}
+							</div>
+							<p class="text-xs text-muted-foreground">
+								{$t('settings.system.wake_up_time_hint')}
+							</p>
 						</div>
+					</div>
+				</section>
+			</div>
+		</Tabs.Content>
 
+		<!-- Notifications -->
+		<Tabs.Content value="notifications" class="space-y-4 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-4">
+				<section class="panel overflow-hidden">
+					<div class="panel-header flex-wrap items-start">
+						<div class="flex items-start gap-3.5">
+							<span
+								class="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-accent text-accent-foreground ring-1 ring-accent-foreground/10"
+							>
+								<Bell size={18} />
+							</span>
+							<div class="space-y-0.5">
+								<h2 class="section-title">Notification Subscriptions</h2>
+								<p class="text-sm text-muted-foreground">
+									Choose which alert types you want to receive notifications for.
+								</p>
+							</div>
+						</div>
+						{#if auth.hasPermission('notifications.broadcast')}
+							<Button class="btn-soothe h-10 px-4" onclick={() => (broadcastOpen = true)}>
+								<Megaphone size={16} />
+								Broadcast
+							</Button>
+						{/if}
+					</div>
+
+					<div class="panel-body">
 						{#if subscriptionsLoading}
 							<div class="flex items-center justify-center py-12">
-								<Loader2 class="text-primary h-8 w-8 animate-spin" />
+								<Loader2 class="h-6 w-6 animate-spin text-primary" />
 							</div>
 						{:else}
-							<div class="grid gap-4 sm:grid-cols-2">
+							<div class="grid gap-3 sm:grid-cols-2">
 								{#each ALERT_TYPES as alertType}
 									<div
-										class="border-border bg-card hover:bg-muted/60 flex items-center justify-between rounded-md border px-5 py-4 shadow-xs transition-colors"
+										class="flex items-center justify-between gap-4 rounded-md border border-border/70 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/50"
 									>
-										<div>
-											<p class="text-foreground font-semibold">{alertType.label}</p>
-											<p class="text-muted-foreground num-mono text-xs">{alertType.value}</p>
+										<div class="min-w-0">
+											<p class="text-sm font-semibold text-foreground">{alertType.label}</p>
+											<p class="num-mono text-xs text-muted-foreground">{alertType.value}</p>
 										</div>
 										<Switch
 											checked={subscriptions[alertType.value] ?? true}
@@ -815,17 +861,17 @@
 							</div>
 						{/if}
 					</div>
-				</div>
-			</Tabs.Content>
-		</Tabs.Root>
-	</div>
+				</section>
+			</div>
+		</Tabs.Content>
+	</Tabs.Root>
 </div>
 
 <Dialog.Root bind:open={broadcastOpen}>
 	<Dialog.Content class="sm:max-w-md">
 		<Dialog.Header>
-			<Dialog.Title class="text-foreground flex items-center gap-2">
-				<Megaphone class="text-primary h-5 w-5" />
+			<Dialog.Title class="flex items-center gap-2">
+				<Megaphone class="h-5 w-5 text-primary" />
 				Broadcast Notification
 			</Dialog.Title>
 			<Dialog.Description>Send a notification to all users.</Dialog.Description>
@@ -853,11 +899,7 @@
 		</div>
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (broadcastOpen = false)}>Cancel</Button>
-			<Button
-				class="bg-primary text-primary-foreground hover:bg-primary/90"
-				onclick={sendBroadcast}
-				disabled={broadcastSending}
-			>
+			<Button class="btn-soothe" onclick={sendBroadcast} disabled={broadcastSending}>
 				{#if broadcastSending}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{:else}

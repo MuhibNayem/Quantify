@@ -11,6 +11,8 @@
 	import { Area, AreaChart, LinearGradient, PieChart, Tooltip } from 'layerchart';
 	import { curveMonotoneX } from 'd3-shape';
 
+	const user = $derived($auth.user);
+
 	let loading = $state(true);
 	const stats = $state({ products: 0, categories: 0, suppliers: 0, alerts: 0 });
 	let recentProducts = $state<Product[]>([]);
@@ -49,8 +51,7 @@
 
 	/* ── Count-up: animates 0 → target whenever target changes ── */
 	const reduceMotion =
-		typeof window !== 'undefined' &&
-		window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	function countUp(getTarget: () => number, duration = 900) {
 		let value = $state(0);
@@ -110,8 +111,7 @@
 		return chartSeries.map((value, i) => ({ day: i + 1, value: revealed ? value : 0 }));
 	});
 
-	const dayLabel = (day: number) =>
-		$t('dashboard.demand.day_label').replace('{day}', String(day));
+	const dayLabel = (day: number) => $t('dashboard.demand.day_label').replace('{day}', String(day));
 
 	/* ── Alert mix (donut) ── */
 	type Severity = 'critical' | 'warning' | 'info';
@@ -158,9 +158,7 @@
 		}
 		return out;
 	}
-	const demandSpark = $derived(
-		chartSeries.length ? sparkFromSeries(chartSeries) : sparkBars(7)
-	);
+	const demandSpark = $derived(chartSeries.length ? sparkFromSeries(chartSeries) : sparkBars(7));
 	const productsSpark = $derived(sparkBars(stats.products));
 	const alertsSpark = $derived(sparkBars(stats.alerts + 3));
 	const reorderSpark = $derived(sparkBars(suggestions.length + 5));
@@ -175,13 +173,31 @@
 	onMount(loadDashboard);
 </script>
 
-{#snippet kpiCard(label: string, value: string, bars: number[], deltaClass: string, deltaText: string, subText: string)}
-	<div class="liquid-hoverable group p-4 lg:p-5" data-animate="fade-up">
-		<p class="overline">{label}</p>
-		<div class="mt-3 flex items-end justify-between gap-3">
+{#snippet kpiCard(
+	label: string,
+	value: string,
+	bars: number[],
+	deltaClass: string,
+	deltaText: string,
+	subText: string
+)}
+	<div class="panel group p-5 lg:p-6" data-animate="fade-up">
+		<div class="flex items-center justify-between">
+			<p class="overline">{label}</p>
+			<span
+				class="inline-flex h-6 w-6 items-center justify-center rounded-md bg-accent text-accent-foreground"
+			>
+				<svg viewBox="0 0 12 12" class="h-3 w-3" fill="currentColor">
+					<circle cx="6" cy="6" r="2" />
+				</svg>
+			</span>
+		</div>
+		<div class="mt-4 flex items-end justify-between gap-3">
 			<div class="min-w-0">
-				<div class="kpi-num text-[1.75rem] lg:text-[2rem]">{value}</div>
-				<p class="mt-1.5 truncate text-xs">
+				<div class="kpi-num text-[1.95rem] lg:text-[2.2rem]">
+					{value}
+				</div>
+				<p class="mt-2 truncate text-xs">
 					<span class="font-semibold {deltaClass}">{deltaText}</span>
 					<span class="text-muted-foreground"> {subText}</span>
 				</p>
@@ -190,7 +206,7 @@
 				{#each bars as h, i}
 					<span
 						style="height:{h}%; transition-delay:{i * 20}ms"
-						class="transition-all duration-500 group-hover:bg-primary/60"
+						class="transition-all duration-500 group-hover:opacity-100"
 					></span>
 				{/each}
 			</div>
@@ -202,7 +218,7 @@
 	{#each Array(5) as _}
 		<tr>
 			<td colspan={cols} class="py-3">
-				<div class="bg-muted animate-pulse rounded-md px-3 py-2.5">&nbsp;</div>
+				<div class="animate-pulse rounded-md bg-muted px-3 py-2.5">&nbsp;</div>
 			</td>
 		</tr>
 	{/each}
@@ -210,7 +226,7 @@
 
 {#snippet emptyRow(cols: number, message: string)}
 	<tr>
-		<td colspan={cols} class="text-muted-foreground py-10 text-center text-sm">
+		<td colspan={cols} class="py-10 text-center text-sm text-muted-foreground">
 			{message}
 		</td>
 	</tr>
@@ -254,7 +270,14 @@
 {/snippet}
 
 {#snippet mixTooltip({ context }: { context: any })}
-	<Tooltip.Root {context} anchor="bottom-left" xOffset={12} yOffset={10} variant="none" class="ledger-tip">
+	<Tooltip.Root
+		{context}
+		anchor="bottom-left"
+		xOffset={12}
+		yOffset={10}
+		variant="none"
+		class="ledger-tip"
+	>
 		{#snippet children({ data })}
 			<p class="ledger-tip-label">
 				<span
@@ -271,35 +294,40 @@
 	</Tooltip.Root>
 {/snippet}
 
-<div class="mx-auto w-full max-w-7xl px-6 py-8">
+<div class="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
 	<!-- ── HEADER ── -->
-	<header class="flex flex-wrap items-end justify-between gap-4" data-animate="fade-up">
-		<div>
-			<h1 class="font-display text-2xl font-bold tracking-tight">Overview</h1>
-			<p class="text-muted-foreground mt-1 flex items-center gap-2 text-sm">
-				<span class="num">{formatDate(new Date())}</span>
-				<span class="bg-border inline-block h-3 w-px" aria-hidden="true"></span>
+	<header class="page-header" data-animate="fade-up">
+		<div class="min-w-0">
+			<div class="mb-3 flex items-center gap-2 overline">
 				<span class="live-dot" aria-hidden="true"></span>
-				<span class="text-success text-xs font-semibold tracking-wide uppercase">Live</span>
-			</p>
+				<span class="text-[0.6875rem] text-primary">Live · {formatDate(new Date())}</span>
+			</div>
+			<h1 class="page-title">
+				Good {(() => {
+					const h = new Date().getHours();
+					if (h < 5) return 'evening';
+					if (h < 12) return 'morning';
+					if (h < 18) return 'afternoon';
+					return 'evening';
+				})()}, {user?.FirstName ?? user?.Username?.split('@')[0] ?? 'there'}<span
+					class="text-primary">.</span
+				>
+			</h1>
+			<p class="page-sub">Here is what is moving across the business today.</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<Button
 				variant="secondary"
 				size="sm"
 				onclick={loadDashboard}
-				class="glass-button rounded-md text-muted-foreground hover:text-foreground"
+				class="h-9 px-4 text-[13px] font-medium"
 				title={$t('dashboard.refresh')}
 			>
-				<RefreshCcw class="h-4 w-4" />
+				<RefreshCcw class="h-3.5 w-3.5" />
 				{$t('dashboard.refresh')}
 			</Button>
-			<Button
-				href="/pos"
-				size="sm"
-				class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md bg-none shadow-xs"
-			>
-				<Plus class="h-4 w-4" />
+			<Button href="/pos" size="sm" class="btn-soothe h-9 px-4 text-[13px]">
+				<Plus class="h-3.5 w-3.5" />
 				New Sale
 			</Button>
 		</div>
@@ -309,10 +337,10 @@
 	<section class="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4" aria-label="Key metrics">
 		{#if loading}
 			{#each Array(4) as _}
-				<div class="liquid-panel space-y-3 p-4 lg:p-5">
-					<div class="bg-muted animate-pulse rounded-md h-3 w-24">&nbsp;</div>
-					<div class="bg-muted animate-pulse rounded-md h-8 w-20">&nbsp;</div>
-					<div class="bg-muted animate-pulse rounded-md h-3 w-28">&nbsp;</div>
+				<div class="panel space-y-3 p-5">
+					<div class="h-3 w-24 animate-pulse rounded-md bg-muted">&nbsp;</div>
+					<div class="h-8 w-20 animate-pulse rounded-md bg-muted">&nbsp;</div>
+					<div class="h-3 w-28 animate-pulse rounded-md bg-muted">&nbsp;</div>
 				</div>
 			{/each}
 		{:else}
@@ -361,11 +389,11 @@
 
 	<!-- ── DEMAND PULSE HERO ── -->
 	{#if auth.hasPermission('reports.sales')}
-		<section class="liquid-panel mt-4" data-animate="fade-up" aria-label="Demand pulse">
-			<div class="flex flex-wrap items-center justify-between gap-3 border-b border-[hsl(var(--border))] px-5 py-4">
+		<section class="panel mt-4 overflow-hidden" data-animate="fade-up" aria-label="Demand pulse">
+			<div class="panel-header flex-wrap">
 				<div>
 					<p class="overline">{$t('dashboard.demand.subtitle')}</p>
-					<h2 class="font-display mt-0.5 text-base font-semibold">
+					<h2 class="section-title mt-0.5">
 						{$t('dashboard.demand.title')}
 					</h2>
 				</div>
@@ -384,43 +412,49 @@
 				<div class="px-5 py-6">
 					<div class="flex flex-col gap-6 lg:flex-row lg:items-stretch">
 						<div class="shrink-0 space-y-3 lg:w-56">
-							<div class="bg-muted animate-pulse rounded-md h-3 w-24">&nbsp;</div>
-							<div class="bg-muted animate-pulse rounded-md h-10 w-36">&nbsp;</div>
-							<div class="bg-muted animate-pulse rounded-md h-3 w-28">&nbsp;</div>
+							<div class="h-3 w-24 animate-pulse rounded-md bg-muted">&nbsp;</div>
+							<div class="h-10 w-36 animate-pulse rounded-md bg-muted">&nbsp;</div>
+							<div class="h-3 w-28 animate-pulse rounded-md bg-muted">&nbsp;</div>
 						</div>
 						<div class="flex h-60 flex-1 items-end gap-2 sm:h-64 lg:h-72">
 							{#each [42, 68, 55, 80, 38, 72, 60, 88, 46, 76, 52, 84, 64, 70] as h}
-								<div class="bg-muted animate-pulse rounded-md flex-1" style="height:{h}%">&nbsp;</div>
+								<div class="flex-1 animate-pulse rounded-md bg-muted" style="height:{h}%">
+									&nbsp;
+								</div>
 							{/each}
 						</div>
 					</div>
 				</div>
 			{:else if chartSeries.length === 0}
-				<div class="text-muted-foreground flex h-60 flex-col items-center justify-center gap-2 text-sm sm:h-64">
+				<div
+					class="flex h-60 flex-col items-center justify-center gap-2 text-sm text-muted-foreground sm:h-64"
+				>
 					<ShoppingCart class="h-6 w-6 opacity-50" />
 					{$t('dashboard.procurement.no_data')}
 				</div>
 			{:else}
 				<div class="flex flex-col gap-6 px-5 py-6 lg:flex-row lg:items-stretch">
-					<div class="flex shrink-0 flex-row items-end justify-between gap-6 lg:w-56 lg:flex-col lg:items-start lg:justify-center">
+					<div
+						class="flex shrink-0 flex-row items-end justify-between gap-6 lg:w-56 lg:flex-col lg:items-start lg:justify-center"
+					>
 						<div>
 							<p class="overline">Total demand</p>
 							<div class="kpi-num mt-1.5 text-4xl lg:text-[2.75rem]">
 								{demandCount().toLocaleString()}
 							</div>
-							<p class="text-muted-foreground mt-1.5 text-xs">
+							<p class="mt-1.5 text-xs text-muted-foreground">
 								units · last <span class="num font-semibold">{chartSeries.length}</span> days
 							</p>
 						</div>
-						<div class="w-full space-y-1.5 border-t border-[hsl(var(--border))] pt-2.5 lg:mt-2">
+						<div class="w-full space-y-1.5 border-t border-border/80 pt-2.5 lg:mt-2">
 							<div class="flex items-baseline justify-between gap-4">
-								<span class="text-muted-foreground text-xs">Peak day</span>
+								<span class="text-xs text-muted-foreground">Peak day</span>
 								<span class="num-mono text-xs font-semibold">
 									{dayLabel(peakDay)} · {chartPeak.toLocaleString()}
 								</span>
 							</div>
 							<div class="flex items-baseline justify-between gap-4">
-								<span class="text-muted-foreground text-xs">Daily average</span>
+								<span class="text-xs text-muted-foreground">Daily average</span>
 								<span class="num-mono text-xs font-semibold">
 									{Math.round(chartAvg).toLocaleString()}
 								</span>
@@ -440,10 +474,15 @@
 							yDomain={[0, chartPeak * 1.12]}
 							padding={{ top: 16, right: 8, bottom: 4, left: 8 }}
 							axis="x"
-							grid={{ y: { stroke: 'hsl(var(--border))', dashArray: '2 4' } }}
+							grid={{ y: { stroke: 'hsl(var(--muted) / 0.6)', dashArray: '2 4' } }}
 							highlight={{
 								lines: { stroke: 'hsl(var(--primary) / 0.4)', dashArray: '3 3' },
-								points: { r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--card))', strokeWidth: 2 }
+								points: {
+									r: 4,
+									fill: 'hsl(var(--primary))',
+									stroke: 'hsl(var(--card))',
+									strokeWidth: 2
+								}
 							}}
 							tooltip={demandTooltip}
 							marks={demandMarks}
@@ -457,7 +496,7 @@
 							}}
 							class="h-60 w-full sm:h-64 lg:h-72"
 						/>
-						<div class="text-muted-foreground mt-2 flex justify-between text-[0.6875rem]">
+						<div class="mt-2 flex justify-between text-[0.6875rem] text-muted-foreground">
 							<span>{dayLabel(1)}</span>
 							<span class="hidden sm:inline">{$t('dashboard.demand.chart_hint')}</span>
 							<span>{dayLabel(chartSeries.length)}</span>
@@ -471,11 +510,11 @@
 	<!-- ── ATTENTION ROW: alerts + mix + fresh inventory ── -->
 	<section class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-3">
 		{#if auth.hasPermission('alerts.view')}
-			<div class="liquid-panel flex flex-col" data-animate="fade-up">
-				<div class="flex items-center justify-between gap-3 border-b border-[hsl(var(--border))] px-5 py-4">
+			<div class="panel flex flex-col" data-animate="fade-up">
+				<div class="panel-header flex-wrap">
 					<div>
 						<p class="overline">{$t('dashboard.priority_alerts.subtitle')}</p>
-						<h2 class="font-display mt-0.5 text-base font-semibold">Needs attention</h2>
+						<h2 class="section-title mt-0.5">Needs attention</h2>
 					</div>
 					{#if !loading && stats.alerts > 0}
 						<span class="badge-danger num">{stats.alerts}</span>
@@ -485,23 +524,27 @@
 					{#if loading}
 						<div class="space-y-2 p-4">
 							{#each Array(5) as _}
-								<div class="bg-muted animate-pulse rounded-md h-12">&nbsp;</div>
+								<div class="h-12 animate-pulse rounded-md bg-muted">&nbsp;</div>
 							{/each}
 						</div>
 					{:else if recentAlerts.length === 0}
-						<div class="text-muted-foreground flex h-full min-h-40 flex-col items-center justify-center gap-2 p-6 text-sm">
-							<AlertTriangle class="text-success h-6 w-6 opacity-60" />
+						<div
+							class="flex h-full min-h-40 flex-col items-center justify-center gap-2 p-6 text-sm text-muted-foreground"
+						>
+							<AlertTriangle class="h-6 w-6 text-success opacity-60" />
 							{$t('dashboard.priority_alerts.no_data')}
 						</div>
 					{:else}
-						<ul class="divide-y divide-[hsl(var(--border)/0.7)]">
+						<ul class="space-y-1 px-2 py-2">
 							{#each recentAlerts as item}
-								<li class="hover:bg-muted/40 flex items-center justify-between gap-3 px-5 py-3 transition-colors">
+								<li
+									class="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-muted/50"
+								>
 									<div class="min-w-0">
 										<p class="truncate text-sm font-medium">
 											{item.Product?.Name ?? item.Product?.SKU ?? `#${item.ProductID}`}
 										</p>
-										<p class="text-muted-foreground num-mono truncate text-xs">
+										<p class="num-mono truncate text-xs text-muted-foreground">
 											{item.Product?.SKU ?? item.ProductID} · {timeAgo(item.TriggeredAt)}
 										</p>
 									</div>
@@ -513,28 +556,34 @@
 				</div>
 				<a
 					href="/alerts"
-					class="text-primary hover:bg-accent border-t border-[hsl(var(--border))] px-5 py-2.5 text-center text-xs font-semibold transition-colors"
+					class="mx-2 mt-1 mb-2 block rounded-xl bg-muted/40 px-5 py-2.5 text-center text-xs font-semibold text-primary transition-colors hover:bg-muted"
 				>
 					View all alerts →
 				</a>
 			</div>
 
-			<div class="liquid-panel flex flex-col" data-animate="fade-up">
-				<div class="border-b border-[hsl(var(--border))] px-5 py-4">
-					<p class="overline">By severity</p>
-					<h2 class="font-display mt-0.5 text-base font-semibold">Alert mix</h2>
+			<div class="panel flex flex-col" data-animate="fade-up">
+				<div class="panel-header">
+					<div>
+						<p class="overline">By severity</p>
+						<h2 class="section-title mt-0.5">Alert mix</h2>
+					</div>
 				</div>
 				<div class="flex flex-1 flex-col justify-center px-5 py-5">
 					{#if loading}
-						<div class="bg-muted mx-auto aspect-square w-full max-w-40 animate-pulse rounded-full">&nbsp;</div>
+						<div class="mx-auto aspect-square w-full max-w-40 animate-pulse rounded-full bg-muted">
+							&nbsp;
+						</div>
 						<div class="mx-auto mt-4 w-full max-w-44 space-y-2">
 							{#each Array(3) as _}
-								<div class="bg-muted animate-pulse rounded-md h-4">&nbsp;</div>
+								<div class="h-4 animate-pulse rounded-md bg-muted">&nbsp;</div>
 							{/each}
 						</div>
 					{:else if recentAlerts.length === 0}
-						<div class="text-muted-foreground flex min-h-40 flex-col items-center justify-center gap-2 text-sm">
-							<AlertTriangle class="text-success h-6 w-6 opacity-60" />
+						<div
+							class="flex min-h-40 flex-col items-center justify-center gap-2 text-sm text-muted-foreground"
+						>
+							<AlertTriangle class="h-6 w-6 text-success opacity-60" />
 							{$t('dashboard.priority_alerts.no_data')}
 						</div>
 					{:else}
@@ -545,11 +594,7 @@
 								value="value"
 								label="label"
 								cDomain={['critical', 'warning', 'info']}
-								cRange={[
-									SEVERITY_COLORS.critical,
-									SEVERITY_COLORS.warning,
-									SEVERITY_COLORS.info
-								]}
+								cRange={[SEVERITY_COLORS.critical, SEVERITY_COLORS.warning, SEVERITY_COLORS.info]}
 								innerRadius={0.72}
 								padAngle={0.03}
 								cornerRadius={2}
@@ -557,7 +602,9 @@
 								tooltip={mixTooltip}
 								class="absolute inset-0"
 							/>
-							<div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+							<div
+								class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"
+							>
 								<span class="kpi-num text-2xl">{mixTotal}</span>
 								<span class="overline">alerts</span>
 							</div>
@@ -567,7 +614,7 @@
 								<li>
 									<button
 										type="button"
-										class="hover:bg-muted/60 flex w-full items-center gap-2 rounded-md px-2 py-1 transition-colors"
+										class="flex w-full items-center gap-2 rounded-md px-2 py-1 transition-colors hover:bg-muted/60"
 										onpointerenter={() => highlightSeverity(s.key)}
 										onpointerleave={() => highlightSeverity(null)}
 										onfocus={() => highlightSeverity(s.key)}
@@ -590,12 +637,14 @@
 		{/if}
 
 		{#if auth.hasPermission('products.read')}
-			<div class="liquid-panel overflow-hidden" data-animate="fade-up">
-				<div class="border-b border-[hsl(var(--border))] px-5 py-4">
-					<p class="overline">{$t('dashboard.fresh_inventory.subtitle')}</p>
-					<h2 class="font-display mt-0.5 text-base font-semibold">
-						{$t('dashboard.fresh_inventory.title')}
-					</h2>
+			<div class="panel overflow-hidden" data-animate="fade-up">
+				<div class="panel-header">
+					<div>
+						<p class="overline">{$t('dashboard.fresh_inventory.subtitle')}</p>
+						<h2 class="section-title mt-0.5">
+							{$t('dashboard.fresh_inventory.title')}
+						</h2>
+					</div>
 				</div>
 				<div class="custom-scrollbar max-h-80 overflow-y-auto">
 					<table class="ledger-table">
@@ -614,10 +663,15 @@
 							{:else}
 								{#each recentProducts as product}
 									<tr>
-										<td class="num-mono text-primary text-[0.8125rem] font-medium">{product.SKU}</td>
+										<td class="num-mono text-[0.8125rem] font-medium text-primary">{product.SKU}</td
+										>
 										<td class="max-w-48 truncate">{product.Name}</td>
 										<td class="text-right">
-											<span class={(product.Status ?? 'active').toLowerCase() === 'active' ? 'badge-success' : 'badge-neutral'}>
+											<span
+												class={(product.Status ?? 'active').toLowerCase() === 'active'
+													? 'badge-success'
+													: 'badge-neutral'}
+											>
 												{product.Status ?? 'active'}
 											</span>
 										</td>
@@ -633,12 +687,14 @@
 
 	<!-- ── PROCUREMENT ── -->
 	{#if auth.hasPermission('replenishment.read')}
-		<section class="liquid-panel mt-4 overflow-hidden" data-animate="fade-up">
-			<div class="border-b border-[hsl(var(--border))] px-5 py-4">
-				<p class="overline">{$t('dashboard.procurement.subtitle')}</p>
-				<h2 class="font-display mt-0.5 text-base font-semibold">
-					{$t('dashboard.procurement.title')}
-				</h2>
+		<section class="panel mt-4 overflow-hidden" data-animate="fade-up">
+			<div class="panel-header">
+				<div>
+					<p class="overline">{$t('dashboard.procurement.subtitle')}</p>
+					<h2 class="section-title mt-0.5">
+						{$t('dashboard.procurement.title')}
+					</h2>
+				</div>
 			</div>
 			<div class="custom-scrollbar max-h-96 overflow-y-auto">
 				<table class="ledger-table">
@@ -663,10 +719,16 @@
 										{s.Product?.Name ?? `Product ${s.ProductID}`}
 									</td>
 									<td class="col-num">{s.CurrentStock ?? '—'}</td>
-									<td class="col-num text-primary font-semibold">{s.SuggestedOrderQuantity ?? '—'}</td>
-									<td class="text-muted-foreground max-w-32 truncate">{s.Supplier?.Name ?? s.SupplierID}</td>
+									<td class="col-num font-semibold text-primary"
+										>{s.SuggestedOrderQuantity ?? '—'}</td
+									>
+									<td class="max-w-32 truncate text-muted-foreground"
+										>{s.Supplier?.Name ?? s.SupplierID}</td
+									>
 									<td class="text-right">
-										<span class="badge-info">{s.Status ?? $t('dashboard.procurement.ready_to_order')}</span>
+										<span class="badge-info"
+											>{s.Status ?? $t('dashboard.procurement.ready_to_order')}</span
+										>
 									</td>
 								</tr>
 							{/each}

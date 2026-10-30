@@ -9,6 +9,6 @@
 	}: { children: Snippet; className?: string; [key: string]: any } = $props();
 </script>
 
-<div class={cn('liquid-panel relative overflow-hidden rounded-lg p-6', className)} {...rest}>
+<div class={cn('panel relative overflow-hidden p-6', className)} {...rest}>
 	{@render children()}
 </div>

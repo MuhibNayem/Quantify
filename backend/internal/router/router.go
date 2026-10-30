@@ -16,6 +16,13 @@ import (
 
 func SetupRouter(c *app.Container) *gin.Engine {
 	r := gin.Default()
+	if len(c.Cfg.TrustedProxies) > 0 {
+		_ = r.SetTrustedProxies(c.Cfg.TrustedProxies)
+	} else {
+		// Do not trust X-Forwarded-For unless explicitly configured; this keeps
+		// rate limiting keyed on the real socket address by default.
+		_ = r.SetTrustedProxies(nil)
+	}
 
 	corsConfig := cors.Config{
 		AllowOrigins:     c.Cfg.CORSAllowedOrigins,
@@ -32,6 +39,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	r.Use(middleware.Metrics())
 	r.Use(cors.New(corsConfig))
 	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.RateLimit(c.Cfg.RateLimitRequests, c.Cfg.RateLimitWindow, "api"))
 	r.Use(middleware.ErrorHandler())
 
 	roleRepo := c.Roles
@@ -54,6 +62,7 @@ func SetupRouter(c *app.Container) *gin.Engine {
 	groups.RegisterBarcode(api, c, roleRepo)
 	groups.RegisterReplenishment(api, c, roleRepo)
 	groups.RegisterSales(api, c, roleRepo)
+	groups.RegisterCashDrawer(api, c, roleRepo)
 	groups.RegisterReturns(api, c, roleRepo)
 	groups.RegisterReports(api, c, roleRepo)
 	groups.RegisterFinance(api, c, roleRepo)

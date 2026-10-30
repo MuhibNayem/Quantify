@@ -43,7 +43,15 @@ func setupTestDB() *gorm.DB {
 		&domain.Role{},
 		&domain.Permission{},
 		&domain.RolePermission{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
+		&domain.AccountsReceivable{},
+		&domain.Payment{},
+		&domain.PaymentAllocation{},
+		&domain.Promotion{},
 	)
+	_ = repository.SeedChartOfAccounts(db)
 	return db
 }
 
@@ -52,7 +60,8 @@ func TestRefundReturnFlow(t *testing.T) {
 	settingsRepo := repository.NewSettingsRepository(db)
 	settingsService := services.NewSettingsService(settingsRepo)
 
-	salesHandler := handlers.NewSalesHandler(db, settingsService, nil, nil)
+	salesService := services.NewSalesService(db, settingsService, nil)
+	salesHandler := handlers.NewSalesHandler(db, settingsService, nil, salesService)
 
 	hub := websocket.NewHub()
 	go hub.Run()
@@ -108,7 +117,7 @@ func TestRefundReturnFlow(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusCreated, w.Code)
+	assert.Equal(t, http.StatusCreated, w.Code, w.Body.String())
 
 	// Verify Order Created
 	var order domain.Order

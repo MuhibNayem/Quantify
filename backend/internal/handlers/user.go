@@ -38,6 +38,13 @@ func resolveRefreshTTL(cfg *config.Config) time.Duration {
 	return cfg.RefreshTokenTTL
 }
 
+func (h *UserHandler) secureCookies() bool {
+	if h.cfg == nil {
+		return false
+	}
+	return h.secureCookies()
+}
+
 // ListUsers godoc
 // @Summary List users with optional status and search filters
 // @Description Retrieves all users, optionally filtered by status (approved/pending) and search query (username or ID). Supports pagination.
@@ -250,14 +257,66 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 		"permissions": len(permissions),
 	}).Debug("LoginUser resolved role permissions")
 
+	auth.SetSessionCookies(c, accessToken, refreshToken, csrfToken, resolveRefreshTTL(h.cfg), h.secureCookies())
+
 	user.Password = ""
+	// Tokens live only in httpOnly cookies; the SPA receives identity and the
+	// non-secret CSRF token needed for the double-submit header.
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-		"csrfToken":    csrfToken,
-		"user":         user,
-		"permissions":  permissions,
+		"csrfToken":   csrfToken,
+		"user":        user,
+		"permissions": permissions,
+		"expiresIn":   int(auth.AccessTokenTTL.Seconds()),
 	})
+}
+
+// GetCurrentUser godoc
+// @Summary Get the authenticated user
+// @Description Returns the current user and effective permissions. Used by the
+// SPA to validate its cookie session after a reload.
+// @Tags users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /users/me [get]
+func (h *UserHandler) GetCurrentUser(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.Error(appErrors.NewAppError("Authenticated user not found", http.StatusUnauthorized, nil))
+		return
+	}
+	uid, ok := userID.(uint)
+	if !ok {
+		c.Error(appErrors.NewAppError("Invalid user context", http.StatusInternalServerError, nil))
+		return
+	}
+
+	user, err := h.userRepo.GetUserByID(strconv.FormatUint(uint64(uid), 10))
+	if err != nil {
+		c.Error(appErrors.NewAppError("User not found", http.StatusUnauthorized, err))
+		return
+	}
+
+	permissions := make([]string, 0, len(user.Role.Permissions))
+	for _, p := range user.Role.Permissions {
+		permissions = append(permissions, p.Name)
+	}
+
+	// Ensure the SPA always has a usable CSRF token, even when the API and SPA
+	// are on different subdomains and the cookie is not JS-readable.
+	csrfToken := auth.CSRFTokenFromRequest(c)
+	if csrfToken == "" {
+		csrfToken, _ = auth.GenerateCSRFToken(uid)
+	} else if valid, _ := auth.ValidateCSRFToken(csrfToken, uid); !valid {
+		csrfToken, _ = auth.GenerateCSRFToken(uid)
+	}
+	if csrfToken != "" {
+		auth.SetCSRFCookie(c, csrfToken, h.secureCookies())
+	}
+
+	user.Password = ""
+	c.JSON(http.StatusOK, gin.H{"user": user, "permissions": permissions, "csrfToken": csrfToken})
 }
 
 // RefreshToken godoc
@@ -275,13 +334,21 @@ func (h *UserHandler) LoginUser(c *gin.Context) {
 // @Router /users/refresh-token [post]
 func (h *UserHandler) RefreshToken(c *gin.Context) {
 	var req requests.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
+			return
+		}
+	}
+
+	refreshToken := auth.RefreshTokenFromRequest(c, req.RefreshToken)
+	if refreshToken == "" {
+		c.Error(appErrors.NewAppError("Refresh token required", http.StatusUnauthorized, nil))
 		return
 	}
 
 	// Check if refresh token is in Redis
-	userID, err := repository.GetCache("refresh_token:" + req.RefreshToken)
+	userID, err := repository.GetCache("refresh_token:" + refreshToken)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to check refresh token", http.StatusInternalServerError, err))
 		return
@@ -292,7 +359,7 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 	}
 
 	// Invalidate old refresh token
-	if err := repository.DeleteCache("refresh_token:" + req.RefreshToken); err != nil {
+	if err := repository.DeleteCache("refresh_token:" + refreshToken); err != nil {
 		c.Error(appErrors.NewAppError("Failed to invalidate old refresh token", http.StatusInternalServerError, err))
 		return
 	}
@@ -321,16 +388,19 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
+	if oldCSRF := auth.CSRFTokenFromRequest(c); oldCSRF != "" {
+		_ = auth.InvalidateCSRFToken(oldCSRF)
+	}
 	csrfToken, err := auth.GenerateCSRFToken(user.ID)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Failed to generate CSRF token", http.StatusInternalServerError, err))
 		return
 	}
 
+	auth.SetSessionCookies(c, accessToken, refreshToken, csrfToken, resolveRefreshTTL(h.cfg), h.secureCookies())
 	c.JSON(http.StatusOK, gin.H{
-		"accessToken":  accessToken,
-		"refreshToken": refreshToken,
-		"csrfToken":    csrfToken,
+		"csrfToken": csrfToken,
+		"expiresIn": int(auth.AccessTokenTTL.Seconds()),
 	})
 }
 
@@ -348,34 +418,30 @@ func (h *UserHandler) RefreshToken(c *gin.Context) {
 // @Router /users/logout [post]
 func (h *UserHandler) LogoutUser(c *gin.Context) {
 	var req requests.RefreshTokenRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.Error(appErrors.NewAppError("Invalid request payload", http.StatusBadRequest, err))
-		return
+	if c.Request.ContentLength > 0 {
+		_ = c.ShouldBindJSON(&req) // body is optional; cookies carry the session
 	}
 
-	// Invalidate refresh token
-	if err := repository.DeleteCache("refresh_token:" + req.RefreshToken); err != nil {
-		c.Error(appErrors.NewAppError("Failed to invalidate refresh token", http.StatusInternalServerError, err))
-		return
-	}
-
-	// Invalidate access token
-	authHeader := c.GetHeader("Authorization")
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-	claims, err := auth.GetTokenClaims(tokenString)
-	if err == nil && claims.ID != "" {
-		if err := repository.DeleteCache("access_token:" + claims.ID); err != nil {
-			// Even if the access token is already expired, we should proceed with logout
+	// Invalidate refresh token (cookie or explicit body token).
+	if refreshToken := auth.RefreshTokenFromRequest(c, req.RefreshToken); refreshToken != "" {
+		if err := repository.DeleteCache("refresh_token:" + refreshToken); err != nil {
+			c.Error(appErrors.NewAppError("Failed to invalidate refresh token", http.StatusInternalServerError, err))
+			return
 		}
 	}
 
-	csrfToken := c.GetHeader("X-CSRF-Token")
-	if err := auth.InvalidateCSRFToken(csrfToken); err != nil {
-		c.Error(appErrors.NewAppError("Failed to invalidate CSRF token", http.StatusInternalServerError, err))
-		return
+	// Invalidate access token (header or cookie).
+	if tokenString := auth.AccessTokenFromRequest(c); tokenString != "" {
+		if claims, err := auth.GetTokenClaims(tokenString); err == nil && claims.ID != "" {
+			_ = repository.DeleteCache("access_token:" + claims.ID)
+		}
 	}
 
+	if csrfToken := auth.CSRFTokenFromRequest(c); csrfToken != "" {
+		_ = auth.InvalidateCSRFToken(csrfToken)
+	}
+
+	auth.ClearSessionCookies(c, h.secureCookies())
 	c.JSON(http.StatusOK, gin.H{"message": "Logout successful"})
 }
 

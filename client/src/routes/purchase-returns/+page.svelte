@@ -229,51 +229,45 @@
 	}
 </script>
 
-<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
-	<div class="mx-auto max-w-7xl space-y-8">
-		<div
-			class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-			data-animate="fade-up"
-		>
-			<div class="space-y-1">
-				<p class="overline">Procurement · Vendor Returns</p>
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">
-					Purchase Returns
-				</h1>
-				<p class="text-muted-foreground">Manage supplier returns and refunds</p>
-			</div>
-			<Button
-				class="bg-primary text-primary-foreground gap-2 rounded-md shadow-md hover:bg-primary/90"
-				onclick={openCreateModal}
-			>
-				<Plus class="h-4 w-4" />
-				New Return
-			</Button>
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="overline">Procurement · Vendor Returns</p>
+			<h1 class="page-title mt-1">Purchase Returns</h1>
+			<p class="page-sub">Manage supplier returns and refunds</p>
 		</div>
+		<Button class="btn-soothe" onclick={openCreateModal}>
+			<Plus class="h-4 w-4" />
+			New Return
+		</Button>
+	</header>
 
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 md:flex-row md:items-center"
-			data-animate="fade-up"
-			style="animation-delay: 80ms;"
-		>
-			<div class="w-48">
-				<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
-			</div>
-			<div class="w-48">
-				<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
-			</div>
-			<Button variant="outline" size="sm" onclick={applyFilters} class="glass-button gap-1 rounded-md">
-				<Search class="h-3 w-3" />
-				Filter
-			</Button>
+	<!-- Filters -->
+	<section
+		class="panel mt-6 flex flex-col gap-3 p-4 md:flex-row md:items-center"
+		data-animate="fade-up"
+		style="animation-delay: 80ms;"
+	>
+		<div class="w-full md:w-48">
+			<Select bind:value={statusFilter} options={statusOptions} placeholder="All Statuses" />
 		</div>
+		<div class="w-full md:w-48">
+			<Select bind:value={supplierFilter} options={supplierOptions} placeholder="All Suppliers" />
+		</div>
+		<Button variant="outline" size="sm" onclick={applyFilters} class="h-9 shrink-0 gap-1.5">
+			<Search class="h-3.5 w-3.5" />
+			Filter
+		</Button>
+	</section>
 
+	<div class="mt-4">
 		{#if loading}
-			<div class="flex h-64 items-center justify-center">
-				<Loader2 class="text-primary h-8 w-8 animate-spin" />
+			<div class="panel flex h-64 items-center justify-center">
+				<Loader2 class="h-7 w-7 animate-spin text-primary" />
 			</div>
 		{:else if returns.length === 0}
-			<div class="liquid-panel rounded-lg">
+			<div class="rounded-lg border border-dashed border-border/70 bg-muted/25">
 				<EmptyState
 					icon={Undo2}
 					title="No purchase returns found"
@@ -283,7 +277,7 @@
 				/>
 			</div>
 		{:else}
-			<div in:fly={{ y: 20, duration: 300 }} class="liquid-panel overflow-hidden rounded-lg">
+			<section in:fly={{ y: 16, duration: 300 }} class="panel overflow-hidden">
 				<div class="overflow-x-auto">
 					<table class="ledger-table">
 						<thead>
@@ -301,10 +295,10 @@
 						<tbody>
 							{#each returns as ret (ret.ID)}
 								<tr>
-									<td class="num-mono text-foreground font-semibold">
+									<td class="num-mono font-semibold text-foreground">
 										{returnNumber(ret.ID)}
 									</td>
-									<td class="num-mono text-muted-foreground">
+									<td class="num-mono text-xs text-muted-foreground">
 										{poNumber(ret.PurchaseOrderID)}
 									</td>
 									<td class="text-foreground">
@@ -315,26 +309,27 @@
 											{ret.Status}
 										</span>
 									</td>
-									<td class="col-num text-foreground font-semibold">
+									<td class="col-num font-semibold text-foreground">
 										{formatCurrency(ret.TotalAmount)}
 									</td>
-									<td class="text-muted-foreground max-w-[12rem] truncate">
+									<td class="max-w-[12rem] truncate text-sm text-muted-foreground">
 										{ret.Reason}
 									</td>
-									<td class="text-muted-foreground">
+									<td class="text-sm text-muted-foreground">
 										<TimeAgo date={ret.CreatedAt} />
 									</td>
 									<td>
-										<div class="flex items-center justify-end gap-1">
+										<div class="flex items-center justify-end gap-0.5">
 											{#if actionLoading === ret.ID}
-												<Loader2 class="text-primary h-4 w-4 animate-spin" />
+												<Loader2 class="h-4 w-4 animate-spin text-primary" />
 											{:else}
 												{#if ret.Status === 'PENDING'}
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-success h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-success"
 														title="Approve"
+														aria-label="Approve purchase return"
 														onclick={() => handleApprove(ret)}
 													>
 														<CheckCircle2 class="h-3.5 w-3.5" />
@@ -344,8 +339,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-info h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-info"
 														title="Complete"
+														aria-label="Complete purchase return"
 														onclick={() => handleComplete(ret)}
 													>
 														<PackageCheck class="h-3.5 w-3.5" />
@@ -355,8 +351,9 @@
 													<Button
 														variant="ghost"
 														size="sm"
-														class="text-muted-foreground hover:text-danger h-7 w-7 rounded-md p-0"
+														class="h-8 w-8 p-0 text-muted-foreground hover:text-danger"
 														title="Cancel"
+														aria-label="Cancel purchase return"
 														onclick={() => handleCancel(ret)}
 													>
 														<XCircle class="h-3.5 w-3.5" />
@@ -370,32 +367,34 @@
 						</tbody>
 					</table>
 				</div>
-			</div>
+			</section>
 
 			{#if totalPages > 1}
-				<div class="flex items-center justify-between">
-					<p class="text-muted-foreground text-sm">
+				<div class="mt-3 flex items-center justify-between">
+					<p class="text-sm text-muted-foreground">
 						Showing {returns.length} of {total} returns
 					</p>
 					<div class="flex items-center gap-2">
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={page <= 1}
 							onclick={() => goToPage(page - 1)}
+							aria-label="Previous page"
 						>
 							<ChevronLeft class="h-4 w-4" />
 						</Button>
-						<span class="text-foreground num-mono text-sm font-medium">
+						<span class="num-mono text-sm font-medium text-foreground">
 							Page {page} of {totalPages}
 						</span>
 						<Button
 							variant="outline"
 							size="sm"
-							class="glass-button rounded-md"
+							class="h-9 w-9 p-0"
 							disabled={page >= totalPages}
 							onclick={() => goToPage(page + 1)}
+							aria-label="Next page"
 						>
 							<ChevronRight class="h-4 w-4" />
 						</Button>
@@ -417,31 +416,36 @@
 
 		<div class="space-y-4 py-4">
 			<div class="space-y-2">
-				<Label>Purchase Order</Label>
-				<div class="select-wrapper">
-					<select bind:value={createForm.purchaseOrderId} onchange={onPoSelect}>
-						<option value="">Select a PO...</option>
-						{#each purchaseOrders as po}
-							<option value={String(po.ID)}>
-								{poNumber(po.ID)} — {(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
-							</option>
-						{/each}
-					</select>
-				</div>
+				<Label for="pr-po">Purchase Order</Label>
+				<select
+					id="pr-po"
+					bind:value={createForm.purchaseOrderId}
+					onchange={onPoSelect}
+					class="h-11 text-sm"
+				>
+					<option value="">Select a PO...</option>
+					{#each purchaseOrders as po}
+						<option value={String(po.ID)}>
+							{poNumber(po.ID)} — {(po as any).Supplier?.Name || `Supplier #${po.SupplierID}`}
+						</option>
+					{/each}
+				</select>
 			</div>
 
 			<div class="space-y-2">
-				<Label>Reason</Label>
+				<Label for="pr-reason">Reason</Label>
 				<Input
+					id="pr-reason"
 					bind:value={createForm.reason}
 					placeholder="e.g. Damaged goods, wrong items, quality issue..."
+					class="h-11 w-full rounded-md text-sm"
 				/>
 			</div>
 
 			{#if createForm.items.length > 0}
 				<div class="space-y-2">
 					<Label>Items</Label>
-					<div class="border-border overflow-hidden rounded-md border">
+					<div class="overflow-hidden rounded-lg ring-1 ring-border">
 						<table class="ledger-table">
 							<thead>
 								<tr>
@@ -461,7 +465,7 @@
 												type="number"
 												min="1"
 												bind:value={item.quantity}
-												class="liquid-input num-mono h-7 w-20 px-2 text-right text-sm"
+												class="num-mono ml-auto h-8 w-20 rounded-md px-2 text-right text-sm"
 											/>
 										</td>
 										<td class="col-num">
@@ -478,11 +482,7 @@
 
 		<Dialog.Footer>
 			<Button variant="outline" onclick={() => (isCreateModalOpen = false)}>Cancel</Button>
-			<Button
-				onclick={handleCreate}
-				disabled={creating}
-				class="bg-primary text-primary-foreground hover:bg-primary/90"
-			>
+			<Button onclick={handleCreate} disabled={creating} class="btn-soothe">
 				{#if creating}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 				{/if}

@@ -122,9 +122,12 @@ type Batch struct {
 	Product     Product
 	LocationID  uint `gorm:"index:idx_product_location"`
 	Location    Location
-	BatchNumber string     `gorm:"not null"`
-	Quantity    float64    `gorm:"not null"`
-	ExpiryDate  *time.Time // Pointer to allow null for non-perishable
+	BatchNumber string  `gorm:"not null"`
+	Quantity    float64 `gorm:"not null"`
+	// UnitCost is the landed cost per base unit for this batch. COGS and
+	// inventory valuation use it so later price changes cannot rewrite history.
+	UnitCost   float64    `gorm:"type:numeric(14,4);default:0"`
+	ExpiryDate *time.Time // Pointer to allow null for non-perishable
 }
 
 // StockAdjustment represents a manual adjustment to stock levels.
@@ -134,9 +137,10 @@ type StockAdjustment struct {
 	Product          Product
 	LocationID       uint
 	Location         Location
-	Type             string `gorm:"not null"` // e.g., "STOCK_IN", "STOCK_OUT"
+	Type             string  `gorm:"not null"` // e.g., "STOCK_IN", "STOCK_OUT"
 	Quantity         float64 `gorm:"not null"`
-	ReasonCode       string  `gorm:"not null"` // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
+	UnitCost         float64 `gorm:"type:numeric(14,4);default:0"` // valuation per base unit at the time of the move
+	ReasonCode       string  `gorm:"not null"`                     // e.g., "DAMAGED_GOODS", "STOCK_TAKE_CORRECTION"
 	Notes            string
 	AdjustedBy       uint      // UserID of the person who made the adjustment
 	AdjustedAt       time.Time `gorm:"index"`
@@ -227,7 +231,7 @@ type DemandForecast struct {
 	gorm.Model
 	ProductID       uint `gorm:"not null"`
 	Product         Product
-	ForecastPeriod  string `gorm:"not null"` // e.g., "30_DAYS", "90_DAYS"
+	ForecastPeriod  string  `gorm:"not null"` // e.g., "30_DAYS", "90_DAYS"
 	PredictedDemand float64 `gorm:"not null"`
 	ConfidenceScore float64
 	Reasoning       string
@@ -246,7 +250,7 @@ type ReorderSuggestion struct {
 	SuggestedOrderQuantity float64 `gorm:"not null"`
 	LeadTimeDays           int
 	SnapshotPrice          float64 `gorm:"type:decimal(12,2);default:0"` // Product.PurchasePrice at the time the suggestion was generated; used to detect price drift when the PO is created
-	Status                 string  `gorm:"default:'PENDING'"`             // PENDING, APPROVED, REJECTED, PO_CREATED
+	Status                 string  `gorm:"default:'PENDING'"`            // PENDING, APPROVED, REJECTED, PO_CREATED
 	SuggestedAt            time.Time
 }
 
@@ -275,7 +279,7 @@ type StockTransfer struct {
 	DestLocation     Location
 	Quantity         float64 `gorm:"not null"`
 	Status           string  `gorm:"default:'PENDING'"` // PENDING, COMPLETED, CANCELLED
-	TransferredBy    uint   // UserID of the person who initiated the transfer
+	TransferredBy    uint    // UserID of the person who initiated the transfer
 	TransferredAt    time.Time
 }
 
@@ -391,6 +395,7 @@ type PurchaseReturn struct {
 	ApprovedAt          *time.Time // Timestamp of approval intent
 	CompletedAt         *time.Time // Timestamp of completion (stock deducted)
 	CancelledAt         *time.Time // Timestamp of cancellation
+	JournalEntryID      *uint      // ledger entry posted when stock leaves
 	PurchaseReturnItems []PurchaseReturnItem
 }
 

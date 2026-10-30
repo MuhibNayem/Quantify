@@ -95,8 +95,12 @@ func (h *ReturnHandler) RequestReturn(c *gin.Context) {
 		var totalRefundAmount float64
 		var returnItems []domain.ReturnItem
 
+		// Refund at the tax rate actually charged on this order, not the
+		// current global setting (which may have changed since the sale).
 		taxRate := 0.0
-		if val, err := h.Settings.GetSetting("tax_rate_percentage"); err == nil {
+		if order.Subtotal > 0 {
+			taxRate = (order.TaxAmount / order.Subtotal) * 100.0
+		} else if val, err := h.Settings.GetSetting("tax_rate_percentage"); err == nil {
 			if v, err := strconv.ParseFloat(val, 64); err == nil {
 				taxRate = v
 			}

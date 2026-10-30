@@ -12,53 +12,66 @@
 	let { categoryPerformance }: Props = $props();
 </script>
 
-<div class="liquid-panel rounded-lg p-6">
-	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
-		<PieChart class="text-primary h-5 w-5" />
-		{$t('reports.category.title')}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				<HelpCircle class="text-muted-foreground hover:text-primary h-4 w-4 transition-colors" />
-			</Tooltip.Trigger>
-			<Tooltip.Content>
-				<p class="max-w-xs">{$t('reports.category.description')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
-	</h3>
+<div class="panel p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-primary/10 text-primary"
+		>
+			<PieChart class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.category.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle
+							class="h-4 w-4 text-muted-foreground transition-colors hover:text-primary"
+						/>
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">{$t('reports.category.description')}</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+		</div>
+	</div>
 
-	<div class="custom-scrollbar max-h-[350px] space-y-2 overflow-y-auto p-1 pr-2">
+	<div class="custom-scrollbar mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+		{#if categoryPerformance.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
 		{#each categoryPerformance as cat}
 			<div
-				class="group border-border bg-card hover:bg-muted space-y-3 rounded-md border p-3 transition-colors"
+				class="rounded-[calc(var(--radius)_-_6px)] border border-border/70 bg-muted/30 p-3 transition-colors"
 			>
-				<div class="flex items-center justify-between">
-					<span class="text-foreground text-base font-semibold">{cat.CategoryName}</span>
-					<span class="bg-muted text-muted-foreground rounded-md px-2.5 py-1 text-[11px] font-semibold num-mono">
+				<div class="flex items-center justify-between gap-2">
+					<span class="truncate text-sm font-semibold text-foreground">{cat.CategoryName}</span>
+					<span class="badge-neutral num-mono">
 						{cat.ItemCount || cat.TotalUnits || 0}
 						{$t('reports.category.items')}
 					</span>
 				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div class="border-border bg-muted/40 rounded-md border p-3">
-						<div class="overline mb-1">
-							{$t('reports.category.sales')}
-						</div>
-						<div class="text-foreground text-sm font-semibold num-mono">
+				<div class="mt-2.5 grid grid-cols-2 gap-2">
+					<div
+						class="rounded-[calc(var(--radius)_-_8px)] border border-border/70 bg-card px-2.5 py-2"
+					>
+						<p class="overline">{$t('reports.category.sales')}</p>
+						<p class="num-mono mt-1 text-sm font-semibold text-foreground">
 							{formatCurrency(cat.TotalSales)}
-						</div>
+						</p>
 					</div>
-					<div class="border-border bg-muted/40 rounded-md border p-3">
-						<div class="overline mb-1">
-							{$t('reports.category.margin')}
-						</div>
-						<div class="flex flex-col items-start">
-							<div class="text-success text-sm font-semibold num-mono">
-								{formatCurrency(cat.GrossMargin)}
-							</div>
-							<div class="text-success mt-0.5 text-[10px] font-semibold num-mono">
+					<div
+						class="rounded-[calc(var(--radius)_-_8px)] border border-border/70 bg-card px-2.5 py-2"
+					>
+						<p class="overline">{$t('reports.category.margin')}</p>
+						<p class="num-mono mt-1 flex items-baseline gap-1.5 text-sm font-semibold text-success">
+							{formatCurrency(cat.GrossMargin)}
+							<span class="text-[10px] font-medium">
 								{formatPercent(cat.MarginPercent / 100)}
-							</div>
-						</div>
+							</span>
+						</p>
 					</div>
 				</div>
 			</div>

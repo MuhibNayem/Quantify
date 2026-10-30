@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"net/http"
-	"strings"
 
 	"inventory/backend/internal/auth"
 	appErrors "inventory/backend/internal/errors"
@@ -11,19 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AuthMiddleware authenticates requests using JWT.
+// AuthMiddleware authenticates requests using the httpOnly session cookie
+// (browser) or a Bearer token (API clients).
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.Error(appErrors.NewAppError("Authorization header required", http.StatusUnauthorized, nil))
-			c.Abort()
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader { // No "Bearer " prefix found
-			c.Error(appErrors.NewAppError("Bearer token required", http.StatusUnauthorized, nil))
+		tokenString := auth.AccessTokenFromRequest(c)
+		if tokenString == "" {
+			c.Error(appErrors.NewAppError("Authentication required", http.StatusUnauthorized, nil))
 			c.Abort()
 			return
 		}

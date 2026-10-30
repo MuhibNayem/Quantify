@@ -58,7 +58,7 @@
 {#if open}
 	<!-- svelte-ignore a11y_interactive_supports_focus -->
 	<div
-		class="fixed inset-0 z-50 flex items-start justify-center bg-foreground/40 pt-[15vh]"
+		class="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/25 pt-[15vh] backdrop-blur-sm"
 		role="dialog"
 		aria-modal="true"
 		onclick={() => (open = false)}
@@ -66,7 +66,7 @@
 	>
 		<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 		<div
-			class="w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+			class="glass-float w-full max-w-lg overflow-hidden rounded-xl"
 			onclick={(e) => e.stopPropagation()}
 			role="document"
 		>
@@ -80,8 +80,8 @@
 								<CommandItem onSelect={() => runCommand({ action: () => goto(item.href) })}>
 									<History class="h-4 w-4 text-muted-foreground" />
 									<span class="flex-1">{item.label}</span>
-									<span
-										class="text-[0.65rem] font-medium text-muted-foreground capitalize">{item.type}</span
+									<span class="text-[0.65rem] font-medium text-muted-foreground capitalize"
+										>{item.type}</span
 									>
 								</CommandItem>
 							{/each}

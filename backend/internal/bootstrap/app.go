@@ -56,9 +56,39 @@ func NewApp(cfg *config.Config) *App {
 		logrus.Infof("OpenTelemetry tracing enabled, exporting to %s", cfg.OTLPEndpoint)
 	}
 
-	// Initialize database connection
+	// Initialize database connection. InitDB runs GORM AutoMigrate in dev
+	// mode as a safety net for any tables the GORM models describe but the
+	// SQL migrations don't yet cover.
 	repository.InitDB(cfg)
 	gormDB := repository.DB()
+
+	// Apply the embedded SQL migrations. This is the source of truth for
+	// schema and RBAC reference data (permissions, roles, role_permissions,
+	// system_settings, alert role subscriptions, etc.). Idempotent: on a
+	// fresh DB it creates every table and seeds the data; on a warm DB it
+	// applies only the pending versions tracked in `schema_migrations`.
+	// Without this step, a fresh environment boots with empty RBAC tables
+	// (the bug that hid every product permission from the Admin role).
+	//
+	// CRITICAL: this runs BEFORE GORM AutoMigrate. If AutoMigrate ran
+	// first, it would create the tables based on the GORM models, and the
+	// SQL `CREATE TABLE` statements would then fail with "already exists"
+	// — leaving the migration in a DIRTY state. The SQL files are
+	// authoritative; AutoMigrate is a safety net for any GORM-only models
+	// that aren't covered by SQL yet.
+	if err := migrations.Run(gormDB); err != nil {
+		logrus.Fatalf("SQL migrations failed (database is unusable): %v", err)
+	}
+
+	// Now that SQL has authoritative schema + seed data, run GORM
+	// AutoMigrate as a safety net for any tables GORM knows about that
+	// the SQL files don't yet cover. This is a no-op for tables SQL
+	// already created (it only adds missing columns/tables).
+	if cfg.AppEnv == "dev" {
+		repository.RunAutoMigrate()
+	} else {
+		logrus.Info("GORM AutoMigrate skipped (APP_ENV != dev); SQL migrations are the source of truth")
+	}
 
 	// Check if search index migration should run
 	if os.Getenv("RUN_MIGRATIONS") == "true" {
@@ -69,12 +99,13 @@ func NewApp(cfg *config.Config) *App {
 		logrus.Info("Search index population completed.")
 	}
 
-	// Seed Roles
+	// Idempotent Go seeders. These run after the SQL migrations because the
+	// reference data they insert (units, chart of accounts, AI agent user)
+	// lives in Go rather than SQL. Each one is a no-op if its data is
+	// already present.
 	if err := migrations.SeedRoles(gormDB); err != nil {
 		logrus.Errorf("Failed to seed roles: %v", err)
 	}
-
-	// Seed AI Agent User
 	if err := migrations.SeedAIUser(gormDB); err != nil {
 		logrus.Errorf("Failed to seed AI Agent user: %v", err)
 	}

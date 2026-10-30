@@ -68,11 +68,11 @@ func (s *purchaseOrderService) CreatePOFromSuggestion(suggestionID string, userI
 
 		if suggestion.SnapshotPrice != product.PurchasePrice {
 			logrus.WithFields(logrus.Fields{
-				"suggestion_id":   suggestion.ID,
-				"product_id":      product.ID,
-				"snapshot_price":  suggestion.SnapshotPrice,
-				"current_price":   product.PurchasePrice,
-				"price_drift":     product.PurchasePrice - suggestion.SnapshotPrice,
+				"suggestion_id":  suggestion.ID,
+				"product_id":     product.ID,
+				"snapshot_price": suggestion.SnapshotPrice,
+				"current_price":  product.PurchasePrice,
+				"price_drift":    product.PurchasePrice - suggestion.SnapshotPrice,
 			}).Warn("product purchase_price changed since reorder suggestion was generated; PO uses current price")
 		}
 
@@ -298,10 +298,27 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 			// Accumulate the value of goods received for ledger/AP posting.
 			receivedValue += receivedItem.ReceivedQuantity * poItem.UnitPrice
 
+			var product domain.Product
+			// A soft-deleted/missing product must not block receiving an
+			// already-approved PO; fall back to the PO price and location 0.
+			_ = tx.Unscoped().First(&product, poItem.ProductID).Error
+			unitCost := poItem.UnitPrice
+			if unitCost <= 0 {
+				unitCost = product.PurchasePrice
+			}
+			if product.LocationID == 0 {
+				var fallback domain.Location
+				if err := tx.First(&fallback).Error; err == nil {
+					product.LocationID = fallback.ID
+				}
+			}
+
 			batch := domain.Batch{
 				ProductID:   poItem.ProductID,
+				LocationID:  product.LocationID,
 				BatchNumber: receivedItem.BatchNumber,
 				Quantity:    receivedItem.ReceivedQuantity,
+				UnitCost:    unitCost,
 				ExpiryDate:  receivedItem.ExpiryDate,
 			}
 			if err := tx.Create(&batch).Error; err != nil {
@@ -310,9 +327,11 @@ func (s *purchaseOrderService) ReceivePurchaseOrder(ctx context.Context, poID st
 
 			adj := domain.StockAdjustment{
 				ProductID:  poItem.ProductID,
+				LocationID: product.LocationID,
 				Type:       "STOCK_IN",
 				ReasonCode: "PURCHASE",
 				Quantity:   receivedItem.ReceivedQuantity,
+				UnitCost:   unitCost,
 				AdjustedBy: userID,
 				AdjustedAt: time.Now(),
 			}

@@ -12,33 +12,49 @@
 	let { deadStock }: Props = $props();
 </script>
 
-<div class="liquid-panel rounded-lg p-6">
-	<h3 class="font-display text-foreground mb-4 flex items-center gap-2 text-lg font-semibold">
-		<AlertTriangle class="text-danger h-5 w-5" />
-		{$t('reports.dead_stock.title')}
-		<Tooltip.Root>
-			<Tooltip.Trigger>
-				<HelpCircle class="text-muted-foreground hover:text-danger h-4 w-4 transition-colors" />
-			</Tooltip.Trigger>
-			<Tooltip.Content>
-				<p class="max-w-xs">{$t('reports.dead_stock.description')}</p>
-			</Tooltip.Content>
-		</Tooltip.Root>
-	</h3>
-	<div class="space-y-2">
+<div class="panel p-5">
+	<div class="flex items-start gap-3">
+		<span
+			class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-danger/10 text-danger"
+		>
+			<AlertTriangle class="h-4 w-4" />
+		</span>
+		<div class="min-w-0">
+			<h3 class="section-title flex items-center gap-1.5">
+				{$t('reports.dead_stock.title')}
+				<Tooltip.Root>
+					<Tooltip.Trigger>
+						<HelpCircle class="h-4 w-4 text-muted-foreground transition-colors hover:text-danger" />
+					</Tooltip.Trigger>
+					<Tooltip.Content>
+						<p class="max-w-xs font-normal text-foreground">
+							{$t('reports.dead_stock.description')}
+						</p>
+					</Tooltip.Content>
+				</Tooltip.Root>
+			</h3>
+		</div>
+	</div>
+
+	<div class="mt-4 space-y-1">
+		{#if deadStock.length === 0}
+			<p class="py-8 text-center text-xs text-muted-foreground">
+				{$t('common.no_data_available')}
+			</p>
+		{/if}
 		{#each deadStock.slice(0, 5) as item}
 			<div
-				class="border-border bg-card hover:bg-muted flex items-center justify-between rounded-md border p-4 transition-colors"
+				class="flex items-center justify-between gap-3 rounded-[calc(var(--radius)_-_6px)] px-2.5 py-2.5 transition-colors hover:bg-muted/50"
 			>
-				<div class="text-foreground max-w-[200px] truncate text-sm font-semibold">
+				<p class="min-w-0 truncate text-sm font-medium text-foreground">
 					{item.ProductName}
-				</div>
-				<div class="text-right">
-					<div class="text-danger text-sm font-semibold num-mono">{formatCurrency(item.Value)}</div>
-					<div class="badge-danger mt-1 text-[10px]">
+				</p>
+				<div class="shrink-0 text-right">
+					<p class="num-mono text-sm font-semibold text-danger">{formatCurrency(item.Value)}</p>
+					<span class="badge-danger mt-1 text-[10px]">
 						{item.DaysSinceLastSale}
 						{$t('reports.dead_stock.days_idle')}
-					</div>
+					</span>
 				</div>
 			</div>
 		{/each}

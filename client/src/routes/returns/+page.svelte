@@ -26,13 +26,6 @@
 	let searchQuery = '';
 	let isSearching = false;
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const tabTriggerClass =
-		'data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm rounded-md';
-
 	$effect(() => {
 		if (!auth.hasPermission('returns.manage') && !auth.hasPermission('returns.request')) {
 			toast.error('Access Denied', {
@@ -124,75 +117,61 @@
 	}
 </script>
 
-<div class="relative min-h-screen overflow-hidden p-6 lg:p-10">
-	<div class="relative z-10 mx-auto max-w-7xl space-y-8">
-		<!-- Header -->
-		<div class="flex flex-col gap-2" data-animate="fade-up">
-			<h1
-				class="font-display text-foreground text-3xl font-bold tracking-tight"
-			>
-				Returns Center
-			</h1>
-			<p class="text-muted-foreground font-medium">
-				Manage your orders, request returns, and track refunds.
-			</p>
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="overline">After-sales · Returns</p>
+			<h1 class="page-title mt-1">Returns Center</h1>
+			<p class="page-sub">Manage your orders, request returns, and track refunds.</p>
 		</div>
+	</header>
 
-		<Tabs.Root
-			value={activeTab}
-			class="w-full space-y-8"
-			onValueChange={(val) => (activeTab = val)}
+	<Tabs.Root
+		value={activeTab}
+		class="mt-6 w-full space-y-4"
+		onValueChange={(val) => (activeTab = val)}
+	>
+		<Tabs.List
+			class="inline-flex h-11 w-full items-center gap-1 rounded-lg border border-border/70 bg-muted/60 p-1 sm:w-auto"
 		>
-			<Tabs.List
-				class="border-border bg-muted inline-flex h-auto w-full rounded-lg border p-1.5 shadow-none backdrop-blur-none"
+			<Tabs.Trigger
+				value="request"
+				class="flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs sm:flex-none"
 			>
+				<Package size={16} /> Request Return
+			</Tabs.Trigger>
+			<Tabs.Trigger
+				value="history"
+				class="flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs sm:flex-none"
+			>
+				<History size={16} /> My Returns
+			</Tabs.Trigger>
+			{#if auth.hasPermission('returns.manage')}
 				<Tabs.Trigger
-					value="request"
-					class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
+					value="admin"
+					class="flex flex-1 items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-xs sm:flex-none"
 				>
-					<div class="flex items-center justify-center gap-2">
-						<Package size={18} /> Request Return
-					</div>
+					<ShieldCheck size={16} /> Manage Returns
 				</Tabs.Trigger>
-				<Tabs.Trigger
-					value="history"
-					class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
-				>
-					<div class="flex items-center justify-center gap-2">
-						<History size={18} /> My Returns
-					</div>
-				</Tabs.Trigger>
-				{#if auth.hasPermission('returns.manage')}
-					<Tabs.Trigger
-						value="admin"
-						class="flex-1 py-3 text-sm font-medium transition-all duration-300 {tabTriggerClass}"
-					>
-						<div class="flex items-center justify-center gap-2">
-							<ShieldCheck size={18} /> Manage Returns
-						</div>
-					</Tabs.Trigger>
-				{/if}
-			</Tabs.List>
+			{/if}
+		</Tabs.List>
 
-			<!-- Request Return Tab -->
-			<Tabs.Content value="request" class="space-y-6 pt-2 outline-none">
-				<!-- Search -->
-				<div class="liquid-panel flex items-center gap-4 rounded-lg p-4">
-					<div class="relative flex-1">
-						<Search class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-						<Input
-							placeholder="Search by Order Number (e.g., ORD-12345...)"
-							class="{inputClass} pl-9"
-							bind:value={searchQuery}
-							onkeydown={(e) => e.key === 'Enter' && searchOrder()}
-						/>
-					</div>
-					<Button
-						variant="default"
-						class={btnPrimary}
-						onclick={searchOrder}
-						disabled={isSearching}
-					>
+		<!-- Request Return Tab -->
+		<Tabs.Content value="request" class="space-y-4 pt-1 outline-none">
+			<!-- Search -->
+			<section class="panel flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+				<div class="relative flex-1">
+					<Search class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search by Order Number (e.g., ORD-12345...)"
+						class="h-11 w-full rounded-md pl-9 text-sm"
+						bind:value={searchQuery}
+						onkeydown={(e) => e.key === 'Enter' && searchOrder()}
+					/>
+				</div>
+				<div class="flex items-center gap-2">
+					<Button class="btn-soothe shrink-0" onclick={searchOrder} disabled={isSearching}>
 						{#if isSearching}
 							<Loader2 class="mr-2 h-4 w-4 animate-spin" /> Searching...
 						{:else}
@@ -202,7 +181,7 @@
 					{#if searchQuery}
 						<Button
 							variant="ghost"
-							class="text-muted-foreground hover:text-foreground"
+							class="shrink-0 text-muted-foreground hover:text-foreground"
 							onclick={() => {
 								searchQuery = '';
 								loadOrders();
@@ -212,70 +191,75 @@
 						</Button>
 					{/if}
 				</div>
+			</section>
 
-				<div in:fly={{ y: 20, duration: 300 }} class="grid gap-6">
-					<!-- Orders List -->
-					{#each orders as order}
-						<div
-							class="liquid-panel group relative overflow-hidden rounded-lg p-6 transition-all hover:border-primary/35 hover:shadow-md"
-						>
-							<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-								<div>
-									<div class="flex items-center gap-3">
-										<h3 class="num-mono text-foreground text-lg font-bold">{orderNumber(order)}</h3>
-										<span class={order.Status === 'COMPLETED' ? 'badge-success' : 'badge-neutral'}
-											>{order.Status}</span
-										>
-									</div>
-									<p class="text-muted-foreground text-sm">
-										{#if order.Customer}
-											{order.Customer.FirstName} {order.Customer.LastName} •
-										{/if}
-										Placed <TimeAgo date={order.OrderDate} /> • <span class="num">{order.Items?.length || 0}</span> Items
+			<div in:fly={{ y: 16, duration: 300 }} class="grid gap-3">
+				<!-- Orders List -->
+				{#each orders as order}
+					<div
+						class="panel group relative overflow-hidden p-5 transition-colors duration-200 hover:border-primary/30"
+					>
+						<div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+							<div class="min-w-0">
+								<div class="flex flex-wrap items-center gap-2.5">
+									<h3 class="num-mono text-base font-bold text-foreground">{orderNumber(order)}</h3>
+									<span class={order.Status === 'COMPLETED' ? 'badge-success' : 'badge-neutral'}
+										>{order.Status}</span
+									>
+								</div>
+								<p class="mt-1 text-sm text-muted-foreground">
+									{#if order.Customer}
+										{order.Customer.FirstName} {order.Customer.LastName} •
+									{/if}
+									Placed <TimeAgo date={order.OrderDate} /> •
+									<span class="num">{order.Items?.length || 0}</span>
+									Items
+								</p>
+							</div>
+							<div class="flex items-center justify-between gap-5 md:justify-end">
+								<div class="text-right">
+									<p class="overline">Total</p>
+									<p class="num-mono mt-0.5 text-lg font-bold text-foreground">
+										${order.TotalAmount.toFixed(2)}
 									</p>
 								</div>
-								<div class="flex items-center gap-4">
-									<div class="text-right">
-										<p class="overline">Total</p>
-										<p class="num-mono text-foreground text-xl font-bold">${order.TotalAmount.toFixed(2)}</p>
-									</div>
-									<Button
-										class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md bg-none shadow-sm hover:bg-none"
-										onclick={() => openRequestModal(order)}
-										disabled={order.Status !== 'COMPLETED'}
-									>
-										<Undo2 size={18} class="mr-2" /> Return Items
-									</Button>
-								</div>
+								<Button
+									size="sm"
+									class="btn-soothe shrink-0"
+									onclick={() => openRequestModal(order)}
+									disabled={order.Status !== 'COMPLETED'}
+								>
+									<Undo2 size={16} class="mr-1.5" /> Return Items
+								</Button>
 							</div>
 						</div>
-					{:else}
-						<div class="border-border bg-muted/40 rounded-lg border border-dashed">
-							<EmptyState
-								icon={Package}
-								title="No orders found"
-								description="Go make some purchases, then come back to request a return."
-							/>
-						</div>
-					{/each}
-				</div>
-			</Tabs.Content>
+					</div>
+				{:else}
+					<div class="rounded-lg border border-dashed border-border/70 bg-muted/25">
+						<EmptyState
+							icon={Package}
+							title="No orders found"
+							description="Go make some purchases, then come back to request a return."
+						/>
+					</div>
+				{/each}
+			</div>
+		</Tabs.Content>
 
-			<!-- My Returns Tab -->
-			<Tabs.Content value="history" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }}>
-					<p class="text-muted-foreground text-center">Return history coming soon...</p>
-				</div>
-			</Tabs.Content>
+		<!-- My Returns Tab -->
+		<Tabs.Content value="history" class="space-y-6 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }} class="panel p-12">
+				<p class="text-center text-sm text-muted-foreground">Return history coming soon...</p>
+			</div>
+		</Tabs.Content>
 
-			<!-- Admin Tab -->
-			<Tabs.Content value="admin" class="space-y-6 pt-2 outline-none">
-				<div in:fly={{ y: 20, duration: 300 }}>
-					<AdminReturnList />
-				</div>
-			</Tabs.Content>
-		</Tabs.Root>
-	</div>
+		<!-- Admin Tab -->
+		<Tabs.Content value="admin" class="space-y-6 pt-1 outline-none">
+			<div in:fly={{ y: 16, duration: 300 }}>
+				<AdminReturnList />
+			</div>
+		</Tabs.Content>
+	</Tabs.Root>
 </div>
 
 {#if selectedOrder}

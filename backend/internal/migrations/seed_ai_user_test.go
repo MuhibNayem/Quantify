@@ -25,7 +25,7 @@ func TestSeedAIUser_HashIsBcrypt(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestSeedAIUser_DefaultInactive(t *testing.T) {
+func TestSeedAIUser_IsActive(t *testing.T) {
 	user := buildAIUser("pwhash", domain.Role{})
-	assert.False(t, user.IsActive, "AI agent user must default to inactive")
+	assert.True(t, user.IsActive, "AI agent user must be active so the ai-service can authenticate")
 }

@@ -46,9 +46,10 @@
 	};
 </script>
 
-<div class="mx-auto w-full max-w-7xl px-6 py-8">
-	<section class="space-y-8">
-		{#if product}
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+	{#if product}
+		{@const badge = statusBadge(product.Status)}
+		<div class="space-y-6">
 			<Breadcrumbs
 				items={[
 					{ label: 'Catalog', href: '/catalog' },
@@ -56,75 +57,86 @@
 					{ label: product.Name }
 				]}
 			/>
-		{/if}
-		<!-- HEADER -->
-		<div class="flex items-center justify-between">
-			<a
-				href="/catalog"
-				class="text-primary hover:text-foreground flex items-center text-sm font-medium transition-colors"
-			>
-				<ArrowLeft class="mr-2 h-4 w-4" />
-				Back to Catalog
-			</a>
-		</div>
 
-		{#if product}
-			<div class="grid gap-8 lg:grid-cols-3">
+			<!-- HEADER -->
+			<div class="page-header">
+				<div class="min-w-0 space-y-2">
+					<p class="overline">Catalog · Product</p>
+					<h1 class="page-title truncate">{product.Name}</h1>
+					<div class="flex flex-wrap items-center gap-3">
+						<span class="num-mono text-sm text-muted-foreground">{product.SKU}</span>
+						{#if badge}
+							<span class="badge-{badge.variant} capitalize">{badge.text}</span>
+						{/if}
+					</div>
+				</div>
+				<div class="flex flex-wrap items-center gap-2">
+					<a
+						href="/catalog"
+						class="btn-soft inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+					>
+						<ArrowLeft class="h-4 w-4" />
+						Back to Catalog
+					</a>
+				</div>
+			</div>
+
+			<div class="grid gap-6 lg:grid-cols-3">
 				<!-- Product Details -->
-				<div class="lg:col-span-2">
-					<div class="liquid-panel overflow-hidden rounded-lg">
-						<div class="border-border space-y-1 border-b px-6 py-5">
-							<h1 class="text-foreground flex items-center font-display text-xl font-semibold">
-								<Info class="text-primary mr-2 h-5 w-5" />
-								{product.Name}
-							</h1>
-							<p class="num-mono text-muted-foreground text-sm">{product.SKU}</p>
+				<div class="min-w-0 lg:col-span-2">
+					<div class="panel overflow-hidden">
+						<div class="panel-header">
+							<div class="flex items-center gap-2">
+								<Info class="h-4 w-4 text-primary" />
+								<h2 class="section-title">Product Details</h2>
+							</div>
 						</div>
-						<div class="space-y-4 p-6">
-							<div class="grid grid-cols-1 gap-x-6 gap-y-4 text-sm sm:grid-cols-2">
-								<div>
-									<p class="overline">Description</p>
-									<p class="text-foreground mt-0.5">{product.Description || 'N/A'}</p>
+						<div class="panel-body">
+							<dl class="grid grid-cols-1 gap-x-6 gap-y-5 text-sm sm:grid-cols-2">
+								<div class="min-w-0">
+									<dt class="overline">Description</dt>
+									<dd class="mt-1 text-foreground">{product.Description || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Brand</p>
-									<p class="text-foreground mt-0.5">{product.Brand || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Brand</dt>
+									<dd class="mt-1 text-foreground">{product.Brand || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Category</p>
-									<p class="text-foreground mt-0.5">{product.Category?.Name || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Category</dt>
+									<dd class="mt-1 text-foreground">{product.Category?.Name || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Sub-Category</p>
-									<p class="text-foreground mt-0.5">{product.SubCategory?.Name || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Sub-Category</dt>
+									<dd class="mt-1 text-foreground">{product.SubCategory?.Name || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Supplier</p>
-									<p class="text-foreground mt-0.5">{product.Supplier?.Name || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Supplier</dt>
+									<dd class="mt-1 text-foreground">{product.Supplier?.Name || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Location</p>
-									<p class="text-foreground mt-0.5">{product.Location?.Name || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Location</dt>
+									<dd class="mt-1 text-foreground">{product.Location?.Name || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Purchase Price</p>
-									<p class="num-mono text-foreground mt-0.5">
+								<div class="min-w-0">
+									<dt class="overline">Purchase Price</dt>
+									<dd class="num-mono mt-1 text-foreground">
 										${product.PurchasePrice?.toFixed(2) || 'N/A'}
-									</p>
+									</dd>
 								</div>
-								<div>
-									<p class="overline">Selling Price</p>
-									<p class="num-mono text-foreground mt-0.5">${product.SellingPrice?.toFixed(2) || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Selling Price</dt>
+									<dd class="num-mono mt-1 text-foreground">
+										${product.SellingPrice?.toFixed(2) || 'N/A'}
+									</dd>
 								</div>
-								<div>
-									<p class="overline">Barcode/UPC</p>
-									<p class="num-mono text-foreground mt-0.5">{product.BarcodeUPC || 'N/A'}</p>
+								<div class="min-w-0">
+									<dt class="overline">Barcode/UPC</dt>
+									<dd class="num-mono mt-1 text-foreground">{product.BarcodeUPC || 'N/A'}</dd>
 								</div>
-								<div>
-									<p class="overline">Status</p>
-									<div class="mt-0.5">
+								<div class="min-w-0">
+									<dt class="overline">Status</dt>
+									<dd class="mt-1.5">
 										{#if product.Status}
-											{@const badge = statusBadge(product.Status)}
 											{#if badge}
 												<span class="badge-{badge.variant} capitalize">
 													{badge.text}
@@ -135,26 +147,25 @@
 										{:else}
 											<span class="text-muted-foreground">—</span>
 										{/if}
-									</div>
+									</dd>
 								</div>
-							</div>
+							</dl>
 						</div>
 					</div>
 				</div>
 
 				<!-- Stock History -->
-				<div class="lg:col-span-1">
-					<div class="flex flex-col gap-4">
-						<div class="liquid-panel flex flex-col gap-1 rounded-lg p-4">
-							<h3 class="text-foreground flex items-center font-display text-lg font-semibold">
-								<History class="text-primary mr-2 h-5 w-5" />
-								Stock History
-							</h3>
-							<p class="text-muted-foreground text-sm">Recent stock adjustments</p>
+				<div class="min-w-0 space-y-6 lg:col-span-1">
+					<div class="panel overflow-hidden">
+						<div class="panel-header">
+							<div class="flex items-center gap-2">
+								<History class="h-4 w-4 text-primary" />
+								<h2 class="section-title">Stock History</h2>
+							</div>
+							<span class="text-xs text-muted-foreground">Recent</span>
 						</div>
-
-						<div class="liquid-panel overflow-hidden rounded-lg">
-							<table class="ledger-table">
+						<div class="custom-scrollbar max-h-[26rem] overflow-y-auto">
+							<table class="glass-table">
 								<thead>
 									<tr>
 										<th>Type</th>
@@ -165,14 +176,14 @@
 								<tbody>
 									{#if (stockHistory || []).length === 0}
 										<tr>
-											<td colspan={3} class="text-muted-foreground py-8 text-center text-sm">
+											<td colspan={3} class="py-10 text-center text-sm text-muted-foreground">
 												No stock adjustments yet
 											</td>
 										</tr>
 									{:else}
 										{#each stockHistory || [] as item}
 											<tr>
-												<td class="text-foreground font-medium">{item.Type}</td>
+												<td class="font-medium text-foreground">{item.Type}</td>
 												<td
 													class="col-num font-semibold {item.Type === 'STOCK_IN'
 														? 'text-success'
@@ -180,7 +191,7 @@
 												>
 													{item.Type === 'STOCK_IN' ? '+' : '-'}{item.Quantity}
 												</td>
-												<td class="text-muted-foreground">
+												<td class="text-xs text-muted-foreground">
 													{new Date(item.AdjustedAt).toLocaleDateString()}
 												</td>
 											</tr>
@@ -189,23 +200,26 @@
 								</tbody>
 							</table>
 						</div>
+					</div>
 
-						<div class="liquid-panel rounded-lg p-4 transition-shadow duration-300 hover:shadow-md">
-							<ActivityHistory entity="Product" entityId={product.ID} />
-						</div>
+					<div class="panel p-5">
+						<ActivityHistory entity="Product" entityId={product.ID} />
 					</div>
 				</div>
 			</div>
-		{:else}
-			<!-- Loading State -->
-			<div class="grid gap-8 lg:grid-cols-3">
+		</div>
+	{:else}
+		<!-- Loading State -->
+		<div class="space-y-6">
+			<Skeleton class="h-9 w-64 rounded-lg" />
+			<div class="grid gap-6 lg:grid-cols-3">
 				<div class="lg:col-span-2">
-					<Skeleton class="h-96 w-full" />
+					<Skeleton class="h-96 w-full rounded-xl" />
 				</div>
 				<div class="lg:col-span-1">
-					<Skeleton class="h-96 w-full" />
+					<Skeleton class="h-96 w-full rounded-xl" />
 				</div>
 			</div>
-		{/if}
-	</section>
+		</div>
+	{/if}
 </div>

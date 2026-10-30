@@ -12,11 +12,9 @@
 	let { editing = null, onsaved }: { editing: Category | null; onsaved: () => void } = $props();
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
+	const btnSecondary = 'btn-soft h-10 px-4 text-sm font-medium';
 
 	const { form, errors, enhance, reset } = superForm(
 		{ name: '' },
@@ -51,19 +49,15 @@
 	});
 </script>
 
-<div
-	class="liquid-panel overflow-hidden rounded-lg"
-	data-animate="fade-up"
-	style="animation-delay:180ms"
->
-	<div class="border-border space-y-1 border-b px-6 py-5">
-		<h3 class="text-foreground font-display text-lg font-semibold"
-			>{editing
+<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:180ms">
+	<div class="panel-header flex-col items-start gap-1">
+		<h3 class="section-title">
+			{editing
 				? $t('catalog.categories.form.update_title')
-				: $t('catalog.categories.form.create_title')}</h3
-		>
+				: $t('catalog.categories.form.create_title')}
+		</h3>
 	</div>
-	<div class="p-6">
+	<div class="panel-body">
 		<form method="POST" use:enhance class="space-y-4">
 			<div class="space-y-1">
 				<Input
@@ -72,15 +66,18 @@
 					bind:value={$form.name}
 				/>
 				{#if $errors.name}
-					<p class="text-danger text-xs font-medium">{$errors.name}</p>
+					<p class="text-xs font-medium text-danger">{$errors.name}</p>
 				{/if}
 			</div>
 			<div class="flex flex-col gap-3 pt-1 sm:flex-row">
-				<Button type="submit" class="{btnPrimary} w-full py-2.5 sm:w-1/2"
+				<Button type="submit" class="{btnPrimary} w-full sm:flex-1"
 					>{editing ? $t('catalog.common.update') : $t('catalog.common.create')}</Button
 				>
-				<Button type="button" class="{btnSecondary} w-full py-2.5 sm:w-1/2" onclick={() => reset()}
-					>{$t('catalog.common.reset')}</Button
+				<Button
+					type="button"
+					variant="secondary"
+					class="{btnSecondary} w-full sm:flex-1"
+					onclick={() => reset()}>{$t('catalog.common.reset')}</Button
 				>
 			</div>
 		</form>

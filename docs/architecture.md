@@ -213,7 +213,7 @@ flowchart LR
         end
         MQ[[rabbitmq :5672 / mgmt :15672]]
         MIO[(minio :9000 / console :9001)]
-        PROM[prometheus :9091]
+        PROM[prometheus :9092]
         GRAF[grafana :3001]
     end
 
@@ -279,11 +279,17 @@ sequenceDiagram
 Notes:
 
 - **Public routes** (`/health`, `/ready`, `/metrics`, `/ws`, `/swagger`,
-  `/payment/*`, `/webhooks/*`, `POST /users/register`, `POST /users/login`)
-  skip auth.
-- **Auth** validates the JWT signature *and* confirms the token's JTI is present
-  in the Redis whitelist (`access_token:<jti>`), so revoked/logged-out tokens
-  are rejected.
+  `/payment/*`, `/webhooks/*`, `POST /users/register`, `POST /users/login`,
+  `POST /users/refresh-token`, `POST /users/logout`) skip auth; refresh and
+  logout authenticate from cookies so they work when the access token expired.
+- **Auth** reads the JWT from the `access_token` HttpOnly cookie (browser) or
+  the `Authorization: Bearer` header (API clients), validates its signature, and
+  confirms the token's JTI is present in the Redis whitelist
+  (`access_token:<jti>`), so revoked/logged-out tokens are rejected.
+- **Sessions** use HttpOnly access/refresh cookies; the SPA only receives the
+  user, permissions, and the non-secret double-submit CSRF token.
+- **Rate limiting** is Redis-backed per client IP: a global budget plus a
+  stricter budget for login/register/refresh.
 - **CSRF** is enforced only on `POST/PUT/PATCH/DELETE` and validates a
   per-user `X-CSRF-Token`.
 - **Errors** are funneled through `c.Error(appErrors.NewAppError(...))` and

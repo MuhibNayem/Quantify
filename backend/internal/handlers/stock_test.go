@@ -30,7 +30,7 @@ import (
 //   - The FOR UPDATE clause is silently ignored by SQLite, so this test
 //     cannot fully verify the SQL row-level lock. The implementation
 //     correctness guarantee is the presence of:
-//        tx.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&Batch{})
+//     tx.Clauses(clause.Locking{Strength: "UPDATE"}).Model(&Batch{})
 //     on the currentQuantity read inside the transaction.
 //   - SQLite serializes writers. With WAL mode + busy_timeout, concurrent
 //     transactions queue rather than fail. Without the lock, lost updates
@@ -60,8 +60,14 @@ func TestStockAdjustment_NoLostUpdates(t *testing.T) {
 		&domain.Product{},
 		&domain.Batch{},
 		&domain.StockAdjustment{},
+		&domain.Account{},
+		&domain.JournalEntry{},
+		&domain.JournalLine{},
 	); err != nil {
 		t.Fatalf("automigrate: %v", err)
+	}
+	if err := repository.SeedChartOfAccounts(db); err != nil {
+		t.Fatalf("seed chart of accounts: %v", err)
 	}
 
 	// SQLite limitation: only one writer at a time. Forcing a single

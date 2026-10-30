@@ -2,9 +2,10 @@
 	import { page } from '$app/stores';
 </script>
 
-<div class="flex min-h-[60vh] items-center justify-center p-4">
-	<div class="liquid-panel w-full max-w-md rounded-lg p-10 text-center" role="alert">
-		<h1 class="font-display kpi-num mb-2 text-5xl text-foreground">
+<div class="flex min-h-[60vh] items-center justify-center p-6">
+	<div class="panel w-full max-w-md p-10 text-center" role="alert">
+		<p class="mb-2 overline">POS</p>
+		<h1 class="kpi-num mb-2 text-5xl text-foreground">
 			{$page.status}
 		</h1>
 		<p class="mb-6 text-muted-foreground">
@@ -13,13 +14,13 @@
 		<div class="flex justify-center gap-3">
 			<a
 				href="/pos"
-				class="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition hover:opacity-90"
+				class="btn-soothe inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-semibold"
 			>
 				Retry
 			</a>
 			<a
 				href="/"
-				class="inline-flex items-center gap-2 rounded-md border border-border bg-card px-5 py-2.5 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted"
+				class="btn-soft inline-flex h-10 items-center gap-2 rounded-lg px-5 text-sm font-medium"
 			>
 				Go Home
 			</a>

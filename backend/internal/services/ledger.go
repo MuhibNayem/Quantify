@@ -72,21 +72,26 @@ func (s *LedgerService) accountID(tx *gorm.DB, code string) (uint, error) {
 }
 
 // PostSale records a completed sale. For a cash sale, cash is debited; for a
-// credit (unpaid) sale, accounts receivable is debited instead. Revenue is
-// always credited, a manual discount (if any) is recorded as a contra-revenue
-// (Sales Discounts), and COGS is recognized against inventory.
+// credit (unpaid) sale, accounts receivable is debited instead.
 //
-// Sale with a manual discount:
-//
-//	DR Cash / AR            netTotal
-//	DR Sales Discounts      manualDiscount   (contra-revenue)
-//	CR Sales Revenue        netTotal + manualDiscount   (gross)
+//	DR Cash / AR            total (incl. tax)
+//	DR Sales Discounts      manualDiscount + loyaltyDiscount (contra-revenue)
+//	CR Sales Revenue        subtotal + manualDiscount (gross of manual, net of promotions)
+//	CR Sales Tax Payable    tax
 //	DR COGS                 cost
 //	CR Inventory            cost
-func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64, manualDiscount float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error) {
-	netTotal := decimal.NewFromFloat(order.TotalAmount).Round(4)
-	discount := decimal.NewFromFloat(manualDiscount).Round(4)
-	grossRevenue := netTotal.Add(discount)
+func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64, manualDiscount float64, loyaltyDiscount float64, onCredit bool, postedBy uint) (*domain.JournalEntry, error) {
+	total := decimal.NewFromFloat(order.TotalAmount).Round(4)
+	tax := decimal.NewFromFloat(order.TaxAmount).Round(4)
+	manual := decimal.NewFromFloat(manualDiscount).Round(4)
+	loyalty := decimal.NewFromFloat(loyaltyDiscount).Round(4)
+	// Order.Subtotal is already net of promotions and the manual discount.
+	// Fall back to total − tax + loyalty for callers that only set TotalAmount.
+	subtotal := order.Subtotal
+	if subtotal == 0 && order.TotalAmount != 0 {
+		subtotal = order.TotalAmount - order.TaxAmount + loyaltyDiscount
+	}
+	grossRevenue := decimal.NewFromFloat(subtotal).Round(4).Add(manual)
 	costDec := decimal.NewFromFloat(cost).Round(4)
 
 	debitAccount := domain.AccountCodeCash
@@ -123,22 +128,35 @@ func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64,
 		Lines:       []domain.JournalLine{},
 	}
 	// Cash/AR leg — omitted for a fully-discounted (zero-total) sale.
-	if netTotal.IsPositive() {
+	if total.IsPositive() {
 		entry.Lines = append(entry.Lines,
-			domain.JournalLine{AccountID: cashID, Debit: netTotal, Description: debitAccount},
+			domain.JournalLine{AccountID: cashID, Debit: total, Description: debitAccount},
 		)
 	}
-	entry.Lines = append(entry.Lines,
-		domain.JournalLine{AccountID: revenueID, Credit: grossRevenue, Description: "Sales Revenue"},
-	)
-	// Record the manual discount as a contra-revenue (debit to Sales Discounts).
-	if discount.IsPositive() {
+	if grossRevenue.IsPositive() {
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: revenueID, Credit: grossRevenue, Description: "Sales Revenue"},
+		)
+	}
+	// Manual and loyalty discounts are contra-revenue.
+	discountTotal := manual.Add(loyalty)
+	if discountTotal.IsPositive() {
 		discountID, err := s.accountID(tx, domain.AccountCodeSalesDiscounts)
 		if err != nil {
 			return nil, err
 		}
 		entry.Lines = append(entry.Lines,
-			domain.JournalLine{AccountID: discountID, Debit: discount, Description: "Sales Discounts"},
+			domain.JournalLine{AccountID: discountID, Debit: discountTotal, Description: "Sales Discounts"},
+		)
+	}
+	// Tax is a liability, never revenue.
+	if tax.IsPositive() {
+		taxID, err := s.accountID(tx, domain.AccountCodeSalesTaxPayable)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: taxID, Credit: tax, Description: "Sales Tax Payable"},
 		)
 	}
 	// Recognize cost of goods sold only if we have a cost figure.
@@ -147,6 +165,178 @@ func (s *LedgerService) PostSale(tx *gorm.DB, order *domain.Order, cost float64,
 			domain.JournalLine{AccountID: cogsID, Debit: costDec, Description: "COGS"},
 			domain.JournalLine{AccountID: inventoryID, Credit: costDec, Description: "Inventory"},
 		)
+	}
+	if err := s.Post(tx, entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+// PostReturn reverses a customer sale:
+//
+//	DR Sales Returns        net refund (contra-revenue)
+//	DR Sales Tax Payable    tax refund
+//	CR Cash / AR            total refund
+//	DR Inventory            cost of GOOD items returned to stock
+//	CR COGS                 same cost
+func (s *LedgerService) PostReturn(tx *gorm.DB, ret *domain.Return, order *domain.Order, netRefund, taxRefund, restockCost float64, postedBy uint) (*domain.JournalEntry, error) {
+	net := decimal.NewFromFloat(netRefund).Round(4)
+	tax := decimal.NewFromFloat(taxRefund).Round(4)
+	total := net.Add(tax)
+	cost := decimal.NewFromFloat(restockCost).Round(4)
+
+	entry := &domain.JournalEntry{
+		Date:        time.Now(),
+		Reference:   fmt.Sprintf("RET-%05d", ret.ID),
+		Description: fmt.Sprintf("Return #%d for order %s", ret.ID, order.OrderNumber),
+		SourceType:  "RETURN",
+		SourceID:    ret.ID,
+		PostedBy:    postedBy,
+		Lines:       []domain.JournalLine{},
+	}
+
+	if net.IsPositive() {
+		returnsID, err := s.accountID(tx, domain.AccountCodeSalesReturns)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: returnsID, Debit: net, Description: "Sales Returns"},
+		)
+	}
+	if tax.IsPositive() {
+		taxID, err := s.accountID(tx, domain.AccountCodeSalesTaxPayable)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: taxID, Debit: tax, Description: "Sales Tax Payable"},
+		)
+	}
+	if total.IsPositive() {
+		creditAccount := domain.AccountCodeCash
+		if order.PaymentMethod == "credit" {
+			creditAccount = domain.AccountCodeAccountsReceivable
+		}
+		creditID, err := s.accountID(tx, creditAccount)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: creditID, Credit: total, Description: creditAccount},
+		)
+	}
+	if cost.IsPositive() {
+		inventoryID, err := s.accountID(tx, domain.AccountCodeInventory)
+		if err != nil {
+			return nil, err
+		}
+		cogsID, err := s.accountID(tx, domain.AccountCodeCOGS)
+		if err != nil {
+			return nil, err
+		}
+		entry.Lines = append(entry.Lines,
+			domain.JournalLine{AccountID: inventoryID, Debit: cost, Description: "Inventory returned"},
+			domain.JournalLine{AccountID: cogsID, Credit: cost, Description: "COGS reversed"},
+		)
+	}
+
+	if len(entry.Lines) < 2 {
+		return nil, nil
+	}
+	if err := s.Post(tx, entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+// PostVendorReturn removes returned stock from inventory and reduces the
+// supplier liability at the batch cost.
+//
+//	DR Accounts Payable   cost
+//	CR Inventory          cost
+func (s *LedgerService) PostVendorReturn(tx *gorm.DB, ret *domain.PurchaseReturn, cost float64, postedBy uint) (*domain.JournalEntry, error) {
+	amount := decimal.NewFromFloat(cost).Round(4)
+	if !amount.IsPositive() {
+		return nil, nil
+	}
+	apID, err := s.accountID(tx, domain.AccountCodeAccountsPayable)
+	if err != nil {
+		return nil, err
+	}
+	inventoryID, err := s.accountID(tx, domain.AccountCodeInventory)
+	if err != nil {
+		return nil, err
+	}
+	entry := &domain.JournalEntry{
+		Date:        time.Now(),
+		Reference:   fmt.Sprintf("PRET-%05d", ret.ID),
+		Description: fmt.Sprintf("Vendor return #%d", ret.ID),
+		SourceType:  "PURCHASE_RETURN",
+		SourceID:    ret.ID,
+		PostedBy:    postedBy,
+		Lines: []domain.JournalLine{
+			{AccountID: apID, Debit: amount, Description: "Accounts Payable"},
+			{AccountID: inventoryID, Credit: amount, Description: "Inventory"},
+		},
+	}
+	if err := s.Post(tx, entry); err != nil {
+		return nil, err
+	}
+	return entry, nil
+}
+
+// PostStockAdjustment values a manual stock move:
+//
+//	STOCK_IN : DR Inventory / CR Inventory Adjustment Gain
+//	STOCK_OUT: DR Inventory Shrinkage / CR Inventory
+func (s *LedgerService) PostStockAdjustment(tx *gorm.DB, adj *domain.StockAdjustment, cost float64, postedBy uint) (*domain.JournalEntry, error) {
+	amount := decimal.NewFromFloat(cost).Round(4)
+	if !amount.IsPositive() {
+		return nil, nil
+	}
+	inventoryID, err := s.accountID(tx, domain.AccountCodeInventory)
+	if err != nil {
+		return nil, err
+	}
+
+	var counterAccount string
+	switch adj.Type {
+	case "STOCK_IN":
+		counterAccount = domain.AccountCodeInventoryAdjustmentGain
+	case "STOCK_OUT":
+		counterAccount = domain.AccountCodeShrinkageExpense
+	default:
+		return nil, nil
+	}
+	counterID, err := s.accountID(tx, counterAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := []domain.JournalLine{
+		{AccountID: inventoryID, Debit: amount, Description: "Inventory"},
+		{AccountID: counterID, Credit: amount, Description: counterAccount},
+	}
+	if adj.Type == "STOCK_OUT" {
+		// Shrinkage is an expense: debit the expense, credit inventory.
+		lines = []domain.JournalLine{
+			{AccountID: counterID, Debit: amount, Description: counterAccount},
+			{AccountID: inventoryID, Credit: amount, Description: "Inventory"},
+		}
+	}
+
+	entry := &domain.JournalEntry{
+		Date:        adj.AdjustedAt,
+		Reference:   fmt.Sprintf("ADJ-%05d", adj.ID),
+		Description: fmt.Sprintf("Stock adjustment %s (%s)", adj.Type, adj.ReasonCode),
+		SourceType:  "ADJUSTMENT",
+		SourceID:    adj.ID,
+		PostedBy:    postedBy,
+		Lines:       lines,
+	}
+	if entry.Date.IsZero() {
+		entry.Date = time.Now()
 	}
 	if err := s.Post(tx, entry); err != nil {
 		return nil, err
@@ -301,11 +491,11 @@ func (s *LedgerService) TrialBalance(from, to *time.Time) ([]TrialBalanceRow, er
 
 // IncomeStatement summarizes revenue and expenses for a period.
 type IncomeStatement struct {
-	Revenue   decimal.Decimal `json:"Revenue"`
-	COGS      decimal.Decimal `json:"COGS"`
+	Revenue     decimal.Decimal `json:"Revenue"`
+	COGS        decimal.Decimal `json:"COGS"`
 	GrossProfit decimal.Decimal `json:"GrossProfit"`
-	Expenses  decimal.Decimal `json:"Expenses"` // non-COGS expenses
-	NetIncome decimal.Decimal `json:"NetIncome"`
+	Expenses    decimal.Decimal `json:"Expenses"` // non-COGS expenses
+	NetIncome   decimal.Decimal `json:"NetIncome"`
 }
 
 // IncomeStatement computes revenue, COGS, and net income for the period.
@@ -338,12 +528,12 @@ func (s *LedgerService) IncomeStatement(from, to *time.Time) (*IncomeStatement, 
 
 // BalanceSheet summarizes the accounting equation: Assets = Liabilities + Equity.
 type BalanceSheet struct {
-	Assets        decimal.Decimal `json:"Assets"`
-	Liabilities   decimal.Decimal `json:"Liabilities"`
-	Equity        decimal.Decimal `json:"Equity"`
-	RetainedEarnings decimal.Decimal `json:"RetainedEarnings"` // net income rolled into equity
+	Assets                    decimal.Decimal `json:"Assets"`
+	Liabilities               decimal.Decimal `json:"Liabilities"`
+	Equity                    decimal.Decimal `json:"Equity"`
+	RetainedEarnings          decimal.Decimal `json:"RetainedEarnings"` // net income rolled into equity
 	TotalLiabilitiesAndEquity decimal.Decimal `json:"TotalLiabilitiesAndEquity"`
-	Balanced      bool            `json:"Balanced"`
+	Balanced                  bool            `json:"Balanced"`
 }
 
 // BalanceSheet computes assets, liabilities, and equity as of the period end.

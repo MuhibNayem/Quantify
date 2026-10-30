@@ -63,11 +63,9 @@
 	let savingUnit = $state(false);
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
+	const btnSecondary = 'btn-soft h-10 px-4 text-sm font-medium';
 
 	const baseUnit = $derived(units.find((u) => String(u.ID) === baseUnitId));
 
@@ -152,7 +150,9 @@
 			await loadProductUnits(editing.ID);
 		} catch (error: any) {
 			const backendMessage =
-				error?.response?.data?.error || error?.response?.data?.message || 'Unable to save selling unit';
+				error?.response?.data?.error ||
+				error?.response?.data?.message ||
+				'Unable to save selling unit';
 			toast.error('Failed to Save Selling Unit', { description: backendMessage });
 		} finally {
 			savingUnit = false;
@@ -292,20 +292,16 @@
 </script>
 
 <div class="flex flex-col gap-6">
-	<div
-		class="liquid-panel overflow-hidden rounded-lg"
-		data-animate="fade-up"
-		style="animation-delay:240ms"
-	>
-		<div class="border-border space-y-1 border-b px-6 py-5">
-			<h3 class="text-foreground font-display text-lg font-semibold"
-				>{editing
+	<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:240ms">
+		<div class="panel-header flex-col items-start gap-1">
+			<h3 class="section-title">
+				{editing
 					? $t('catalog.products.form.update_title')
-					: $t('catalog.products.form.create_title')}</h3
-			>
-			<p class="text-muted-foreground text-sm">{$t('catalog.products.form.subtitle')}</p>
+					: $t('catalog.products.form.create_title')}
+			</h3>
+			<p class="text-sm text-muted-foreground">{$t('catalog.products.form.subtitle')}</p>
 		</div>
-		<div class="p-6">
+		<div class="panel-body">
 			<form method="POST" use:enhance class="space-y-4">
 				<div class="space-y-1">
 					<Input
@@ -314,7 +310,7 @@
 						bind:value={$form.sku}
 					/>
 					{#if $errors.sku}
-						<p class="text-danger text-xs font-medium">{$errors.sku}</p>
+						<p class="text-xs font-medium text-danger">{$errors.sku}</p>
 					{/if}
 				</div>
 				<div class="space-y-1">
@@ -324,7 +320,7 @@
 						bind:value={$form.name}
 					/>
 					{#if $errors.name}
-						<p class="text-danger text-xs font-medium">{$errors.name}</p>
+						<p class="text-xs font-medium text-danger">{$errors.name}</p>
 					{/if}
 				</div>
 				<Input
@@ -339,7 +335,7 @@
 						bind:value={$form.barCodeUPC}
 					/>
 					{#if $errors.barCodeUPC}
-						<p class="text-danger text-xs font-medium">{$errors.barCodeUPC}</p>
+						<p class="text-xs font-medium text-danger">{$errors.barCodeUPC}</p>
 					{/if}
 				</div>
 
@@ -371,8 +367,8 @@
 					<Button
 						type="button"
 						size="sm"
-						variant="outline"
-						class="{btnSecondary} shrink-0"
+						variant="secondary"
+						class="{btnSecondary} h-10 shrink-0"
 						onclick={() => onNavigate?.('sub-categories')}
 					>
 						{$t('catalog.common.new')}</Button
@@ -397,10 +393,10 @@
 					</select>
 				</div>
 
-				<div class="border-border bg-muted/30 space-y-4 rounded-md border p-4">
+				<div class="surface-1 space-y-4 p-4">
 					<p class="overline">Units of Measure</p>
 					<div class="space-y-1">
-						<label class="text-muted-foreground text-xs font-medium" for="base-unit"
+						<label class="text-xs font-medium text-muted-foreground" for="base-unit"
 							>Base Unit</label
 						>
 						<div class="select-wrapper">
@@ -415,17 +411,17 @@
 								{/each}
 							</select>
 						</div>
-						<p class="text-muted-foreground text-xs">The unit stock is tracked in.</p>
+						<p class="text-xs text-muted-foreground">The unit stock is tracked in.</p>
 					</div>
 					<div class="flex items-center justify-between gap-3">
 						<div class="space-y-0.5">
 							<label
-								class="text-foreground cursor-pointer text-sm font-medium"
+								class="cursor-pointer text-sm font-medium text-foreground"
 								for="allow-fractional"
 							>
 								Allow fractional quantities
 							</label>
-							<p class="text-muted-foreground text-xs">For measured goods like wire or fabric.</p>
+							<p class="text-xs text-muted-foreground">For measured goods like wire or fabric.</p>
 						</div>
 						<Switch id="allow-fractional" bind:checked={allowFractional} />
 					</div>
@@ -442,7 +438,7 @@
 							bind:value={$form.purchasePrice}
 						/>
 						{#if $errors.purchasePrice}
-							<p class="text-danger text-xs font-medium">{$errors.purchasePrice}</p>
+							<p class="text-xs font-medium text-danger">{$errors.purchasePrice}</p>
 						{/if}
 					</div>
 					<div class="space-y-1">
@@ -455,7 +451,7 @@
 							bind:value={$form.sellingPrice}
 						/>
 						{#if $errors.sellingPrice}
-							<p class="text-danger text-xs font-medium">{$errors.sellingPrice}</p>
+							<p class="text-xs font-medium text-danger">{$errors.sellingPrice}</p>
 						{/if}
 					</div>
 				</div>
@@ -467,13 +463,14 @@
 						<option value="Discontinued">Discontinued</option>
 					</select>
 				</div>
-				<div class="flex flex-col gap-3 pt-1 pr-2 sm:flex-row">
-					<Button type="submit" class="{btnPrimary} w-full py-2.5 sm:w-1/2">
+				<div class="flex flex-col gap-3 pt-1 sm:flex-row">
+					<Button type="submit" class="{btnPrimary} w-full sm:flex-1">
 						{editing ? $t('catalog.common.update') : $t('catalog.common.create')}
 					</Button>
 					<Button
 						type="button"
-						class="{btnSecondary} w-full py-2.5 sm:w-1/2"
+						variant="secondary"
+						class="{btnSecondary} w-full sm:flex-1"
 						onclick={() => {
 							reset();
 							oncancel?.();
@@ -487,34 +484,28 @@
 	</div>
 
 	{#if editing}
-		<div
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay:300ms"
-		>
-			<div class="border-border space-y-1 border-b px-6 py-5">
-				<h3 class="text-foreground font-display text-lg font-semibold">Selling Units</h3>
-				<p class="text-muted-foreground text-sm">
+		<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:300ms">
+			<div class="panel-header flex-col items-start gap-1">
+				<h3 class="section-title">Selling Units</h3>
+				<p class="text-sm text-muted-foreground">
 					Units this product can be sold in. 1 selling unit = factor ×
 					{baseUnit?.Name?.toLowerCase() ?? 'base unit'}.
 				</p>
 			</div>
-			<div class="space-y-4 p-6">
-				<div class="border-border bg-muted/40 rounded-md border px-3 py-2">
-					<p class="text-muted-foreground text-xs">
-						Example: stocked in {baseUnit?.Name?.toLowerCase() ?? 'feet'}, a coil with factor 100
-						means 1 coil = 100 {baseUnit?.Symbol ?? 'ft'}; set its price accordingly (e.g. 45).
-					</p>
+			<div class="panel-body space-y-4">
+				<div class="rounded-lg bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+					Example: stocked in {baseUnit?.Name?.toLowerCase() ?? 'feet'}, a coil with factor 100
+					means 1 coil = 100 {baseUnit?.Symbol ?? 'ft'}; set its price accordingly (e.g. 45).
 				</div>
 
-				<div class="custom-scrollbar border-border overflow-x-auto rounded-md border">
-					<table class="ledger-table min-w-[40rem]">
+				<div class="surface-1 custom-scrollbar overflow-x-auto overflow-y-hidden">
+					<table class="glass-table min-w-[40rem]">
 						<thead>
 							<tr>
 								<th>Unit</th>
-								<th>Factor</th>
-								<th>Price</th>
-								<th>Purchase</th>
+								<th class="text-right">Factor</th>
+								<th class="text-right">Price</th>
+								<th class="text-right">Purchase</th>
 								<th>Barcode</th>
 								<th>Active</th>
 								<th class="w-16"></th>
@@ -523,10 +514,7 @@
 						<tbody>
 							{#if productUnits.length === 0}
 								<tr>
-									<td
-										colspan="7"
-										class="text-muted-foreground py-8 text-center text-sm"
-									>
+									<td colspan="7" class="py-10 text-center text-sm text-muted-foreground">
 										No selling units yet.
 									</td>
 								</tr>
@@ -534,28 +522,25 @@
 								{#each productUnits as pu (pu.UnitID)}
 									<tr>
 										<td>
-											<span class="text-foreground text-sm font-medium"
-												>{pu.Unit?.Name ?? '—'}</span
+											<span class="text-sm font-medium text-foreground">{pu.Unit?.Name ?? '—'}</span
 											>
-											<span class="text-muted-foreground text-xs">
-												({pu.Unit?.Symbol ?? ''})</span
-											>
+											<span class="text-xs text-muted-foreground"> ({pu.Unit?.Symbol ?? ''})</span>
 										</td>
-										<td class="num-mono">{pu.Factor}</td>
-										<td class="num-mono">{pu.Price}</td>
-										<td class="num-mono">{pu.PurchasePrice}</td>
-										<td class="num-mono">{pu.Barcode || '—'}</td>
+										<td class="col-num">{pu.Factor}</td>
+										<td class="col-num">{pu.Price}</td>
+										<td class="col-num">{pu.PurchasePrice}</td>
+										<td class="num-mono text-xs text-muted-foreground">{pu.Barcode || '—'}</td>
 										<td>
 											<span class="badge-{pu.IsActive ? 'success' : 'neutral'}">
 												{pu.IsActive ? 'Active' : 'Inactive'}
 											</span>
 										</td>
-										<td>
+										<td class="text-right">
 											<Button
 												type="button"
 												size="sm"
 												variant="ghost"
-												class="text-danger hover:text-danger h-8 px-2"
+												class="h-8 px-2 text-danger hover:bg-danger/10 hover:text-danger"
 												onclick={() => deleteSellingUnit(pu.UnitID)}
 											>
 												Delete
@@ -568,13 +553,10 @@
 					</table>
 				</div>
 
-				<div class="border-border bg-muted/30 space-y-3 rounded-md border p-4">
+				<div class="surface-1 space-y-3 p-4">
 					<p class="overline">Add selling unit</p>
 					<div class="select-wrapper">
-						<select
-							value={newUnitId}
-							onchange={(e) => onNewUnitSelect(e.currentTarget.value)}
-						>
+						<select value={newUnitId} onchange={(e) => onNewUnitSelect(e.currentTarget.value)}>
 							<option value="">Select unit</option>
 							{#each dimensionGroups as group (group.name)}
 								<optgroup label={group.name}>
@@ -610,16 +592,12 @@
 							placeholder="Purchase price"
 							bind:value={newPurchasePrice}
 						/>
-						<Input
-							class="{inputClass} num-mono"
-							placeholder="Barcode"
-							bind:value={newBarcode}
-						/>
+						<Input class="{inputClass} num-mono" placeholder="Barcode" bind:value={newBarcode} />
 					</div>
 					<div class="flex items-center justify-between gap-3">
 						<div class="flex items-center gap-2">
 							<Switch id="new-unit-active" bind:checked={newIsActive} />
-							<label class="text-foreground cursor-pointer text-sm" for="new-unit-active"
+							<label class="cursor-pointer text-sm text-foreground" for="new-unit-active"
 								>Active</label
 							>
 						</div>

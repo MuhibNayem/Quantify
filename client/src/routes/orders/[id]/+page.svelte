@@ -126,10 +126,8 @@
 	};
 </script>
 
-<div
-	class="relative min-h-screen overflow-hidden p-8 lg:p-12"
->
-	<div class="relative mx-auto max-w-5xl">
+<div class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<div class="relative">
 		{#if order}
 			<div class="mb-4">
 				<Breadcrumbs
@@ -139,39 +137,39 @@
 		{/if}
 		<button
 			onclick={() => goto('/orders')}
-			class="text-muted-foreground hover:text-primary group mb-8 flex items-center gap-2 text-sm font-medium transition-colors"
+			class="group mb-8 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
 		>
-			<div
-				class="border-border bg-card flex h-8 w-8 items-center justify-center rounded-md border shadow-sm transition-all group-hover:bg-accent"
+			<span
+				class="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card transition-colors group-hover:bg-muted"
 			>
 				←
-			</div>
+			</span>
 			Back to Orders
 		</button>
 
 		{#if loading}
 			<div class="flex h-64 items-center justify-center">
 				<div
-					class="border-border border-t-primary h-10 w-10 animate-spin rounded-full border-4"
+					class="h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary"
 				></div>
 			</div>
 		{:else if error}
-			<div class="liquid-panel border-danger/25 bg-danger/10 rounded-lg p-12 text-center">
+			<div class="panel flex flex-col items-center gap-3 p-12 text-center">
 				<div
-					class="text-danger bg-danger/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg text-2xl font-bold"
+					class="flex h-14 w-14 items-center justify-center rounded-xl bg-danger/10 text-2xl font-semibold text-danger"
 				>
 					!
 				</div>
-				<h3 class="text-foreground text-lg font-semibold">Unable to load order</h3>
-				<p class="text-danger mt-2">{error}</p>
+				<h3 class="text-lg font-semibold text-foreground">Unable to load order</h3>
+				<p class="text-muted-foreground">{error}</p>
 			</div>
 		{:else if order}
 			<div in:fade={{ duration: 300 }}>
 				<!-- Header Section -->
-				<div class="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-center">
-					<div>
-						<div class="flex items-center gap-4">
-							<h1 class="num-mono font-display text-foreground text-4xl font-bold tracking-tight">
+				<header class="page-header mb-8">
+					<div class="min-w-0">
+						<div class="flex flex-wrap items-center gap-3">
+							<h1 class="num-mono page-title">
 								{orderNumber(order)}
 							</h1>
 							<span
@@ -184,13 +182,15 @@
 								{order.Status}
 							</span>
 						</div>
-						<div class="text-muted-foreground mt-2 flex items-center gap-4 text-sm">
+						<div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
 							<span class="flex items-center gap-1.5">
-								<Calendar class="h-3.5 w-3.5" /> <span class="num">{formatDate(order.OrderDate)}</span>
+								<Calendar class="h-3.5 w-3.5" />
+								<span class="num">{formatDate(order.OrderDate)}</span>
 							</span>
-							<span class="bg-border h-1 w-1 rounded-full"></span>
+							<span class="h-1 w-1 rounded-full bg-border"></span>
 							<span class="flex items-center gap-1.5">
-								<Package class="h-3.5 w-3.5" /> <span class="num">{order.OrderItems?.length || 0}</span> Items
+								<Package class="h-3.5 w-3.5" />
+								<span class="num">{order.OrderItems?.length || 0}</span> Items
 							</span>
 						</div>
 					</div>
@@ -199,58 +199,60 @@
 						<span class="overline">Total Amount</span>
 						<div class="flex flex-col items-end">
 							{#if order.AdjustedTotal !== undefined && order.AdjustedTotal < order.TotalAmount}
-								<span class="kpi-num text-foreground text-3xl">
+								<span class="kpi-num text-3xl text-foreground">
 									{formatCurrency(order.AdjustedTotal)}
 								</span>
-								<span class="text-muted-foreground num-mono text-sm font-medium line-through">
+								<span class="num-mono text-sm font-medium text-muted-foreground line-through">
 									{formatCurrency(order.TotalAmount)}
 								</span>
 							{:else}
-								<span class="kpi-num text-foreground text-3xl">
+								<span class="kpi-num text-3xl text-foreground">
 									{formatCurrency(order.TotalAmount)}
 								</span>
 							{/if}
 						</div>
 					</div>
-				</div>
+				</header>
 
-				<div class="grid gap-8 lg:grid-cols-3">
+				<div class="grid gap-6 lg:grid-cols-3">
 					<!-- Order Items -->
-					<div class="space-y-6 lg:col-span-2">
-						<div class="liquid-panel overflow-hidden rounded-lg p-0">
-							<div class="border-border bg-muted/50 border-b px-6 py-4">
-								<h3 class="font-display text-foreground font-semibold">Order Items</h3>
+					<div class="lg:col-span-2">
+						<div class="panel overflow-hidden">
+							<div class="panel-header">
+								<h3 class="section-title">Order Items</h3>
 							</div>
-							<div class="space-y-3 px-6 py-4">
+							<div class="space-y-2 p-4">
 								{#each order.OrderItems as item}
 									<div
-										class="liquid-hoverable group relative flex items-center justify-between rounded-md p-4"
+										class="group flex items-center justify-between gap-4 rounded-lg border border-border/70 p-4 transition-colors hover:bg-muted/40"
 									>
-										<div class="relative z-10 flex items-center gap-4">
+										<div class="flex min-w-0 items-center gap-3">
 											<div
-												class="bg-muted text-muted-foreground flex h-12 min-w-[3rem] items-center justify-center rounded-md px-3 font-medium"
+												class="flex h-11 min-w-[3rem] items-center justify-center rounded-lg bg-muted px-3 text-sm font-medium text-muted-foreground"
 											>
 												<span class="num-mono">{item.Quantity}x</span>
 												{#if item.ReturnedQty > 0}
-													<span class="text-warning ml-1 text-xs">(-{item.ReturnedQty})</span>
+													<span class="ml-1 text-xs text-warning">(-{item.ReturnedQty})</span>
 												{/if}
 											</div>
-											<div>
-												<p class="text-foreground font-semibold">
+											<div class="min-w-0">
+												<p class="truncate font-medium text-foreground">
 													{item.Product?.Name || `Product #${item.ProductID}`}
 												</p>
-												<p class="text-muted-foreground text-sm">
+												<p class="text-sm text-muted-foreground">
 													{#if item.ReturnedQty > 0}
-														<span class="text-warning font-medium"
-															>Net Qty: <span class="num-mono">{item.Quantity - item.ReturnedQty}</span></span
+														<span class="font-medium text-warning"
+															>Net Qty: <span class="num-mono"
+																>{item.Quantity - item.ReturnedQty}</span
+															></span
 														> •
 													{/if}
 													<span class="num-mono">{formatCurrency(item.UnitPrice)}</span> / unit
 												</p>
 											</div>
 										</div>
-										<div class="relative z-10 text-right">
-											<div class="num-mono text-foreground font-bold">
+										<div class="text-right">
+											<div class="num-mono font-semibold text-foreground">
 												{formatCurrency(item.TotalPrice)}
 											</div>
 											{#if item.ReturnedQty > 0}
@@ -268,80 +270,86 @@
 					</div>
 
 					<!-- Sidebar -->
-					<div class="space-y-6">
+					<div class="space-y-4">
 						<!-- Actions Card -->
-						<div class="liquid-panel space-y-6 rounded-lg p-6">
-							<h3 class="border-border font-display text-foreground border-b pb-2 font-semibold">Actions</h3>
+						<div class="panel space-y-4 p-5">
+							<h3 class="section-title border-b border-border/80 pb-2.5">Actions</h3>
 
 							{#if order.Status === 'COMPLETED'}
 								{#if order.HasPendingReturn}
-									<div class="rounded-md border border-warning/25 bg-warning/10 p-4">
-										<p class="text-warning mb-1 text-xs font-semibold tracking-wide uppercase">
+									<div class="rounded-lg border border-warning/25 bg-warning/10 p-4">
+										<p class="mb-1 text-xs font-semibold tracking-wide text-warning uppercase">
 											Return Pending
 										</p>
-										<p class="text-warning/80 text-sm">A request is currently being processed.</p>
+										<p class="text-sm text-muted-foreground">
+											A request is currently being processed.
+										</p>
 									</div>
 									<button
 										disabled
-										class="bg-muted text-muted-foreground w-full cursor-not-allowed rounded-md py-3.5 font-medium"
+										class="w-full cursor-not-allowed rounded-lg bg-muted py-3 font-medium text-muted-foreground"
 									>
 										Return Requested
 									</button>
 								{:else if isReturnEligible}
-									<div class="rounded-md border border-info/25 bg-info/10 p-4">
-										<p class="text-info mb-1 text-xs font-semibold tracking-wide uppercase">
+									<div class="rounded-lg border border-info/25 bg-info/10 p-4">
+										<p class="mb-1 text-xs font-semibold tracking-wide text-info uppercase">
 											Return Window Open
 										</p>
-										<p class="text-info/80 text-sm">
-											Until <span class="num">{returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}</span>
+										<p class="text-sm text-muted-foreground">
+											Until <span class="num"
+												>{returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}</span
+											>
 										</p>
 									</div>
 									<button
 										onclick={() => (showReturnModal = true)}
-										class="bg-primary text-primary-foreground hover:bg-primary/90 w-full rounded-md py-3.5 font-medium shadow-sm transition-all active:scale-[0.99]"
+										class="btn-soothe w-full py-3 font-semibold"
 									>
 										Request Return
 									</button>
 								{:else}
-									<div class="border-border bg-muted rounded-md border p-4 text-center">
-										<p class="text-muted-foreground text-sm font-semibold">Return Window Closed</p>
-										<p class="text-muted-foreground mt-1 text-xs">
-											Deadline was <span class="num">{returnDeadline
-												? formatDate(returnDeadline.toISOString())
-												: 'N/A'}</span>
+									<div class="rounded-lg border border-border bg-muted/60 p-4 text-center">
+										<p class="text-sm font-semibold text-foreground">Return Window Closed</p>
+										<p class="mt-1 text-xs text-muted-foreground">
+											Deadline was <span class="num"
+												>{returnDeadline ? formatDate(returnDeadline.toISOString()) : 'N/A'}</span
+											>
 										</p>
 									</div>
 								{/if}
 							{:else}
-								<div class="border-border bg-muted/60 rounded-md border p-4 text-center">
-									<p class="text-muted-foreground text-sm">Actions available when order is completed.</p>
+								<div class="rounded-lg border border-border bg-muted/60 p-4 text-center">
+									<p class="text-sm text-muted-foreground">
+										Actions available when order is completed.
+									</p>
 								</div>
 							{/if}
 						</div>
 
 						<!-- Order Info -->
-						<div class="liquid-panel space-y-4 rounded-lg p-6">
-							<h3 class="border-border font-display text-foreground border-b pb-2 font-semibold">
-								Payment Info
-							</h3>
-							<div class="flex justify-between text-sm">
-								<span class="text-muted-foreground">Method</span>
-								<span
-									class="border-border bg-muted text-foreground num-mono rounded-md border px-2 py-0.5 font-medium"
-									>{order.PaymentMethod || 'N/A'}</span
-								>
+						<div class="panel p-5">
+							<h3 class="section-title border-b border-border/80 pb-2.5">Payment Info</h3>
+							<div class="mt-3 space-y-2 text-sm">
+								<div class="flex items-center justify-between gap-3">
+									<span class="text-muted-foreground">Method</span>
+									<span
+										class="num-mono rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+										>{order.PaymentMethod || 'N/A'}</span
+									>
+								</div>
+								<div class="flex items-center justify-between gap-3">
+									<span class="text-muted-foreground">Status</span>
+									<span class="font-medium text-foreground">{order.Status}</span>
+								</div>
 							</div>
-						<div class="flex justify-between text-sm">
-							<span class="text-muted-foreground">Status</span>
-							<span class="text-foreground font-medium">{order.Status}</span>
+						</div>
+
+						<!-- Activity History -->
+						<div class="panel p-5">
+							<ActivityHistory entity="Order" entityId={order.ID ?? orderId} />
 						</div>
 					</div>
-
-					<!-- Activity History -->
-					<div class="liquid-panel rounded-lg p-6">
-						<ActivityHistory entity="Order" entityId={order.ID ?? orderId} />
-					</div>
-				</div>
 				</div>
 			</div>
 		{/if}
@@ -350,24 +358,24 @@
 	<!-- Return Modal -->
 	{#if showReturnModal && order}
 		<div
-			class="bg-foreground/50 fixed inset-0 z-50 flex items-center justify-center p-4"
+			class="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur-sm"
 			transition:fade={{ duration: 200 }}
 		>
 			<div class="w-full max-w-lg" transition:fly={{ y: 20, duration: 300 }}>
 				<!-- Ledger Modal -->
-				<div
-					class="liquid-panel relative rounded-lg p-8 shadow-lg"
-				>
+				<div class="surface-3 relative rounded-xl p-6 shadow-lg sm:p-8">
 					<button
 						onclick={() => (showReturnModal = false)}
-						class="text-muted-foreground hover:text-foreground hover:bg-muted absolute top-4 right-4 rounded-md p-1.5 transition-colors"
+						class="absolute top-4 right-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 					>
 						✕
 					</button>
 
 					<div class="mb-6">
-						<h2 class="font-display text-foreground text-2xl font-bold tracking-tight">Request Return</h2>
-						<p class="text-muted-foreground text-sm">Select items and quantities to return</p>
+						<h2 class="font-display text-xl font-semibold tracking-tight text-foreground">
+							Request Return
+						</h2>
+						<p class="mt-1 text-sm text-muted-foreground">Select items and quantities to return</p>
 					</div>
 
 					<div class="custom-scrollbar max-h-[60vh] space-y-3 overflow-y-auto pr-2">
@@ -375,9 +383,9 @@
 							{@const remainingQty = item.Quantity - item.ReturnedQty}
 							{#if remainingQty > 0}
 								<div
-									class={`rounded-md border p-4 transition-all ${
+									class={`rounded-lg border p-4 transition-all ${
 										selectedItems[item.ID]
-											? 'border-primary bg-accent/60 border-l-4'
+											? 'border-primary/45 bg-accent'
 											: 'border-border hover:bg-muted/60'
 									}`}
 								>
@@ -388,17 +396,17 @@
 													type="checkbox"
 													checked={!!selectedItems[item.ID]}
 													onchange={() => toggleItemSelection(item.ID, remainingQty)}
-													class="border-border peer h-5 w-5 cursor-pointer appearance-none rounded-md border transition-all checked:border-primary checked:bg-primary hover:border-primary/60"
+													class="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-border transition-all checked:border-primary checked:bg-primary hover:border-primary/60"
 												/>
 												<div
-													class="text-primary-foreground pointer-events-none absolute text-xs opacity-0 peer-checked:opacity-100"
+													class="pointer-events-none absolute text-xs text-primary-foreground opacity-0 peer-checked:opacity-100"
 												>
 													✓
 												</div>
 											</div>
 											<div>
-												<p class="text-foreground font-medium">{item.Product?.Name}</p>
-												<p class="text-muted-foreground text-xs">
+												<p class="font-medium text-foreground">{item.Product?.Name}</p>
+												<p class="text-xs text-muted-foreground">
 													Max Return: <span class="num-mono">{remainingQty}</span>
 												</p>
 											</div>
@@ -406,20 +414,22 @@
 
 										{#if selectedItems[item.ID]}
 											<div
-												class="border-border bg-card flex items-center rounded-md border shadow-sm"
+												class="flex items-center rounded-lg border border-border bg-card shadow-xs"
 											>
 												<button
-													class="text-muted-foreground hover:text-primary hover:bg-muted h-7 w-7 rounded-l-md transition-colors"
+													class="h-7 w-7 rounded-l-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 													onclick={() =>
 														updateQuantity(item.ID, selectedItems[item.ID] - 1, remainingQty)}
 												>
 													-
 												</button>
-												<span class="num-mono text-foreground w-8 text-center text-sm font-semibold">
+												<span
+													class="num-mono w-8 text-center text-sm font-semibold text-foreground"
+												>
 													{selectedItems[item.ID]}
 												</span>
 												<button
-													class="text-muted-foreground hover:text-primary hover:bg-muted h-7 w-7 rounded-r-md transition-colors"
+													class="h-7 w-7 rounded-r-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 													onclick={() =>
 														updateQuantity(item.ID, selectedItems[item.ID] + 1, remainingQty)}
 												>
@@ -433,10 +443,11 @@
 						{/each}
 
 						<div class="pt-4">
-							<label class="text-foreground mb-2 block text-sm font-medium">Reason for Return</label>
+							<label class="mb-2 block text-sm font-medium text-foreground">Reason for Return</label
+							>
 							<textarea
 								bind:value={returnReason}
-								class="liquid-textarea text-foreground placeholder:text-muted-foreground w-full px-4 py-3 text-sm"
+								class="glass-textarea w-full px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground"
 								rows="3"
 								placeholder="Please tell us why you are returning these items..."
 							></textarea>
@@ -444,26 +455,28 @@
 					</div>
 
 					{#if Object.keys(selectedItems).length > 0}
-						<div class="bg-accent text-accent-foreground mt-4 flex items-center justify-between rounded-md p-4">
+						<div
+							class="mt-4 flex items-center justify-between rounded-lg bg-accent p-4 text-accent-foreground"
+						>
 							<span class="text-sm font-medium">Estimated Refund</span>
-							<span class="num-mono text-lg font-bold">{formatCurrency(estimatedRefund)}</span>
+							<span class="kpi-num text-lg">{formatCurrency(estimatedRefund)}</span>
 						</div>
-						<p class="text-muted-foreground mt-2 text-right text-xs">
+						<p class="mt-2 text-right text-xs text-muted-foreground">
 							Includes {$settings.tax_rate_percentage || 0}% tax adjustment
 						</p>
 					{/if}
 
-					<div class="border-border mt-8 flex gap-3 border-t pt-6">
+					<div class="mt-6 flex gap-3 border-t border-border/80 pt-5">
 						<button
 							onclick={() => (showReturnModal = false)}
-							class="border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted flex-1 rounded-md border py-3 font-medium transition-colors"
+							class="btn-soft flex-1 py-3 font-medium"
 						>
 							Cancel
 						</button>
 						<button
 							onclick={submitReturn}
 							disabled={Object.keys(selectedItems).length === 0 || !returnReason}
-							class="bg-primary text-primary-foreground hover:bg-primary/90 flex-1 rounded-md py-3 font-medium shadow-sm transition-all disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+							class="btn-soothe flex-1 py-3 font-semibold disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							Submit Request
 						</button>

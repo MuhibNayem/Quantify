@@ -41,13 +41,13 @@
 		<Dialog.Header>
 			<div class="flex items-start gap-4">
 				<div
-					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100"
+					class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger ring-1 ring-danger/15"
 				>
-					<AlertTriangle class="h-5 w-5 text-rose-600" />
+					<AlertTriangle class="h-5 w-5" />
 				</div>
 				<div class="space-y-1">
-					<Dialog.Title class="text-lg font-semibold text-slate-900">{title}</Dialog.Title>
-					<Dialog.Description class="text-sm text-slate-500">
+					<Dialog.Title class="text-lg font-semibold text-foreground">{title}</Dialog.Title>
+					<Dialog.Description class="text-sm text-muted-foreground">
 						{description}
 					</Dialog.Description>
 				</div>
@@ -56,8 +56,8 @@
 
 		{#if confirmText}
 			<div class="space-y-2 px-6">
-				<p class="text-sm text-slate-600">
-					Type <span class="font-mono font-semibold text-slate-900">{confirmText}</span> to confirm
+				<p class="text-sm text-muted-foreground">
+					Type <span class="font-mono font-semibold text-foreground">{confirmText}</span> to confirm
 				</p>
 				<Input
 					bind:value={typed}

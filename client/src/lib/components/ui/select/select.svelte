@@ -13,7 +13,8 @@
 		placeholder = 'Select an option',
 		label = '',
 		disabled = false,
-		style = ''
+		style = '',
+		class: className = ''
 	}: {
 		value?: string;
 		options?: { value: string; label: string }[];
@@ -21,6 +22,7 @@
 		label?: string;
 		disabled?: boolean;
 		style?: string;
+		class?: string;
 	} = $props();
 
 	let isOpen = $state(false);
@@ -84,12 +86,12 @@
 	});
 </script>
 
-<div class={cn('relative w-full', style)} bind:this={selectRef}>
+<div class={cn('relative w-full', style, className)} bind:this={selectRef}>
 	<!-- Floating Label -->
 	{#if label}
-		<label
+		<span
 			class={cn(
-				'absolute left-3 z-10 font-medium text-foreground transition-all duration-200 ease-in-out',
+				'pointer-events-none absolute left-3 z-10 font-medium text-foreground transition-all duration-200 ease-in-out',
 				value || isOpen
 					? '-top-2 rounded-sm bg-card px-1 text-xs'
 					: 'top-1/2 -translate-y-1/2 text-base',
@@ -97,7 +99,7 @@
 			)}
 		>
 			{label}
-		</label>
+		</span>
 	{/if}
 
 	<!-- Select Trigger -->
@@ -105,16 +107,15 @@
 		bind:this={triggerRef}
 		type="button"
 		class={cn(
-			'flex h-12 w-full items-center justify-between rounded-md border border-input bg-card px-4 text-left text-sm font-medium text-foreground shadow-xs outline-none transition-all',
+			'flex h-12 w-full items-center justify-between rounded-md border border-input bg-card px-4 text-left text-sm font-medium text-foreground shadow-xs transition-all outline-none',
 			'focus:border-primary focus:ring-[3px] focus:ring-ring/30',
 			'appearance-none',
-			'-webkit-appearance: none;',
-			'cursor: pointer;',
 			disabled && 'cursor-not-allowed bg-muted opacity-50',
 			value && label && 'pt-2'
 		)}
 		onclick={toggleDropdown}
 		aria-haspopup="listbox"
+		aria-label={label || placeholder}
 		aria-expanded={isOpen}
 		{disabled}
 	>
@@ -122,7 +123,10 @@
 			{selectedLabel}
 		</span>
 		<svg
-			class={cn('h-4 w-4 text-muted-foreground transition-transform duration-300', isOpen && 'rotate-180')}
+			class={cn(
+				'h-4 w-4 text-muted-foreground transition-transform duration-300',
+				isOpen && 'rotate-180'
+			)}
 			fill="none"
 			stroke="currentColor"
 			viewBox="0 0 24 24"
@@ -137,23 +141,24 @@
 	{#if isOpen}
 		<ul
 			class={cn(
-				'custom-scrollbar absolute z-10 max-h-60 w-full overflow-auto rounded-md border border-border bg-card p-1 shadow-lg',
+				'glass-float custom-scrollbar absolute z-20 max-h-60 w-full overflow-auto rounded-xl p-1',
 				dropdownPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'
 			)}
 			transition:fly={{ y: dropdownPosition === 'top' ? 10 : -10, duration: 150 }}
 			role="listbox"
 		>
 			{#each options as option (option.value)}
-				<li
-					class={cn(
-						'cursor-pointer rounded-md px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted',
-						value === option.value && 'bg-accent text-accent-foreground'
-					)}
-					onclick={() => selectOption(option.value)}
-					role="option"
-					aria-selected={value === option.value}
-				>
-					{option.label}
+				<li role="option" aria-selected={value === option.value}>
+					<button
+						type="button"
+						class={cn(
+							'w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted',
+							value === option.value && 'bg-accent text-accent-foreground'
+						)}
+						onclick={() => selectOption(option.value)}
+					>
+						{option.label}
+					</button>
 				</li>
 			{/each}
 		</ul>

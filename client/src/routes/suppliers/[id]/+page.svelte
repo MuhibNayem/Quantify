@@ -36,8 +36,8 @@
 	});
 </script>
 
-<div class="mx-auto w-full max-w-6xl px-6 py-8">
-	<section class="space-y-8">
+<div class="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+	<div class="space-y-6">
 		{#if supplier}
 			<Breadcrumbs
 				items={[
@@ -47,72 +47,83 @@
 				]}
 			/>
 		{/if}
+
 		<!-- HEADER -->
-		<div class="flex items-center justify-between">
-			<a
-				href="/catalog"
-				class="text-primary hover:text-foreground flex items-center text-sm font-medium transition-colors"
-			>
-				<ArrowLeft class="mr-2 h-4 w-4" />
-				Back to Catalog
-			</a>
+		<div class="page-header">
+			<div class="min-w-0 space-y-2">
+				<p class="overline">Catalog · Supplier</p>
+				<h1 class="page-title truncate">{supplier?.Name ?? 'Supplier'}</h1>
+				<p class="page-sub">Supplier details and delivery performance.</p>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				<a
+					href="/catalog"
+					class="btn-soft inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+				>
+					<ArrowLeft class="h-4 w-4" />
+					Back to Catalog
+				</a>
+			</div>
 		</div>
 
 		{#if supplier && performance}
-			<div class="grid gap-8 lg:grid-cols-3">
+			<div class="grid gap-6 lg:grid-cols-3">
 				<!-- Supplier Details -->
-				<div class="lg:col-span-1">
-					<div class="liquid-panel overflow-hidden rounded-lg">
-						<div class="border-border space-y-1 border-b px-6 py-5">
-							<h1 class="text-foreground flex items-center font-display text-xl font-semibold">
-								<User class="text-primary mr-2 h-5 w-5" />
-								{supplier.Name}
-							</h1>
-							<p class="text-muted-foreground text-sm">Supplier Details</p>
+				<div class="min-w-0 lg:col-span-1">
+					<div class="panel overflow-hidden">
+						<div class="panel-header">
+							<div class="flex items-center gap-2">
+								<User class="h-4 w-4 text-primary" />
+								<h2 class="section-title">Contact</h2>
+							</div>
 						</div>
-						<div class="space-y-4 p-6 text-sm">
-							<div>
-								<p class="overline">Contact Person</p>
-								<p class="text-foreground mt-0.5">{supplier.ContactPerson || 'N/A'}</p>
-							</div>
-							<div>
-								<p class="overline">Email</p>
-								<p class="text-foreground mt-0.5">{supplier.Email || 'N/A'}</p>
-							</div>
-							<div>
-								<p class="overline">Phone</p>
-								<p class="num-mono text-foreground mt-0.5">{supplier.Phone || 'N/A'}</p>
-							</div>
-							<div>
-								<p class="overline">Address</p>
-								<p class="text-foreground mt-0.5">{supplier.Address || 'N/A'}</p>
-							</div>
+						<div class="panel-body">
+							<dl class="space-y-4 text-sm">
+								<div class="min-w-0">
+									<dt class="overline">Contact Person</dt>
+									<dd class="mt-1 text-foreground">{supplier.ContactPerson || 'N/A'}</dd>
+								</div>
+								<div class="min-w-0">
+									<dt class="overline">Email</dt>
+									<dd class="mt-1 break-words text-foreground">{supplier.Email || 'N/A'}</dd>
+								</div>
+								<div class="min-w-0">
+									<dt class="overline">Phone</dt>
+									<dd class="num-mono mt-1 text-foreground">{supplier.Phone || 'N/A'}</dd>
+								</div>
+								<div class="min-w-0">
+									<dt class="overline">Address</dt>
+									<dd class="mt-1 text-foreground">{supplier.Address || 'N/A'}</dd>
+								</div>
+							</dl>
 						</div>
 					</div>
 				</div>
 
 				<!-- Performance Report -->
-				<div class="lg:col-span-2">
-					<div class="liquid-panel overflow-hidden rounded-lg">
-						<div class="border-border space-y-1 border-b px-6 py-5">
-							<h2 class="text-foreground flex items-center font-display text-xl font-semibold">
-								<BarChart2 class="text-primary mr-2 h-5 w-5" />
-								Performance Report
-							</h2>
-							<p class="text-muted-foreground text-sm">Key performance indicators</p>
-						</div>
-						<div class="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2">
-							<div class="border-border bg-muted/50 rounded-lg border p-4">
-								<p class="overline">On-Time Delivery Rate</p>
-								<p class="kpi-num text-success mt-1 text-3xl">
-									{(performance.onTimeDeliveryRate * 100).toFixed(1)}%
-								</p>
+				<div class="min-w-0 lg:col-span-2">
+					<div class="panel overflow-hidden">
+						<div class="panel-header">
+							<div class="flex items-center gap-2">
+								<BarChart2 class="h-4 w-4 text-primary" />
+								<h2 class="section-title">Performance Report</h2>
 							</div>
-							<div class="border-border bg-muted/50 rounded-lg border p-4">
-								<p class="overline">Average Lead Time</p>
-								<p class="kpi-num text-info mt-1 text-3xl">
-									{performance.averageLeadTimeDays.toFixed(1)} days
-								</p>
+							<span class="text-xs text-muted-foreground">Key performance indicators</span>
+						</div>
+						<div class="panel-body">
+							<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+								<div class="surface-1 p-4">
+									<p class="overline">On-Time Delivery Rate</p>
+									<p class="kpi-num mt-2 text-3xl text-success">
+										{(performance.onTimeDeliveryRate * 100).toFixed(1)}%
+									</p>
+								</div>
+								<div class="surface-1 p-4">
+									<p class="overline">Average Lead Time</p>
+									<p class="kpi-num mt-2 text-3xl text-info">
+										{performance.averageLeadTimeDays.toFixed(1)} days
+									</p>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -120,14 +131,14 @@
 			</div>
 		{:else}
 			<!-- Loading State -->
-			<div class="grid gap-8 lg:grid-cols-3">
+			<div class="grid gap-6 lg:grid-cols-3">
 				<div class="lg:col-span-1">
-					<Skeleton class="h-64 w-full" />
+					<Skeleton class="h-64 w-full rounded-xl" />
 				</div>
 				<div class="lg:col-span-2">
-					<Skeleton class="h-64 w-full" />
+					<Skeleton class="h-64 w-full rounded-xl" />
 				</div>
 			</div>
 		{/if}
-	</section>
+	</div>
 </div>

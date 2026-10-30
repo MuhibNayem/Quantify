@@ -17,7 +17,7 @@
 <div
 	in:fade={{ duration: 300, delay: 150 }}
 	out:fade={{ duration: 150 }}
-	class="grid gap-6 md:grid-cols-2"
+	class="grid gap-4 md:grid-cols-2"
 >
 	<StockAgingCard {stockAgingFlat} />
 

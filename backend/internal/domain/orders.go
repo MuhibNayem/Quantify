@@ -9,61 +9,64 @@ import (
 // Order represents a sales order.
 type Order struct {
 	gorm.Model
-	OrderNumber      string `gorm:"uniqueIndex;not null"`
-	UserID           uint   `gorm:"index"` // Staff ID (logged in user)
-	User             User
-	CustomerID       *uint     `gorm:"index"` // Customer ID (nullable)
-	Customer         *User     `gorm:"foreignKey:CustomerID"`
-	Subtotal         float64   `gorm:"type:decimal(12,2);default:0"` // Pre-tax, post-promo-discount
-	TaxAmount        float64   `gorm:"type:decimal(10,2);default:0"` // Tax portion captured at checkout (P3.T7)
-	TotalAmount      float64   `gorm:"not null"`                      // Post-tax, post-loyalty-discount
-	Status           string    `gorm:"default:'COMPLETED';index"`     // PENDING, COMPLETED, CANCELLED, RETURNED
-	PaymentMethod    string    `gorm:"not null"`
-	OrderDate        time.Time `gorm:"index"`
-	PointsRedeemed   int       `gorm:"default:0"`
-	DiscountAmount   float64   `gorm:"default:0"`
+	OrderNumber    string `gorm:"uniqueIndex;not null"`
+	UserID         uint   `gorm:"index"` // Staff ID (logged in user)
+	User           User
+	CustomerID     *uint     `gorm:"index"` // Customer ID (nullable)
+	Customer       *User     `gorm:"foreignKey:CustomerID"`
+	Subtotal       float64   `gorm:"type:decimal(12,2);default:0"` // Pre-tax, post-promo-discount
+	TaxAmount      float64   `gorm:"type:decimal(10,2);default:0"` // Tax portion captured at checkout (P3.T7)
+	TotalAmount    float64   `gorm:"not null"`                     // Post-tax, post-loyalty-discount
+	Status         string    `gorm:"default:'COMPLETED';index"`    // PENDING, COMPLETED, CANCELLED, RETURNED
+	PaymentMethod  string    `gorm:"not null"`
+	OrderDate      time.Time `gorm:"index"`
+	PointsRedeemed int       `gorm:"default:0"`
+	DiscountAmount float64   `gorm:"default:0"`
 	// Manual discount applied by an employee at checkout (admin opt-in).
-	ManualDiscountType   string  `gorm:"default:''" json:"ManualDiscountType"`     // "percent" | "fixed" | ""
-	ManualDiscountValue  float64 `gorm:"default:0" json:"ManualDiscountValue"`     // the entered value (% or amount)
+	ManualDiscountType   string  `gorm:"default:''" json:"ManualDiscountType"`                     // "percent" | "fixed" | ""
+	ManualDiscountValue  float64 `gorm:"default:0" json:"ManualDiscountValue"`                     // the entered value (% or amount)
 	ManualDiscountAmount float64 `gorm:"type:decimal(12,2);default:0" json:"ManualDiscountAmount"` // computed currency amount
 	ManualDiscountReason string  `json:"ManualDiscountReason"`
 	ManualDiscountBy     uint    `json:"ManualDiscountBy"` // employee who applied it
-	OrderItems       []OrderItem
-	Returns          []Return `gorm:"foreignKey:OrderID" json:"Returns"`
-	HasPendingReturn bool     `gorm:"-" json:"HasPendingReturn"`
-	AdjustedTotal    float64  `gorm:"-" json:"AdjustedTotal"`
+	OrderItems           []OrderItem
+	Returns              []Return `gorm:"foreignKey:OrderID" json:"Returns"`
+	HasPendingReturn     bool     `gorm:"-" json:"HasPendingReturn"`
+	AdjustedTotal        float64  `gorm:"-" json:"AdjustedTotal"`
 }
 
 // OrderItem represents an item within an order.
 type OrderItem struct {
 	gorm.Model
-	OrderID     uint `gorm:"not null;index"`
-	Order       Order
-	ProductID   uint `gorm:"not null;index"`
-	Product     Product
-	Quantity    float64 `gorm:"not null"`
-	UnitID      *uint   `json:"UnitID"` // selling unit (nil = base unit)
-	Unit        Unit    `json:"Unit"`
-	BaseQuantity float64 `gorm:"type:numeric(14,4)" json:"BaseQuantity"` // quantity deducted in base stock units
-	UnitPrice   float64 `gorm:"not null"`
-	TotalPrice  float64 `gorm:"not null"`
-	IsReturned  bool    `gorm:"default:false"`
-	ReturnedQty float64 `gorm:"default:0"`
+	OrderID      uint `gorm:"not null;index"`
+	Order        Order
+	ProductID    uint `gorm:"not null;index"`
+	Product      Product
+	Quantity     float64 `gorm:"not null"`
+	UnitID       *uint   `json:"UnitID"` // selling unit (nil = base unit)
+	Unit         Unit    `json:"Unit"`
+	BaseQuantity float64 `gorm:"type:numeric(14,4)" json:"BaseQuantity"`       // quantity deducted in base stock units
+	LocationID   uint    `gorm:"index" json:"LocationID"`                      // location stock was deducted from, used to restock returns correctly
+	UnitCost     float64 `gorm:"type:numeric(14,4);default:0" json:"UnitCost"` // batch cost per base unit at sale time
+	UnitPrice    float64 `gorm:"not null"`
+	TotalPrice   float64 `gorm:"not null"`
+	IsReturned   bool    `gorm:"default:false"`
+	ReturnedQty  float64 `gorm:"default:0"`
 }
 
 // Return represents a return request or processed return.
 type Return struct {
 	gorm.Model
-	OrderID      uint `gorm:"not null;index"`
-	Order        Order
-	UserID       uint `gorm:"not null;index"` // User who requested the return (Customer)
-	User         User
-	Status       string  `gorm:"default:'PENDING';index"` // PENDING, APPROVED, REJECTED, COMPLETED
-	Reason       string  `gorm:"not null"`
-	RefundAmount float64 `gorm:"not null"`
-	ApprovedBy   *uint   // UserID of the approver (Staff/Manager)
-	ApprovedAt   *time.Time
-	ReturnItems  []ReturnItem
+	OrderID        uint `gorm:"not null;index"`
+	Order          Order
+	UserID         uint `gorm:"not null;index"` // User who requested the return (Customer)
+	User           User
+	Status         string  `gorm:"default:'PENDING';index"` // PENDING, APPROVED, REJECTED, COMPLETED
+	Reason         string  `gorm:"not null"`
+	RefundAmount   float64 `gorm:"not null"`
+	ApprovedBy     *uint   // UserID of the approver (Staff/Manager)
+	ApprovedAt     *time.Time
+	JournalEntryID *uint // ledger entry posted on approval
+	ReturnItems    []ReturnItem
 }
 
 // ReturnItem represents an item within a return.

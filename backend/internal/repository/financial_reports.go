@@ -11,18 +11,20 @@ func (r *reportsRepository) GetProfitMargin(startDate, endDate time.Time, catego
 	var totalRevenue sql.NullFloat64
 	var totalCost sql.NullFloat64
 
-	query := r.DB.Model(&domain.StockAdjustment{}).
-		Select("SUM(stock_adjustments.quantity * products.selling_price)").
-		Joins("JOIN products ON products.id = stock_adjustments.product_id").
-		Where("stock_adjustments.type = ?", "STOCK_OUT").
-		Where("stock_adjustments.reason_code = ?", "SALE").
-		Where("stock_adjustments.adjusted_at BETWEEN ? AND ?", startDate, endDate)
+	// Use the order lines' captured prices and batch costs. This keeps
+	// historical margin stable when catalogue prices change later.
+	query := r.DB.Model(&domain.OrderItem{}).
+		Select("SUM(order_items.total_price)").
+		Joins("JOIN orders ON orders.id = order_items.order_id").
+		Where("orders.status IN ?", []string{"COMPLETED", "PENDING"}).
+		Where("orders.order_date BETWEEN ? AND ?", startDate, endDate)
 
 	if categoryID != nil {
-		query = query.Where("products.category_id = ?", *categoryID)
+		query = query.Joins("JOIN products ON products.id = order_items.product_id").
+			Where("products.category_id = ?", *categoryID)
 	}
 	if locationID != nil {
-		query = query.Where("stock_adjustments.location_id = ?", *locationID)
+		query = query.Where("order_items.location_id = ?", *locationID)
 	}
 
 	err := query.Scan(&totalRevenue).Error
@@ -35,18 +37,18 @@ func (r *reportsRepository) GetProfitMargin(startDate, endDate time.Time, catego
 		revenueValue = totalRevenue.Float64
 	}
 
-	query = r.DB.Model(&domain.StockAdjustment{}).
-		Select("SUM(stock_adjustments.quantity * products.purchase_price)").
-		Joins("JOIN products ON products.id = stock_adjustments.product_id").
-		Where("stock_adjustments.type = ?", "STOCK_OUT").
-		Where("stock_adjustments.reason_code = ?", "SALE").
-		Where("stock_adjustments.adjusted_at BETWEEN ? AND ?", startDate, endDate)
+	query = r.DB.Model(&domain.OrderItem{}).
+		Select("SUM(order_items.base_quantity * order_items.unit_cost)").
+		Joins("JOIN orders ON orders.id = order_items.order_id").
+		Where("orders.status IN ?", []string{"COMPLETED", "PENDING"}).
+		Where("orders.order_date BETWEEN ? AND ?", startDate, endDate)
 
 	if categoryID != nil {
-		query = query.Where("products.category_id = ?", *categoryID)
+		query = query.Joins("JOIN products ON products.id = order_items.product_id").
+			Where("products.category_id = ?", *categoryID)
 	}
 	if locationID != nil {
-		query = query.Where("stock_adjustments.location_id = ?", *locationID)
+		query = query.Where("order_items.location_id = ?", *locationID)
 	}
 
 	err = query.Scan(&totalCost).Error
@@ -137,29 +139,32 @@ func (r *reportsRepository) GetTaxLiabilityReport(startDate, endDate time.Time) 
 		}
 	}
 
-	var totalSales sql.NullFloat64
+	// Tax is charged on top of the subtotal at checkout, so report the
+	// persisted tax_amount rather than backing it out of the grand total.
+	var taxableAmount, taxAmount sql.NullFloat64
 	query := `
-		SELECT COALESCE(SUM(total_amount), 0)
+		SELECT COALESCE(SUM(subtotal), 0), COALESCE(SUM(tax_amount), 0)
 		FROM orders
 		WHERE status = 'COMPLETED'
 		AND order_date BETWEEN ? AND ?
 	`
-	if err := r.DB.Raw(query, startDate, endDate).Scan(&totalSales).Error; err != nil {
+	if err := r.DB.Raw(query, startDate, endDate).Row().Scan(&taxableAmount, &taxAmount); err != nil {
 		return nil, err
 	}
 
-	totalAmount := 0.0
-	if totalSales.Valid {
-		totalAmount = totalSales.Float64
+	taxable := 0.0
+	if taxableAmount.Valid {
+		taxable = taxableAmount.Float64
 	}
-
-	taxableAmount := totalAmount / (1 + taxRate)
-	taxAmount := totalAmount - taxableAmount
+	tax := 0.0
+	if taxAmount.Valid {
+		tax = taxAmount.Float64
+	}
 
 	stats = append(stats, TaxLiabilityStats{
 		TaxRate:       taxRate * 100,
-		TaxableAmount: taxableAmount,
-		TaxAmount:     taxAmount,
+		TaxableAmount: taxable,
+		TaxAmount:     tax,
 	})
 
 	return stats, nil
@@ -179,7 +184,7 @@ func (r *reportsRepository) GetCashDrawerReconciliationReport(startDate, endDate
 func (r *reportsRepository) GetVoidDiscountAuditReport(startDate, endDate time.Time) ([]domain.AuditLog, error) {
 	var logs []domain.AuditLog
 
-	err := r.DB.Where("action IN (?)", []string{"VOID", "DISCOUNT"}).
+	err := r.DB.Where("action IN (?)", []string{"VOID", "DISCOUNT", "MANUAL_DISCOUNT"}).
 		Where("timestamp BETWEEN ? AND ?", startDate, endDate).
 		Preload("User").
 		Order("timestamp DESC").

@@ -15,8 +15,7 @@
 	import { t } from '$lib/i18n';
 	import { goto } from '$app/navigation';
 
-	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0';
+	const inputClass = 'h-11 w-full rounded-md text-sm';
 
 	$effect(() => {
 		if (!auth.hasPermission('users.view')) {
@@ -273,278 +272,290 @@
 	};
 </script>
 
-<!-- HEADER -->
-<section class="w-full">
-	<div class="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-		<div class="space-y-3" data-animate="fade-up">
-			<div class="flex items-center gap-3">
-				<span class="glass-button inline-flex rounded-md p-2">
-					<UserCheck class="text-primary h-5 w-5" />
+<div class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+	<!-- Page header -->
+	<header class="page-header" data-animate="fade-up">
+		<div>
+			<p class="flex items-center gap-2 overline">
+				<span class="inline-flex rounded-md bg-primary/10 p-1.5 text-primary">
+					<UserCheck class="h-3.5 w-3.5" />
 				</span>
-				<p class="overline">Staff · Access</p>
-			</div>
-			<h1 class="font-display text-foreground text-3xl font-bold tracking-tight sm:text-4xl">
-				{$t('users.title')}
-			</h1>
-			<p class="text-muted-foreground max-w-2xl">
-				{$t('users.subtitle')}
+				Staff · Access
 			</p>
-			<div class="flex flex-wrap items-center gap-2 pt-1">
-				<span class="badge-neutral">{$t('users.badges.role_control')}</span>
-				<span class="badge-neutral">{$t('users.badges.status_filters')}</span>
-				<span class="badge-neutral">{$t('users.badges.inline_edits')}</span>
-			</div>
+			<h1 class="page-title mt-1">{$t('users.title')}</h1>
+			<p class="page-sub">{$t('users.subtitle')}</p>
 		</div>
-	</div>
-</section>
+		<div class="flex flex-wrap items-center gap-2">
+			<span class="badge-neutral">{$t('users.badges.role_control')}</span>
+			<span class="badge-neutral">{$t('users.badges.status_filters')}</span>
+			<span class="badge-neutral">{$t('users.badges.inline_edits')}</span>
+		</div>
+	</header>
 
-<DetailsModal
-	bind:open={detailModalOpen}
-	resourceId={detailResourceId}
-	endpoint="/users"
-	title="User Details"
-	subtitle={detailModalSubtitle}
-	buildSections={buildUserSections}
-/>
+	<DetailsModal
+		bind:open={detailModalOpen}
+		resourceId={detailResourceId}
+		endpoint="/users"
+		title="User Details"
+		subtitle={detailModalSubtitle}
+		buildSections={buildUserSections}
+	/>
 
-<!-- MAIN CONTENT -->
-<section class="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6">
-	<!-- Search & Filter -->
-	<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up" style="animation-delay: 100ms;">
-		<div class="border-border bg-muted/40 space-y-4 border-b px-6 py-5">
-			<div class="flex flex-col gap-3 sm:flex-row">
-				<Input
-					class="{inputClass} flex-1"
-					placeholder={$t('users.filters.search_placeholder')}
-					value={searchTerm}
-					oninput={(event) => (searchTerm = event.currentTarget.value)}
-					onkeydown={(event) => event.key === 'Enter' && handleSearch()}
-				/>
-				<Button
-					class="bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-					onclick={handleSearch}
-				>
-					{$t('users.filters.search_btn')}
-				</Button>
-			</div>
-			<div class="flex flex-wrap gap-2">
-				{#each tabFilters as tab}
-					<Button
-						variant={tab.value === activeTab ? 'default' : 'secondary'}
-						class={tab.value === activeTab
-							? 'glass-toggle-active flex-1 rounded-md'
-							: 'glass-button text-muted-foreground flex-1 rounded-md'}
-						onclick={() => (activeTab = tab.value)}
-					>
-						{$t(tab.label)}
+	<!-- MAIN CONTENT -->
+	<div class="mt-6 space-y-4">
+		<!-- Search & Filter -->
+		<section class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 80ms;">
+			<div class="panel-body space-y-4">
+				<div class="flex flex-col gap-3 sm:flex-row">
+					<Input
+						class="{inputClass} flex-1"
+						placeholder={$t('users.filters.search_placeholder')}
+						value={searchTerm}
+						oninput={(event) => (searchTerm = event.currentTarget.value)}
+						onkeydown={(event) => event.key === 'Enter' && handleSearch()}
+					/>
+					<Button class="btn-soothe h-11 shrink-0 px-5" onclick={handleSearch}>
+						{$t('users.filters.search_btn')}
 					</Button>
-				{/each}
+				</div>
+				<div
+					class="inline-flex w-full flex-wrap items-center gap-1 rounded-md border border-border/70 bg-muted/50 p-1 sm:w-auto"
+					role="tablist"
+				>
+					{#each tabFilters as tab}
+						<Button
+							variant="ghost"
+							size="sm"
+							role="tab"
+							aria-selected={tab.value === activeTab}
+							class="flex-1 rounded-md px-4 text-sm font-medium sm:flex-none {tab.value ===
+							activeTab
+								? 'bg-card text-foreground shadow-xs ring-1 ring-border'
+								: 'text-muted-foreground hover:text-foreground'}"
+							onclick={() => (activeTab = tab.value)}
+						>
+							{$t(tab.label)}
+						</Button>
+					{/each}
+				</div>
 			</div>
-		</div>
 
-		<div class="overflow-x-auto">
-			<table class="ledger-table">
-				<thead>
-					<tr>
-						<th>{$t('users.table.id')}</th>
-						<th>{$t('users.table.username')}</th>
-						<th>{$t('users.table.role')}</th>
-						<th>{$t('users.table.status')}</th>
-						<th class="text-right">{$t('users.table.actions')}</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#if listLoading}
-						{#each Array(4) as _, i}
-							<tr>
-								<td colspan="5"><Skeleton class="bg-muted h-6 w-full" /></td>
-							</tr>
-						{/each}
-					{:else if users.length === 0}
+			<div class="overflow-x-auto">
+				<table class="ledger-table">
+					<thead>
 						<tr>
-							<td colspan="5" class="text-muted-foreground py-6 text-center text-sm">
-								{$t('users.table.empty')}
-							</td>
+							<th>{$t('users.table.id')}</th>
+							<th>{$t('users.table.username')}</th>
+							<th>{$t('users.table.role')}</th>
+							<th>{$t('users.table.status')}</th>
+							<th class="text-right">{$t('users.table.actions')}</th>
 						</tr>
-					{:else}
-						{#each users as item}
-							<tr
-								class={selectedUser?.ID === item.ID
-									? 'border-l-2 border-primary bg-muted/60'
-									: 'cursor-pointer'}
-								onclick={() => openUserDetails(item)}
-							>
-								<td class="num-mono text-muted-foreground text-xs">#{item.ID}</td>
-								<td class="text-foreground font-medium">{item.Username}</td>
-								<td>
-									<span class="badge-info">{item.Role.Name}</span>
-								</td>
-								<td>
-									<span class={item.IsActive ? 'badge-success' : 'badge-warning'}>
-										{item.IsActive ? $t('users.status.approved') : $t('users.status.pending')}
-									</span>
-								</td>
-								<td>
-									<div class="flex items-center justify-end gap-1">
-										<Button
-											size="sm"
-											variant="ghost"
-											disabled={item.IsActive}
-											class="bg-success text-primary-foreground hover:bg-success/90 rounded-md px-3 py-1.5"
-											onclick={(event: MouseEvent) => {
-												event.stopPropagation();
-												approveUser(item.ID);
-											}}
+					</thead>
+					<tbody>
+						{#if listLoading}
+							{#each Array(4) as _, i}
+								<tr>
+									<td colspan="5">
+										<Skeleton class="h-6 w-full bg-muted" />
+									</td>
+								</tr>
+							{/each}
+						{:else if users.length === 0}
+							<tr>
+								<td colspan="5" class="py-14 text-center">
+									<div class="flex flex-col items-center gap-2">
+										<span
+											class="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground ring-1 ring-border"
 										>
-											Approve
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="text-foreground hover:bg-muted rounded-md px-3 py-1.5"
-											onclick={(event: MouseEvent) => {
-												event.stopPropagation();
-												editUser(item);
-											}}
-										>
-											<Pencil class="mr-1 h-3.5 w-3.5" />
-											{$t('users.table.edit')}
-										</Button>
-										<Button
-											size="sm"
-											variant="ghost"
-											class="text-danger hover:bg-danger/10 hover:text-danger rounded-md px-3 py-1.5"
-											onclick={(event: MouseEvent) => {
-												event.stopPropagation();
-												deleteUser(item.ID, item.Username);
-											}}
-										>
-											{$t('users.table.delete')}
-										</Button>
+											<UserCheck class="h-5 w-5" />
+										</span>
+										<p class="text-sm font-medium text-foreground">{$t('users.table.empty')}</p>
+										<p class="text-xs text-muted-foreground">
+											Try a different filter or search term.
+										</p>
 									</div>
 								</td>
 							</tr>
-						{/each}
-					{/if}
-				</tbody>
-			</table>
-		</div>
-	</div>
-
-	<!-- User Details -->
-	<div
-		id="user-edit-form"
-		class="liquid-panel overflow-hidden rounded-lg"
-		data-animate="fade-up"
-		style="animation-delay: 180ms;"
-	>
-		<div class="border-border bg-muted/40 border-b px-6 py-5">
-			<h2 class="font-display text-foreground text-lg font-bold">{$t('users.form.title')}</h2>
-			<p class="text-muted-foreground text-sm">{$t('users.form.subtitle')}</p>
-		</div>
-		{#if !selectedUser}
-			<div class="p-6">
-				<p class="text-muted-foreground text-sm">{$t('users.form.select_prompt')}</p>
+						{:else}
+							{#each users as item}
+								<tr
+									class={selectedUser?.ID === item.ID
+										? 'cursor-pointer bg-muted/60 shadow-[inset_2px_0_0_0_hsl(var(--primary))]'
+										: 'cursor-pointer'}
+									onclick={() => openUserDetails(item)}
+								>
+									<td class="num-mono text-xs text-muted-foreground">#{item.ID}</td>
+									<td class="font-medium text-foreground">{item.Username}</td>
+									<td>
+										<span class="badge-info">{item.Role.Name}</span>
+									</td>
+									<td>
+										<span class={item.IsActive ? 'badge-success' : 'badge-warning'}>
+											{item.IsActive ? $t('users.status.approved') : $t('users.status.pending')}
+										</span>
+									</td>
+									<td>
+										<div class="flex items-center justify-end gap-1">
+											<Button
+												size="sm"
+												variant="ghost"
+												disabled={item.IsActive}
+												class="h-8 px-2.5 text-xs font-semibold text-success hover:bg-success/10 hover:text-success"
+												onclick={(event: MouseEvent) => {
+													event.stopPropagation();
+													approveUser(item.ID);
+												}}
+											>
+												Approve
+											</Button>
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+												onclick={(event: MouseEvent) => {
+													event.stopPropagation();
+													editUser(item);
+												}}
+											>
+												<Pencil class="mr-1 h-3.5 w-3.5" />
+												{$t('users.table.edit')}
+											</Button>
+											<Button
+												size="sm"
+												variant="ghost"
+												class="h-8 px-2.5 text-xs font-medium text-danger hover:bg-danger/10 hover:text-danger"
+												onclick={(event: MouseEvent) => {
+													event.stopPropagation();
+													deleteUser(item.ID, item.Username);
+												}}
+											>
+												{$t('users.table.delete')}
+											</Button>
+										</div>
+									</td>
+								</tr>
+							{/each}
+						{/if}
+					</tbody>
+				</table>
 			</div>
-		{:else}
-			<div class="space-y-4 p-6">
-				<p class="text-muted-foreground num-mono text-xs">{$t('users.form.editing')} #{selectedUser.ID}</p>
+		</section>
 
-				<!-- Basic Info -->
-				<div class="space-y-3">
-					<p class="overline border-border border-b pb-2">
-						{$t('users.form.sections.credentials')}
-					</p>
-					<Input
-						class={inputClass}
-						placeholder={$t('users.form.fields.username')}
-						bind:value={form.username}
-					/>
-					<Input
-						type="password"
-						class={inputClass}
-						placeholder={$t('users.form.fields.password_placeholder')}
-						bind:value={form.password}
-					/>
-					<div class="select-wrapper">
-						<select bind:value={form.role}>
+		<!-- User Details -->
+		<section
+			id="user-edit-form"
+			class="panel overflow-hidden"
+			data-animate="fade-up"
+			style="animation-delay: 140ms;"
+		>
+			<div class="panel-header items-start">
+				<div class="space-y-0.5">
+					<h2 class="section-title">{$t('users.form.title')}</h2>
+					<p class="text-sm text-muted-foreground">{$t('users.form.subtitle')}</p>
+				</div>
+				{#if selectedUser}
+					<span class="num-mono text-xs text-muted-foreground">
+						{$t('users.form.editing')} #{selectedUser.ID}
+					</span>
+				{/if}
+			</div>
+			{#if !selectedUser}
+				<div class="panel-body">
+					<p class="text-sm text-muted-foreground">{$t('users.form.select_prompt')}</p>
+				</div>
+			{:else}
+				<div class="panel-body space-y-6">
+					<!-- Credentials -->
+					<div class="space-y-3">
+						<p class="overline">{$t('users.form.sections.credentials')}</p>
+						<div class="grid gap-3 sm:grid-cols-2">
+							<Input
+								class={inputClass}
+								placeholder={$t('users.form.fields.username')}
+								bind:value={form.username}
+							/>
+							<Input
+								type="password"
+								class={inputClass}
+								placeholder={$t('users.form.fields.password_placeholder')}
+								bind:value={form.password}
+							/>
+						</div>
+						<select bind:value={form.role} aria-label={$t('users.form.fields.select_role')}>
 							<option value="" disabled>{$t('users.form.fields.select_role')}</option>
 							{#each roles as role}
 								<option value={role.Name}>{role.Name}</option>
 							{/each}
 						</select>
 					</div>
-				</div>
 
-				<!-- Personal Info -->
-				<div class="space-y-3">
-					<p class="overline border-border border-b pb-2">
-						{$t('users.form.sections.personal')}
-					</p>
-					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-						<Input
-							class={inputClass}
-							placeholder={$t('users.form.fields.first_name')}
-							bind:value={form.firstName}
-						/>
-						<Input
-							class={inputClass}
-							placeholder={$t('users.form.fields.last_name')}
-							bind:value={form.lastName}
-						/>
-					</div>
-					<Input
-						type="email"
-						class={inputClass}
-						placeholder={$t('users.form.fields.email')}
-						bind:value={form.email}
-					/>
-					<Input
-						type="tel"
-						class={inputClass}
-						placeholder={$t('users.form.fields.phone')}
-						bind:value={form.phoneNumber}
-					/>
-					<Input
-						class={inputClass}
-						placeholder={$t('users.form.fields.address')}
-						bind:value={form.address}
-					/>
-				</div>
-
-				<div class="flex flex-col gap-3 pt-2 sm:flex-row">
-					{#if auth.hasPermission('users.manage')}
-						<Button
-							class="bg-primary text-primary-foreground flex-1 rounded-md font-semibold hover:bg-primary/90"
-							onclick={updateUser}
-						>
-							{$t('users.form.buttons.save')}
-						</Button>
-						<Button
-							class="bg-success text-primary-foreground flex-1 rounded-md font-semibold hover:bg-success/90"
-							onclick={() => approveUser()}
-							disabled={selectedUser.IsActive}
-						>
-							{$t('users.form.buttons.approve')}
-						</Button>
-						<Button
-							class="text-danger hover:bg-danger/10 hover:text-danger flex-1 rounded-md border border-danger/25 font-semibold"
-							onclick={() => deleteUser()}
-						>
-							{$t('users.form.buttons.delete')}
-						</Button>
-					{:else}
-						<div
-							class="text-warning w-full rounded-md border border-warning/25 bg-warning/10 p-4 text-center text-sm"
-						>
-							{$t('users.form.read_only')}
+					<!-- Personal Info -->
+					<div class="space-y-3">
+						<p class="overline">{$t('users.form.sections.personal')}</p>
+						<div class="grid gap-3 sm:grid-cols-2">
+							<Input
+								class={inputClass}
+								placeholder={$t('users.form.fields.first_name')}
+								bind:value={form.firstName}
+							/>
+							<Input
+								class={inputClass}
+								placeholder={$t('users.form.fields.last_name')}
+								bind:value={form.lastName}
+							/>
+							<Input
+								type="email"
+								class={inputClass}
+								placeholder={$t('users.form.fields.email')}
+								bind:value={form.email}
+							/>
+							<Input
+								type="tel"
+								class={inputClass}
+								placeholder={$t('users.form.fields.phone')}
+								bind:value={form.phoneNumber}
+							/>
+							<Input
+								class="{inputClass} sm:col-span-2"
+								placeholder={$t('users.form.fields.address')}
+								bind:value={form.address}
+							/>
 						</div>
-					{/if}
+					</div>
+
+					<div class="flex flex-col gap-2.5 border-t border-border/70 pt-4 sm:flex-row">
+						{#if auth.hasPermission('users.manage')}
+							<Button class="btn-soothe h-11 flex-1 font-semibold" onclick={updateUser}>
+								{$t('users.form.buttons.save')}
+							</Button>
+							<Button
+								variant="outline"
+								class="h-11 flex-1 font-semibold"
+								onclick={() => approveUser()}
+								disabled={selectedUser.IsActive}
+							>
+								{$t('users.form.buttons.approve')}
+							</Button>
+							<Button
+								variant="ghost"
+								class="h-11 flex-1 border border-danger/25 font-semibold text-danger hover:bg-danger/10 hover:text-danger"
+								onclick={() => deleteUser()}
+							>
+								{$t('users.form.buttons.delete')}
+							</Button>
+						{:else}
+							<div
+								class="w-full rounded-md border border-warning/25 bg-warning/10 p-4 text-center text-sm text-warning"
+							>
+								{$t('users.form.read_only')}
+							</div>
+						{/if}
+					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
+		</section>
 	</div>
-</section>
+</div>
 
 <ConfirmDialog
 	bind:open={deleteDialogOpen}

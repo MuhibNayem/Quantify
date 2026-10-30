@@ -26,11 +26,9 @@
 	let editingSubCategory = $state<SubCategory | null>(null);
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnPrimary =
-		'rounded-md bg-primary bg-none px-4 text-sm font-medium text-primary-foreground shadow-none hover:bg-primary/90 hover:bg-none';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm text-foreground placeholder:text-muted-foreground';
+	const btnPrimary = 'btn-soothe h-10 px-4 text-sm font-semibold';
+	const btnSecondary = 'btn-soft h-10 px-4 text-sm font-medium';
 
 	const { form, errors, enhance } = superForm(
 		{ name: '', categoryId: '' },
@@ -114,44 +112,48 @@
 </script>
 
 <div
-	class="grid gap-8 {auth.hasPermission('categories.write')
-		? 'lg:grid-cols-[2fr,1fr]'
+	class="grid gap-6 {auth.hasPermission('categories.write')
+		? 'lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]'
 		: 'grid-cols-1'}"
 >
-	<div class="flex flex-col gap-6">
-		<div
-			class="liquid-panel flex flex-col gap-4 rounded-lg p-4 sm:flex-row sm:items-center sm:justify-between"
-		>
-			<div class="space-y-1">
-				<h2 class="font-display text-foreground text-lg font-semibold">
-					{$t('catalog.sub_categories.title')}
-				</h2>
-				<p class="text-muted-foreground text-sm">{$t('catalog.sub_categories.subtitle')}</p>
-			</div>
-			<div class="select-wrapper w-full sm:w-1/2">
-				<select
-					bind:value={$form.categoryId}
-					onchange={(e) => loadSubCategories(Number(e.currentTarget.value))}
-				>
-					<option value="">{$t('catalog.sub_categories.select_category')}</option>
-					{#if categories.length > 0}
-						{#each categories as category (category.ID)}
-							<option value={category.ID}>{category.Name}</option>
-						{/each}
-					{:else}
-						<option disabled>{$t('catalog.sub_categories.loading_categories')}</option>
-					{/if}
-				</select>
+	<div class="flex min-w-0 flex-col gap-4">
+		<div class="panel p-4">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<div class="min-w-0 space-y-1">
+					<h2 class="section-title">{$t('catalog.sub_categories.title')}</h2>
+					<p class="text-sm text-muted-foreground">{$t('catalog.sub_categories.subtitle')}</p>
+				</div>
+				<div class="select-wrapper w-full sm:w-64">
+					<select
+						bind:value={$form.categoryId}
+						onchange={(e) => loadSubCategories(Number(e.currentTarget.value))}
+					>
+						<option value="">{$t('catalog.sub_categories.select_category')}</option>
+						{#if categories.length > 0}
+							{#each categories as category (category.ID)}
+								<option value={category.ID}>{category.Name}</option>
+							{/each}
+						{:else}
+							<option disabled>{$t('catalog.sub_categories.loading_categories')}</option>
+						{/if}
+					</select>
+				</div>
 			</div>
 		</div>
 
 		{#if !$form.categoryId}
-			<div
-				class="border-border bg-card text-muted-foreground rounded-lg border-2 border-dashed py-12 text-center shadow-sm"
-			>
-				<Layers class="text-muted-foreground/40 mx-auto mb-3 h-12 w-12" />
-				<p class="text-foreground text-base font-medium">{$t('catalog.sub_categories.empty_state')}</p>
-				<p class="text-muted-foreground text-sm">{$t('catalog.sub_categories.empty_subtitle')}</p>
+			<div class="panel flex flex-col items-center justify-center gap-2 px-6 py-14 text-center">
+				<div
+					class="mb-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground"
+				>
+					<Layers class="h-7 w-7" strokeWidth={1.5} />
+				</div>
+				<p class="text-base font-medium text-foreground">
+					{$t('catalog.sub_categories.empty_state')}
+				</p>
+				<p class="max-w-sm text-sm text-muted-foreground">
+					{$t('catalog.sub_categories.empty_subtitle')}
+				</p>
 			</div>
 		{:else}
 			<EntityTable
@@ -161,14 +163,14 @@
 				onRowClick={(subCategory) => onViewDetails(subCategory, 'sub-categories')}
 			>
 				{#snippet children(subCategory)}
-					<td class="text-foreground font-medium">{subCategory.Name}</td>
+					<td class="font-medium text-foreground">{subCategory.Name}</td>
 					{#if auth.hasPermission('categories.write')}
 						<td class="text-right">
 							<div class="flex items-center justify-end gap-1">
 								<Button
 									size="sm"
 									variant="ghost"
-									class="h-8 text-primary hover:bg-muted hover:text-foreground"
+									class="h-8 px-2.5 text-muted-foreground hover:bg-muted hover:text-foreground"
 									onclick={(event) => {
 										event.stopPropagation();
 										editingSubCategory = subCategory;
@@ -181,7 +183,7 @@
 								<Button
 									size="sm"
 									variant="ghost"
-									class="h-8 text-danger hover:bg-danger/10 hover:text-danger"
+									class="h-8 px-2.5 text-danger hover:bg-danger/10 hover:text-danger"
 									onclick={(event) => {
 										event.stopPropagation();
 										deleteSubCategory(subCategory);
@@ -198,19 +200,15 @@
 	</div>
 
 	{#if auth.hasPermission('categories.write')}
-		<div
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay:180ms"
-		>
-			<div class="border-border space-y-1 border-b px-6 py-5">
-				<h3 class="text-foreground font-display text-lg font-semibold"
-					>{editingSubCategory
+		<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:180ms">
+			<div class="panel-header flex-col items-start gap-1">
+				<h3 class="section-title">
+					{editingSubCategory
 						? $t('catalog.sub_categories.form.update_title')
-						: $t('catalog.sub_categories.form.create_title')}</h3
-				>
+						: $t('catalog.sub_categories.form.create_title')}
+				</h3>
 			</div>
-			<div class="p-6">
+			<div class="panel-body">
 				<form method="POST" use:enhance class="space-y-4">
 					<div class="space-y-1">
 						<Input
@@ -219,7 +217,7 @@
 							bind:value={$form.name}
 						/>
 						{#if $errors.name}
-							<p class="text-danger text-xs font-medium">{$errors.name}</p>
+							<p class="text-xs font-medium text-danger">{$errors.name}</p>
 						{/if}
 					</div>
 					<div class="space-y-1">
@@ -232,16 +230,17 @@
 							</select>
 						</div>
 						{#if $errors.categoryId}
-							<p class="text-danger text-xs font-medium">{$errors.categoryId}</p>
+							<p class="text-xs font-medium text-danger">{$errors.categoryId}</p>
 						{/if}
 					</div>
 					<div class="flex flex-col gap-3 pt-1 sm:flex-row">
-						<Button type="submit" class="{btnPrimary} w-full py-2.5 sm:w-1/2">
+						<Button type="submit" class="{btnPrimary} w-full sm:flex-1">
 							{editingSubCategory ? $t('catalog.common.update') : $t('catalog.common.create')}
 						</Button>
 						<Button
 							type="button"
-							class="{btnSecondary} w-full py-2.5 sm:w-1/2"
+							variant="secondary"
+							class="{btnSecondary} w-full sm:flex-1"
 							onclick={() => {
 								$form.name = '';
 								editingSubCategory = null;

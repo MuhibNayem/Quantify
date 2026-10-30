@@ -30,8 +30,7 @@
 		discountReason = $bindable()
 	}: Props = $props();
 
-	const inputClass =
-		'liquid-input h-9 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 placeholder:text-muted-foreground focus:border-primary focus:ring-0';
+	const inputClass = 'glass-input h-9 w-full rounded-lg px-3 text-sm font-normal';
 
 	const segments = $derived([
 		{ id: 'percent', label: $t('pos.discount.type_percent'), icon: Percent },
@@ -44,23 +43,19 @@
 	}
 </script>
 
-<div
-	class="liquid-panel overflow-hidden rounded-lg"
-	data-animate="fade-up"
-	style="animation-delay:220ms"
->
-	<div class="border-border bg-muted/50 flex items-center justify-between border-b px-4 py-3">
+<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:220ms">
+	<div class="panel-header">
 		<div>
-			<h3 class="font-display text-foreground text-sm font-semibold">
+			<h3 class="section-title">
 				{$t('pos.discount.title')}
 			</h3>
-			<p class="text-muted-foreground text-[0.75rem]">{$t('pos.discount.description')}</p>
+			<p class="mt-0.5 text-xs text-muted-foreground">{$t('pos.discount.description')}</p>
 		</div>
 		{#if discountValue > 0 || discountReason}
 			<button
 				type="button"
 				onclick={clearDiscount}
-				class="text-muted-foreground hover:text-danger border-border bg-card hover:border-danger/40 inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[0.7rem] font-medium transition-colors"
+				class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[0.7rem] font-medium text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger"
 			>
 				<X class="h-3 w-3" />
 				{$t('pos.discount.clear_btn')}
@@ -68,16 +63,16 @@
 		{/if}
 	</div>
 
-	<div class="space-y-3 p-4 pt-3">
-		<div class="border-border bg-muted flex rounded-md border p-0.5">
+	<div class="space-y-3 p-4">
+		<div class="flex rounded-lg bg-muted p-0.5">
 			{#each segments as seg}
 				<button
 					type="button"
 					onclick={() => (discountType = seg.id)}
 					class={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
 						discountType === seg.id
-							? 'bg-card text-foreground border-border shadow-sm border'
-							: 'text-muted-foreground hover:text-foreground border border-transparent'
+							? 'bg-card text-foreground shadow-xs'
+							: 'text-muted-foreground hover:text-foreground'
 					}`}
 				>
 					<seg.icon class="h-3.5 w-3.5" />
@@ -87,11 +82,11 @@
 		</div>
 
 		<div>
-			<div class="flex items-center justify-between">
-				<Label class="text-muted-foreground text-[0.7rem] font-medium">
+			<div class="flex items-baseline justify-between gap-2">
+				<Label class="text-xs font-medium text-muted-foreground">
 					{$t('pos.discount.value_label')}
 				</Label>
-				<span class="text-muted-foreground num-mono text-[0.65rem]">
+				<span class="num-mono text-[0.65rem] text-muted-foreground">
 					{#if discountType === 'percent'}
 						{$t('pos.discount.max_percent_hint', { max: maxPercent })}
 					{:else if maxAmount > 0}
@@ -107,10 +102,12 @@
 				step="any"
 				bind:value={discountValue}
 				placeholder="0"
-				class="{inputClass} num-mono mt-1 text-right {valueInvalid ? 'border-danger focus:border-danger' : ''}"
+				class="{inputClass} num-mono mt-1 text-right {valueInvalid
+					? 'border-danger focus:border-danger'
+					: ''}"
 			/>
 			{#if valueInvalid}
-				<p class="text-danger mt-1 text-[0.65rem]">
+				<p class="mt-1 text-[0.65rem] text-danger">
 					{#if discountType === 'percent'}
 						{$t('pos.discount.error_exceed_percent', { max: maxPercent })}
 					{:else}
@@ -122,7 +119,7 @@
 
 		{#if requireReason}
 			<div>
-				<Label class="text-muted-foreground text-[0.7rem] font-medium">
+				<Label class="text-xs font-medium text-muted-foreground">
 					{$t('pos.discount.reason_label')}
 				</Label>
 				<input
@@ -132,7 +129,7 @@
 					class="{inputClass} mt-1 {reasonMissing ? 'border-danger focus:border-danger' : ''}"
 				/>
 				{#if reasonMissing}
-					<p class="text-danger mt-1 text-[0.65rem]">
+					<p class="mt-1 text-[0.65rem] text-danger">
 						{$t('pos.discount.error_reason_required')}
 					</p>
 				{/if}
@@ -140,11 +137,9 @@
 		{/if}
 
 		{#if amount > 0}
-			<div
-				class="border-border flex items-center justify-between border-t pt-2 text-[0.75rem]"
-			>
-				<span class="text-muted-foreground font-medium">{$t('pos.discount.preview')}</span>
-				<span class="num-mono text-success font-bold">− {formatCurrency(amount)}</span>
+			<div class="flex items-center justify-between border-t border-border/80 pt-2 text-xs">
+				<span class="font-medium text-muted-foreground">{$t('pos.discount.preview')}</span>
+				<span class="num-mono font-semibold text-success">− {formatCurrency(amount)}</span>
 			</div>
 		{/if}
 	</div>

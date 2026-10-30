@@ -42,83 +42,30 @@
 </script>
 
 {#if open}
-	<div class="onboarding-overlay">
-		<div class="onboarding-card">
-			<Sparkles size={28} />
-			<h2>{steps[step].title}</h2>
-			<p>{steps[step].body}</p>
-			<div class="dots">
+	<div
+		class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-md"
+	>
+		<div class="glass-float w-full max-w-md rounded-2xl p-8 text-center">
+			<Sparkles class="mx-auto mb-4 h-7 w-7 text-primary" />
+			<h2 class="text-xl font-semibold tracking-tight text-foreground">{steps[step].title}</h2>
+			<p class="mx-auto mt-2 min-h-14 max-w-sm text-sm leading-relaxed text-muted-foreground">
+				{steps[step].body}
+			</p>
+			<div class="my-5 flex justify-center gap-1.5">
 				{#each steps as _, i}
-					<span class="dot" class:active={i === step}></span>
+					<span
+						class="h-1.5 rounded-full transition-all duration-200 {i === step
+							? 'w-5 bg-primary'
+							: 'w-1.5 bg-border'}"
+					></span>
 				{/each}
 			</div>
-			<div class="actions">
+			<div class="flex items-center justify-between gap-2">
 				<Button variant="ghost" size="sm" onclick={finish}>Skip</Button>
-				<Button size="sm" onclick={next}
-					>{step === steps.length - 1 ? 'Get Started' : 'Next'}</Button
-				>
+				<Button size="sm" onclick={next}>
+					{step === steps.length - 1 ? 'Get Started' : 'Next'}
+				</Button>
 			</div>
 		</div>
 	</div>
 {/if}
-
-<style>
-	.onboarding-overlay {
-		position: fixed;
-		inset: 0;
-		z-index: 100;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: rgba(15, 23, 42, 0.5);
-		backdrop-filter: blur(6px);
-	}
-	.onboarding-card {
-		width: 100%;
-		max-width: 26rem;
-		margin: 1rem;
-		padding: 2rem;
-		border-radius: 1.5rem;
-		border: 1px solid rgba(255, 255, 255, 0.6);
-		background: rgba(255, 255, 255, 0.95);
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-		text-align: center;
-		color: #1e293b;
-	}
-	.onboarding-card :global(svg) {
-		margin: 0 auto 1rem;
-		color: #6366f1;
-	}
-	h2 {
-		font-size: 1.25rem;
-		font-weight: 700;
-		margin-bottom: 0.5rem;
-	}
-	p {
-		font-size: 0.9rem;
-		color: #64748b;
-		line-height: 1.5;
-		min-height: 3.5rem;
-	}
-	.dots {
-		display: flex;
-		justify-content: center;
-		gap: 0.4rem;
-		margin: 1.25rem 0;
-	}
-	.dot {
-		width: 0.5rem;
-		height: 0.5rem;
-		border-radius: 9999px;
-		background: #cbd5e1;
-		transition: background 0.2s;
-	}
-	.dot.active {
-		background: #6366f1;
-	}
-	.actions {
-		display: flex;
-		justify-content: space-between;
-		gap: 0.5rem;
-	}
-</style>

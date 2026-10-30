@@ -3,6 +3,7 @@ package groups
 import (
 	"inventory/backend/internal/app"
 	"inventory/backend/internal/handlers"
+	"inventory/backend/internal/middleware"
 	"inventory/backend/internal/repository"
 
 	"github.com/gin-gonic/gin"
@@ -41,12 +42,18 @@ func RegisterPublic(r *gin.Engine, c *app.Container, roleRepo repository.RoleRep
 		paymentRoutes.POST("/ipn", paymentHandler.HandleSSLCommerzIPN)
 	}
 
+	authLimit := middleware.RateLimit(c.Cfg.AuthRateLimitRequests, c.Cfg.AuthRateLimitWindow, "auth")
+
 	publicAPI := r.Group("/api/v1")
 	{
 		userRoutes := publicAPI.Group("/users")
 		{
-			userRoutes.POST("/register", userHandler.RegisterUser)
-			userRoutes.POST("/login", userHandler.LoginUser)
+			userRoutes.POST("/register", authLimit, userHandler.RegisterUser)
+			userRoutes.POST("/login", authLimit, userHandler.LoginUser)
+			// Refresh and logout must work when the access cookie has expired;
+			// both authenticate from the refresh cookie / session cookies.
+			userRoutes.POST("/refresh-token", authLimit, userHandler.RefreshToken)
+			userRoutes.POST("/logout", userHandler.LogoutUser)
 		}
 	}
 }

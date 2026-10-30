@@ -11,8 +11,8 @@
 	let location = $derived(data.location);
 </script>
 
-<div class="mx-auto w-full max-w-4xl px-6 py-8">
-	<section class="space-y-8">
+<div class="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+	<div class="space-y-6">
 		{#if location}
 			<Breadcrumbs
 				items={[
@@ -22,36 +22,45 @@
 				]}
 			/>
 		{/if}
+
 		<!-- HEADER -->
-		<div class="flex items-center justify-between">
-			<a
-				href="/catalog"
-				class="text-primary hover:text-foreground flex items-center text-sm font-medium transition-colors"
-			>
-				<ArrowLeft class="mr-2 h-4 w-4" />
-				Back to Catalog
-			</a>
+		<div class="page-header">
+			<div class="min-w-0 space-y-2">
+				<p class="overline">Catalog · Location</p>
+				<h1 class="page-title truncate">{location?.Name ?? 'Location'}</h1>
+				<p class="page-sub">Stocking location details.</p>
+			</div>
+			<div class="flex flex-wrap items-center gap-2">
+				<a
+					href="/catalog"
+					class="btn-soft inline-flex h-10 items-center gap-2 px-4 text-sm font-medium"
+				>
+					<ArrowLeft class="h-4 w-4" />
+					Back to Catalog
+				</a>
+			</div>
 		</div>
 
 		{#if location}
-			<div class="liquid-panel overflow-hidden rounded-lg">
-				<div class="border-border space-y-1 border-b px-6 py-5">
-					<h1 class="text-foreground flex items-center font-display text-xl font-semibold">
-						<MapPin class="text-primary mr-2 h-5 w-5" />
-						{location.Name}
-					</h1>
-					<p class="text-muted-foreground text-sm">Location Details</p>
-				</div>
-				<div class="p-6 text-sm">
-					<div>
-						<p class="overline">Address</p>
-						<p class="text-foreground mt-0.5">{location.Address || 'N/A'}</p>
+			<div class="panel overflow-hidden">
+				<div class="panel-header">
+					<div class="flex items-center gap-2">
+						<MapPin class="h-4 w-4 text-primary" />
+						<h2 class="section-title">Location Details</h2>
 					</div>
+				</div>
+				<div class="panel-body">
+					<dl class="grid grid-cols-1 gap-4 text-sm">
+						<div class="min-w-0">
+							<dt class="overline">Address</dt>
+							<dd class="mt-1 text-foreground">{location.Address || 'N/A'}</dd>
+						</div>
+					</dl>
 				</div>
 			</div>
 		{:else}
 			<!-- Loading State -->
-			<Skeleton class="h-48 w-full" />
+			<Skeleton class="h-48 w-full rounded-xl" />
 		{/if}
-	</section>
+	</div>
 </div>

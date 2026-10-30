@@ -1,8 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
 	import {
-		Clock,
 		LogIn,
 		LogOut,
 		Timer,
@@ -10,9 +8,7 @@
 		Target,
 		TrendingUp,
 		Calendar,
-		Activity,
-		CheckCircle,
-		FileText
+		Activity
 	} from 'lucide-svelte';
 	import { onMount, onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
@@ -92,8 +88,8 @@
 							day: 'numeric'
 						}),
 						time: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${h.ClockOut ? new Date(h.ClockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Now'}`,
-					duration: `${hours}h ${minutes}m`
-				};
+						duration: `${hours}h ${minutes}m`
+					};
 				});
 			}
 
@@ -253,240 +249,206 @@
 	});
 </script>
 
-<div class="space-y-10">
-	<!-- Header -->
-	<div class="space-y-1" data-animate="fade-up">
+<div class="space-y-4">
+	<!-- Dashboard header -->
+	<div data-animate="fade-up">
 		<p class="overline">{$t('time_tracking.staff.header.subtitle')}</p>
-		<h1 class="font-display text-foreground text-3xl font-bold tracking-tight md:text-4xl">
+		<h2 class="mt-1 font-display text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
 			{$t('time_tracking.staff.header.title')}
-		</h1>
-		<p class="text-muted-foreground">{$t('time_tracking.staff.header.desc')}</p>
+		</h2>
+		<p class="mt-1 text-sm text-muted-foreground">{$t('time_tracking.staff.header.desc')}</p>
 	</div>
 
 	<!-- Main Clock Card -->
-	<Card class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
-		<CardHeader class="pb-4">
-			<CardTitle class="text-foreground flex items-center justify-between">
-				<span class="text-xl font-semibold">{$t('time_tracking.staff.status_card.title')}</span>
-				<div class="flex items-center gap-3">
-					{#if onBreak}
-						<span class="badge-warning">
-							<Coffee size={14} />
-							{$t('time_tracking.staff.status_card.on_break')}
-						</span>
-					{:else if clockedIn}
-						<span class="badge-success">
-							<span class="live-dot" style="width: 0.4rem; height: 0.4rem;"></span>
-							{$t('time_tracking.staff.status_card.clocked_in')}
-						</span>
-					{:else}
-						<span class="badge-neutral">
-							{$t('time_tracking.staff.status_card.clocked_out')}
-						</span>
-					{/if}
-				</div>
-			</CardTitle>
-		</CardHeader>
-		<CardContent class="p-8 text-center">
-			<div class="num-mono text-foreground mb-6 text-6xl font-bold tracking-tighter md:text-7xl">
+	<section class="panel overflow-hidden" data-animate="fade-up">
+		<div class="panel-header flex-wrap items-start">
+			<div class="min-w-0">
+				<h3 class="section-title text-base">{$t('time_tracking.staff.status_card.title')}</h3>
+				<p class="mt-0.5 text-xs text-muted-foreground">
+					{$t('time_tracking.staff.status_card.today_total')}:
+					<span class="num-mono font-medium text-foreground">{todayHours}</span>
+				</p>
+			</div>
+			<div class="flex shrink-0 items-center gap-2">
+				{#if onBreak}
+					<span class="badge-warning">
+						<Coffee size={13} />
+						{$t('time_tracking.staff.status_card.on_break')}
+					</span>
+				{:else if clockedIn}
+					<span class="badge-success">
+						<span class="live-dot" style="width: 0.4rem; height: 0.4rem;"></span>
+						{$t('time_tracking.staff.status_card.clocked_in')}
+					</span>
+				{:else}
+					<span class="badge-neutral">
+						{$t('time_tracking.staff.status_card.clocked_out')}
+					</span>
+				{/if}
+			</div>
+		</div>
+		<div class="panel-body flex flex-col items-center py-8 text-center">
+			<div class="num-mono text-5xl font-bold tracking-tighter text-foreground sm:text-6xl">
 				{elapsedTime}
 			</div>
 
 			{#if onBreak}
-				<div class="mb-6">
-					<div class="text-warning mb-2 text-lg font-medium">
+				<div class="mt-5">
+					<div
+						class="mb-1 flex items-center justify-center gap-1.5 text-xs font-semibold tracking-wide text-warning uppercase"
+					>
+						<Coffee size={13} />
 						{$t('time_tracking.staff.status_card.break_time')}
 					</div>
-					<div class="num-mono text-foreground text-2xl">{breakTime}</div>
+					<div class="num-mono text-xl text-foreground">{breakTime}</div>
 				</div>
 			{/if}
 
-			<div class="mb-6 flex flex-col gap-4 md:flex-row">
-				<div class="bg-muted flex-1 rounded-md p-4">
-					<div class="num-mono text-foreground text-lg font-bold">{todayHours}</div>
-					<div class="text-muted-foreground text-sm font-medium">
-						{$t('time_tracking.staff.status_card.today_total')}
-					</div>
-				</div>
-			</div>
-
-			<div class="flex flex-col gap-4 md:flex-row">
-				<Button
-					onclick={handleClockToggle}
-					class="bg-primary text-primary-foreground flex-1 rounded-md py-4 text-lg font-semibold shadow-md transition-all hover:bg-primary/90"
-				>
+			<div class="mt-7 flex w-full max-w-md flex-col gap-2">
+				<Button onclick={handleClockToggle} class="btn-soothe h-12 w-full text-base font-semibold">
 					{#if clockedIn}
-						<LogOut class="mr-2" size={20} />
+						<LogOut class="mr-2" size={18} />
 						{$t('time_tracking.staff.status_card.clock_out_btn')}
 					{:else}
-						<LogIn class="mr-2" size={20} />
+						<LogIn class="mr-2" size={18} />
 						{$t('time_tracking.staff.status_card.clock_in_btn')}
 					{/if}
 				</Button>
 				{#if clockedIn}
 					<Button
+						variant="outline"
 						onclick={handleBreakToggle}
-						class={onBreak
-							? 'glass-button text-foreground flex-1 rounded-md py-4 text-lg font-semibold'
-							: 'bg-warning text-primary-foreground flex-1 rounded-md py-4 text-lg font-semibold shadow-md hover:bg-warning/90'}
+						class="h-12 w-full text-base font-semibold {onBreak
+							? 'text-foreground'
+							: 'text-warning hover:text-warning'}"
 					>
-						<Coffee class="mr-2" size={20} />
-						{onBreak ? $t('time_tracking.staff.status_card.end_break_btn') : $t('time_tracking.staff.status_card.start_break_btn')}
+						<Coffee class="mr-2" size={18} />
+						{onBreak
+							? $t('time_tracking.staff.status_card.end_break_btn')
+							: $t('time_tracking.staff.status_card.start_break_btn')}
 					</Button>
 				{/if}
 			</div>
-		</CardContent>
-	</Card>
+		</div>
+	</section>
 
 	<!-- Hours Overview -->
-	<div class="grid grid-cols-1 gap-8 md:grid-cols-2">
-		<Card
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay: 150ms;"
-		>
-			<CardHeader class="pb-2">
-				<CardTitle class="text-muted-foreground flex items-center gap-3">
-					<Timer size={20} />
-					<span>{$t('time_tracking.staff.stats.today_hours')}</span>
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<p class="kpi-num text-foreground mb-2 text-4xl">{todayHours}</p>
-				<div class="bg-muted mb-2 h-3 w-full rounded-md">
-					<div
-						class="bg-primary h-3 rounded-md transition-all duration-500"
-						style="width: {(parseFloat(todayHours) / todayTarget) * 100}%"
-					></div>
-				</div>
-				<p class="text-muted-foreground text-sm">{$t('time_tracking.staff.stats.target_label', { target: todayTarget })}</p>
-			</CardContent>
-		</Card>
+	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+		<section class="panel p-5" data-animate="fade-up" style="animation-delay: 100ms;">
+			<div class="flex items-center gap-2 text-muted-foreground">
+				<Timer size={16} />
+				<span class="text-xs font-medium">{$t('time_tracking.staff.stats.today_hours')}</span>
+			</div>
+			<p class="kpi-num mt-2 text-3xl text-foreground">{todayHours}</p>
+			<div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+				<div
+					class="h-full rounded-full bg-primary transition-all duration-500"
+					style="width: {(parseFloat(todayHours) / todayTarget) * 100}%"
+				></div>
+			</div>
+			<p class="mt-2 text-xs text-muted-foreground">
+				{$t('time_tracking.staff.stats.target_label', { target: todayTarget })}
+			</p>
+		</section>
 
-		<Card
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay: 300ms;"
-		>
-			<CardHeader class="pb-2">
-				<CardTitle class="text-muted-foreground flex items-center gap-3">
-					<Calendar size={20} />
-					<span>{$t('time_tracking.staff.stats.weekly_hours')}</span>
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<p class="kpi-num text-foreground mb-2 text-4xl">{weeklyHours}</p>
-				<div class="bg-muted mb-2 h-3 w-full rounded-md">
-					<div
-						class="bg-info h-3 rounded-md transition-all duration-500"
-						style="width: {weeklyProgress}%"
-					></div>
-				</div>
-				<p class="text-muted-foreground text-sm">{$t('time_tracking.staff.stats.target_label', { target: weeklyTarget })}</p>
-			</CardContent>
-		</Card>
+		<section class="panel p-5" data-animate="fade-up" style="animation-delay: 180ms;">
+			<div class="flex items-center gap-2 text-muted-foreground">
+				<Calendar size={16} />
+				<span class="text-xs font-medium">{$t('time_tracking.staff.stats.weekly_hours')}</span>
+			</div>
+			<p class="kpi-num mt-2 text-3xl text-foreground">{weeklyHours}</p>
+			<div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+				<div
+					class="h-full rounded-full bg-info transition-all duration-500"
+					style="width: {weeklyProgress}%"
+				></div>
+			</div>
+			<p class="mt-2 text-xs text-muted-foreground">
+				{$t('time_tracking.staff.stats.target_label', { target: weeklyTarget })}
+			</p>
+		</section>
 	</div>
 
 	<!-- Current Task & Daily Goals -->
-	<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+	<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
 		<!-- Current Task -->
-		<Card
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay: 450ms;"
-		>
-			<CardHeader>
-				<CardTitle class="text-foreground flex items-center gap-3">
-					<Target size={20} class="text-primary" />
-					<span>{$t('time_tracking.staff.task.title')}</span>
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div class="space-y-4">
-					<div>
-						<label class="text-foreground mb-2 block text-sm font-medium"
-							>{$t('time_tracking.staff.task.label')}</label
-						>
-						<input
-							bind:value={currentTask}
-							type="text"
-							placeholder={$t('time_tracking.staff.task.placeholder')}
-							class="liquid-input text-foreground w-full px-4 py-3 text-sm placeholder:text-muted-foreground"
-						/>
-					</div>
-					<Button
-						onclick={updateTask}
-						class="bg-primary text-primary-foreground w-full rounded-md py-3 font-semibold hover:bg-primary/90"
+		<section class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 240ms;">
+			<div class="panel-header">
+				<h3 class="section-title flex items-center gap-2">
+					<Target size={16} class="text-primary" />
+					{$t('time_tracking.staff.task.title')}
+				</h3>
+			</div>
+			<div class="panel-body space-y-3">
+				<div>
+					<label class="mb-1.5 block text-sm font-medium text-foreground" for="current-task"
+						>{$t('time_tracking.staff.task.label')}</label
 					>
-						{$t('time_tracking.staff.task.button')}
-					</Button>
+					<input
+						id="current-task"
+						bind:value={currentTask}
+						type="text"
+						placeholder={$t('time_tracking.staff.task.placeholder')}
+						class="glass-input h-11 w-full rounded-md px-3 text-sm"
+					/>
 				</div>
-			</CardContent>
-		</Card>
+				<Button onclick={updateTask} class="btn-soothe w-full">
+					{$t('time_tracking.staff.task.button')}
+				</Button>
+			</div>
+		</section>
 
 		<!-- Daily Goals -->
-		<Card
-			class="liquid-panel overflow-hidden rounded-lg"
-			data-animate="fade-up"
-			style="animation-delay: 600ms;"
-		>
-			<CardHeader>
-				<CardTitle class="text-foreground flex items-center gap-3">
-					<TrendingUp size={20} class="text-success" />
-					<span>{$t('time_tracking.staff.goals.title')}</span>
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<div class="space-y-4">
-					{#each dailyStats.goals as goal}
-						<div class="space-y-2">
-							<div class="flex items-center justify-between">
-								<span class="text-foreground text-sm font-medium">{goal.name}</span>
-								<span class="text-muted-foreground num-mono text-sm"
-									>{goal.current}{goal.unit} / {goal.target}{goal.unit}</span
-								>
-							</div>
-							<div class="bg-muted h-2 w-full rounded-md">
-								<div
-									class="bg-success h-2 rounded-md transition-all duration-500"
-									style="width: {(goal.current / goal.target) * 100}%"
-								></div>
-							</div>
+		<section class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 300ms;">
+			<div class="panel-header">
+				<h3 class="section-title flex items-center gap-2">
+					<TrendingUp size={16} class="text-success" />
+					{$t('time_tracking.staff.goals.title')}
+				</h3>
+			</div>
+			<div class="panel-body space-y-4">
+				{#each dailyStats.goals as goal}
+					<div class="space-y-1.5">
+						<div class="flex items-center justify-between gap-3">
+							<span class="text-sm font-medium text-foreground">{goal.name}</span>
+							<span class="num-mono text-xs text-muted-foreground"
+								>{goal.current}{goal.unit} / {goal.target}{goal.unit}</span
+							>
 						</div>
-					{/each}
-				</div>
-			</CardContent>
-		</Card>
-	</div>
-
-	<!-- Recent Shifts -->
-	<Card
-		class="liquid-panel overflow-hidden rounded-lg"
-		data-animate="fade-up"
-		style="animation-delay: 750ms;"
-	>
-		<CardHeader>
-			<CardTitle class="text-foreground flex items-center gap-3">
-				<Activity size={20} class="text-info" />
-				<span>{$t('time_tracking.staff.recent_shifts.title')}</span>
-			</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<div class="space-y-3">
-				{#each recentShifts as shift}
-					<div class="liquid-hoverable flex items-center justify-between rounded-md p-4">
-						<div class="flex-1">
-							<div class="mb-1 flex items-center gap-3">
-								<p class="text-foreground font-semibold">{shift.date}</p>
-							</div>
-							<p class="text-muted-foreground num-mono text-sm">{shift.time}</p>
-						</div>
-						<div class="text-right">
-							<p class="num-mono text-foreground text-lg font-semibold">{shift.duration}</p>
+						<div class="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+							<div
+								class="h-full rounded-full bg-success transition-all duration-500"
+								style="width: {(goal.current / goal.target) * 100}%"
+							></div>
 						</div>
 					</div>
 				{/each}
 			</div>
-		</CardContent>
-	</Card>
+		</section>
+	</div>
+
+	<!-- Recent Shifts -->
+	<section class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 360ms;">
+		<div class="panel-header">
+			<h3 class="section-title flex items-center gap-2">
+				<Activity size={16} class="text-info" />
+				{$t('time_tracking.staff.recent_shifts.title')}
+			</h3>
+		</div>
+		<div class="panel-body space-y-1.5">
+			{#each recentShifts as shift}
+				<div
+					class="flex items-center justify-between gap-3 rounded-md px-2.5 py-2.5 transition-colors hover:bg-muted/60"
+				>
+					<div class="min-w-0">
+						<p class="truncate text-sm font-semibold text-foreground">{shift.date}</p>
+						<p class="num-mono mt-0.5 text-xs text-muted-foreground">{shift.time}</p>
+					</div>
+					<p class="num-mono shrink-0 text-sm font-semibold text-foreground">{shift.duration}</p>
+				</div>
+			{:else}
+				<p class="text-muted-foreground px-2 py-6 text-center text-sm">No shifts recorded yet.</p>
+			{/each}
+		</div>
+	</section>
 </div>

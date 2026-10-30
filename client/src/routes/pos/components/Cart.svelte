@@ -27,15 +27,11 @@
 	}: Props = $props();
 </script>
 
-<div
-	class="liquid-panel overflow-hidden rounded-lg"
-	data-animate="fade-up"
-	style="animation-delay:200ms"
->
-	<div class="border-border bg-muted/50 flex flex-row items-center justify-between border-b px-4 py-3">
+<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay:200ms">
+	<div class="panel-header">
 		<div>
-			<h3 class="font-display text-foreground text-sm font-semibold">{$t('pos.cart.title')}</h3>
-			<p class="text-muted-foreground text-[0.75rem]">
+			<h3 class="section-title">{$t('pos.cart.title')}</h3>
+			<p class="mt-0.5 text-xs text-muted-foreground">
 				{cart.length === 0
 					? $t('pos.cart.empty_desc')
 					: $t('pos.cart.items_desc', { count: cart.length, s: cart.length > 1 ? 's' : '' })}
@@ -46,7 +42,7 @@
 			<Button
 				variant="ghost"
 				size="sm"
-				class="text-muted-foreground hover:text-danger hover:bg-danger/10 rounded-md px-3 py-1.5 text-[0.75rem]"
+				class="h-8 rounded-lg px-2.5 text-xs text-muted-foreground hover:bg-danger/10 hover:text-danger"
 				onclick={onClear}
 			>
 				{$t('pos.cart.clear_btn')}
@@ -56,7 +52,7 @@
 
 	<div class="custom-scrollbar max-h-[20rem] overflow-auto">
 		{#if cart.length === 0}
-			<div class="text-muted-foreground py-8 text-center text-[0.8rem]">
+			<div class="px-4 py-10 text-center text-sm text-muted-foreground">
 				{$t('pos.cart.empty_state')}
 			</div>
 		{:else}
@@ -72,110 +68,114 @@
 				</thead>
 
 				<tbody>
-				{#each cart as item}
-					{@const { price, originalPrice, discountName } = getProductPrice(item)}
-					{@const unitPrice = getLinePrice(item)}
-					<tr>
-						<td class="text-right align-top">
-							<button
-								type="button"
-								class="text-muted-foreground hover:text-danger hover:bg-danger/10 inline-flex h-6 w-6 items-center justify-center rounded-md transition-colors"
-								onclick={() => onRemove(item.id)}
-								aria-label="Remove item"
-							>
-								<X class="h-3 w-3" />
-							</button>
-						</td>
-						<td class="min-w-0 align-top whitespace-normal">
-							<div
-								class="text-foreground line-clamp-2 text-[0.8rem] font-medium break-words hyphens-auto"
-								style="display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;"
-							>
-								{item.Name}
-							</div>
-
-							<div class="text-muted-foreground mt-0.5 text-[0.7rem] break-words">
-								<span class="num-mono">#{item.id}</span>
-								{#if discountName}
-									<span class="text-danger ml-1 text-[0.65rem] font-medium">({discountName})</span>
-								{/if}
-							</div>
-						</td>
-
-						<td class="num-mono text-foreground min-w-[8rem] align-top text-[0.8rem] whitespace-nowrap">
-							{#if item.unitId}
-								<span class="font-bold">{formatCurrency(unitPrice)}</span>
-								{#if item.unitSymbol}
-									<span class="text-muted-foreground text-[0.65rem]">/ {item.unitSymbol}</span>
-								{/if}
-							{:else if price < originalPrice}
-								<div class="flex flex-col">
-									<span class="text-muted-foreground text-[0.65rem] line-through"
-										>{formatCurrency(originalPrice)}</span
-									>
-									<span class="text-danger font-bold">{formatCurrency(price)}</span>
+					{#each cart as item}
+						{@const { price, originalPrice, discountName } = getProductPrice(item)}
+						{@const unitPrice = getLinePrice(item)}
+						<tr>
+							<td class="text-right align-top">
+								<button
+									type="button"
+									class="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-danger/10 hover:text-danger"
+									onclick={() => onRemove(item.id)}
+									aria-label="Remove item"
+								>
+									<X class="h-3 w-3" />
+								</button>
+							</td>
+							<td class="min-w-0 align-top whitespace-normal">
+								<div
+									class="line-clamp-2 text-[0.8125rem] font-medium break-words hyphens-auto text-foreground"
+									style="display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;"
+								>
+									{item.Name}
 								</div>
-							{:else}
-								{formatCurrency(price)}
-							{/if}
 
-							{#if item.units && item.units.length > 0}
-								<select
-									class="liquid-input mt-1 h-7 w-full min-w-[7.5rem] cursor-pointer rounded-md px-1.5 text-[0.7rem]"
-									value={item.unitId ?? ''}
-									onchange={(e) => {
-										const v = e.currentTarget.value;
-										onUpdateUnit(item.id, v ? Number(v) : undefined);
-									}}
-								>
-									<option value="">{$t('pos.cart.base_unit')}</option>
-									{#each item.units as u}
-										<option value={u.UnitID}>
-											{u.Unit?.Name ?? u.Unit?.Symbol ?? u.UnitID}
-											{#if u.Price > 0}· {formatCurrency(u.Price)}{/if}
-										</option>
-									{/each}
-								</select>
-							{/if}
-						</td>
+								<div class="mt-0.5 text-[0.7rem] break-words text-muted-foreground">
+									<span class="num-mono">#{item.id}</span>
+									{#if discountName}
+										<span class="ml-1 text-[0.65rem] font-medium text-success"
+											>({discountName})</span
+										>
+									{/if}
+								</div>
+							</td>
 
-						<!-- Quantity input -->
-						<td class="min-w-[6.5rem] align-top">
-							<div class="flex items-center gap-1">
-								<button
-									type="button"
-									class="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 w-7 shrink-0 items-center justify-center rounded-md border border-border transition-colors"
-									onclick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-									aria-label="Decrease quantity"
-								>
-									<Minus class="h-3 w-3" />
-								</button>
-								<input
-									type="number"
-									class="liquid-input num-mono h-8 w-full min-w-[3.5rem] rounded-md px-1 text-center text-[0.8rem]"
-									min="0.01"
-									step="0.01"
-									value={item.quantity}
-									onchange={(e) => onUpdateQuantity(item.id, parseFloat(e.currentTarget.value))}
-								/>
-								<button
-									type="button"
-									class="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 w-7 shrink-0 items-center justify-center rounded-md border border-border transition-colors"
-									onclick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-									aria-label="Increase quantity"
-								>
-									<Plus class="h-3 w-3" />
-								</button>
-							</div>
-						</td>
+							<td
+								class="num-mono min-w-[8rem] align-top text-[0.8125rem] whitespace-nowrap text-foreground"
+							>
+								{#if item.unitId}
+									<span class="font-semibold">{formatCurrency(unitPrice)}</span>
+									{#if item.unitSymbol}
+										<span class="text-[0.65rem] text-muted-foreground">/ {item.unitSymbol}</span>
+									{/if}
+								{:else if price < originalPrice}
+									<div class="flex flex-col">
+										<span class="text-[0.65rem] text-muted-foreground line-through"
+											>{formatCurrency(originalPrice)}</span
+										>
+										<span class="font-semibold text-primary">{formatCurrency(price)}</span>
+									</div>
+								{:else}
+									{formatCurrency(price)}
+								{/if}
 
-						<td
-							class="num-mono text-foreground min-w-[12rem] text-right align-top text-[0.8rem] font-semibold whitespace-nowrap"
-						>
-							{formatCurrency(unitPrice * item.quantity)}
-						</td>
-					</tr>
-				{/each}
+								{#if item.units && item.units.length > 0}
+									<select
+										class="glass-input mt-1 h-7 w-full min-w-[7.5rem] cursor-pointer rounded-md px-1.5 text-[0.7rem]"
+										value={item.unitId ?? ''}
+										onchange={(e) => {
+											const v = e.currentTarget.value;
+											onUpdateUnit(item.id, v ? Number(v) : undefined);
+										}}
+									>
+										<option value="">{$t('pos.cart.base_unit')}</option>
+										{#each item.units as u}
+											<option value={u.UnitID}>
+												{u.Unit?.Name ?? u.Unit?.Symbol ?? u.UnitID}
+												{#if u.Price > 0}· {formatCurrency(u.Price)}{/if}
+											</option>
+										{/each}
+									</select>
+								{/if}
+							</td>
+
+							<!-- Quantity input -->
+							<td class="min-w-[6.5rem] align-top">
+								<div class="flex items-center gap-1">
+									<button
+										type="button"
+										class="inline-flex h-8 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+										onclick={() => onUpdateQuantity(item.id, item.quantity - 1)}
+										aria-label="Decrease quantity"
+									>
+										<Minus class="h-3 w-3" />
+									</button>
+									<input
+										type="number"
+										class="glass-input num-mono h-8 w-full min-w-[3.5rem] rounded-md px-1 text-center text-[0.8125rem]"
+										min="0.01"
+										step="0.01"
+										value={item.quantity}
+										onchange={(e) => onUpdateQuantity(item.id, parseFloat(e.currentTarget.value))}
+									/>
+									<button
+										type="button"
+										class="inline-flex h-8 w-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+										onclick={() => onUpdateQuantity(item.id, item.quantity + 1)}
+										aria-label="Increase quantity"
+									>
+										<Plus class="h-3 w-3" />
+									</button>
+								</div>
+							</td>
+
+							<td
+								class="col-num min-w-[10rem] align-top font-semibold whitespace-nowrap text-foreground"
+							>
+								{formatCurrency(unitPrice * item.quantity)}
+							</td>
+						</tr>
+					{/each}
 				</tbody>
 			</table>
 		{/if}

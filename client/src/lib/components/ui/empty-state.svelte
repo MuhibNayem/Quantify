@@ -25,7 +25,9 @@
 	<h3>{title}</h3>
 	{#if description}<p>{description}</p>{/if}
 	{#if actionLabel && onAction}
-		<Button onclick={onAction} variant="outline" size="sm">{actionLabel}</Button>
+		<Button onclick={onAction} variant="secondary" size="sm" class="mt-2 font-medium">
+			{actionLabel}
+		</Button>
 	{/if}
 </div>
 
@@ -37,21 +39,37 @@
 		justify-content: center;
 		text-align: center;
 		padding: 3rem 1.5rem;
-		gap: 0.75rem;
+		gap: 0.5rem;
 	}
+
 	.icon-wrap {
-		opacity: 0.35;
+		color: hsl(var(--muted-foreground));
+		opacity: 0.55;
 		margin-bottom: 0.5rem;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 4rem;
+		height: 4rem;
+		border-radius: calc(var(--radius) - 2px);
+		background: hsl(var(--muted) / 0.6);
+		box-shadow: inset 0 0 0 1px hsl(var(--border) / 0.7);
 	}
+
 	h3 {
+		font-family: var(--font-display);
 		font-size: 1rem;
 		font-weight: 600;
+		letter-spacing: -0.015em;
 		margin: 0;
+		color: hsl(var(--foreground));
 	}
+
 	p {
 		font-size: 0.85rem;
-		opacity: 0.6;
+		color: hsl(var(--muted-foreground));
 		margin: 0;
-		max-width: 320px;
+		max-width: 34ch;
+		line-height: 1.55;
 	}
 </style>

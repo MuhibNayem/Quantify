@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"inventory/backend/internal/domain"
+	"inventory/backend/internal/middleware"
 )
 
 func setupNotificationSubscriptionTestDB(t *testing.T) *gorm.DB {
@@ -46,6 +47,7 @@ func setupNotificationSubscriptionTestDB(t *testing.T) *gorm.DB {
 func TestListNotifications_RejectsMissingUserContext(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	h := &NotificationHandler{}
 	r.GET("/users/:id/notifications", h.ListNotifications)
 
@@ -63,6 +65,7 @@ func TestUpdateSubscription_DisablesAlertType(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	r.Use(func(c *gin.Context) {
 		c.Set("user_id", user.ID)
 		c.Next()
@@ -95,6 +98,7 @@ func TestUpdateSubscription_RejectsCrossUserWrite(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	r.Use(func(c *gin.Context) {
 		c.Set("user_id", user.ID)
 		c.Set("role", "Customer")
@@ -132,6 +136,7 @@ func TestUpdateSubscription_RejectsUnauthenticated(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	h := &NotificationHandler{db: db}
 	r.PUT("/users/:id/notifications/subscriptions/:type", h.UpdateSubscription)
 
@@ -158,6 +163,7 @@ func TestListSubscriptions_ReturnsUserPreferences(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
+	r.Use(middleware.ErrorHandler())
 	r.Use(func(c *gin.Context) {
 		c.Set("user_id", user.ID)
 		c.Next()

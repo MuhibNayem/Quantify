@@ -11,34 +11,39 @@
 	let { stockAgingFlat }: Props = $props();
 </script>
 
-<div class="liquid-panel col-span-2 overflow-hidden rounded-lg p-0">
-	<div class="border-border border-b p-6">
-		<div class="flex items-center gap-3">
-			<div
-				class="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-warning/10 text-warning"
+<div class="panel col-span-2 overflow-hidden">
+	<div class="panel-header">
+		<div class="flex items-start gap-3">
+			<span
+				class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[calc(var(--radius)_-_4px)] border border-border bg-warning/10 text-warning"
 			>
-				<Package class="h-5 w-5" />
-			</div>
-			<div>
-				<h3 class="font-display text-foreground mb-0 flex items-center gap-2 text-lg font-semibold">
+				<Package class="h-4 w-4" />
+			</span>
+			<div class="min-w-0">
+				<h3 class="section-title flex items-center gap-1.5">
 					{$t('reports.stock_aging.title')}
 					<Tooltip.Root>
 						<Tooltip.Trigger>
-							<HelpCircle class="text-muted-foreground hover:text-warning h-4 w-4 transition-colors" />
+							<HelpCircle
+								class="h-4 w-4 text-muted-foreground transition-colors hover:text-warning"
+							/>
 						</Tooltip.Trigger>
 						<Tooltip.Content>
-							<p class="max-w-xs">{$t('reports.stock_aging.description')}</p>
+							<p class="max-w-xs font-normal text-foreground">
+								{$t('reports.stock_aging.description')}
+							</p>
 						</Tooltip.Content>
 					</Tooltip.Root>
 				</h3>
-				<p class="text-muted-foreground text-sm">
+				<p class="mt-0.5 text-xs text-muted-foreground">
 					{$t('reports.stock_aging.subtitle')}
 				</p>
 			</div>
 		</div>
+		<span class="badge-neutral num-mono">{stockAgingFlat.length}</span>
 	</div>
 
-	<div class="custom-scrollbar max-h-[500px] overflow-y-auto">
+	<div class="custom-scrollbar max-h-[480px] overflow-y-auto">
 		<table class="ledger-table">
 			<thead>
 				<tr>
@@ -50,14 +55,12 @@
 			</thead>
 			<tbody>
 				{#each stockAgingFlat as item}
-					<tr class="group">
+					<tr>
 						<td>
-							<div class="text-foreground font-semibold">
+							<div class="text-sm font-medium text-foreground">
 								{item.ProductName}
 							</div>
-							<div
-								class="border-border bg-muted text-muted-foreground mt-1 inline-block rounded border px-1.5 text-[11px] num-mono"
-							>
+							<div class="badge-neutral num-mono mt-1">
 								{item.SKU}
 							</div>
 						</td>

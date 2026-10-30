@@ -42,9 +42,8 @@
 	} from '$lib/types';
 
 	const inputClass =
-		'liquid-input h-10 w-full rounded-md bg-card bg-none px-3 text-sm font-normal text-foreground shadow-none ring-0 backdrop-blur-none backdrop-saturate-100 from-card to-card placeholder:text-muted-foreground focus:scale-100 focus:border-primary focus:ring-0 md:text-sm';
-	const btnSecondary =
-		'rounded-md border border-border bg-card bg-none text-foreground shadow-none backdrop-blur-none hover:bg-muted hover:bg-none';
+		'glass-input h-10 w-full px-3 text-sm font-normal text-foreground placeholder:text-muted-foreground';
+	const btnSecondary = 'shadow-none';
 
 	type Tone = 'success' | 'info' | 'warning' | 'danger';
 	const toneText: Record<Tone, string> = {
@@ -494,32 +493,27 @@
 	</Tooltip.Root>
 {/snippet}
 
-<div class="bg-background relative min-h-screen overflow-hidden p-6 lg:p-10">
-	<div class="mx-auto max-w-7xl space-y-8">
-		<div
-			class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
-			data-animate="fade-up"
-		>
-			<div class="space-y-1">
+<div class="min-h-screen bg-background p-6 lg:p-8">
+	<div class="mx-auto max-w-7xl space-y-6">
+		<header class="page-header" data-animate="fade-up">
+			<div class="min-w-0">
 				<p class="flex items-center gap-2 overline">
-					<span class="bg-primary/10 text-primary inline-flex rounded-md p-1.5">
-						<Landmark class="h-4 w-4" />
+					<span class="inline-flex rounded-md bg-primary/10 p-1 text-primary">
+						<Landmark class="h-3.5 w-3.5" />
 					</span>
 					Control · Double-Entry Ledger
 				</p>
-				<h1 class="font-display text-foreground text-3xl font-bold tracking-tight">Finance</h1>
-				<p class="text-muted-foreground">
-					Financial statements, trial balance, receivables & payables
-				</p>
+				<h1 class="page-title mt-2">Finance</h1>
+				<p class="page-sub">Financial statements, trial balance, receivables & payables</p>
 			</div>
 			<Button
 				onclick={() => openPayment()}
-				class="bg-primary text-primary-foreground hover:bg-primary/90 gap-2 rounded-md shadow-md"
+				class="btn-soothe h-10 gap-2 px-5 text-sm font-semibold"
 			>
 				<Plus class="h-4 w-4" />
 				Record Payment
 			</Button>
-		</div>
+		</header>
 
 		<GlassTabs
 			bind:value={activeTab}
@@ -536,7 +530,7 @@
 				{#if arLoading}
 					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
 						{#each [0, 80, 160, 240, 320] as delay (delay)}
-							<div class="liquid-panel space-y-3 rounded-lg p-4">
+							<div class="panel space-y-3 p-4">
 								<Skeleton class="h-3 w-16" />
 								<Skeleton class="h-7 w-24" style="animation-delay: {delay}ms;" />
 								<Skeleton class="h-3 w-12" />
@@ -544,11 +538,11 @@
 						{/each}
 					</div>
 				{:else if buckets.length > 0}
-					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
-						<div class="border-border flex items-center justify-between border-b p-4">
+					<div class="panel overflow-hidden" data-animate="fade-up">
+						<div class="panel-header">
 							<div>
 								<p class="overline">Aging Overview</p>
-								<p class="text-muted-foreground mt-0.5 text-sm">
+								<p class="mt-0.5 text-sm text-muted-foreground">
 									Outstanding receivables by age bucket
 								</p>
 							</div>
@@ -581,7 +575,7 @@
 						{#each buckets as b, i (b.Label)}
 							{@const tone = bucketTone(b.Label, i)}
 							<div
-								class="liquid-panel group rounded-lg border-l-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md {toneBorder[
+								class="panel group border-l-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md {toneBorder[
 									tone
 								]}"
 							>
@@ -589,7 +583,7 @@
 								<p class="kpi-num mt-2 text-xl md:text-2xl {toneText[tone]}">
 									{money(b.Amount)}
 								</p>
-								<p class="text-muted-foreground num-mono mt-1 text-xs">
+								<p class="num-mono mt-1 text-xs text-muted-foreground">
 									{b.Count} invoice{b.Count === 1 ? '' : 's'}
 								</p>
 							</div>
@@ -597,17 +591,13 @@
 					</div>
 				{/if}
 
-				<div
-					class="liquid-panel overflow-hidden rounded-lg"
-					data-animate="fade-up"
-					style="animation-delay: 80ms;"
-				>
+				<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 80ms;">
 					<div
-						class="border-border flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between"
+						class="panel-header flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
 					>
 						<div>
 							<p class="overline">Accounts Receivable</p>
-							<p class="text-foreground mt-0.5 text-sm font-medium">
+							<p class="mt-0.5 text-sm font-medium text-foreground">
 								{filteredReceivables.length} receivable{filteredReceivables.length === 1 ? '' : 's'}
 								·
 								<span class="num-mono font-semibold">{money(totalOutstanding)}</span> outstanding
@@ -616,7 +606,7 @@
 						<div class="flex items-center gap-2">
 							<div class="w-40">
 								<div class="select-wrapper">
-									<select bind:value={statusFilter}>
+									<select bind:value={statusFilter} class="h-10">
 										<option value="">All Statuses</option>
 										<option value="UNPAID">Unpaid</option>
 										<option value="PARTIAL">Partial</option>
@@ -637,7 +627,7 @@
 					</div>
 
 					{#if arLoading}
-						<div class="divide-border/70 divide-y">
+						<div class="divide-y divide-border/70">
 							{#each [0, 60, 120, 180, 240, 300] as delay (delay)}
 								<div class="flex items-center gap-4 px-4 py-3.5">
 									<Skeleton class="h-4 w-1/5" style="animation-delay: {delay}ms;" />
@@ -687,9 +677,9 @@
 										<tr>
 											<td>
 												<div class="flex flex-col">
-													<span class="text-foreground font-semibold">{customerName(ar)}</span>
+													<span class="font-semibold text-foreground">{customerName(ar)}</span>
 													{#if ar.Customer?.Email}
-														<span class="text-muted-foreground text-xs">{ar.Customer.Email}</span>
+														<span class="text-xs text-muted-foreground">{ar.Customer.Email}</span>
 													{/if}
 												</div>
 											</td>
@@ -719,13 +709,13 @@
 														<span
 															class={cn(
 																'text-sm',
-																overdue ? 'text-danger font-semibold' : 'text-muted-foreground'
+																overdue ? 'font-semibold text-danger' : 'text-muted-foreground'
 															)}
 														>
 															{formatDate(ar.DueDate)}
 														</span>
 														{#if overdue}
-															<span class="text-danger flex items-center gap-1 text-xs">
+															<span class="flex items-center gap-1 text-xs text-danger">
 																<AlertTriangle class="h-3 w-3" />
 																Overdue
 															</span>
@@ -748,7 +738,7 @@
 															Payment
 														</Button>
 													{:else}
-														<span class="text-muted-foreground text-xs">Settled</span>
+														<span class="text-xs text-muted-foreground">Settled</span>
 													{/if}
 												</div>
 											</td>
@@ -765,7 +755,7 @@
 				{#if apLoading}
 					<div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
 						{#each [0, 80, 160, 240, 320] as delay (delay)}
-							<div class="liquid-panel space-y-3 rounded-lg p-4">
+							<div class="panel space-y-3 p-4">
 								<Skeleton class="h-3 w-16" />
 								<Skeleton class="h-7 w-24" style="animation-delay: {delay}ms;" />
 								<Skeleton class="h-3 w-12" />
@@ -773,11 +763,11 @@
 						{/each}
 					</div>
 				{:else if apBuckets.length > 0}
-					<div class="liquid-panel overflow-hidden rounded-lg" data-animate="fade-up">
-						<div class="border-border flex items-center justify-between border-b p-4">
+					<div class="panel overflow-hidden" data-animate="fade-up">
+						<div class="panel-header">
 							<div>
 								<p class="overline">Aging Overview</p>
-								<p class="text-muted-foreground mt-0.5 text-sm">
+								<p class="mt-0.5 text-sm text-muted-foreground">
 									Outstanding payables by age bucket
 								</p>
 							</div>
@@ -810,7 +800,7 @@
 						{#each apBuckets as b, i (b.Label)}
 							{@const tone = bucketTone(b.Label, i)}
 							<div
-								class="liquid-panel group rounded-lg border-l-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md {toneBorder[
+								class="panel group border-l-2 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md {toneBorder[
 									tone
 								]}"
 							>
@@ -818,7 +808,7 @@
 								<p class="kpi-num mt-2 text-xl md:text-2xl {toneText[tone]}">
 									{money(b.Amount)}
 								</p>
-								<p class="text-muted-foreground num-mono mt-1 text-xs">
+								<p class="num-mono mt-1 text-xs text-muted-foreground">
 									{b.Count} bill{b.Count === 1 ? '' : 's'}
 								</p>
 							</div>
@@ -826,17 +816,13 @@
 					</div>
 				{/if}
 
-				<div
-					class="liquid-panel overflow-hidden rounded-lg"
-					data-animate="fade-up"
-					style="animation-delay: 80ms;"
-				>
+				<div class="panel overflow-hidden" data-animate="fade-up" style="animation-delay: 80ms;">
 					<div
-						class="border-border flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between"
+						class="panel-header flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
 					>
 						<div>
 							<p class="overline">Accounts Payable</p>
-							<p class="text-foreground mt-0.5 text-sm font-medium">
+							<p class="mt-0.5 text-sm font-medium text-foreground">
 								{filteredPayables.length} payable{filteredPayables.length === 1 ? '' : 's'}
 								·
 								<span class="num-mono font-semibold">{money(totalAPOutstanding)}</span> outstanding
@@ -845,7 +831,7 @@
 						<div class="flex items-center gap-2">
 							<div class="w-40">
 								<div class="select-wrapper">
-									<select bind:value={apStatusFilter}>
+									<select bind:value={apStatusFilter} class="h-10">
 										<option value="">All Statuses</option>
 										<option value="UNPAID">Unpaid</option>
 										<option value="PARTIAL">Partial</option>
@@ -866,7 +852,7 @@
 					</div>
 
 					{#if apLoading}
-						<div class="divide-border/70 divide-y">
+						<div class="divide-y divide-border/70">
 							{#each [0, 60, 120, 180, 240, 300] as delay (delay)}
 								<div class="flex items-center gap-4 px-4 py-3.5">
 									<Skeleton class="h-4 w-1/5" style="animation-delay: {delay}ms;" />
@@ -916,9 +902,9 @@
 										<tr>
 											<td>
 												<div class="flex flex-col">
-													<span class="text-foreground font-semibold">{supplierName(ap)}</span>
+													<span class="font-semibold text-foreground">{supplierName(ap)}</span>
 													{#if ap.PurchaseOrder?.OrderDate}
-														<span class="text-muted-foreground text-xs">
+														<span class="text-xs text-muted-foreground">
 															Ordered {formatDate(ap.PurchaseOrder.OrderDate)}
 														</span>
 													{/if}
@@ -950,13 +936,13 @@
 														<span
 															class={cn(
 																'text-sm',
-																overdue ? 'text-danger font-semibold' : 'text-muted-foreground'
+																overdue ? 'font-semibold text-danger' : 'text-muted-foreground'
 															)}
 														>
 															{formatDate(ap.DueDate)}
 														</span>
 														{#if overdue}
-															<span class="text-danger flex items-center gap-1 text-xs">
+															<span class="flex items-center gap-1 text-xs text-danger">
 																<AlertTriangle class="h-3 w-3" />
 																Overdue
 															</span>
@@ -979,7 +965,7 @@
 															Payment
 														</Button>
 													{:else}
-														<span class="text-muted-foreground text-xs">Settled</span>
+														<span class="text-xs text-muted-foreground">Settled</span>
 													{/if}
 												</div>
 											</td>
@@ -994,7 +980,7 @@
 		{:else}
 			<div class="space-y-6">
 				<div
-					class="liquid-panel flex flex-col gap-4 rounded-lg p-4 lg:flex-row lg:items-center lg:justify-between"
+					class="panel flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between"
 					data-animate="fade-up"
 				>
 					<GlassTabs
@@ -1013,7 +999,7 @@
 							class="{inputClass} num-mono w-40"
 							aria-label="From date"
 						/>
-						<span class="text-muted-foreground text-sm">→</span>
+						<span class="text-sm text-muted-foreground">→</span>
 						<Input
 							type="date"
 							bind:value={to}
@@ -1040,7 +1026,7 @@
 				{#key stmtTab}
 					<div in:fly={{ y: 16, duration: 250 }}>
 						{#if stmtLoading}
-							<div class="liquid-panel space-y-4 rounded-lg p-6">
+							<div class="panel space-y-4 p-6">
 								<Skeleton class="h-4 w-44" />
 								{#each [0, 70, 140, 210, 280, 350] as delay (delay)}
 									<Skeleton class="h-9 w-full" style="animation-delay: {delay}ms;" />
@@ -1048,17 +1034,17 @@
 							</div>
 						{:else if stmtTab === 'income'}
 							{#if income}
-								<div class="liquid-panel overflow-hidden rounded-lg">
-									<div class="border-border flex items-center justify-between border-b p-5">
+								<div class="panel overflow-hidden">
+									<div class="panel-header">
 										<div>
 											<p class="flex items-center gap-1.5 overline">
 												<Scale class="h-3.5 w-3.5" />
 												Income Statement
 											</p>
-											<p class="text-muted-foreground mt-1 text-sm">{periodLabel}</p>
+											<p class="mt-1 text-sm text-muted-foreground">{periodLabel}</p>
 										</div>
 									</div>
-									<div class="border-border border-b px-5 pt-5 pb-4">
+									<div class="border-b border-border px-5 pt-5 pb-4">
 										<BarChart
 											data={incomeChartData}
 											x="key"
@@ -1083,33 +1069,33 @@
 									<div class="mx-auto max-w-2xl px-6 py-6">
 										<dl>
 											<div class="flex items-baseline justify-between py-2">
-												<dt class="text-foreground text-sm font-medium">Revenue</dt>
-												<dd class="num-mono text-foreground text-sm font-semibold">
+												<dt class="text-sm font-medium text-foreground">Revenue</dt>
+												<dd class="num-mono text-sm font-semibold text-foreground">
 													{money(income.Revenue)}
 												</dd>
 											</div>
 											<div class="flex items-baseline justify-between py-2 pl-6">
-												<dt class="text-muted-foreground text-sm">− Cost of Goods Sold</dt>
-												<dd class="num-mono text-muted-foreground text-sm">{money(income.COGS)}</dd>
+												<dt class="text-sm text-muted-foreground">− Cost of Goods Sold</dt>
+												<dd class="num-mono text-sm text-muted-foreground">{money(income.COGS)}</dd>
 											</div>
 											<div
-												class="border-border flex items-baseline justify-between border-t py-2.5"
+												class="flex items-baseline justify-between border-t border-border py-2.5"
 											>
-												<dt class="text-foreground text-sm font-semibold">
+												<dt class="text-sm font-semibold text-foreground">
 													Gross Profit
 													{#if grossMargin !== null}
-														<span class="text-muted-foreground num-mono text-xs font-normal">
+														<span class="num-mono text-xs font-normal text-muted-foreground">
 															· {formatPercent(grossMargin)} margin
 														</span>
 													{/if}
 												</dt>
-												<dd class="num-mono text-foreground text-sm font-semibold">
+												<dd class="num-mono text-sm font-semibold text-foreground">
 													{money(income.GrossProfit)}
 												</dd>
 											</div>
 											<div class="flex items-baseline justify-between py-2 pl-6">
-												<dt class="text-muted-foreground text-sm">− Operating Expenses</dt>
-												<dd class="num-mono text-muted-foreground text-sm">
+												<dt class="text-sm text-muted-foreground">− Operating Expenses</dt>
+												<dd class="num-mono text-sm text-muted-foreground">
 													{money(income.Expenses)}
 												</dd>
 											</div>
@@ -1138,7 +1124,7 @@
 									</div>
 								</div>
 							{:else}
-								<div class="liquid-panel rounded-lg">
+								<div class="panel">
 									<EmptyState
 										icon={Scale}
 										title="No statement data"
@@ -1148,16 +1134,16 @@
 							{/if}
 						{:else if stmtTab === 'balance'}
 							{#if sheet}
-								<div class="liquid-panel overflow-hidden rounded-lg">
+								<div class="panel overflow-hidden">
 									<div
-										class="border-border flex flex-col gap-3 border-b p-5 sm:flex-row sm:items-center sm:justify-between"
+										class="panel-header flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between"
 									>
 										<div>
 											<p class="flex items-center gap-1.5 overline">
 												<BookOpen class="h-3.5 w-3.5" />
 												Balance Sheet
 											</p>
-											<p class="text-muted-foreground mt-1 text-sm">{periodLabel}</p>
+											<p class="mt-1 text-sm text-muted-foreground">{periodLabel}</p>
 										</div>
 										{#if sheet.Balanced}
 											<span class="badge-success w-fit">
@@ -1172,7 +1158,7 @@
 										{/if}
 									</div>
 
-									<div class="border-border border-b px-5 pt-5 pb-4">
+									<div class="border-b border-border px-5 pt-5 pb-4">
 										<div class="mx-auto max-w-md">
 											<BarChart
 												data={sheetChartData}
@@ -1195,47 +1181,47 @@
 												class="h-48 w-full"
 											/>
 										</div>
-										<p class="text-muted-foreground mt-2 text-center text-xs">
+										<p class="mt-2 text-center text-xs text-muted-foreground">
 											{sheet.Balanced
 												? 'Assets equal liabilities plus equity — the ledger balances.'
 												: 'Assets do not equal liabilities plus equity — review postings.'}
 										</p>
 									</div>
 
-									<div class="bg-border grid gap-px md:grid-cols-2">
+									<div class="grid gap-px bg-border md:grid-cols-2">
 										<div class="bg-card p-6">
 											<p class="overline">Assets</p>
-											<p class="kpi-num text-foreground mt-3 text-3xl">{money(sheet.Assets)}</p>
-											<p class="text-muted-foreground mt-2 text-xs">Everything the business owns</p>
+											<p class="kpi-num mt-3 text-3xl text-foreground">{money(sheet.Assets)}</p>
+											<p class="mt-2 text-xs text-muted-foreground">Everything the business owns</p>
 										</div>
 										<div class="bg-card p-6">
 											<p class="overline">Liabilities & Equity</p>
 											<div class="mt-3 space-y-2.5">
 												<div class="flex items-baseline justify-between">
-													<span class="text-foreground text-sm font-medium">Liabilities</span>
-													<span class="num-mono text-foreground text-sm font-semibold">
+													<span class="text-sm font-medium text-foreground">Liabilities</span>
+													<span class="num-mono text-sm font-semibold text-foreground">
 														{money(sheet.Liabilities)}
 													</span>
 												</div>
 												<div class="flex items-baseline justify-between">
-													<span class="text-foreground text-sm font-medium">Equity</span>
-													<span class="num-mono text-foreground text-sm font-semibold">
+													<span class="text-sm font-medium text-foreground">Equity</span>
+													<span class="num-mono text-sm font-semibold text-foreground">
 														{money(sheet.Equity)}
 													</span>
 												</div>
 												<div class="flex items-baseline justify-between pl-4">
-													<span class="text-muted-foreground text-xs">incl. Retained Earnings</span>
-													<span class="num-mono text-muted-foreground text-xs">
+													<span class="text-xs text-muted-foreground">incl. Retained Earnings</span>
+													<span class="num-mono text-xs text-muted-foreground">
 														{money(sheet.RetainedEarnings)}
 													</span>
 												</div>
 												<div
-													class="border-border flex items-baseline justify-between border-t pt-2.5"
+													class="flex items-baseline justify-between border-t border-border pt-2.5"
 												>
-													<span class="text-foreground text-sm font-bold"
+													<span class="text-sm font-bold text-foreground"
 														>Total Liabilities & Equity</span
 													>
-													<span class="num-mono text-foreground text-sm font-bold">
+													<span class="num-mono text-sm font-bold text-foreground">
 														{money(sheet.TotalLiabilitiesAndEquity)}
 													</span>
 												</div>
@@ -1243,25 +1229,25 @@
 										</div>
 									</div>
 
-									<div class="border-border bg-muted/50 border-t px-6 py-4">
+									<div class="border-t border-border bg-muted/50 px-6 py-4">
 										<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
 											<div class="text-center">
 												<p class="overline">Assets</p>
-												<p class="num-mono text-foreground text-lg font-bold">
+												<p class="num-mono text-lg font-bold text-foreground">
 													{money(sheet.Assets)}
 												</p>
 											</div>
-											<span class="font-display text-muted-foreground text-xl">=</span>
+											<span class="font-display text-xl text-muted-foreground">=</span>
 											<div class="text-center">
 												<p class="overline">Liabilities</p>
-												<p class="num-mono text-foreground text-lg font-bold">
+												<p class="num-mono text-lg font-bold text-foreground">
 													{money(sheet.Liabilities)}
 												</p>
 											</div>
-											<span class="font-display text-muted-foreground text-xl">+</span>
+											<span class="font-display text-xl text-muted-foreground">+</span>
 											<div class="text-center">
 												<p class="overline">Equity</p>
-												<p class="num-mono text-foreground text-lg font-bold">
+												<p class="num-mono text-lg font-bold text-foreground">
 													{money(sheet.Equity)}
 												</p>
 											</div>
@@ -1269,7 +1255,7 @@
 									</div>
 								</div>
 							{:else}
-								<div class="liquid-panel rounded-lg">
+								<div class="panel">
 									<EmptyState
 										icon={BookOpen}
 										title="No statement data"
@@ -1278,7 +1264,7 @@
 								</div>
 							{/if}
 						{:else if trialRows && trialRows.length > 0}
-							<div class="liquid-panel overflow-hidden rounded-lg">
+							<div class="panel overflow-hidden">
 								<div class="overflow-x-auto">
 									<table class="ledger-table min-w-[52rem]">
 										<thead>
@@ -1295,7 +1281,7 @@
 											{#each trialRows as row (row.AccountID)}
 												<tr>
 													<td class="num-mono text-muted-foreground">{row.Code}</td>
-													<td class="text-foreground font-medium">{row.Name}</td>
+													<td class="font-medium text-foreground">{row.Name}</td>
 													<td>
 														<span class={cn(accountBadge(row.Type), 'tracking-wide uppercase')}>
 															{row.Type}
@@ -1318,17 +1304,17 @@
 											{/each}
 										</tbody>
 										<tfoot>
-											<tr class="border-border bg-muted/60 border-t-2">
+											<tr class="border-t-2 border-border bg-muted/60">
 												<td colspan="3" class="px-3.5 py-3 overline">
 													Totals · {trialRows.length} account{trialRows.length === 1 ? '' : 's'}
 												</td>
 												<td
-													class="num-mono text-foreground px-3.5 py-3 text-right text-sm font-bold"
+													class="num-mono px-3.5 py-3 text-right text-sm font-bold text-foreground"
 												>
 													{money(tbTotals.debit)}
 												</td>
 												<td
-													class="num-mono text-foreground px-3.5 py-3 text-right text-sm font-bold"
+													class="num-mono px-3.5 py-3 text-right text-sm font-bold text-foreground"
 												>
 													{money(tbTotals.credit)}
 												</td>
@@ -1347,7 +1333,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="liquid-panel rounded-lg">
+							<div class="panel">
 								<EmptyState
 									icon={BookOpen}
 									title="No accounts to show"
@@ -1376,17 +1362,17 @@
 		<div class="space-y-4 py-4">
 			{#if payTarget}
 				<div
-					class="border-border bg-muted/50 flex items-center justify-between rounded-md border px-3 py-2.5"
+					class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2.5"
 				>
 					<div>
-						<p class="text-foreground text-sm font-semibold">{customerName(payTarget)}</p>
-						<p class="text-muted-foreground num-mono text-xs">
+						<p class="text-sm font-semibold text-foreground">{customerName(payTarget)}</p>
+						<p class="num-mono text-xs text-muted-foreground">
 							{payTarget.Order?.OrderNumber || `#${payTarget.OrderID}`}
 						</p>
 					</div>
 					<div class="text-right">
 						<p class="overline">Outstanding</p>
-						<p class="num-mono text-foreground text-sm font-bold">
+						<p class="num-mono text-sm font-bold text-foreground">
 							{money(outstandingOf(payTarget))}
 						</p>
 					</div>
@@ -1396,7 +1382,7 @@
 			<div class="space-y-2">
 				<Label>Customer</Label>
 				<div class="select-wrapper">
-					<select bind:value={payCustomerId} disabled={!!payTarget}>
+					<select bind:value={payCustomerId} disabled={!!payTarget} class="h-10">
 						{#each customerOptions as c (c.value)}
 							<option value={c.value}>{c.label}</option>
 						{/each}
@@ -1428,7 +1414,7 @@
 								'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2.5 text-xs font-semibold transition-all',
 								payMethod === m.value
 									? 'border-primary/40 bg-accent text-accent-foreground shadow-xs'
-									: 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-muted-foreground/40'
+									: 'border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
 							)}
 						>
 							<Icon class="h-4 w-4" />
@@ -1439,12 +1425,12 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label>Notes <span class="text-muted-foreground font-normal">(optional)</span></Label>
+				<Label>Notes <span class="font-normal text-muted-foreground">(optional)</span></Label>
 				<textarea
 					bind:value={payNotes}
 					rows="2"
 					placeholder="Reference, cheque no, remarks..."
-					class="liquid-textarea w-full px-3 py-2 text-sm"
+					class="glass-textarea w-full px-3 py-2 text-sm"
 				></textarea>
 			</div>
 		</div>
@@ -1456,7 +1442,7 @@
 			<Button
 				onclick={submitPayment}
 				disabled={paying}
-				class="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+				class="btn-soothe h-10 gap-2 px-5 text-sm font-semibold"
 			>
 				{#if paying}
 					<Loader2 class="h-4 w-4 animate-spin" />
@@ -1483,17 +1469,17 @@
 		<div class="space-y-4 py-4">
 			{#if spTarget}
 				<div
-					class="border-border bg-muted/50 flex items-center justify-between rounded-md border px-3 py-2.5"
+					class="flex items-center justify-between rounded-md border border-border bg-muted/50 px-3 py-2.5"
 				>
 					<div>
-						<p class="text-foreground text-sm font-semibold">{supplierName(spTarget)}</p>
-						<p class="text-muted-foreground num-mono text-xs">
+						<p class="text-sm font-semibold text-foreground">{supplierName(spTarget)}</p>
+						<p class="num-mono text-xs text-muted-foreground">
 							PO #{spTarget.PurchaseOrder?.ID ?? spTarget.PurchaseOrderID}
 						</p>
 					</div>
 					<div class="text-right">
 						<p class="overline">Outstanding</p>
-						<p class="num-mono text-foreground text-sm font-bold">
+						<p class="num-mono text-sm font-bold text-foreground">
 							{money(outstandingOfAP(spTarget))}
 						</p>
 					</div>
@@ -1503,7 +1489,7 @@
 			<div class="space-y-2">
 				<Label>Supplier</Label>
 				<div class="select-wrapper">
-					<select bind:value={spSupplierId} disabled={!!spTarget}>
+					<select bind:value={spSupplierId} disabled={!!spTarget} class="h-10">
 						{#each supplierOptions as s (s.value)}
 							<option value={s.value}>{s.label}</option>
 						{/each}
@@ -1535,7 +1521,7 @@
 								'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2.5 text-xs font-semibold transition-all',
 								spMethod === m.value
 									? 'border-primary/40 bg-accent text-accent-foreground shadow-xs'
-									: 'border-border bg-card text-muted-foreground hover:text-foreground hover:border-muted-foreground/40'
+									: 'border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:text-foreground'
 							)}
 						>
 							<Icon class="h-4 w-4" />
@@ -1546,12 +1532,12 @@
 			</div>
 
 			<div class="space-y-2">
-				<Label>Notes <span class="text-muted-foreground font-normal">(optional)</span></Label>
+				<Label>Notes <span class="font-normal text-muted-foreground">(optional)</span></Label>
 				<textarea
 					bind:value={spNotes}
 					rows="2"
 					placeholder="Reference, cheque no, remarks..."
-					class="liquid-textarea w-full px-3 py-2 text-sm"
+					class="glass-textarea w-full px-3 py-2 text-sm"
 				></textarea>
 			</div>
 		</div>
@@ -1562,7 +1548,7 @@
 			<Button
 				onclick={submitSupplierPayment}
 				disabled={spPaying}
-				class="bg-primary text-primary-foreground hover:bg-primary/90 gap-2"
+				class="btn-soothe h-10 gap-2 px-5 text-sm font-semibold"
 			>
 				{#if spPaying}
 					<Loader2 class="h-4 w-4 animate-spin" />

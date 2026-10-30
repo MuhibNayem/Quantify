@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"inventory/backend/internal/domain"
 	"inventory/backend/internal/repository"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -22,14 +23,15 @@ func GenerateRandomPassword() string {
 
 func buildAIUser(hashedPassword string, adminRole domain.Role) domain.User {
 	return domain.User{
-		Username:    "ai-agent",
-		Email:       "ai-agent@quantify.com",
-		Password:    hashedPassword,
-		RoleID:      adminRole.ID,
-		Role:        adminRole, // Explicitly set association
-		RoleName:    adminRole.Name,
-		LegacyRole:  adminRole.Name, // Populate legacy column
-		IsActive:    false,
+		Username:   "ai-agent",
+		Email:      "ai-agent@quantify.com",
+		Password:   hashedPassword,
+		RoleID:     adminRole.ID,
+		Role:       adminRole, // Explicitly set association
+		RoleName:   adminRole.Name,
+		LegacyRole: adminRole.Name, // Populate legacy column
+		// The AI service authenticates as this user, so it must be active.
+		IsActive:    true,
 		FirstName:   "AI",
 		LastName:    "Agent",
 		PhoneNumber: "000-000-0000",
@@ -55,8 +57,14 @@ func SeedAIUser(db *gorm.DB) error {
 		return err
 	}
 
-	// Create AI Agent user
-	password := GenerateRandomPassword()
+	// Create AI Agent user. Prefer the operator-provided password so the
+	// backend and ai-service can share it via environment configuration;
+	// otherwise generate one and print it exactly once.
+	password := os.Getenv("AI_AGENT_PASSWORD")
+	generated := password == ""
+	if generated {
+		password = GenerateRandomPassword()
+	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -69,6 +77,10 @@ func SeedAIUser(db *gorm.DB) error {
 		return err
 	}
 
-	logrus.Infof("AI Agent user created successfully. One-time password (store securely): %s", password)
+	if generated {
+		logrus.Infof("AI Agent user created successfully. One-time password (store securely and set AI_AGENT_PASSWORD): %s", password)
+	} else {
+		logrus.Info("AI Agent user created successfully using AI_AGENT_PASSWORD.")
+	}
 	return nil
 }

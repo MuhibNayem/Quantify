@@ -3,13 +3,17 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"inventory/backend/internal/domain"
 	appErrors "inventory/backend/internal/errors"
+	"inventory/backend/internal/services"
+	"inventory/backend/internal/units"
 )
 
 // ProcessReturn godoc
@@ -86,43 +90,83 @@ func (h *ReturnHandler) ProcessReturn(c *gin.Context) {
 		}
 
 		var stockAdjustments []domain.StockAdjustment
+		restockCost := 0.0
 
 		for _, item := range returnRecord.ReturnItems {
+			// Load the original line so the return restocks the same physical
+			// quantity that was deducted (selling units → base units).
+			var orderItem domain.OrderItem
+			if err := tx.First(&orderItem, item.OrderItemID).Error; err != nil {
+				return fmt.Errorf("order item %d not found", item.OrderItemID)
+			}
+
+			restockQty := item.Quantity
+			if orderItem.Quantity > 0 && orderItem.BaseQuantity > 0 {
+				restockQty = units.RoundQty(item.Quantity * orderItem.BaseQuantity / orderItem.Quantity)
+			}
+
 			if item.Condition == "GOOD" {
 				product, ok := productMap[item.ProductID]
 				if !ok {
 					return fmt.Errorf("product %d not found", item.ProductID)
 				}
 
+				locationID := orderItem.LocationID
+				if locationID == 0 {
+					locationID = product.LocationID
+				}
+				unitCost := orderItem.UnitCost
+				if unitCost <= 0 {
+					unitCost = product.PurchasePrice
+				}
+				restockCost += restockQty * unitCost
+
 				var batch domain.Batch
-				if err := tx.Where("product_id = ? AND location_id = ?", item.ProductID, product.LocationID).Order("created_at desc").First(&batch).Error; err == nil {
-					batch.Quantity += item.Quantity
+				if err := tx.Where("product_id = ? AND location_id = ?", item.ProductID, locationID).Order("created_at desc").First(&batch).Error; err == nil {
+					previousQty := batch.Quantity
+					batch.Quantity = units.RoundQty(batch.Quantity + restockQty)
+					batch.UnitCost = unitCost
 					if err := tx.Save(&batch).Error; err != nil {
 						return fmt.Errorf("failed to update batch")
 					}
+					stockAdjustments = append(stockAdjustments, domain.StockAdjustment{
+						ProductID:        item.ProductID,
+						LocationID:       locationID,
+						Type:             "STOCK_IN",
+						Quantity:         restockQty,
+						UnitCost:         unitCost,
+						ReasonCode:       "RETURN",
+						Notes:            fmt.Sprintf("Return ID: %d", returnRecord.ID),
+						AdjustedBy:       approverID,
+						AdjustedAt:       time.Now(),
+						PreviousQuantity: previousQty,
+						NewQuantity:      batch.Quantity,
+					})
 				} else {
 					batch = domain.Batch{
 						ProductID:   item.ProductID,
-						LocationID:  product.LocationID,
+						LocationID:  locationID,
 						BatchNumber: fmt.Sprintf("RET-%d", returnRecord.ID),
-						Quantity:    item.Quantity,
+						Quantity:    restockQty,
+						UnitCost:    unitCost,
 					}
 					if err := tx.Create(&batch).Error; err != nil {
 						return fmt.Errorf("failed to create batch")
 					}
+					stockAdjustments = append(stockAdjustments, domain.StockAdjustment{
+						ProductID:        item.ProductID,
+						LocationID:       locationID,
+						Type:             "STOCK_IN",
+						Quantity:         restockQty,
+						UnitCost:         unitCost,
+						ReasonCode:       "RETURN",
+						Notes:            fmt.Sprintf("Return ID: %d", returnRecord.ID),
+						AdjustedBy:       approverID,
+						AdjustedAt:       time.Now(),
+						PreviousQuantity: 0,
+						NewQuantity:      batch.Quantity,
+					})
 				}
-
-				stockAdjustments = append(stockAdjustments, domain.StockAdjustment{
-					ProductID:   item.ProductID,
-					LocationID:  product.LocationID,
-					Type:        "STOCK_IN",
-					Quantity:    item.Quantity,
-					ReasonCode:  "RETURN",
-					Notes:       fmt.Sprintf("Return ID: %d", returnRecord.ID),
-					AdjustedBy:  approverID,
-					AdjustedAt:  time.Now(),
-					NewQuantity: batch.Quantity,
-				})
 			}
 
 			if err := tx.Model(&domain.OrderItem{}).Where("id = ?", item.OrderItemID).
@@ -143,10 +187,52 @@ func (h *ReturnHandler) ProcessReturn(c *gin.Context) {
 			return fmt.Errorf("order not found")
 		}
 
+		// Split the refund into revenue and tax using the tax rate actually
+		// charged on the original order, then post the return to the ledger.
+		effectiveTaxRate := 0.0
+		if order.Subtotal > 0 {
+			effectiveTaxRate = order.TaxAmount / order.Subtotal
+		}
+		netRefund := returnRecord.RefundAmount
+		taxRefund := 0.0
+		if effectiveTaxRate > 0 {
+			netRefund = returnRecord.RefundAmount / (1 + effectiveTaxRate)
+			taxRefund = returnRecord.RefundAmount - netRefund
+		}
+		ledger := services.NewLedgerService(h.DB)
+		entry, err := ledger.PostReturn(tx, &returnRecord, &order, netRefund, taxRefund, restockCost, approverID)
+		if err != nil {
+			return fmt.Errorf("failed to post return to ledger: %w", err)
+		}
+		if entry != nil {
+			returnRecord.JournalEntryID = &entry.ID
+		}
+
+		// A cash refund reduces the original cashier's open drawer.
+		if order.PaymentMethod == "cash" {
+			var drawer domain.CashDrawerSession
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+				Where("user_id = ? AND status = ?", order.UserID, "OPEN").
+				Order("start_time DESC").First(&drawer).Error; err == nil {
+				drawer.TotalRefunds += returnRecord.RefundAmount
+				drawer.SystemCash = drawer.StartingCash + drawer.TotalSales - drawer.TotalRefunds - drawer.TotalDrops
+				if err := tx.Save(&drawer).Error; err != nil {
+					return fmt.Errorf("failed to update cash drawer for refund: %w", err)
+				}
+			}
+		}
+
+		currency := "USD"
+		if v, err := h.Settings.GetSetting("currency_code"); err == nil {
+			if code := strings.ToUpper(strings.TrimSpace(v)); len(code) == 3 {
+				currency = code
+			}
+		}
+
 		transaction := domain.Transaction{
 			OrderID:              order.OrderNumber,
 			Amount:               int64(returnRecord.RefundAmount * 100),
-			Currency:             "USD",
+			Currency:             currency,
 			PaymentMethod:        order.PaymentMethod,
 			Status:               "REFUNDED",
 			GatewayTransactionID: fmt.Sprintf("REF-%d", time.Now().UnixNano()),

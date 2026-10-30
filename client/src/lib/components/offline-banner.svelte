@@ -18,7 +18,7 @@
 
 {#if !online}
 	<div class="offline-banner" role="status" aria-live="polite">
-		<WifiOff size={16} />
+		<WifiOff size={16} class="offline-icon" />
 		<span>
 			You're offline.
 			{#if pending > 0}
@@ -41,10 +41,28 @@
 		align-items: center;
 		justify-content: center;
 		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: #f59e0b;
-		color: #1a1a1a;
-		font-size: 0.85rem;
+		padding: 0.55rem 1rem;
+		background: hsl(var(--warning) / 0.14);
+		color: hsl(var(--foreground));
+		border-bottom: 1px solid hsl(var(--warning) / 0.32);
+		backdrop-filter: blur(22px) saturate(180%);
+		-webkit-backdrop-filter: blur(22px) saturate(180%);
+		box-shadow: var(--shadow-xs);
+		font-size: 0.8125rem;
 		font-weight: 500;
+		letter-spacing: -0.005em;
+	}
+
+	.offline-icon {
+		flex: none;
+		color: hsl(var(--warning));
+	}
+
+	@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+		.offline-banner {
+			background: hsl(var(--card));
+			backdrop-filter: none;
+			-webkit-backdrop-filter: none;
+		}
 	}
 </style>
