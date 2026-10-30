@@ -1,4 +1,4 @@
-<!-- client/src/routes/products/[id]/+page.svelte -->
+<!-- client/src/routes/products/[sku]/+page.svelte -->
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { toast } from 'svelte-sonner';
@@ -31,7 +31,7 @@
 				type: 'product',
 				id: product.ID,
 				label: product.Name,
-				href: `/products/${product.ID}`
+				href: `/products/${encodeURIComponent(product.SKU || String(product.ID))}`
 			});
 		}
 	});

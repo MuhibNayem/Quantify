@@ -72,9 +72,9 @@ export const productsApi = {
 		),
 	get: async (id: number) => cachedGet<Product>(`products:get:${id}`, `/products/${id}`),
 	getBySku: async (sku: string) =>
-		cachedGet<Product>(`products:sku:${sku}`, `/products/sku/${sku}`),
+		cachedGet<Product>(`products:sku:${sku}`, `/products/sku/${encodeURIComponent(sku)}`),
 	getByBarcode: async (barcode: string) =>
-		(await api.get<Product>(`/products/barcode/${barcode}`)).data,
+		(await api.get<Product>(`/products/barcode/${encodeURIComponent(barcode)}`)).data,
 	create: async (payload: Record<string, unknown>) => {
 		const data = (await api.post<Product>('/products', payload)).data;
 		invalidateCache('products:');
@@ -224,7 +224,15 @@ export const locationsApi = {
 export const barcodeApi = {
 	lookup: async (barcode: string, params?: Record<string, string>) =>
 		(await api.get<Product>('/barcode/lookup', { params: { barcode, ...params } })).data,
-	generate: async (params: Record<string, string | number>) =>
+	/** Resolve a product barcode, SKU, or selling-unit barcode. */
+	resolve: async (barcode: string) =>
+		(
+			await api.get<{ product: Product; unit: ProductUnit | null }>('/barcode/resolve', {
+				params: { barcode }
+			})
+		).data,
+	/** Label generation is keyed by SKU, never by database ID. */
+	generate: async (params: { sku: string }) =>
 		(await api.get('/barcode/generate', { params, responseType: 'blob' })).data as Blob
 };
 
@@ -362,17 +370,21 @@ export const crmApi = {
 		(await api.get<PaginatedUsers>('/crm/customers', { params })).data,
 	createCustomer: async (payload: Record<string, unknown>) =>
 		(await api.post<UserSummary>('/crm/customers', payload)).data,
-	getCustomer: async (id: number | string) =>
-		(await api.get<UserSummary>(`/crm/customers/${id}`)).data,
+	/** Explicit ID lookup (admin workflows). */
+	getCustomer: async (id: number) => (await api.get<UserSummary>(`/crm/customers/id/${id}`)).data,
+	/** Natural-key lookup: email, phone, or username only. */
+	lookupCustomer: async (query: string) =>
+		(await api.get<UserSummary>('/crm/customers/lookup', { params: { q: query } })).data,
 	updateCustomer: async (id: number, payload: Record<string, unknown>) =>
-		(await api.put<UserSummary>(`/crm/customers/${id}`, payload)).data,
-	deleteCustomer: async (id: number) => (await api.delete(`/crm/customers/${id}`)).data,
+		(await api.put<UserSummary>(`/crm/customers/id/${id}`, payload)).data,
+	deleteCustomer: async (id: number) => (await api.delete(`/crm/customers/id/${id}`)).data,
 	getLoyalty: async (id: number) => (await api.get<LoyaltyAccount>(`/crm/loyalty/${id}`)).data,
 	addPoints: async (id: number, points: number) =>
 		(await api.post<LoyaltyAccount>(`/crm/loyalty/${id}/points`, { points })).data,
 	redeemPoints: async (userId: number, points: number) =>
-		(await api.post<LoyaltyAccount>(`crm/loyalty/${userId}/redeem`, { points })).data,
-	getChurnRisk: async (userId: number) => (await api.get(`crm/customers/${userId}/churn-risk`)).data
+		(await api.post<LoyaltyAccount>(`/crm/loyalty/${userId}/redeem`, { points })).data,
+	getChurnRisk: async (userId: number) =>
+		(await api.get(`/crm/customers/id/${userId}/churn-risk`)).data
 };
 
 export const purchaseOrdersApi = {

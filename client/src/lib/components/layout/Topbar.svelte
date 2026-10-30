@@ -34,18 +34,31 @@
 
 	const typeConfig: Record<
 		string,
-		{ label: string; icon: typeof Package; route: (id: any) => string }
+		{ label: string; icon: typeof Package; route: (entity: any) => string }
 	> = {
-		product: { label: 'Products', icon: Package, route: (id) => `/products/${id}` },
+		product: {
+			label: 'Products',
+			icon: Package,
+			// SKU is the human-facing product identifier; numeric ID is only a
+			// fallback for legacy records.
+			route: (entity) =>
+				`/products/${encodeURIComponent(entity.SKU || String(entity.ID ?? entity.id))}`
+		},
 		user: { label: 'Users', icon: Users, route: () => `/users` },
-		supplier: { label: 'Suppliers', icon: Truck, route: () => `/suppliers` },
-		category: { label: 'Categories', icon: FolderTree, route: () => `/catalog` }
+		supplier: {
+			label: 'Suppliers',
+			icon: Truck,
+			route: (entity) => (entity.ID ? `/suppliers/${entity.ID}` : '/suppliers')
+		},
+		category: { label: 'Categories', icon: FolderTree, route: () => '/catalog' }
 	};
+
+	const normalizeHit = (hit: any) => hit.entity ?? hit;
 
 	const groupedResults = $derived.by(() => {
 		const groups: Record<string, any[]> = {};
 		for (const hit of searchResults) {
-			const type = (hit.type || hit.entityType || 'other').toLowerCase();
+			const type = (hit.entity_type || hit.type || 'other').toLowerCase();
 			if (!groups[type]) groups[type] = [];
 			groups[type].push(hit);
 		}
@@ -78,23 +91,29 @@
 	};
 
 	const navigateToResult = (hit: any) => {
-		const type = (hit.type || hit.entityType || '').toLowerCase();
+		const type = (hit.entity_type || hit.type || '').toLowerCase();
 		const config = typeConfig[type];
-		const id = hit.id || hit.ID || hit.entityId;
-		if (config && id) {
-			goto(config.route(id));
+		const entity = normalizeHit(hit);
+		if (config) {
+			goto(config.route(entity));
 		}
 		searchResults = [];
 		searchFocused = false;
 		search = '';
 	};
 
-	const getDisplayName = (hit: any) =>
-		hit.name ||
-		hit.Name ||
-		hit.title ||
-		hit.matchedContent ||
-		`#${hit.id || hit.ID || hit.entityId}`;
+	const getDisplayName = (hit: any) => {
+		const entity = normalizeHit(hit);
+		return (
+			entity.Name ||
+			entity.Username ||
+			entity.name ||
+			entity.title ||
+			hit.content ||
+			hit.matchedContent ||
+			`#${entity.ID ?? hit.entity_id ?? hit.id}`
+		);
+	};
 </script>
 
 <header

@@ -5,7 +5,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Activity, ArrowRightLeft, ClipboardCheck, ScanLine } from 'lucide-svelte';
-	import type { Batch, Product } from '$lib/types';
+	import type { Batch, Product, ProductUnit } from '$lib/types';
 	import ProductSelector from '$lib/components/ui/product-selector.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
@@ -37,7 +37,11 @@
 		destLocationId: '',
 		quantity: '0'
 	});
-	const barcodeLookup = $state({ value: '', result: null as Product | null });
+	const barcodeLookup = $state({
+		value: '',
+		result: null as Product | null,
+		unit: null as ProductUnit | null
+	});
 	let barcodeImage = $state<string | null>(null);
 
 	const loadStock = async () => {
@@ -95,8 +99,9 @@
 	const runBarcodeLookup = async () => {
 		if (!barcodeLookup.value) return toast.warning($t('operations.toasts.barcode_required'));
 		try {
-			const product = await barcodeApi.lookup(barcodeLookup.value);
-			barcodeLookup.result = product;
+			const resolved = await barcodeApi.resolve(barcodeLookup.value);
+			barcodeLookup.result = resolved.product;
+			barcodeLookup.unit = resolved.unit;
 			toast.success($t('operations.toasts.sku_resolved'));
 		} catch (error) {
 			toast.error($t('operations.toasts.lookup_fail'), {
@@ -107,7 +112,7 @@
 	};
 
 	const generateBarcode = async () => {
-		if (!barcodeLookup.value) return toast.warning($t('operations.toasts.sku_or_id_required'));
+		if (!barcodeLookup.value) return toast.warning($t('operations.toasts.sku_required'));
 		try {
 			const blob = await barcodeApi.generate({ sku: barcodeLookup.value });
 			barcodeImage = URL.createObjectURL(blob);
@@ -364,6 +369,16 @@
 						<p class="text-muted-foreground">
 							SKU: <span class="num-mono">{barcodeLookup.result.SKU}</span>
 						</p>
+						{#if barcodeLookup.unit}
+							<p class="mt-1">
+								<span class="badge-info">
+									Unit: {barcodeLookup.unit.Unit?.Name ??
+										barcodeLookup.unit.Unit?.Symbol ??
+										'selling unit'}
+									· ×{barcodeLookup.unit.Factor}
+								</span>
+							</p>
+						{/if}
 					</div>
 				{/if}
 				{#if barcodeImage}

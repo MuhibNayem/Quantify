@@ -15,7 +15,8 @@ and gain insights into your business performance.
 - **Insightful Reporting:** Sales trends, inventory turnover, profit margins, GMROI, shrinkage, basket analysis, and more — with cached and async (job-based) reports.
 - **Automated Alerts:** Low stock, out-of-stock, overstock, and expiry alerts with per-role and per-user subscriptions.
 - **Bulk Operations:** Async, confirmation-gated bulk import and export for product data.
-- **Barcode Support:** 1D barcode lookup and generation for quick product access.
+- **Barcode Support:** 1D barcode lookup and generation for product and selling-unit
+  barcodes, plus scan-first POS resolution.
 - **Demand Forecasting:** AI-assisted demand forecasting and reorder suggestions (via the `ai-service`).
 - **Real-time Notifications:** WebSocket notifications on order status changes, returns, and alerts.
 

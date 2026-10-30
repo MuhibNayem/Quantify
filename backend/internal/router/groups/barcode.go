@@ -14,6 +14,7 @@ func RegisterBarcode(rg *gin.RouterGroup, c *app.Container, roleRepo repository.
 	barcode := rg.Group("/barcode")
 	{
 		barcode.GET("/lookup", middleware.RequirePermission(roleRepo, "barcode.read"), barcodeHandler.LookupProductByBarcode)
+		barcode.GET("/resolve", middleware.RequirePermission(roleRepo, "barcode.read"), barcodeHandler.ResolveBarcode)
 		barcode.GET("/generate", middleware.RequirePermission(roleRepo, "barcode.read"), barcodeHandler.GenerateBarcode)
 	}
 }

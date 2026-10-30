@@ -13,9 +13,7 @@
 	import ActivityHistory from '$lib/components/activity-history.svelte';
 	import { Calendar, Package } from 'lucide-svelte';
 
-	let orderId = $page.params.id; // actually OrderNumber or ID, usually number in URL, but backend uses string OrderNumber.
-	// Assuming route is /orders/[id], if id is the db ID, we fetch by ID. If orderNumber, by Number.
-	// The previous code used $page.params.id.
+	let orderId = $page.params.orderNumber;
 
 	let order = $state<any>(null);
 	let loading = $state(true);

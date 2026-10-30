@@ -69,7 +69,8 @@ func (r *productRepository) DeleteProduct(product *domain.Product) error {
 
 func (r *productRepository) GetProductBySKU(sku string) (*domain.Product, error) {
 	var product domain.Product
-	if err := r.db.Where("sku = ?", sku).First(&product).Error; err != nil {
+	if err := r.db.Preload("Category").Preload("SubCategory").Preload("Supplier").Preload("Location").
+		Where("sku = ?", sku).First(&product).Error; err != nil {
 		return nil, err
 	}
 	return &product, nil
@@ -77,7 +78,8 @@ func (r *productRepository) GetProductBySKU(sku string) (*domain.Product, error)
 
 func (r *productRepository) GetProductByBarcode(barcode string) (*domain.Product, error) {
 	var product domain.Product
-	if err := r.db.Where("barcode_upc = ?", barcode).First(&product).Error; err != nil {
+	if err := r.db.Preload("Category").Preload("SubCategory").Preload("Supplier").Preload("Location").
+		Where("barcode_upc = ?", barcode).First(&product).Error; err != nil {
 		return nil, err
 	}
 	return &product, nil

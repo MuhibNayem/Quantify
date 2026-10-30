@@ -53,9 +53,17 @@ func (r *crmRepository) AddLoyaltyPointsAtomic(userID uint, points int) error {
 		Error
 }
 
+// customerQuery restricts CRM lookups to users with the Customer role. Staff
+// and admin accounts must never be resolvable through customer endpoints.
+func (r *crmRepository) customerQuery() *gorm.DB {
+	return r.db.Preload("Role").
+		Joins("JOIN roles ON roles.id = users.role_id").
+		Where("roles.name = ?", "Customer")
+}
+
 func (r *crmRepository) GetUserByUsername(username string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Preload("Role").Where("username = ?", username).First(&user).Error; err != nil {
+	if err := r.customerQuery().Where("users.username = ?", username).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -63,7 +71,7 @@ func (r *crmRepository) GetUserByUsername(username string) (*domain.User, error)
 
 func (r *crmRepository) GetUserByEmail(email string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Preload("Role").Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.customerQuery().Where("users.email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -71,7 +79,7 @@ func (r *crmRepository) GetUserByEmail(email string) (*domain.User, error) {
 
 func (r *crmRepository) GetUserByID(userID uint) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Preload("Role").First(&user, userID).Error; err != nil {
+	if err := r.customerQuery().Where("users.id = ?", userID).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -79,7 +87,7 @@ func (r *crmRepository) GetUserByID(userID uint) (*domain.User, error) {
 
 func (r *crmRepository) GetUserByPhone(phone string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.Preload("Role").Where("phone_number = ?", phone).First(&user).Error; err != nil {
+	if err := r.customerQuery().Where("users.phone_number = ?", phone).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

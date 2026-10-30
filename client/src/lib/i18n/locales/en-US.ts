@@ -782,6 +782,7 @@ export default {
 			sku_resolved: 'SKU resolved',
 			lookup_fail: 'Failed to Lookup Barcode',
 			sku_or_id_required: 'Provide SKU or product ID',
+			sku_required: 'Provide a product SKU',
 			generate_fail: 'Failed to Generate Barcode',
 			product_not_found: 'Product not found'
 		}

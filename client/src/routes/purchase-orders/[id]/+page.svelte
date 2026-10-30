@@ -187,7 +187,9 @@
 											<tr>
 												<td>
 													<a
-														href="/products/{item.ProductID}"
+														href="/products/{encodeURIComponent(
+															item.Product?.SKU ?? String(item.ProductID)
+														)}"
 														class="font-medium text-foreground transition-colors hover:text-primary hover:underline"
 													>
 														{item.Product?.Name || `Product ID: ${item.ProductID}`}

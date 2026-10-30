@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -21,39 +20,25 @@ func NewBarcodeHandler(barcodeService services.BarcodeService) *BarcodeHandler {
 
 // GenerateBarcode godoc
 // @Summary Generate a barcode image for a product
-// @Description Generates a barcode image (PNG) for a given product SKU or ID
+// @Description Generates a barcode image (PNG) for a product SKU
 // @Tags barcodes
 // @Accept json
 // @Produce image/png
-// @Param sku query string false "Product SKU"
-// @Param productId query int false "Product ID"
+// @Param sku query string true "Product SKU"
 // @Security BearerAuth
 // @Success 200 {file} image/png "Barcode image"
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /barcodes/generate [get]
+// @Router /barcode/generate [get]
 func (h *BarcodeHandler) GenerateBarcode(c *gin.Context) {
 	sku := c.Query("sku")
-	productIDStr := c.Query("productId")
-
-	var productID uint64
-	var err error
-
-	if productIDStr != "" {
-		productID, err = strconv.ParseUint(productIDStr, 10, 64)
-		if err != nil {
-			c.Error(appErrors.NewAppError("Invalid product ID", http.StatusBadRequest, err))
-			return
-		}
-	}
-
-	if sku == "" && productID == 0 {
-		c.Error(appErrors.NewAppError("Either 'sku' or 'productId' is required", http.StatusBadRequest, nil))
+	if sku == "" {
+		c.Error(appErrors.NewAppError("Product SKU is required", http.StatusBadRequest, nil))
 		return
 	}
 
-	buf, err := h.barcodeService.GenerateBarcode(sku, productID)
+	buf, err := h.barcodeService.GenerateBarcode(sku)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.Error(appErrors.NewAppError("Product not found", http.StatusNotFound, err))
@@ -74,11 +59,11 @@ func (h *BarcodeHandler) GenerateBarcode(c *gin.Context) {
 // @Produce json
 // @Param barcode query string true "Barcode or UPC value"
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} domain.Product
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 404 {object} map[string]interface{} "Product not found"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /products/lookup [get]
+// @Router /barcode/lookup [get]
 func (h *BarcodeHandler) LookupProductByBarcode(c *gin.Context) {
 	barcodeValue := c.Query("barcode")
 	if barcodeValue == "" {
@@ -97,4 +82,36 @@ func (h *BarcodeHandler) LookupProductByBarcode(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, product)
+}
+
+// ResolveBarcode godoc
+// @Summary Resolve a barcode to a product and selling unit
+// @Description Resolves a product barcode, SKU, or active selling-unit barcode.
+// @Tags barcodes
+// @Accept json
+// @Produce json
+// @Param barcode query string true "Barcode, UPC, or SKU"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "product and optional unit"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Product not found"
+// @Router /barcode/resolve [get]
+func (h *BarcodeHandler) ResolveBarcode(c *gin.Context) {
+	barcodeValue := c.Query("barcode")
+	if barcodeValue == "" {
+		c.Error(appErrors.NewAppError("Barcode value is required", http.StatusBadRequest, nil))
+		return
+	}
+
+	product, unit, err := h.barcodeService.ResolveBarcode(barcodeValue)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.Error(appErrors.NewAppError("Product not found with provided barcode", http.StatusNotFound, err))
+			return
+		}
+		c.Error(appErrors.NewAppError("Failed to resolve barcode", http.StatusInternalServerError, err))
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"product": product, "unit": unit})
 }

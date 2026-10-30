@@ -117,31 +117,128 @@ func (h *CRMHandler) GetCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func (h *CRMHandler) lookupCustomer(ctx context.Context, identifier string) (*domain.User, error) {
+func (h *CRMHandler) customerQuery(ctx context.Context) *gorm.DB {
+	return h.db.WithContext(ctx).
+		Preload("Role").
+		Joins("JOIN roles ON roles.id = users.role_id").
+		Where("roles.name = ?", "Customer")
+}
+
+func (h *CRMHandler) lookupCustomerByID(ctx context.Context, id uint) (*domain.User, error) {
 	var u domain.User
-	// Try ID first
-	if id, err := strconv.ParseUint(identifier, 10, 64); err == nil {
-		if err := h.db.WithContext(ctx).First(&u, id).Error; err == nil {
-			return &u, nil
-		}
+	if err := h.customerQuery(ctx).Where("users.id = ?", id).First(&u).Error; err != nil {
+		return nil, err
 	}
-	// Email (contains @ and .)
+	return &u, nil
+}
+
+// lookupCustomer resolves natural identifiers only — email, phone, or
+// username. Database IDs are resolved through the explicit /id/:id route so a
+// numeric username or phone is never shadowed by an internal key.
+func (h *CRMHandler) lookupCustomer(ctx context.Context, identifier string) (*domain.User, error) {
+	identifier = strings.TrimSpace(identifier)
+	if identifier == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	try := func(column string) (*domain.User, bool) {
+		var u domain.User
+		err := h.customerQuery(ctx).Where("users."+column+" = ?", identifier).First(&u).Error
+		return &u, err == nil
+	}
+
 	if strings.Contains(identifier, "@") {
-		if err := h.db.WithContext(ctx).Where("email = ?", identifier).First(&u).Error; err == nil {
-			return &u, nil
+		if user, ok := try("email"); ok {
+			return user, nil
 		}
 	}
-	// Phone (digits and separators)
 	if isPhone(identifier) {
-		if err := h.db.WithContext(ctx).Where("phone_number = ?", identifier).First(&u).Error; err == nil {
-			return &u, nil
+		if user, ok := try("phone_number"); ok {
+			return user, nil
 		}
 	}
-	// Username
-	if err := h.db.WithContext(ctx).Where("username = ?", identifier).First(&u).Error; err == nil {
-		return &u, nil
+	if user, ok := try("username"); ok {
+		return user, nil
 	}
 	return nil, gorm.ErrRecordNotFound
+}
+
+// GetCustomerByID godoc
+// @Summary Get customer by database ID
+// @Description Explicit ID lookup for admin workflows.
+// @Tags crm
+// @Produce json
+// @Param id path int true "Customer user ID"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Router /crm/customers/id/{id} [get]
+func (h *CRMHandler) GetCustomerByID(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Invalid customer ID", http.StatusBadRequest, err))
+		return
+	}
+	user, err := h.lookupCustomerByID(c.Request.Context(), uint(id))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
+		return
+	}
+	user.Password = ""
+	c.JSON(http.StatusOK, user)
+}
+
+// LookupCustomer godoc
+// @Summary Look up a customer by natural identifier
+// @Description Exact lookup by email, phone, or username (no ID).
+// @Tags crm
+// @Produce json
+// @Param q query string true "Email, phone, or username"
+// @Security BearerAuth
+// @Success 200 {object} domain.User
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Router /crm/customers/lookup [get]
+func (h *CRMHandler) LookupCustomer(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		c.Error(appErrors.NewAppError("Query parameter 'q' is required", http.StatusBadRequest, nil))
+		return
+	}
+	user, err := h.lookupCustomer(c.Request.Context(), query)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
+		return
+	}
+	user.Password = ""
+	c.JSON(http.StatusOK, user)
+}
+
+// GetChurnRiskByID godoc
+// @Summary Get customer churn risk by database ID
+// @Tags crm
+// @Produce json
+// @Param id path int true "Customer user ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{} "Customer not found"
+// @Router /crm/customers/id/{id}/churn-risk [get]
+func (h *CRMHandler) GetChurnRiskByID(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.Error(appErrors.NewAppError("Invalid customer ID", http.StatusBadRequest, err))
+		return
+	}
+	if _, err := h.lookupCustomerByID(c.Request.Context(), uint(id)); err != nil {
+		c.Error(appErrors.NewAppError("Customer not found", http.StatusNotFound, err))
+		return
+	}
+	risk, err := h.crmService.GetChurnRisk(uint(id))
+	if err != nil {
+		c.Error(appErrors.NewAppError("Failed to analyze churn risk", http.StatusInternalServerError, err))
+		return
+	}
+	c.JSON(http.StatusOK, risk)
 }
 
 func isPhone(s string) bool {
@@ -228,15 +325,15 @@ func (h *CRMHandler) GetCustomerByPhone(c *gin.Context) {
 // @Tags crm
 // @Accept json
 // @Produce json
-// @Param identifier path string true "Customer user ID"
+// @Param id path int true "Customer user ID"
 // @Param customer body requests.UpdateCustomerRequest true "Customer update request"
 // @Security BearerAuth
 // @Success 200 {object} domain.User
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /crm/customers/{identifier} [put]
+// @Router /crm/customers/id/{id} [put]
 func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
 		return
@@ -264,14 +361,14 @@ func (h *CRMHandler) UpdateCustomer(c *gin.Context) {
 // @Tags crm
 // @Accept json
 // @Produce json
-// @Param identifier path string true "Customer user ID"
+// @Param id path int true "Customer user ID"
 // @Security BearerAuth
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{} "Bad Request"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /crm/customers/{identifier} [delete]
+// @Router /crm/customers/id/{id} [delete]
 func (h *CRMHandler) DeleteCustomer(c *gin.Context) {
-	userID, err := strconv.ParseUint(c.Param("identifier"), 10, 32)
+	userID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.Error(appErrors.NewAppError("Invalid user ID", http.StatusBadRequest, err))
 		return

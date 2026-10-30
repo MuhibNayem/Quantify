@@ -6,7 +6,14 @@
 	import Kbd from '$lib/components/ui/kbd.svelte';
 	import { Search, Zap, CreditCard, ScanBarcode } from 'lucide-svelte';
 	import api from '$lib/api';
-	import { crmApi, promotionsApi, paymentApi, productsApi, unitsApi } from '$lib/api/resources';
+	import {
+		barcodeApi,
+		crmApi,
+		promotionsApi,
+		paymentApi,
+		productsApi,
+		unitsApi
+	} from '$lib/api/resources';
 	import type { ProductUnit } from '$lib/types';
 	import { toast } from 'svelte-sonner';
 	import { formatCurrency } from '$lib/utils';
@@ -55,9 +62,10 @@
 
 	async function findProductByCode(code: string) {
 		const product = products.find((p) => p.BarcodeUPC === code || p.SKU === code);
-		if (product) return product;
+		if (product) return { product, unit: null };
 		try {
-			return await productsApi.getByBarcode(code);
+			// Resolves product barcodes, SKUs, and per-selling-unit barcodes.
+			return await barcodeApi.resolve(code);
 		} catch {
 			return null;
 		}
@@ -69,12 +77,13 @@
 		const code = barcodeInput.trim();
 		if (!code) return;
 		try {
-			const product = await findProductByCode(code);
-			if (product) {
+			const resolved = await findProductByCode(code);
+			if (resolved) {
+				const product = resolved.product;
 				const mapped = product.stock
 					? product
 					: { ...product, stock: { currentQuantity: product.StockQuantity ?? 0 } };
-				addToCart(mapped);
+				await addToCart(mapped, resolved.unit);
 				toast.success($t('pos.toasts.barcode_added', { name: product.Name }));
 			} else {
 				toast.error($t('pos.toasts.barcode_not_found', { code }));
@@ -185,8 +194,8 @@
 				selectedCustomer = response.data.users[0];
 			} else {
 				try {
-					const idResp = await api.get(`/crm/customers/${customerSearchTerm}`);
-					selectedCustomer = idResp.data;
+					// Natural-key lookup only: email, phone, or username.
+					selectedCustomer = await crmApi.lookupCustomer(customerSearchTerm);
 				} catch (e) {
 					selectedCustomer = null;
 					toast.error($t('pos.toasts.customer_not_found'));
@@ -206,7 +215,18 @@
 		return Math.max(0, currentStock - cartQty);
 	};
 
-	const addToCart = async (product: any) => {
+	const applyScannedUnit = (item: any, unit: ProductUnit) => {
+		const matched =
+			item.units?.find(
+				(u: ProductUnit) => u.UnitID === unit.UnitID || (u.Barcode && u.Barcode === unit.Barcode)
+			) ?? unit;
+		item.unitId = matched.UnitID;
+		item.unitSymbol = matched.Unit?.Symbol;
+		item.unitPrice =
+			matched.Price > 0 ? matched.Price : getProductPrice(item).price * (matched.Factor || 1);
+	};
+
+	const addToCart = async (product: any, scannedUnit: ProductUnit | null = null) => {
 		const existingItem = cart.find((item) => item.id === product.ID);
 		const currentQty = existingItem ? existingItem.quantity : 0;
 		const stockLimit = product.stock ? product.stock.currentQuantity : 0;
@@ -218,6 +238,7 @@
 
 		if (existingItem) {
 			existingItem.quantity++;
+			if (scannedUnit) applyScannedUnit(existingItem, scannedUnit);
 			cart = [...cart];
 		} else {
 			let units: ProductUnit[] = [];
@@ -231,18 +252,17 @@
 			} catch {
 				units = [];
 			}
-			cart = [
-				...cart,
-				{
-					...product,
-					id: product.ID,
-					quantity: 1,
-					units,
-					unitId: undefined,
-					unitSymbol: undefined,
-					unitPrice: undefined
-				}
-			];
+			const item: any = {
+				...product,
+				id: product.ID,
+				quantity: 1,
+				units,
+				unitId: undefined,
+				unitSymbol: undefined,
+				unitPrice: undefined
+			};
+			if (scannedUnit) applyScannedUnit(item, scannedUnit);
+			cart = [...cart, item];
 		}
 	};
 

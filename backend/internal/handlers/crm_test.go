@@ -22,17 +22,24 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	dsn := fmt.Sprintf("file:crm-test-%d?mode=memory&cache=shared", time.Now().UnixNano())
 	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	require.NoError(t, err)
-	require.NoError(t, db.AutoMigrate(&domain.User{}))
+	require.NoError(t, db.AutoMigrate(&domain.User{}, &domain.Role{}))
 	return db
 }
 
 func seedUser(t *testing.T, db *gorm.DB, username, email, phone string) domain.User {
 	t.Helper()
+	var role domain.Role
+	require.NoError(t, db.Where("name = ?", "Customer").FirstOrCreate(&role, domain.Role{
+		Name:     "Customer",
+		IsSystem: true,
+	}).Error)
+
 	user := domain.User{
 		Username:    username,
 		Email:       email,
 		PhoneNumber: phone,
 		Password:    "secret-hash",
+		RoleID:      role.ID,
 	}
 	require.NoError(t, db.Create(&user).Error)
 	return user
@@ -65,20 +72,30 @@ func TestGetCustomer_ValidLookupsStillWork(t *testing.T) {
 	r := gin.New()
 	r.Use(middleware.ErrorHandler())
 	h := &CRMHandler{db: db}
+	r.GET("/crm/customers/id/:id", h.GetCustomerByID)
 	r.GET("/crm/customers/:identifier", h.GetCustomer)
 
-	for _, id := range []string{
-		fmt.Sprintf("%d", alice.ID),
-		"a@x.com",
-		"555-1234",
-		"alice",
-	} {
+	// Natural keys resolve through the generic route.
+	for _, id := range []string{"a@x.com", "555-1234", "alice"} {
 		req := httptest.NewRequest("GET", "/crm/customers/"+id, nil)
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
 		assert.Equal(t, 200, w.Code, "identifier %s should be 200", id)
 		assert.NotContains(t, w.Body.String(), alice.Password)
 	}
+
+	// The internal ID is only available through the explicit /id route.
+	req := httptest.NewRequest("GET", fmt.Sprintf("/crm/customers/id/%d", alice.ID), nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 200, w.Code)
+	assert.NotContains(t, w.Body.String(), alice.Password)
+
+	// A bare numeric ID must not resolve through the natural-key route.
+	req = httptest.NewRequest("GET", fmt.Sprintf("/crm/customers/%d", alice.ID), nil)
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, 404, w.Code, "generic lookup must not accept database IDs")
 }
 
 type stubCRMService struct {

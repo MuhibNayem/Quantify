@@ -12,6 +12,8 @@ import (
 	appErrors "inventory/backend/internal/errors"
 	"inventory/backend/internal/requests"
 	"inventory/backend/internal/services"
+
+	"gorm.io/gorm/clause"
 )
 
 type SalesHandler struct {
@@ -122,6 +124,7 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		ID            uint    `json:"ID"`
 		Name          string  `json:"Name"`
 		SKU           string  `json:"SKU"`
+		BarcodeUPC    string  `json:"BarcodeUPC"`
 		SellingPrice  float64 `json:"SellingPrice"`
 		StockQuantity float64 `json:"StockQuantity"`
 		CategoryID    uint    `json:"CategoryID"`
@@ -133,10 +136,10 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 	// Optimized query: Get products and sum their batch quantities
 	// Using LEFT JOIN to ensure products with 0 stock are also returned (with NULL sum -> 0)
 	query := h.DB.Table("products").
-		Select("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
+		Select("products.id, products.name, products.sku, products.barcode_upc, products.selling_price, products.category_id, products.sub_category_id, COALESCE(SUM(batches.quantity), 0) as stock_quantity").
 		Joins("LEFT JOIN batches ON batches.product_id = products.id").
 		Where("products.deleted_at IS NULL"). // Respect soft delete
-		Group("products.id, products.name, products.sku, products.selling_price, products.category_id, products.sub_category_id")
+		Group("products.id, products.name, products.sku, products.barcode_upc, products.selling_price, products.category_id, products.sub_category_id")
 
 	// Pagination & Search
 	type ProductQuery struct {
@@ -162,8 +165,22 @@ func (h *SalesHandler) ListProducts(c *gin.Context) {
 		query = query.Limit(pq.Limit).Offset(offset)
 
 		if pq.Q != "" {
+			// Natural keys only: name, SKU, or barcode. Internal database IDs
+			// are never valid cashier search terms.
 			searchPattern := "%" + pq.Q + "%"
-			query = query.Where("products.name ILIKE ? OR products.sku ILIKE ? OR CAST(products.id AS TEXT) = ?", searchPattern, searchPattern, pq.Q)
+			query = query.Where(
+				"products.name ILIKE ? OR products.sku ILIKE ? OR products.barcode_upc ILIKE ?",
+				searchPattern, searchPattern, searchPattern,
+			)
+			// Exact SKU/barcode match first, then prefix matches, then names.
+			query = query.Order(clause.Expr{
+				SQL: `CASE
+					WHEN LOWER(products.sku) = LOWER(?) OR LOWER(products.barcode_upc) = LOWER(?) THEN 0
+					WHEN products.sku ILIKE ? OR products.barcode_upc ILIKE ? THEN 1
+					ELSE 2
+				END, products.name`,
+				Vars: []interface{}{pq.Q, pq.Q, pq.Q + "%", pq.Q + "%"},
+			})
 		}
 	}
 
